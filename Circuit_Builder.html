@@ -1,0 +1,2007 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Circuit Builder</title>
+<style>
+:root {
+  color-scheme: dark;
+  --page: #1c1d1f; --panel: #404040; --well: #262626;
+  --ink: #ececec; --muted: #bfbfbf; --faint: #8d8d8d;
+  --gold: #ffc000; --chip: #2c2d30; --chip-on: #4a4b50; --line: #3a3b3f; --focus: #ffc000;
+  --ui: "Aptos", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+[hidden] { display: none !important; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--ui); }
+.wrap { max-width: none; margin: 0 auto; padding: 12px 16px 16px; display: grid; gap: 10px; }
+.wrap > * { min-width: 0; }
+header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 18px; }
+h1 { margin: 0; font-size: 1.35rem; font-weight: 700; letter-spacing: .01em; }
+h1 span { color: var(--gold); }
+.top-right { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.label { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.seg { display: inline-flex; background: var(--chip); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
+.seg button { font: inherit; font-size: .88rem; color: var(--muted); background: transparent; border: 0; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+.seg button[aria-pressed="true"], .seg button[aria-selected="true"] { background: var(--chip-on); color: var(--ink); }
+button:focus-visible, select:focus-visible, .dev:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+select { font: inherit; font-size: .88rem; color: var(--ink); background: var(--chip); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: stretch; gap: 6px 4px; background: var(--chip); border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; }
+.tgrp { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 0 6px; min-width: 0; }
+.tgrp + .tgrp { border-left: 1px solid var(--line); }
+@media (max-width: 700px) { .tgrp + .tgrp { border-left: 0; } .tgrp { padding: 0; } }
+.tool { font: inherit; font-size: .84rem; color: var(--ink); background: #232427; border: 1px solid var(--line); border-radius: 7px; padding: 3px 9px 3px 5px;
+  display: inline-flex; align-items: center; gap: 7px; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; min-height: 36px; }
+.tool:hover:not(:disabled) { background: var(--chip-on); }
+.tool[aria-pressed="true"] { background: #4d462e; border-color: var(--gold); }
+.tool:disabled { opacity: .35; cursor: default; }
+.tool svg { width: 30px; height: 26px; flex: none; }
+.tool.plain { padding-left: 10px; }
+.tool.danger { color: #ff9a9a; }
+.runbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; }
+.reset { font: inherit; font-size: .88rem; font-weight: 600; color: #f2f2f2; display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 999px; background: rgba(255,255,255,.04); border: 1.4px dashed #9a9a9a; cursor: pointer; }
+.reset:hover { background: rgba(255,255,255,.1); }
+.stage { position: relative; width: 100%; background: #2b2c2f; border-radius: 10px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,.35); margin: 0 auto; }
+.stage svg { display: block; width: 100%; height: 100%; user-select: none; -webkit-user-select: none; touch-action: none; }
+.cap { font-size: 12.5px; fill: var(--muted); pointer-events: none; stroke: #404040; stroke-width: 5px; stroke-linejoin: round; paint-order: stroke; }
+.rail { font-size: 20.3px; font-weight: 700; fill: var(--gold); pointer-events: none; }
+.devtext { font-weight: 700; pointer-events: none; }
+.dev { cursor: pointer; outline: none; }
+.zoombar { position: absolute; right: 10px; bottom: 10px; display: flex; align-items: center; gap: 2px; background: rgba(28,29,31,.85); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
+.zoombar button { font: inherit; font-size: .9rem; font-weight: 600; color: var(--ink); background: transparent; border: 0; border-radius: 6px; min-width: 30px; height: 28px; padding: 0 8px; cursor: pointer; }
+.zoombar button:hover { background: var(--chip-on); }
+.zoombar span { font-size: .78rem; color: var(--muted); min-width: 3.4em; text-align: center; font-variant-numeric: tabular-nums; }
+.zoombar [data-tip]::after { left: auto; right: 0; top: auto; bottom: calc(100% + 8px); }
+.hit { animation: hitPulse .9s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes hitPulse { 0%, 100% { transform: scale(.85); opacity: .7; } 50% { transform: scale(1.1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .hit { animation: none; } }
+.props { display: flex; flex-wrap: wrap; gap: 12px 22px; align-items: flex-start; }
+.tgroup { display: grid; gap: 6px; }
+.selname { font-size: .95rem; font-weight: 600; }
+.swatches { display: flex; flex-wrap: wrap; gap: 6px; max-width: 330px; }
+.sw { width: 26px; height: 26px; border-radius: 6px; border: 2px solid transparent; cursor: pointer; padding: 0; box-shadow: inset 0 0 0 1px rgba(0,0,0,.35); }
+.sw[aria-checked="true"] { border-color: var(--ink); box-shadow: 0 0 0 2px var(--page) inset; }
+.hint { font-size: .84rem; color: var(--faint); margin: 0; line-height: 1.45; }
+.msg { font-size: .88rem; color: #ffb4a3; min-height: 1.2em; margin: 0; }
+.fault { background: #3a1f1c; border: 1px solid #7a3229; color: #ffc7bd; border-radius: 10px; padding: 8px 12px; font-size: .9rem; }
+.ghost { position: fixed; z-index: 50; pointer-events: none; transform: translate(-50%, -60%); background: #232427; border: 1px solid var(--gold); border-radius: 8px;
+  padding: 5px 10px 5px 6px; display: flex; align-items: center; gap: 7px; font-size: .84rem; box-shadow: 0 8px 20px rgba(0,0,0,.5); }
+.ghost svg { width: 30px; height: 26px; }
+[data-tip] { position: relative; }
+[data-tip]::after { content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 8px); z-index: 5; width: max-content; max-width: min(260px, calc(100vw - 40px)); display: none;
+  padding: 7px 10px; border-radius: 6px; background: #111214; color: #ececec; font-size: .8rem; font-weight: 400; line-height: 1.35; text-align: left; box-shadow: 0 6px 18px rgba(0,0,0,.45); pointer-events: none; }
+.props [data-tip]::after, .runbar [data-tip]::after { top: auto; bottom: calc(100% + 10px); }
+[data-tip]:hover::after { display: block; }
+body.dragging [data-tip]::after { display: none; }
+
+/* Save / Open */
+.filebtn { font: inherit; font-size: .86rem; color: var(--ink); display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 8px; background: var(--chip); border: 1px solid var(--line); cursor: pointer; }
+.filebtn:hover { background: var(--chip-on); }
+.filebtn[data-tip]::after { left: auto; right: 0; }
+dialog { background: #26272a; color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 0; width: min(520px, calc(100vw - 32px)); box-shadow: 0 20px 50px rgba(0,0,0,.55); }
+dialog::backdrop { background: rgba(0,0,0,.55); }
+.dlg { display: grid; gap: 10px; padding: 18px 20px; }
+.dlg h2 { margin: 0 0 4px; font-size: 1.1rem; }
+.dlg .field { display: grid; gap: 5px; }
+.dlg input[type=text], .dlg textarea { font: inherit; font-size: .9rem; color: var(--ink); background: #1c1d1f; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; }
+.dlg textarea { font-family: "Cascadia Mono", Consolas, Menlo, monospace; font-size: .78rem; resize: vertical; word-break: break-all; }
+.dlg input:focus-visible, .dlg textarea:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.dlg button { font: inherit; font-size: .88rem; color: var(--ink); background: var(--chip); border: 1px solid var(--line); border-radius: 8px; padding: 7px 14px; cursor: pointer; }
+.dlg button:hover { background: var(--chip-on); }
+.dlg button.primary { background: #4d462e; border-color: var(--gold); }
+.dlg-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.dlg-row .hint { flex: 1 1 200px; }
+.dlg-sep { height: 1px; background: var(--line); margin: 4px 0; }
+.dlg-end { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.stage.dropping { outline: 3px dashed var(--gold); outline-offset: -3px; }
+
+.splitbtn { display: inline-flex; }
+.splitbtn #save-btn { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.splitbtn .more { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 0; padding: 6px 7px; }
+.file-label { font-size: .8rem; color: var(--muted); max-width: 28ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-label.dirty { color: var(--gold); }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60; background: #26272a; color: var(--ink); border: 1px solid var(--gold); border-radius: 10px; padding: 9px 16px; font-size: .9rem; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Order of Operations: <span>Circuit Builder</span></h1>
+    <div class="top-right">
+      <label class="row"><span class="label">Start from</span>
+        <select id="preset">
+          <option value="">Choose a circuit…</option>
+          <option value="blank">Blank</option>
+          <option value="seal">Start / Stop with a seal-in</option>
+          <option value="abc">ABC sequence start</option>
+          <option value="io">A → X</option>
+          <option value="and">AND</option>
+          <option value="or">OR</option>
+          <option value="andor">AND + OR</option>
+          <option value="three">Three rungs into X</option>
+        </select>
+      </label>
+      <div class="row">
+        <span class="file-label" id="file-label" hidden></span>
+        <span class="splitbtn">
+          <button type="button" class="filebtn" id="save-btn" data-tip="Save this circuit as a file, or copy a short code you can paste anywhere (Ctrl+S)">
+            <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M4 3h9l3 3v11H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 3v4h6V3M7 17v-5h6v5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>Save</button><button type="button" class="filebtn more" id="save-more" aria-label="More ways to save" data-tip="Save as a new file, rename, or copy a code">
+            <svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </span>
+        <button type="button" class="filebtn" id="open-btn" data-tip="Open a saved circuit file, or paste a circuit code">
+          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M3 5h5l2 2h7v9H3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Open</button>
+      </div>
+      <div class="seg" role="tablist" aria-label="Mode">
+        <button type="button" role="tab" id="tab-edit" aria-selected="true">Build</button>
+        <button type="button" role="tab" id="tab-run" aria-selected="false">Run</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="toolbar" id="toolbar" role="toolbar" aria-label="Parts and tools">
+    <div class="tgrp">
+      <button type="button" class="tool plain" data-tool="select" aria-pressed="true" data-tip="Select: click a part or wire to change it. Drag a part to move it (its wires follow), a wire's middle to slide it, or a wire end to pull it off and move it. Drag across empty space to select several things. Drag from a free part end or a bar to draw a wire.">
+        <svg viewBox="0 0 30 26"><path d="M9 3l13 10-6 1 3 7-3 1-3-7-4 4z" fill="#cfcfcf"/></svg>Select</button>
+      <button type="button" class="tool plain" data-tool="wire" aria-pressed="false" data-tip="Wire: press anywhere and drag. The wire bends once, at a right angle.">
+        <svg viewBox="0 0 30 26"><path d="M3 20h12V6h12" stroke="#cfcfcf" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Wire</button>
+    </div>
+    <div class="tgrp">
+      <button type="button" class="tool" data-part="btn-no" data-tip="Pushbutton, normally open. Drag it onto the panel, or onto a wire to put it in that wire.">
+        <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FF0032" stroke-width="1.6"/><rect x="8.5" y="6.5" width="13" height="13" rx="2.4" fill="#FF0032"/></svg>Button NO</button>
+      <button type="button" class="tool" data-part="btn-nc" data-tip="Pushbutton, normally closed">
+        <svg viewBox="0 0 30 26"><path d="M15 1 L26 7.3 L26 18.7 L15 25 L4 18.7 L4 7.3 Z" fill="#222" stroke="#FF9600" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 6 L21.5 9.7 L21.5 16.3 L15 20 L8.5 16.3 L8.5 9.7 Z" fill="#FF9600"/></svg>Button NC</button>
+      <button type="button" class="tool" data-part="coil" data-tip="Relay coil">
+        <svg viewBox="0 0 30 26"><circle cx="15" cy="13" r="11.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="15" cy="13" r="7.5" fill="#555"/></svg>Coil</button>
+      <button type="button" class="tool" data-part="con-no" data-tip="Relay contact, normally open: closes when its coil picks up. Choose which coil works it in its settings.">
+        <svg viewBox="0 0 30 26"><rect x="3" y="5" width="24" height="17" rx="3" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="8" width="14" height="2.6" rx="1.3" fill="#a6a6a6"/><circle cx="10" cy="15" r="2.4" fill="#555"/><circle cx="20" cy="15" r="2.4" fill="#555"/></svg>Contact NO</button>
+      <button type="button" class="tool" data-part="con-nc" data-tip="Relay contact, normally closed: opens when its coil picks up. Choose which coil works it in its settings.">
+        <svg viewBox="0 0 30 26"><rect x="3" y="5" width="24" height="17" rx="3" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="13.7" width="14" height="2.6" rx="1.3" fill="#FFDC00"/><circle cx="10" cy="15" r="2.4" fill="#FFDC00"/><circle cx="20" cy="15" r="2.4" fill="#FFDC00"/></svg>Contact NC</button>
+    </div>
+    <div class="tgrp">
+      <button type="button" class="tool plain danger" id="del" data-tip="Delete the selected part or wire (Delete key)">Delete</button>
+      <button type="button" class="tool plain" id="undo" data-tip="Undo (Ctrl+Z)">Undo</button>
+      <button type="button" class="tool plain" id="clear" data-tip="Start with an empty panel">Clear</button>
+    </div>
+  </div>
+
+  <div class="runbar" id="runbar" hidden>
+    <div class="row"><span class="label">Speed</span>
+      <div class="seg" role="group" aria-label="Speed">
+        <button type="button" data-speed="0.25" data-tip="Quarter speed: follow the current step by step">¼×</button><button type="button" data-speed="0.5" data-tip="Half speed">½×</button><button type="button" data-speed="1" aria-pressed="true" data-tip="Normal speed">1×</button><button type="button" data-speed="2" data-tip="Double speed">2×</button>
+      </div>
+    </div>
+    <div class="row" id="mode-group"><span class="label">Pushbuttons</span>
+      <div class="seg" role="group" aria-label="Pushbutton mode">
+        <button type="button" data-mode="click" aria-pressed="true" data-tip="One click presses a momentary button; it lets go once the circuit settles">Click</button>
+        <button type="button" data-mode="hold" data-tip="A momentary button stays down only while you hold it">Press and hold</button>
+      </div>
+    </div>
+    <button type="button" class="reset" id="reset-btn" data-tip="Turn everything off and start over">
+      <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M15.5 10a5.5 5.5 0 1 1-1.6-3.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14.4 2.8l.1 3.9-3.9.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Reset</button>
+  </div>
+
+  <div class="fault" id="fault" role="alert" hidden></div>
+  <div class="stage" id="stage"><svg id="svg" role="img" aria-label="Circuit diagram"></svg>
+    <div class="zoombar" role="group" aria-label="Zoom">
+      <button type="button" id="zoom-out" aria-label="Zoom out" data-tip="Zoom out (Ctrl + scroll wheel)">−</button>
+      <span id="zoom-pct">100%</span>
+      <button type="button" id="zoom-in" aria-label="Zoom in" data-tip="Zoom in (Ctrl + scroll wheel). Then scroll to move up and down, Shift + scroll to move left and right, or drag with the scroll wheel held down.">+</button>
+      <button type="button" id="zoom-fit" data-tip="Show the whole circuit">Fit</button>
+    </div>
+  </div>
+
+  <div id="editpanel">
+    <p class="hint">Power comes in from the <b>L1 bar</b> on the left and goes out to the <b>L2 bar</b> on the right. Drag buttons, coils and relay contacts onto the panel, or onto a wire to put them in it. A contact is worked by a coil: pick which one in its settings (it follows its coil a moment after the coil picks up or drops out). Draw wires by dragging from a free end of a part or from either bar (or anywhere, with the Wire tool). Drag the middle of a wire to slide it; drag any wire end, even one fastened to a part, to pull it off and put it somewhere else; when you move a part, its wires follow. A green ring shows where a wire or part will connect. Drag across empty space to select several things (Shift-click adds or removes one), then drag any of them to move them together. Drag the handle at the top of the L1 or L2 bar to make the circuit longer or shorter (double-click it to fit the screen again). Ctrl + scroll wheel zooms; scroll and Shift + scroll move around. Then press Run.</p>
+    <div class="props" style="margin-top:10px">
+      <div class="tgroup"><span class="label">Selected</span><span class="selname" id="selname">Nothing</span></div>
+      <div class="props" id="props-btn" hidden>
+        <div class="tgroup"><span class="label">Letter</span><select id="p-letter" aria-label="Button letter"></select></div>
+        <div class="tgroup"><span class="label">Contact</span>
+          <div class="seg" role="group" aria-label="Normally open or closed"><button type="button" data-nc="0" data-tip="Normally open: passes current only while pressed">NO</button><button type="button" data-nc="1" data-tip="Normally closed: passes current until pressed">NC</button></div></div>
+        <div class="tgroup"><span class="label">Action</span>
+          <div class="seg" role="group" aria-label="Button action"><button type="button" data-maint="1" data-tip="Stays in when pressed; press again to release">Maintained</button><button type="button" data-maint="0" data-tip="Springs back when released">Momentary</button></div></div>
+        <div class="tgroup"><span class="label">Colour</span><div class="swatches" id="p-colour" role="radiogroup" aria-label="Button colour"></div></div>
+      </div>
+      <div class="props" id="props-con" hidden>
+        <div class="tgroup"><span class="label">Worked by</span><select id="c-of" aria-label="The relay coil that works this contact"></select></div>
+        <div class="tgroup"><span class="label">Contact</span>
+          <div class="seg" role="group" aria-label="Normally open or closed"><button type="button" data-cnc="0" data-tip="Normally open: closes when its coil picks up">NO</button><button type="button" data-cnc="1" data-tip="Normally closed: opens when its coil picks up">NC</button></div></div>
+      </div>
+      <div class="props" id="props-coil" hidden>
+        <div class="tgroup"><span class="label">Letter</span><select id="o-letter" aria-label="Coil letter"></select></div>
+        <div class="tgroup"><span class="label">Colour</span><div class="swatches" id="o-colour" role="radiogroup" aria-label="Coil colour"></div></div>
+      </div>
+    </div>
+    <p class="msg" id="msg" role="status"></p>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+<dialog id="save-dlg" aria-labelledby="save-title">
+  <form method="dialog" class="dlg">
+    <h2 id="save-title">Save this circuit</h2>
+    <label class="field"><span class="label">Name</span><input id="save-name" type="text" maxlength="60" placeholder="My circuit" autocomplete="off"></label>
+    <div class="dlg-row"><button type="button" class="primary" id="save-same" hidden>Save</button><button type="button" class="primary" id="save-file">Save as a file</button><span class="hint" id="save-file-hint">A small .json file you can hand out, collect or open again later.</span></div>
+    <div class="dlg-sep"></div>
+    <span class="label">Or share it as a code</span>
+    <textarea id="save-code" readonly rows="3" aria-label="Circuit code"></textarea>
+    <div class="dlg-row"><button type="button" id="copy-code">Copy code</button><span class="hint" id="copy-msg">Paste it into an email, a document or your class page. Anyone can open it with Open → Paste a code.</span></div>
+    <div class="dlg-end"><button value="close">Done</button></div>
+  </form>
+</dialog>
+<dialog id="open-dlg" aria-labelledby="open-title">
+  <form method="dialog" class="dlg">
+    <h2 id="open-title">Open a circuit</h2>
+    <div class="dlg-row"><button type="button" class="primary" id="open-file">Choose a file…</button><span class="hint">A circuit saved with Save (you can also drop the file onto the panel).</span></div>
+    <input id="open-input" type="file" accept=".json,application/json" hidden>
+    <div class="dlg-sep"></div>
+    <span class="label">Or paste a circuit code</span>
+    <textarea id="open-code" rows="3" aria-label="Circuit code to open" placeholder="Paste the code here"></textarea>
+    <p class="msg" id="open-msg" role="status"></p>
+    <div class="dlg-end"><button value="close">Cancel</button><button type="button" class="primary" id="open-code-btn">Open code</button></div>
+  </form>
+</dialog>
+<script>
+/* ---- js/constants.js ---- */
+/* =====================================================================
+   Circuit Builder: buttons, coils and wires on a panel. Power enters at the left edge (L1) and
+   leaves at the right edge (L2), as in the Order of Operations simulators.
+   ===================================================================== */
+const W_MIN = 880;                   // narrowest the sheet gets (L1 is its left edge, x = 0; L2 its right edge, x = W: see geometry.js)
+const G = 20, SUB = 5;               // grid spacing; wires are traced in 5-unit steps for smooth flow
+const V = 450;                       // how fast the current front travels (units per second)
+const V_MAX = 1, V_LEAD = 160, V_RAMP = 220;  // speed-up on long plain stretches: switched off for now (V_MAX = 4 speeds them up to 4×)
+const RAMP = 110, FADE = 160;        // colour shading after a button / from a coil back to egg
+const BOX = 65.8368, BTN_IN = 43.8912, COIL = 82.296, COIL_IN = 60.3504;
+const OFF_WHITE = '#ffffd7', GREY = '#404040';
+const DARK_TEXT = 'rgba(28,28,28,.85)', LIGHT_TEXT = 'rgba(242,242,242,.78)';
+// colours chosen to sit evenly round the colour wheel, so any two currents that meet make a clear, distinct mix
+// (white mixes like white light: it pales whatever it meets)
+const PALETTE = [['Red', '#FF0032'], ['Orange', '#FF9600'], ['Yellow', '#FFDC00'], ['Green', '#00B050'], ['Teal', '#00D2BE'],
+  ['Blue', '#0070C0'], ['Violet', '#7030A0'], ['Magenta', '#EC008C'], ['White', '#FFFFFF']];
+const BTN_COL = { A: '#FF0032', B: '#0070C0', C: '#00B050', D: '#FF9600', E: '#00D2BE', F: '#7030A0', G: '#EC008C', H: '#FFDC00' };
+const COIL_COL = { X: '#FFDC00', Y: '#EC008C', Z: '#7030A0', W: '#00D2BE' };
+const ALL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const CON_H = 53.986176;             // a relay contact's box is as wide as a button's and a little shorter
+const CT = 0.2, SWING = 0.4;         // relay contacts start to move this long after their coil changes, and take this long to swing
+const OPEN_LIFT = 15, BLADE_GREY = '#a6a6a6';   // how far an open contact's bar lifts off its posts
+const TERM = p => p.t === 'coil' ? 60 : 40;
+const isSw = p => p.t === 'btn' || p.t === 'con';   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre
+
+/* ---- js/model.js ---- */
+/* ---------------- the drawing ---------------- */
+let nextId = 1, parts = [], wires = [];
+const P = (t, x, y, o = {}) => Object.assign({ id: nextId++, t, x, y }, o);
+const Wr = (x1, y1, x2, y2) => ({ id: nextId++, x1, y1, x2, y2 });
+const B = (L, x, y, nc = false) => P('btn', x, y, { L, nc, maint: true, color: BTN_COL[L] });
+const C = (L, x, y) => P('coil', x, y, { L, color: COIL_COL[L] });
+const PRESETS = {
+  blank: () => [[], []],
+  io: () => [[B('A', 220, 200), C('X', 700, 200)], [Wr(0, 200, 180, 200), Wr(260, 200, 640, 200), Wr(760, 200, W, 200)]],
+  and: () => [[B('A', 180, 200), B('B', 360, 200), C('X', 700, 200)], [Wr(0, 200, 140, 200), Wr(220, 200, 320, 200), Wr(400, 200, 640, 200), Wr(760, 200, W, 200)]],
+  or: () => [[B('A', 300, 140), B('B', 300, 260), C('X', 700, 200)],
+    [Wr(0, 200, 160, 200), Wr(160, 140, 160, 260), Wr(160, 140, 260, 140), Wr(160, 260, 260, 260), Wr(340, 140, 440, 140), Wr(340, 260, 440, 260),
+     Wr(440, 140, 440, 260), Wr(440, 200, 640, 200), Wr(760, 200, W, 200)]],
+  andor: () => [[B('A', 140, 200), B('B', 360, 140), B('C', 360, 260), C('X', 700, 200)],
+    [Wr(0, 200, 100, 200), Wr(180, 200, 240, 200), Wr(240, 140, 240, 260), Wr(240, 140, 320, 140), Wr(240, 260, 320, 260), Wr(400, 140, 480, 140), Wr(400, 260, 480, 260),
+     Wr(480, 140, 480, 260), Wr(480, 200, 640, 200), Wr(760, 200, W, 200)]],
+};
+// three rungs, each an NC button then two NO buttons in parallel, all feeding one coil:
+// X = (NOT A AND (B OR C)) OR (NOT D AND (F OR G)) OR (NOT E AND (H OR I))
+PRESETS.three = () => {
+  const ps = [C('X', 700, 140)], ws = [Wr(480, 140, 640, 140), Wr(760, 140, W, 140), Wr(480, 140, 480, 640)];
+  const nb = (L, x, y, nc, color) => P('btn', x, y, { L, nc, maint: true, color });
+  for (const [N, nc, top, ct, bot, cb, y] of [['A', '#FF0032', 'B', '#0070C0', 'C', '#00B050', 140], ['D', '#FF9600', 'F', '#7030A0', 'G', '#EC008C', 340], ['E', '#00D2BE', 'H', '#FFDC00', 'I', '#FF0032', 540]]) {
+    ps.push(nb(N, 120, y, true, nc), nb(top, 340, y, false, ct), nb(bot, 340, y + 100, false, cb));
+    ws.push(Wr(0, y, 80, y), Wr(160, y, 300, y), Wr(240, y, 240, y + 100), Wr(240, y + 100, 300, y + 100), Wr(380, y, 480, y), Wr(380, y + 100, 480, y + 100));
+  }
+  return [ps, ws];
+};
+// relay circuits: momentary pushbuttons (they spring back) held in by seal-in contacts
+const Bm = (L, x, y, nc = false) => P('btn', x, y, { L, nc, maint: false, color: BTN_COL[L] });
+const Ct = (L, x, y, nc = false) => P('con', x, y, { L, nc });
+// Start / Stop: press A and X picks up; its seal-in contact closes around A and keeps X in after A springs back.
+// Press D (stop, normally closed) to drop X out.
+PRESETS.seal = () => [[Bm('D', 120, 200, true), Bm('A', 300, 200), Ct('X', 300, 300), C('X', 700, 200)],
+  [Wr(0, 200, 80, 200), Wr(160, 200, 260, 200), Wr(220, 200, 220, 300), Wr(220, 300, 260, 300), Wr(340, 200, 640, 200), Wr(340, 300, 380, 300), Wr(380, 300, 380, 200), Wr(760, 200, W, 200)]];
+// ABC sequence start: X must be in before Y can start, and X and Y before Z. D stops everything.
+PRESETS.abc = () => {
+  const ps = [Bm('D', 120, 100, true), C('X', 700, 100), C('Y', 700, 320), C('Z', 700, 540)];
+  const ws = [Wr(0, 100, 80, 100), Wr(160, 100, 260, 100), Wr(200, 100, 200, 640), Wr(380, 100, 640, 100), Wr(760, 100, W, 100)];
+  for (const [L, coil, y] of [['A', 'X', 100], ['B', 'Y', 320], ['C', 'Z', 540]]) {
+    ps.push(Bm(L, 300, y), Ct(coil, 300, y + 100));   // the start button, with its coil's seal-in contact around it
+    ws.push(Wr(200, y + 100, 260, y + 100), Wr(340, y + 100, 380, y + 100), Wr(380, y + 100, 380, y), Wr(340, y, 380, y));
+    if (y > 100) ws.push(Wr(200, y, 260, y));
+  }
+  ps.push(Ct('X', 480, 320), Ct('X', 460, 540), Ct('Y', 580, 540));   // the interlocks: Y needs X in; Z needs X and Y in
+  ws.push(Wr(380, 320, 440, 320), Wr(520, 320, 640, 320), Wr(760, 320, W, 320), Wr(380, 540, 420, 540), Wr(500, 540, 540, 540), Wr(620, 540, 640, 540), Wr(760, 540, W, 540));
+  return [ps, ws];
+};
+function loadPreset(k) { W = W_MIN; W_USER = null; [parts, wires] = PRESETS[k](); normalize(); }
+
+/* ---- js/geometry.js ---- */
+/* ---------------- geometry ---------------- */
+const snap = v => Math.round(v / G) * G;
+const key = (x, y) => x + ',' + y;
+const terms = p => [[p.x - TERM(p), p.y], [p.x + TERM(p), p.y]];
+/* The sheet is as wide as it needs to be to fill the panel with the whole circuit in view: on a wide screen, or for a
+   tall circuit, the L2 bar moves out to the right edge and the wires fastened to it stretch to meet it. (It is never
+   narrower than W_MIN, nor so narrow that a part would end up past L2.) Once the L1 or L2 bar has been moved by hand,
+   the sheet keeps that length instead (W_USER), until a bar's handle is double-clicked. */
+let W = W_MIN, W_USER = null;
+function contentRight(floor = W_MIN) {
+  let m = floor;
+  for (const p of parts) m = Math.max(m, p.x + TERM(p) + 40);
+  for (const w of wires) for (const x of [w.x1, w.x2]) if (x !== W) m = Math.max(m, x + 20);
+  return Math.ceil(m / G) * G;
+}
+const contentH = () => { let m = 0; for (const p of parts) m = Math.max(m, p.y + 60); for (const w of wires) m = Math.max(m, w.y1, w.y2); return Math.max(400, snap(m + 120)); };
+// move the L2 bar to x = nw: wire ends on it move with it
+function setWidth(nw) {
+  if (nw === W) return false;
+  for (const w of wires) { if (w.x1 === W) w.x1 = nw; if (w.x2 === W) w.x2 = nw; }
+  W = nw; normalize();
+  return true;
+}
+// the width that fills a panel of the given size (in screen pixels) with the whole circuit
+function fitWidth(pw, ph) { return W_USER ? Math.max(contentRight(BAR_MIN), W_USER) : Math.max(contentRight(), Math.ceil(contentH() * pw / Math.max(ph, 1) / G) * G); }
+const BAR_MIN = 240;   // the shortest a circuit can be made by moving the bars
+// how far right the L1 bar can move: up to 40 units short of the first part or wire corner
+function leftRoom() {
+  let m = Infinity;
+  for (const p of parts) m = Math.min(m, p.x - TERM(p));
+  for (const w of wires) for (const x of [w.x1, w.x2]) if (x !== 0) m = Math.min(m, x);
+  return isFinite(m) ? Math.max(0, Math.floor((m - 40) / G) * G) : W - BAR_MIN;
+}
+// move the L1 bar dx to the right (or left, if dx is negative): the circuit stays where it is and the wires fastened
+// to L1 shorten (or lengthen); as L1 is always x = 0, everything else shifts by -dx
+function shiftL1(dx) {
+  if (!dx) return;
+  for (const p of parts) p.x -= dx;
+  for (const w of wires) { if (w.x1 !== 0) w.x1 -= dx; if (w.x2 !== 0) w.x2 -= dx; }
+  W -= dx; normalize();
+}
+// the panel's height in panel units: room for everything on it, and at least as tall as the window shows
+let VIS_H1 = 400;   // how many panel units tall the view is at normal zoom (set by layoutStage)
+function canvasH() {
+  let m = 0;
+  for (const p of parts) m = Math.max(m, p.y + 60);
+  for (const w of wires) m = Math.max(m, w.y1, w.y2);
+  return Math.max(400, VIS_H1, snap(m + 120));
+}
+function overlaps(p, x, y, t) {
+  const hw = t === 'coil' ? 60 : 40;
+  return parts.some(q => q !== p && Math.abs(q.x - x) < hw + TERM(q) && Math.abs(q.y - y) < 80);
+}
+const clampPart = (x, y, t) => { const h = t === 'coil' ? 60 : 40; return [Math.min(W - h - 20, Math.max(h + 20, snap(x))), Math.max(60, snap(y))]; };
+const clampX = x => Math.min(W, Math.max(0, snap(x))), clampY = y => Math.max(40, snap(y));
+
+/* ---- js/network.js ---- */
+/* ---------------- connectivity ----------------
+   Wires are traced point by point. Points where a wire ends or a part's end sits are shared, so everything
+   at that point joins; wires that merely cross stay apart. A wire end on the left edge is fed from L1, on the
+   right edge it returns to L2. */
+function network() {
+  const shared = new Set();
+  for (const w of wires) { shared.add(key(w.x1, w.y1)); shared.add(key(w.x2, w.y2)); }
+  for (const p of parts) for (const [x, y] of terms(p)) shared.add(key(x, y));
+  const nodes = [], index = new Map();
+  const node = (x, y, k) => { if (!index.has(k)) { index.set(k, nodes.length); nodes.push({ x, y, k }); } return index.get(k); };
+  const L1 = node(-1, 0, 'L1'), L2 = node(W + 1, 0, 'L2');
+  const edges = [], subs = [];
+  // jedges: the same wiring seen as junctions (wire ends, part ends, T-points) joined by runs of wire and by parts
+  const jedges = [];
+  for (const w of wires) {
+    const len = Math.abs(w.x2 - w.x1) + Math.abs(w.y2 - w.y1), n = Math.max(1, Math.round(len / SUB));
+    let prev = null, chain = [];
+    for (let i = 0; i <= n; i++) {
+      const x = w.x1 + (w.x2 - w.x1) * i / n, y = w.y1 + (w.y2 - w.y1) * i / n, k0 = key(x, y);
+      const id = node(x, y, shared.has(k0) ? k0 : k0 + '#' + w.id);
+      if (prev) { edges.push({ a: prev.id, b: id, w: len / n, kind: 'w' }); subs.push({ a: prev.id, b: id, x1: prev.x, y1: prev.y, x2: x, y2: y, wire: w }); }
+      chain.push(id);
+      if (shared.has(k0) && chain.length > 1) { jedges.push({ kind: 'seg', a: chain[0], b: id, len: (chain.length - 1) * len / n, chain }); chain = [id]; }
+      prev = { id, x, y };
+    }
+  }
+  for (const p of parts) {
+    const [[ax, ay], [bx, by]] = terms(p);
+    p._a = node(ax, ay, key(ax, ay)); p._b = node(bx, by, key(bx, by));
+    edges.push({ a: p._a, b: p._b, w: 2 * TERM(p), kind: 'part', part: p });
+    jedges.push({ kind: 'part', a: p._a, b: p._b, len: 2 * TERM(p), part: p });
+  }
+  const jadj = new Map(), feedV = new Map();
+  jedges.forEach((e, i) => { e.i = i; for (const v of [e.a, e.b]) { if (!jadj.has(v)) jadj.set(v, []); jadj.get(v).push(e); } });
+  const feeds = [];
+  for (const [k, i] of index) {
+    if (k.includes('#')) continue;
+    const n = nodes[i];
+    if (n.x === 0) { edges.push({ a: L1, b: i, w: 0, kind: 'w' }); feeds.push({ x: 0, y: n.y, t: 'L1' }); feedV.set(i, 1); }
+    if (n.x === W) { edges.push({ a: L2, b: i, w: 0, kind: 'w' }); feeds.push({ x: W, y: n.y, t: 'L2' }); feedV.set(i, 0); }
+  }
+  const adj = nodes.map(() => []);
+  edges.forEach((e, i) => { e.i = i; adj[e.a].push(i); adj[e.b].push(i); });
+  // wires that cross without joining: the horizontal one hops over the vertical one
+  const hops = [];
+  for (const v of wires) if (v.x1 === v.x2) for (const h of wires) if (h.y1 === h.y2) {
+    const x = v.x1, y = h.y1;
+    if (x > Math.min(h.x1, h.x2) && x < Math.max(h.x1, h.x2) && y > Math.min(v.y1, v.y2) && y < Math.max(v.y1, v.y2) && !shared.has(key(x, y))) hops.push([x, y]);
+  }
+  return { nodes, edges, adj, subs, L1, L2, feeds, hops, jedges, jadj, feedV };
+}
+function components(net, ok) {
+  const par = net.nodes.map((_, i) => i);
+  const f = i => { while (par[i] !== i) { par[i] = par[par[i]]; i = par[i]; } return i; };
+  net.edges.forEach(e => { if (ok(e)) { const a = f(e.a), b = f(e.b); if (a !== b) par[a] = b; } });
+  return f;
+}
+// build-mode check: with every button passing current, is each coil wired from L1 to L2?
+function wiringIssues(net) {
+  const f = components(net, e => e.kind === 'w' || isSw(e.part)), l1 = f(net.L1), l2 = f(net.L2), out = new Map();
+  if (l1 === l2) out.set('short', true);
+  for (const p of parts) {
+    const a = f(p._a), b = f(p._b);
+    if (p.t === 'coil') { if (!((a === l1 && b === l2) || (a === l2 && b === l1))) out.set(p.id, 'Not wired from L1 to L2'); }
+    else if (net.adj[p._a].length < 2 || net.adj[p._b].length < 2) out.set(p.id, 'An end is not connected');
+  }
+  return out;
+}
+
+/* ---- js/colour.js ---- */
+/* ---------------- colour (OKLab) ---------------- */
+function toLin(c) { c /= 255; return c <= .04045 ? c / 12.92 : Math.pow((c + .055) / 1.055, 2.4); }
+function toSrgb(c) { c = c <= .0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - .055; return Math.round(Math.min(1, Math.max(0, c)) * 255); }
+function oklab(h) {
+  let n; if (h[0] === '#') n = parseInt(h.slice(1), 16); else { const m = h.match(/\d+/g).map(Number); n = (m[0] << 16) | (m[1] << 8) | m[2]; }
+  const r = toLin(n >> 16 & 255), g = toLin(n >> 8 & 255), b = toLin(n & 255);
+  const l = Math.cbrt(.4122214708 * r + .5363325363 * g + .0514459929 * b), m = Math.cbrt(.2119034982 * r + .6806995451 * g + .1073969566 * b), s = Math.cbrt(.0883024619 * r + .2817188376 * g + .6299787005 * b);
+  return [.2104542553 * l + .793617785 * m - .0040720468 * s, 1.9779984951 * l - 2.428592205 * m + .4505937099 * s, .0259040371 * l + .7827717662 * m - .808675766 * s];
+}
+function labRgb(L, a, b) {
+  const l = (L + .3963377774 * a + .2158037573 * b) ** 3, m = (L - .1055613458 * a - .0638541728 * b) ** 3, s = (L - .0894841775 * a - 1.291485548 * b) ** 3;
+  return `rgb(${toSrgb(4.0767416621 * l - 3.3077115913 * m + .2309699292 * s)},${toSrgb(-1.2684380046 * l + 2.6097574011 * m - .3413193965 * s)},${toSrgb(-.0041960863 * l - .7034186147 * m + 1.707614701 * s)})`;
+}
+const lerp = (a, b, f) => a + (b - a) * f, clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
+function mixOk(h1, h2, f) { const A = oklab(h1), B = oklab(h2); return labRgb(lerp(A[0], B[0], f), lerp(A[1], B[1], f), lerp(A[2], B[2], f)); }
+// currents that meet mix like coloured light: red + blue meet as violet, blue + green as teal, red + green as yellow.
+// The hue is the average of their hue directions and the colour keeps its strength, so it never turns muddy grey.
+// Two adjustments keep every mix clean: a mix that lands among the yellows and golds is kept light (a dark yellow
+// reads as olive or brown), and three or more colours spread round the wheel shift a little toward white, as light does (keeping most of their colour).
+// White (no hue of its own) just pales whatever it meets.
+function blend(cols) {
+  const Q = cols.map(oklab), Cr = q => Math.hypot(q[1], q[2]), n = Q.length, avg = f => Q.reduce((t, q) => t + f(q), 0) / n;
+  let L = avg(q => q[0]), C = avg(Cr);
+  const hued = Q.filter(q => Cr(q) > 0.03);
+  if (!hued.length) return labRgb(L, 0, 0);
+  const ux = hued.reduce((t, q) => t + q[1] / Cr(q), 0) / hued.length, uy = hued.reduce((t, q) => t + q[2] / Cr(q), 0) / hued.length;
+  const R = Math.hypot(ux, uy), h = Math.atan2(uy, ux), deg = (h * 180 / Math.PI + 360) % 360;
+  if (hued.length >= 3) { const k = Math.min(1, 0.6 + R * 0.8); C *= k; L += (0.92 - L) * (1 - k) * 0.6; }
+  const dh = Math.min(Math.abs(deg - 95), 360 - Math.abs(deg - 95)), yellowness = dh < 70 ? 0.5 + 0.5 * Math.cos(Math.PI * dh / 70) : 0;
+  L = Math.max(L, 0.66 + 0.26 * yellowness);
+  return labRgb(L, C * Math.cos(h), C * Math.sin(h));
+}
+function mixRgb(h1, h2, f) { const a = parseInt(h1.slice(1), 16), b = parseInt(h2.slice(1), 16), ch = s => Math.round(lerp((a >> s) & 255, (b >> s) & 255, f)); return `rgb(${ch(16)},${ch(8)},${ch(0)})`; }
+const flowCache = {};
+const flowOf = hex => flowCache[hex] || (flowCache[hex] = mixOk(hex, '#ffffff', .2));   // current is a little lighter than its button
+
+/* ---- js/sim-core.js ---- */
+/* =====================================================================
+   simulation
+   Every point on the wiring keeps a short timeline of the colour it shows (or dark) and when. A change starts
+   where it happened (a button pressed, a coil picking up) and reaches each point after the current has had time
+   to travel there, so nothing ever appears or disappears all at once.
+   ===================================================================== */
+let NET = null, simT = 0, speed = 1, mode = 'click', queue = [], seq = 0, evT = 0, busyUntil = 0;
+let tl = [], coilOn = {}, down = {}, autoRel = {}, shortNow = false;
+const btnColour = L => (parts.find(p => p.t === 'btn' && p.L === L) || {}).color || '#888888';
+function schedule(t, fn) { queue.push({ t, s: seq++, fn }); if (t > busyUntil) busyUntil = t; }
+function runEvents(upTo) {
+  for (let guard = 0; guard < 5000 && queue.length; guard++) {
+    let bi = 0; for (let i = 1; i < queue.length; i++) { const a = queue[i], b = queue[bi]; if (a.t < b.t - 1e-9 || (Math.abs(a.t - b.t) <= 1e-9 && a.s < b.s)) bi = i; }
+    if (queue[bi].t > upTo) return;
+    const ev = queue.splice(bi, 1)[0]; evT = ev.t; ev.fn();
+  }
+}
+const conducts = e => e.kind === 'w' || (isSw(e.part) && closed(e.part));
+// a point partway along a wire keeps one timeline for each way along it (a wire between two branches can carry
+// one button's colour one way and another's the other way); it shows the mix of what both carry
+let ltl = new Map();
+function tlCol(a, t) { for (let i = a.length - 1; i >= 0; i--) if (a[i][0] <= t + 1e-9) return a[i][1]; return null; }
+const mixCache = new Map();
+function colAt(n, t) {
+  const L = ltl.get(n); if (!L) return tlCol(tl[n], t);
+  const a = tlCol(L[0], t), b = tlCol(L[1], t);
+  if (!a || !b || a === b) return a || b;
+  const k = a + b; if (!mixCache.has(k)) { if (mixCache.size > 5000) mixCache.clear(); mixCache.set(k, blend([a, b])); }
+  return mixCache.get(k);
+}
+const lit = (n, t) => colAt(n, t) !== null;
+function setAt(n, t, c, lane) {
+  const a = lane === undefined ? tl[n] : ltl.get(n)[lane];
+  while (a.length > 1 && a[a.length - 1][0] >= t - 1e-9) a.pop();
+  if (a.length === 1 && a[0][0] >= t - 1e-9) a[0] = [t, c]; else a.push([t, c]);
+  let k = 0; for (let i = 0; i < a.length; i++) if (a[i][0] <= simT) k = i;
+  if (k > 0) a.splice(0, k);
+  if (t > busyUntil) busyUntil = t;
+}
+// the colour of a stream of current: plain egg from L1, a button's colour after it (shading in over a short
+// distance from whatever colour came into the button), or the mix of several buttons' colours where branches met
+const setCol = set => set.size === 0 ? OFF_WHITE : set.size === 1 ? flowOf(btnColour([...set][0])) : blend([...set].map(L => flowOf(btnColour(L))));
+const colourOf = r => r.rd < RAMP ? mixOk(r.from, setCol(r.set), r.rd / RAMP) : setCol(r.set);
+// a pushbutton passes current while pressed (NO) or until pressed (NC); a relay contact once its bar has landed on its posts
+const closed = p => p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.nc ? !down[p.L] : !!down[p.L];
+// relay contacts: { closing: moving toward closed, t0: when it started moving, shut: passing current }
+let CON = {};
+const coilOnL = L => parts.some(q => q.t === 'coil' && q.L === L && coilOn[q.id]);
+const coilColour = L => (parts.find(q => q.t === 'coil' && q.L === L) || {}).color || '#9a9a9a';
+
+/* ---- js/solve.js ---- */
+/* =====================================================================
+   which way current goes
+   The wiring is solved like a real circuit: L1 at full voltage, L2 at none, every wire and closed button a small
+   resistance and every coil a large one. Current flows from higher voltage to lower. This is used once per run, as if
+   every button were passing current, to give every wire and every button its direction (see engine.js).
+   ===================================================================== */
+// node voltages with the buttons as they are (or, with allClosed, as if every button were letting current through)
+/* Like the rungs of a ladder diagram, current only goes through a button (or relay contact) one way: from the end
+   nearer L1 to the other end (worked out once per run). So a button never carries current
+   backward from a lower rung up into the rung above, but a button wired with power coming in on its right still works.
+   (Solved by treating each button as a one-way valve: solve, block any button that would carry current the wrong way,
+   and solve again until nothing changes.) */
+let BTN_DIR = new Map();   // button -> the end current comes in at
+const btnIn = p => BTN_DIR.get(p.id) ?? p._a;
+function findButtonDirections() {
+  BTN_DIR = new Map();
+  const V0 = solveOnce(true, new Set()).V;
+  // how far each junction is from L1 along the wiring, not going through part p itself
+  const distFromL1 = p => {
+    const dist = new Map(), q = [];
+    for (const [id, v] of NET.feedV) if (v === 1) { dist.set(id, 0); q.push([0, id]); }
+    while (q.length) { q.sort((a, b) => a[0] - b[0]); const [d, u] = q.shift(); if (d > dist.get(u)) continue;
+      for (const e of NET.jadj.get(u) || []) { if (e.part === p) continue; const w = e.a === u ? e.b : e.a, nd = d + e.len; if (!dist.has(w) || nd < dist.get(w)) { dist.set(w, nd); q.push([nd, w]); } } }
+    return dist;
+  };
+  for (const p of parts) if (isSw(p)) {
+    // current comes in at the end nearer L1 (like reading a rung from left to right, whichever way it is drawn);
+    // if both ends are equally near, at the end with the higher voltage
+    const dist = distFromL1(p), da = dist.get(p._a) ?? Infinity, db = dist.get(p._b) ?? Infinity;
+    if (da !== db) { BTN_DIR.set(p.id, da < db ? p._a : p._b); continue; }
+    const va = V0.get(p._a), vb = V0.get(p._b);
+    BTN_DIR.set(p.id, va !== undefined && vb !== undefined && vb > va + 1e-9 ? p._b : p._a);
+  }
+}
+function solveV(allClosed) {
+  const blocked = new Set();
+  let r = null;
+  for (let it = 0; it < 40; it++) {
+    r = solveOnce(allClosed, blocked);
+    let changed = false;
+    for (const p of parts) {
+      if (!isSw(p) || !(allClosed || closed(p))) continue;
+      const i = btnIn(p), va = r.V.get(i), vb = r.V.get(i === p._a ? p._b : p._a);   // va: where current should come in
+      if (!blocked.has(p) && va !== undefined && vb !== undefined && vb > va + 1e-12) { blocked.add(p); changed = true; }
+      else if (blocked.has(p) && va !== undefined && vb !== undefined && va > vb + 1e-12) { blocked.delete(p); changed = true; }
+      else if (blocked.has(p) && va !== undefined && vb === undefined) { blocked.delete(p); changed = true; }
+    }
+    if (!changed) break;
+  }
+  r.blocked = blocked;
+  return r;
+}
+function solveOnce(allClosed, blocked) {
+  const net = NET, J = net.jedges;
+  const g = e => e.kind === 'seg' ? 1 / Math.max(e.len, 1) : isSw(e.part) ? ((closed(e.part) || allClosed) && !blocked.has(e.part) ? 1 / (2 * TERM(e.part)) : 0) : 1 / 4000;
+  // everything L1 reaches through things that conduct
+  const live = new Set(), stack = [];
+  for (const [id, v] of net.feedV) if (v === 1) { live.add(id); stack.push(id); }
+  while (stack.length) { const u = stack.pop(); for (const e of net.jadj.get(u) || []) { if (!(g(e) > 0)) continue; const w = e.a === u ? e.b : e.a; if (!live.has(w)) { live.add(w); stack.push(w); } } }
+  // node voltages (Gaussian elimination; a circuit has at most a few hundred junctions)
+  const V = new Map(); for (const [id, v] of net.feedV) if (live.has(id)) V.set(id, v);
+  const unk = [...live].filter(id => !net.feedV.has(id)), ix = new Map(unk.map((id, i) => [id, i])), n = unk.length;
+  const A = Array.from({ length: n }, () => new Float64Array(n + 1));
+  for (const e of J) {
+    const ge = g(e); if (!(ge > 0) || !live.has(e.a) || !live.has(e.b)) continue;
+    for (const [u, w] of [[e.a, e.b], [e.b, e.a]]) {
+      if (!ix.has(u)) continue;
+      const r = A[ix.get(u)]; r[ix.get(u)] += ge;
+      if (ix.has(w)) r[ix.get(w)] -= ge; else r[n] += ge * V.get(w);
+    }
+  }
+  for (let c = 0; c < n; c++) {
+    let pv = c; for (let r = c + 1; r < n; r++) if (Math.abs(A[r][c]) > Math.abs(A[pv][c])) pv = r;
+    [A[c], A[pv]] = [A[pv], A[c]];
+    const d = A[c][c]; if (Math.abs(d) < 1e-300) continue;
+    for (let r = 0; r < n; r++) if (r !== c && A[r][c] !== 0) { const k = A[r][c] / d; for (let q = c; q <= n; q++) A[r][q] -= k * A[c][q]; }
+  }
+  unk.forEach((id, i) => V.set(id, A[i][i] ? A[i][n] / A[i][i] : 1));
+  return { V, live, g };
+}
+
+/* ---- js/engine.js ---- */
+/* ---------------- the current, junction by junction ----------------
+   The wiring is a set of junctions joined by runs of wire and by parts. A run of wire can be travelled either way;
+   each way is a "lane". Like reading a ladder diagram, a lane carries a button's colour when there is a path from
+   L1, through that button (pressed or otherwise passing current), along the lane and on through a coil to L2.
+   So a wire between two branches carries both branches' colours, each in its own direction, and an output fed
+   both ways shows the mix. Ahead of a button that is not passing current, the wire waits in the colour that has
+   reached it (plain egg from L1, or the colour of the buttons before), and wire that leads nowhere stays dark.
+   Each junction passes on whatever is arriving from all the lanes feeding it: the colours of the buttons it came
+   through, mixed where branches meet. A change (a button pressed or let go, a coil picking up or dropping out)
+   sets off a new stream that travels along at speed V. So when one branch stops, the wire after the junction
+   carries on with what the other branches are still sending, and only goes dark once the last of every stream
+   feeding it has passed. */
+let DIRS = [], OUTS = new Map(), INS = new Map(), REC = new Map(), PATHS = [], ALLOW = new Map(), REACH = new Map();
+const recKey = r => !r ? '-' : r.ret ? `r${r.base}|${r.along.toFixed(1)}` : `${[...r.set].sort().join('')}|${r.from}|${isFinite(r.rd) ? r.rd.toFixed(1) : 'i'}`;
+const along = (r, s) => !r ? null : r.ret ? { ret: true, base: r.base, along: r.along + s } : { set: r.set, from: r.from, rd: r.rd + s };
+const colAtRec = r => !r ? null : r.ret ? mixOk(r.base, OFF_WHITE, clamp01(r.along / FADE)) : colourOf(r);
+function mergeRecs(ins) {
+  if (!ins.length) return null;
+  const rs = ins.filter(r => r.ret);
+  if (rs.length) return { ret: true, base: rs.length > 1 ? blend(rs.map(r => r.base)) : rs[0].base, along: Math.min(...rs.map(r => r.along)) };
+  const set = new Set(); ins.forEach(r => r.set.forEach(x => set.add(x)));
+  const same = ins.every(r => [...r.set].sort().join() === [...ins[0].set].sort().join() && r.from === ins[0].from);
+  return { set, from: ins[0].from, rd: same ? Math.min(...ins.map(r => r.rd)) : Infinity };
+}
+const EGG = () => ({ set: new Set(), from: OFF_WHITE, rd: Infinity });
+const isFeed1 = id => NET.feedV.get(id) === 1;
+function addLane(e, from) {
+  const d = { e, from, to: from === e.a ? e.b : e.a, delay: e.len / V, arrived: null, sent: null, sentKey: e.kind === 'part' && e.part.t === 'coil' ? '-|out' : '-' };   // (nothing sent yet: dark)
+  if (e.kind === 'seg') {
+    d.chain = from === e.a ? e.chain : [...e.chain].reverse(); d.li = from === e.a ? 0 : 1;
+    // when the stream reaches each point along it (seconds after it enters)
+    const T = from === e.a ? e.T : [...e.T].reverse();
+    d.tk = T.map(x => Math.abs(x - T[0])); d.delay = d.tk[d.tk.length - 1];   // (for a stream with nothing ahead of it)
+    d.dir = (from === e.a) === e.fwd ? 0 : 1; d.off = d.dir === 0 ? e.s0 : e.st.S - e.s0 - e.len;
+  }
+  DIRS.push(d);
+  if (!OUTS.has(d.from)) OUTS.set(d.from, []); OUTS.get(d.from).push(d);
+  if (!INS.has(d.to)) INS.set(d.to, []); INS.get(d.to).push(d);
+}
+function startRun() {
+  NET = network();
+  simT = 0; queue = []; seq = 0; busyUntil = 0; autoRel = {}; down = {}; coilOn = {};
+  CON = {}; for (const p of parts) if (p.t === 'con') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };   // every coil starts off
+  tl = NET.nodes.map(() => [[-1e9, null]]);
+  for (const p of parts) { delete p._chg; delete p._lead; }
+  // which way each button and coil is passed through (as if every button were passing current)
+  findButtonDirections();
+  const h = solveV(true).V, dist = new Map(), q = [];
+  for (const [id, v] of NET.feedV) if (v === 1) { dist.set(id, 0); q.push([0, id]); }
+  while (q.length) { q.sort((a, b) => a[0] - b[0]); const [d, u] = q.shift(); if (d > dist.get(u)) continue;
+    for (const e of NET.jadj.get(u) || []) { const w = e.a === u ? e.b : e.a, nd = d + e.len; if (!dist.has(w) || nd < dist.get(w)) { dist.set(w, nd); q.push([nd, w]); } } }
+  DIRS = []; OUTS = new Map(); INS = new Map(); REC = new Map();
+  stretchTimes();
+  for (const e of NET.jedges) {
+    if (e.kind === 'seg') { addLane(e, e.a); addLane(e, e.b); continue; }
+    let from;
+    if (isSw(e.part)) from = btnIn(e.part);
+    else if (h.has(e.a) && h.has(e.b) && Math.abs(h.get(e.a) - h.get(e.b)) > 1e-9) from = h.get(e.a) > h.get(e.b) ? e.a : e.b;
+    else from = (dist.get(e.a) ?? 1e9) <= (dist.get(e.b) ?? 1e9) ? e.a : e.b;
+    addLane(e, from);
+  }
+  ltl = new Map();
+  for (const e of NET.jedges) if (e.kind === 'seg') for (const n of e.chain.slice(1, -1)) ltl.set(n, [[[-1e9, null]], [[-1e9, null]]]);
+  INLEAD = new Map();
+  for (const d of DIRS) if (d.e.kind === 'part') { const p = d.e.part; if (!INLEAD.has(d.from)) INLEAD.set(d.from, []); INLEAD.get(d.from).push([p, d.from === p._a ? 'A' : 'B']); }
+  findPaths(); findReach();
+  checkShort();
+  ALLOW = allowNow();
+  for (const [id, v] of NET.feedV) if (v === 1) setRec(id, shortNow ? null : EGG(), 0);
+  updateCoils(0);
+}
+/* Long plain stretches of wire (no junctions or parts along them, only corners) carry the current faster in the
+   middle, so it does not keep everyone waiting: it leaves a junction at normal speed, speeds up to V_MAX times
+   normal, and slows back down before it reaches the next junction, part or bar. Each run of wire gets, for every
+   point along it, the time the stream takes to get there along its stretch. */
+/* One plain stretch of length S. The speed rises and falls smoothly (no sudden changes): normal for V_LEAD units
+   from either end, then easing up to V_MAX times normal over V_RAMP units. Tf(s): time to travel s units from the
+   start (past the far end it carries on at normal speed); Ti: the reverse. Streams on a stretch travel together like
+   cars of a train: one that follows another keeps the same spacing behind it (see send), so streams that set off a
+   moment apart, such as the colours of several branches arriving one after another, stay together and never pull
+   apart as the stretch speeds them up. lead/out (one for each way along it): when the train's first stream set off,
+   and when its last one gets out the far end. */
+function stretch(S) {
+  const ease = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
+  const speed = s => V * (1 + (V_MAX - 1) * ease((Math.min(s, S - s) - V_LEAD) / V_RAMP));
+  const n = Math.ceil(S), T = new Float64Array(n + 1);
+  for (let i = 1; i <= n; i++) T[i] = T[i - 1] + 1 / speed(i - 0.5);
+  const Tf = s => { if (s <= 0) return s / V; if (s >= n) return T[n] + (s - n) / V; const i = Math.floor(s); return T[i] + (T[i + 1] - T[i]) * (s - i); };
+  const Ti = t => { if (t <= 0) return t * V; if (t >= T[n]) return n + (t - T[n]) * V; let lo = 0, hi = n; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (T[m] <= t) lo = m; else hi = m; } return lo + (t - T[lo]) / (T[hi] - T[lo]); };
+  return { S, Tf, Ti, lead: [-Infinity, -Infinity], out: [-Infinity, -Infinity] };
+}
+// how long the current takes along one small step of wire, or through a part (used by the checks)
+let STEP_T = new Map();
+const stepTime = e => e.kind === 'part' ? e.w / V : STEP_T.get(Math.min(e.a, e.b) + ',' + Math.max(e.a, e.b)) ?? (e.w || 0) / V;
+function stretchTimes() {
+  STEP_T = new Map();
+  const J = NET.jadj, plain = v => !NET.feedV.has(v) && (J.get(v) || []).length === 2 && J.get(v).every(e => e.kind === 'seg');
+  const done = new Set();
+  for (const e0 of NET.jedges) {
+    if (e0.kind !== 'seg' || done.has(e0)) continue;
+    // walk back to one end of the stretch, then along it to the other
+    let e = e0, at = e0.a;
+    for (let g = 0; g < 10000 && plain(at); g++) { const n = J.get(at).find(x => x !== e); if (n === e0) break; at = n.a === at ? n.b : n.a; e = n; }
+    const runs = []; let from = at === e.a ? e.a : e.b, cur = e;
+    for (let g = 0; g < 10000 && cur && !done.has(cur); g++) {
+      done.add(cur); runs.push([cur, from]); const to = cur.a === from ? cur.b : cur.a;
+      if (!plain(to)) break; cur = J.get(to).find(x => x !== cur); from = to;
+    }
+    const st = stretch(runs.reduce((t, [r]) => t + r.len, 0)), Tof = st.Tf;
+    let s0 = 0;
+    for (const [r, f] of runs) {
+      const m = r.chain.length - 1, fwd = f === r.a;
+      r.st = st; r.s0 = s0; r.fwd = fwd;
+      r.T = r.chain.map((_, k) => Tof(s0 + r.len * (fwd ? k : m - k) / m));
+      for (let k = 1; k <= m; k++) STEP_T.set(Math.min(r.chain[k - 1], r.chain[k]) + ',' + Math.max(r.chain[k - 1], r.chain[k]), Math.abs(r.T[k] - r.T[k - 1]));
+      s0 += r.len;
+    }
+  }
+}
+/* every way from L1 to L2 that goes through at least one coil and never visits a junction twice (buttons only the
+   way they pass current, coils from their L1 side). Worked out once per run; a ladder of rungs has only a few dozen. */
+function findPaths() {
+  PATHS = [];
+  const isL1 = id => NET.feedV.get(id) === 1, isL2 = id => NET.feedV.get(id) === 0;
+  // junctions from which L2 can be reached at all (so dead ends are never explored)
+  const toL2 = new Set([...NET.feedV].filter(([, v]) => v === 0).map(([id]) => id)), st = [...toL2];
+  while (st.length) { const v = st.pop(); for (const d of INS.get(v) || []) if (!toL2.has(d.from)) { toL2.add(d.from); st.push(d.from); } }
+  let budget = 400000;
+  const seen = new Set(), path = [];
+  const dfs = (v, coil) => {
+    if (--budget < 0) return;
+    if (isL2(v)) { if (coil) PATHS.push([...path]); return; }
+    for (const d of OUTS.get(v) || []) {
+      const w = d.to;
+      if (seen.has(w) || !toL2.has(w) || isL1(w)) continue;
+      seen.add(w); path.push(d);
+      dfs(w, coil || (d.e.kind === 'part' && d.e.part.t === 'coil'));
+      path.pop(); seen.delete(w);
+    }
+  };
+  for (const [id, v] of NET.feedV) if (v === 1) { seen.add(id); dfs(id, false); seen.delete(id); }
+}
+// which colours each lane may carry right now: along every path, from L1 up to the first button not passing current,
+// each lane carries the colour of the last button before it ('' for plain egg, 'ret' after a coil)
+// how far it is from L1 to the far end of each lane along any path carrying each colour: the end of a colour's
+// stream can still be on its way for as long as it takes to travel that far (a button keeps sending its colour
+// until the change upstream of it has reached it)
+function findReach() {
+  REACH = new Map();
+  for (const path of PATHS) {
+    let label = '', s = 0;
+    for (const d of path) {
+      s += d.e.len;
+      if (d.e.kind === 'part' && d.e.part.t !== 'con') { if (d.e.part.t === 'btn') label = d.e.part.L; else if (d.e.part.t === 'coil') label = 'ret'; continue; }
+      const m = REACH.get(d) || {}; m[label] = Math.max(m[label] || 0, s); REACH.set(d, m);
+    }
+  }
+}
+const filtered = d => d.e.kind === 'seg' || d.e.part.t === 'con';   // lanes that only carry the colours with a path along them
+function allowNow() {
+  const A = new Map();
+  for (const path of PATHS) {
+    let label = '';
+    for (const d of path) {
+      if (d.e.kind === 'part') {
+        if (isSw(d.e.part)) { if (!closed(d.e.part)) break; if (d.e.part.t === 'btn') label = d.e.part.L; else { if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label); } }   // a contact passes on the colour it is given
+        else if (coilOn[d.e.part.id]) label = 'ret';   // past a coil that is in: the return side, back to L2
+        // (a coil that cannot pick up, because something past it is open, carries no current: the wire past it is as
+        // live as the wire before it, so the colour waiting at the coil carries on up to whatever is open)
+        continue;
+      }
+      if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label);
+    }
+  }
+  return A;
+}
+// what of a stream a lane lets through: only the colours that have a path along it
+function filt(d, r, t) {
+  if (!r || !filtered(d)) return r;
+  // a colour the lane can no longer carry is still let through for as long as some of it could still be on its way
+  // (the end of its stream, or pulses following one another), so it runs out along the wire behind the last of it
+  // rather than being cut off where it is
+  const A0 = ALLOW.get(d), late = d.drain ? Object.keys(d.drain).filter(x => d.drain[x] > t + 1e-9) : [];
+  const A = late.length ? new Set([...(A0 || []), ...late]) : A0;
+  if (!A) return null;
+  if (r.ret) return A.has('ret') ? r : null;
+  if (!r.set.size) return A.has('') ? r : null;
+  const s = [...r.set].filter(x => A.has(x));
+  return !s.length ? null : s.length === r.set.size ? r : { set: new Set(s), from: r.from, rd: r.rd };
+}
+const active = d => d.e.kind === 'seg' ? ALLOW.has(d) : isSw(d.e.part) ? closed(d.e.part) || !!d.draining : true;   // (a coil always passes something on, or nothing: see through)
+// what a run hands on at its far end, given what entered it
+function through(d, r) {
+  if (!r) return null;
+  if (d.e.kind === 'seg') return along(r, d.e.len);
+  if (d.e.part.t === 'btn') return { set: new Set([d.e.part.L]), from: colourOf(r), rd: 0 };
+  if (d.e.part.t === 'con') return along(r, d.e.len);   // a relay contact passes the current on as it is
+  // through a coil that is in: the return side, fading to egg. Through a coil that cannot pick up: the colour
+  // waiting at it, on up to whatever is open past it
+  if (r.ret) return null;
+  return coilOn[d.e.part.id] ? { ret: true, base: colourOf(r), along: 0 } : along(r, d.e.len);
+}
+// send a stream into run d starting now: the points along it change one after another as it travels
+function send(d, r, t, atOnce) {
+  r = filt(d, r, t);
+  if (d.draining && !(r && r.ret)) { d.draining = false; if (!closed(d.e.part)) r = null; }   // the end of the return current has gone through; the switch is open
+  const key = recKey(r) + (d.e.kind === 'part' && d.e.part.t === 'coil' ? (coilOn[d.e.part.id] ? '|in' : '|out') : '');
+  if (d.sent !== undefined && d.sentKey === key) return;
+  d.sent = r; d.sentKey = key;
+  const out = through(d, r);
+  if (d.e.kind !== 'seg') {
+    // the part's leads: the current flows in from the end it enters at, and out along the far lead just in time to
+    // reach the far end when it arrives there
+    const p = d.e.part, outS = d.from === p._a ? 'B' : 'A', Ls = TERM(p) - (p.t === 'coil' ? COIL : BOX) / 2;
+    const tOut = t + (atOnce ? 0 : d.delay);
+    leadEvent(p, outS, tOut - Ls / V, out, 'body');
+    schedule(tOut, () => { d.arrived = out; reeval(d.to, evT); });
+    return;
+  }
+  const m = d.chain.length - 1;
+  if (V_MAX === 1) {   // one steady speed everywhere (the speed-up is switched off)
+    for (let k = 1; k < m; k++) { const s = d.e.len * k / m; setAt(d.chain[k], t + s / V, colAtRec(along(r, s)), d.li); }
+    schedule(t + d.e.len / V, () => { d.arrived = out; reeval(d.to, evT); });
+    return;
+  }
+  // where this stream sits in its stretch's train: a set distance (dd) behind the train's first stream
+  const st = d.e.st, w = d.dir;
+  if (!(t < st.out[w])) st.lead[w] = t - st.Tf(d.off);                 // nothing still on the stretch: it leads a new train
+  const tl = st.lead[w], dd = Math.max(0, st.Ti(t - tl) - d.off), at = s => tl + st.Tf(d.off + s + dd);
+  for (let k = 1; k < m; k++) { const s = d.e.len * k / m; setAt(d.chain[k], Math.max(t, at(s)), colAtRec(along(r, s)), d.li); }
+  const tEnd = Math.max(t, at(d.e.len));
+  st.out[w] = Math.max(st.out[w], tl + st.Tf(st.S + dd));
+  schedule(tEnd, () => { d.arrived = out; reeval(d.to, evT); });
+}
+// a lead's latest changes (what it shows, from when, flowing from the part's end or from its body)
+function leadEvent(p, S, t0, rec, from) { const L = (p._lead || (p._lead = { A: [], B: [] }))[S]; L.push({ t0, col: colAtRec(rec), from }); if (L.length > 6) L.shift(); }
+let INLEAD = new Map();   // junction -> the part leads current flows in along from there
+function setRec(v, r, t) {
+  if (recKey(REC.get(v)) === recKey(r)) return;
+  REC.set(v, r);
+  for (const [p, S] of INLEAD.get(v) || []) leadEvent(p, S, t, r, 'term');   // what reaches a part flows in along its lead
+  setAt(v, t, colAtRec(r));
+  for (const d of OUTS.get(v) || []) if (d.e.kind === 'seg' || active(d)) send(d, r, t);
+  if (coilIns.has(v)) updateCoils(t);
+}
+function reeval(v, t) {
+  if (isFeed1(v)) return;
+  setRec(v, mergeRecs((INS.get(v) || []).filter(d => d.arrived).map(d => d.arrived)), t);
+}
+// a coil picks up when current reaches it and it has a way through to L2; it drops out when its current is gone
+let coilIns = new Set();
+function updateCoils(t) {
+  const f = components(NET, conducts), c2 = f(NET.L2);
+  coilIns = new Set(); let changed = false;
+  for (const p of parts) if (p.t === 'coil') {
+    const d = DIRS.find(x => x.e.part === p); if (!d) continue;
+    coilIns.add(d.from);
+    const r = REC.get(d.from), want = !shortNow && !!r && !r.ret && f(d.to) === c2;
+    let atOnce = false; const wasOn = !!coilOn[p.id];
+    if (want !== wasOn) {
+      coilOn[p.id] = want; p._chg = t;
+      for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(t + CT, () => moveContact(c, evT));   // its contacts follow
+      // current already at the coil, and its way back to L2 opening or closing: the coil drops out or picks up there
+      // and then, so the change starts at its far end at once (rather than travelling through it like new current)
+      atOnce = !!r && !r.ret && p._inKey === recKey(r);
+    }
+    p._inKey = recKey(r || null);
+    if (want !== wasOn) changed = true;
+    send(d, r || null, t, atOnce);   // keep what goes through it up to date
+  }
+  if (changed) refreshAllow(t);   // a coil picking up or dropping out changes what the wire past it may carry
+}
+function checkShort() { const f = components(NET, conducts); shortNow = f(NET.L1) === f(NET.L2); }
+const allowKey = A => A ? [...A].sort().join() : '';
+function press(L, v) {
+  if (!!down[L] === v) return;
+  down[L] = v;
+  switched(parts.filter(p => p.t === 'btn' && p.L === L), simT);
+}
+// a relay contact's bar starts to move: it stops passing current as soon as it lifts, and passes current again
+// only once it has landed
+function moveContact(c, t) {
+  const want = coilOnL(c.L) !== !!c.nc, s = CON[c.id];
+  if (!s || s.closing === want) return;
+  CON[c.id] = { t0: t, closing: want, shut: s.shut };
+  if (t + SWING > busyUntil) busyUntil = t + SWING;
+  if (want) schedule(t + SWING, () => { const k = CON[c.id]; if (k.closing && !k.shut) { k.shut = true; switched([c], evT); } });
+  else if (s.shut) { CON[c.id].shut = false; switched([c], t); }
+}
+// some pushbuttons or contacts have just opened or closed
+function switched(sw, t) {
+  const was = shortNow;
+  checkShort();
+  if (was !== shortNow) for (const [id, fv] of NET.feedV) if (fv === 1) setRec(id, shortNow ? null : EGG(), t);
+  for (const d of DIRS) if (d.e.kind === 'part' && sw.includes(d.e.part)) {
+    const r = REC.get(d.from) || null;
+    // a switch on the return side (past a coil) that opens stops the coil, and the return current already past the
+    // coil runs out through it to L2 behind its own end, rather than being cut where the switch is
+    d.draining = !closed(d.e.part) && !!r && !!r.ret;
+    if (!d.draining) send(d, closed(d.e.part) ? r : null, t);
+  }
+  // coils first: a contact closing behind a coil lets the coil pick up, and then only its return current (not the
+  // colour that was waiting in front of the contact) goes on past the contact
+  updateCoils(t);
+  refreshAllow(t);
+}
+/* which colours each lane may carry, worked out again after a change. Lanes that can now carry a colour they could
+   not before pick up what their junction already has. (A lane that loses a colour keeps carrying it until that
+   colour's own stream runs out, so it fades along the wire, from where it stopped, rather than vanishing.) */
+function refreshAllow(t) {
+  const old = ALLOW; ALLOW = allowNow();
+  for (const d of DIRS) if (filtered(d)) {
+    const a = old.get(d), b = ALLOW.get(d);
+    if (a) for (const x of a) if (!b || !b.has(x)) (d.drain || (d.drain = {}))[x] = t + ((REACH.get(d) || {})[x] || 0) / V + 0.3;
+    if (b && [...b].some(x => !a || !a.has(x))) send(d, REC.get(d.from) || null, t);
+  }
+}
+
+/* ---- js/render-parts.js ---- */
+/* =====================================================================
+   drawing
+   ===================================================================== */
+const NS = 'http://www.w3.org/2000/svg', svg = document.getElementById('svg');
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); (parent || svg).appendChild(e); return e; }
+function hexPath(cx, cy, R, r) {
+  const Q = []; for (let k = 0; k < 6; k++) { const a = Math.PI / 2 + k * Math.PI / 3; Q.push([cx + R * Math.cos(a), cy + R * Math.sin(a)]); }
+  let d = '';
+  for (let k = 0; k < 6; k++) { const p = Q[k], pv = Q[(k + 5) % 6], nx = Q[(k + 1) % 6], f = r / R;
+    const a1 = [p[0] + (pv[0] - p[0]) * f, p[1] + (pv[1] - p[1]) * f], a2 = [p[0] + (nx[0] - p[0]) * f, p[1] + (nx[1] - p[1]) * f];
+    d += (k ? ' L ' : 'M ') + a1[0].toFixed(2) + ' ' + a1[1].toFixed(2) + ' Q ' + p[0].toFixed(2) + ' ' + p[1].toFixed(2) + ' ' + a2[0].toFixed(2) + ' ' + a2[1].toFixed(2); }
+  return d + ' Z';
+}
+const DEFS = `
+  <linearGradient id="gWell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#303030"/><stop offset="1" stop-color="#1f1f1f"/></linearGradient>
+  <linearGradient id="gGloss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".38"/><stop offset=".45" stop-color="#fff" stop-opacity=".06"/><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></linearGradient>
+  <radialGradient id="gDome" cx=".38" cy=".3" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient>
+  <filter id="fShadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="2.2" stdDeviation="2.2" flood-color="#000" flood-opacity=".55"/></filter>
+  <pattern id="grid" width="${G}" height="${G}" patternUnits="userSpaceOnUse"><path d="M ${G} 0 L 0 0 0 ${G}" fill="none" stroke="#4b4b4b" stroke-width="1"/></pattern>
+  <pattern id="gridMajor" width="${G * 5}" height="${G * 5}" patternUnits="userSpaceOnUse"><rect width="${G * 5}" height="${G * 5}" fill="url(#grid)"/><path d="M ${G * 5} 0 L 0 0 0 ${G * 5}" fill="none" stroke="#555" stroke-width="1.4"/></pattern>
+  <linearGradient id="gBar" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8a7a4a"/><stop offset=".45" stop-color="#d9c27a"/><stop offset="1" stop-color="#7a6a3c"/></linearGradient>
+  <radialGradient id="gStud" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#e8e8e8"/><stop offset=".6" stop-color="#9a9a9a"/><stop offset="1" stop-color="#5a5a5a"/></radialGradient>`;
+const BAR = 14;   // the L1 and L2 connection bars along the left and right edges
+const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
+const captionOf = p => p.t === 'coil' ? `${p.L} Coil` : p.t === 'con' ? `${p.L} Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
+// a part, in the same style as the Order of Operations simulators
+function drawPart(p, g, x, y, chan) {
+  const v = {}, T = TERM(p), half = p.t === 'coil' ? COIL / 2 : BOX / 2, capH = p.t === 'con' ? CON_H / 2 + 1 : half;
+  el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
+  // the short leads between the part's ends and its body: each drawn in two pieces, so the current can flow along
+  // them (the new colour, and what was there before it)
+  const lead = () => el('line', { x1: x, y1: y, x2: x, y2: y, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g);
+  v.lead = { A: { old: lead(), cur: lead(), term: x - T, body: x - half, y }, B: { old: lead(), cur: lead(), term: x + T, body: x + half, y } };
+  if (p.t === 'btn') {
+    if (p.nc) {
+      const RB = BOX / 2 * 1.08, RI = BTN_IN / 2 * 1.1;
+      el('path', { d: hexPath(x, y, RB, RB * .17), fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
+      v.press = el('g', {}, g);
+      v.fill = el('path', { d: hexPath(x, y, RI, RI * .17), fill: p.color, stroke: '#1d2733', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, v.press);
+      el('path', { d: hexPath(x, y, RI, RI * .17), fill: 'url(#gGloss)' }, v.press);
+    } else {
+      el('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
+      v.press = el('g', {}, g);
+      v.fill = el('rect', { x: x - BTN_IN / 2, y: y - BTN_IN / 2, width: BTN_IN, height: BTN_IN, rx: BTN_IN * .1667, fill: p.color, stroke: '#1d2733', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, v.press);
+      el('rect', { x: x - BTN_IN / 2, y: y - BTN_IN / 2, width: BTN_IN, height: BTN_IN, rx: BTN_IN * .1667, fill: 'url(#gGloss)' }, v.press);
+    }
+    v.text = el('text', { x, y: y + 6.6, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: DARK_TEXT }, v.press); v.text.textContent = p.L;
+  } else if (p.t === 'con') {
+    // a relay contact, as in the Order of Operations simulators: two contact points, and a bar that drops onto them to close
+    const B = BOX, H = CON_H, col = coilColour(p.L);
+    el('rect', { x: x - B / 2, y: y - H / 2, width: B, height: H, rx: H * .1667, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
+    v.posts = el('g', { fill: p.nc ? col : GREY }, g);
+    const sy = B * .045, r = B * .105, L = x - B / 2, inset = 4.5;
+    el('rect', { x: L + inset, y: y - sy, width: B * .25 - inset, height: 2 * sy }, v.posts);
+    el('rect', { x: L + B * .75, y: y - sy, width: B * .25 - inset, height: 2 * sy }, v.posts);
+    el('circle', { cx: L + B * .25, cy: y, r }, v.posts);
+    el('circle', { cx: L + B * .75, cy: y, r }, v.posts);
+    const gl = el('g', { fill: 'url(#gDome)' }, g);
+    el('circle', { cx: L + B * .25, cy: y, r }, gl);
+    el('circle', { cx: L + B * .75, cy: y, r }, gl);
+    const bx1 = L + B * .25 - r * 1.15, bx2 = L + B * .75 + r * 1.15, bh = 7;
+    v.blade = el('g', { transform: p.nc ? '' : `translate(0 ${-OPEN_LIFT})` }, g);
+    v.bladeShape = el('rect', { x: bx1, y: y - bh / 2, width: bx2 - bx1, height: bh, rx: bh / 2, fill: p.nc ? col : BLADE_GREY, stroke: 'rgba(0,0,0,.35)', 'stroke-width': .6 }, v.blade);
+    el('rect', { x: bx1, y: y - bh / 2, width: bx2 - bx1, height: bh, rx: bh / 2, fill: 'url(#gGloss)' }, v.blade);
+    g.insertBefore(v.blade, v.posts);   // the bar sits behind the contact points
+    v.col = col;
+  } else {
+    el('circle', { cx: x, cy: y, r: COIL / 2, fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
+    v.fill = el('circle', { cx: x, cy: y, r: COIL_IN / 2, fill: GREY, stroke: '#1d2733', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, g);
+    el('circle', { cx: x, cy: y, r: COIL_IN / 2, fill: 'url(#gDome)' }, g);
+    v.text = el('text', { x, y: y + 7.5, 'text-anchor': 'middle', class: 'devtext', 'font-size': 21, fill: LIGHT_TEXT }, g); v.text.textContent = p.L;
+  }
+  el('text', { x, y: y + capH + 14 + (p.t === 'btn' && p.nc ? 4 : 0), 'text-anchor': 'middle', class: 'cap' }, g).textContent = captionOf(p);
+  return v;
+}
+// a horizontal run from lo to hi at height y, hopping over every crossing in hops
+function hPath(lo, hi, y, hops) {
+  const hx = hops.filter(([x, yy]) => yy === y && x + 10 > lo && x - 10 < hi).map(([x]) => x);
+  const yAt = x => { for (const h of hx) if (Math.abs(x - h) <= 10) return +(y - Math.sqrt(Math.max(0, 100 - (x - h) ** 2))).toFixed(2); return y; };
+  const bps = [lo, hi]; for (const h of hx) for (const b of [h - 10, h, h + 10]) if (b > lo && b < hi) bps.push(b);
+  bps.sort((a, b) => a - b);
+  let d = `M${lo} ${yAt(lo)}`;
+  for (let i = 1; i < bps.length; i++) { const a = bps[i - 1], b = bps[i], mid = (a + b) / 2; d += hx.some(h => mid > h - 10 && mid < h + 10) ? `A10 10 0 0 1 ${b} ${yAt(b)}` : `L${b} ${y}`; }
+  return d;
+}
+
+/* ---- js/editor-state.js ---- */
+let editing = true, tool = 'select', sel = null, view = {}, preview = null;
+// the selection: any number of parts and wires
+const selOne = (k, id) => ({ parts: new Set(k === 'p' ? [id] : []), wires: new Set(k === 'w' ? [id] : []) });
+const selHasP = id => !!sel && sel.parts.has(id), selHasW = id => !!sel && sel.wires.has(id);
+const selCount = () => sel ? sel.parts.size + sel.wires.size : 0;
+const history = [];
+function snapshot() { history.push(stateOf()); if (history.length > 100) history.shift(); }
+function undo() {
+  const h = history.pop(); if (!h) return;
+  restore(h); if (cam.fit) fit(true);
+  for (const x of [...parts, ...wires]) nextId = Math.max(nextId, x.id + 1);
+  sel = null; say(''); draw();
+}
+function say(t) { document.getElementById('msg').textContent = t || ''; }
+
+/* ---- js/render.js ---- */
+function draw() {
+  const H = canvasH();
+  applyCam();
+  svg.innerHTML = '';
+  el('defs', {}).innerHTML = DEFS;
+  el('rect', { x: 0, y: 0, width: W, height: H, fill: '#404040' });   // the sheet the circuit is drawn on
+  if (editing) el('rect', { x: 0, y: 0, width: W, height: H, fill: 'url(#gridMajor)' });   // positioning grid while building
+  const net = network(); if (editing) NET = net;
+  // one dark channel under all the wiring, so wires that meet join into one seamless conduit; then vertical
+  // cores, then horizontal ones (which hop over any vertical wire they cross without joining)
+  // wires are trimmed at the edges of the sheet (their rounded ends would otherwise poke past the L1 and L2 bars)
+  el('clipPath', { id: 'sheetClip' }, svg.querySelector('defs')).appendChild(Object.assign(document.createElementNS(NS, 'rect'), {})).setAttribute('width', W);
+  svg.querySelector('#sheetClip rect').setAttribute('height', H);
+  const clip = { 'clip-path': 'url(#sheetClip)' };
+  const chan = el('g', clip), wlV = el('g', clip), backs = el('g', clip), wlH = el('g', clip), hits = el('g', {});
+  const shape = (x1, y1, x2, y2) => y1 === y2 && x1 !== x2 ? hPath(Math.min(x1, x2), Math.max(x1, x2), y1, net.hops) : `M${x1} ${y1}L${x2} ${y2}`;
+  const chanD = wires.map(w => shape(w.x1, w.y1, w.x2, w.y2)).join('');
+  if (chanD) el('path', { d: chanD, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', fill: 'none' }, chan);
+  for (const [x, y] of net.hops) el('path', { d: hPath(x - 10, x + 10, y, net.hops), stroke: '#262626', 'stroke-width': 18, fill: 'none' }, backs);
+  const layer = (x1, x2) => x1 === x2 ? wlV : wlH;
+  view.runs = []; view.shape = shape;
+  if (editing) {
+    for (const w of wires) {
+      const isSel = selHasW(w.id);
+      el('path', { d: shape(w.x1, w.y1, w.x2, w.y2), fill: 'none', stroke: isSel ? '#ffc000' : '#5e5e5e', 'stroke-width': isSel ? 6 : 4, 'stroke-linecap': 'round' }, layer(w.x1, w.x2));
+      el('line', { x1: w.x1, y1: w.y1, x2: w.x2, y2: w.y2, stroke: 'transparent', 'stroke-width': 20 }, hits);
+    }
+  } else {
+    // each wire is repainted as a few smooth runs, one per colour
+    const byWire = new Map();
+    for (const s of NET.subs) { if (!byWire.has(s.wire.id)) byWire.set(s.wire.id, []); byWire.get(s.wire.id).push(s); }
+    for (const [, subs] of byWire) view.runs.push({ subs, n: view.runs.length, g: el('g', {}, layer(subs[0].x1, subs[0].x2)), last: '' });
+  }
+  // the L1 bar down the left edge and the L2 bar down the right: wires connect by running into them
+  for (const [x, t] of [[0, 'L1'], [W - BAR, 'L2']]) {
+    const g = el('g', { style: editing ? 'cursor:crosshair' : '' });
+    el('rect', { x, y: 6, width: BAR, height: H - 12, rx: 3, fill: 'url(#gBar)', stroke: '#262626', 'stroke-width': 1.5 }, g);
+    el('title', {}, g).textContent = editing ? `${t}: drag from here to draw a wire, or end a wire here` : t;
+    if (editing) {
+      // a handle at the top of each bar: drag it sideways to make the circuit longer or shorter
+      const hx = x + BAR / 2, h = el('g', { class: 'barhandle', 'data-bar': t, style: 'cursor:ew-resize' });
+      el('rect', { x: hx - 13, y: BAR_HANDLE_Y, width: 26, height: BAR_HANDLE_H, rx: 6, fill: '#e2cc85', stroke: '#262626', 'stroke-width': 1.5 }, h);
+      for (const dx of [-4, 0, 4]) el('line', { x1: hx + dx, y1: BAR_HANDLE_Y + 12, x2: hx + dx, y2: BAR_HANDLE_Y + BAR_HANDLE_H - 12, stroke: '#5a4c22', 'stroke-width': 1.6, 'stroke-linecap': 'round' }, h);
+      for (const s of [-1, 1]) el('path', { d: `M ${hx + s * 17} ${BAR_HANDLE_Y + BAR_HANDLE_H / 2 - 5} l ${s * 6} 5 l ${-s * 6} 5`, fill: 'none', stroke: '#e2cc85', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, h);
+      el('title', {}, h).textContent = `Drag to move the ${t} bar and make the circuit longer or shorter. Double-click to let it fit the screen again.`;
+    }
+  }
+  // a terminal screw wherever a wire meets a bar, and the bar's name next to it, as in the simulators
+  const seen = new Set();
+  for (const fd of net.feeds) {
+    const k = fd.t + fd.y; if (seen.has(k)) continue; seen.add(k);
+    const sx = fd.t === 'L1' ? BAR / 2 : W - BAR / 2;
+    el('circle', { cx: sx, cy: fd.y, r: 5.5, fill: 'url(#gStud)', stroke: '#2a2a2a', 'stroke-width': 1 });
+    el('path', { d: `M ${sx - 3} ${fd.y} L ${sx + 3} ${fd.y}`, stroke: '#3a3a3a', 'stroke-width': 1.4 });
+    el('text', fd.t === 'L1' ? { x: BAR + 8, y: fd.y - 20, class: 'rail' } : { x: W - BAR - 8, y: fd.y + 36, class: 'rail', 'text-anchor': 'end' }).textContent = fd.t;
+  }
+  const issues = editing ? wiringIssues(net) : new Map();
+  view.parts = new Map();
+  for (const p of parts) {
+    const g = el('g', { 'data-part': p.id, style: editing ? 'cursor:grab' : '' });
+    const v = drawPart(p, g, p.x, p.y, chan);
+    view.parts.set(p.id, v);
+    if (editing) {
+      for (const [tx, ty] of terms(p)) el('circle', { cx: tx, cy: ty, r: 6.5, fill: '#404040', stroke: '#c8c8c8', 'stroke-width': 1.6, style: 'cursor:crosshair' }, g);
+      if (selHasP(p.id)) el('rect', { x: p.x - TERM(p) - 12, y: p.y - (p.t === 'coil' ? COIL : BOX) / 2 - 12, width: 2 * TERM(p) + 24, height: (p.t === 'coil' ? COIL : BOX) + 44, rx: 12, fill: 'rgba(255,192,0,.07)', stroke: '#ffc000', 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'pointer-events': 'none' }, g);
+      if (issues.has(p.id)) {
+        const t = el('text', { x: p.x, y: p.y - (p.t === 'coil' ? COIL : BOX) / 2 - 10, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: '#ff8a7a', 'pointer-events': 'none', stroke: '#404040', 'stroke-width': 4, 'paint-order': 'stroke' }, g);
+        t.textContent = '⚠ ' + issues.get(p.id);
+      }
+    } else if (p.t === 'btn') bindButton(g, p);
+  }
+  if (editing) {
+    const f = document.getElementById('fault');
+    f.hidden = !issues.has('short');
+    f.textContent = 'Warning: with every button passing current, L1 connects straight to L2 with no coil in between. That is a short circuit.';
+  }
+  view.overlay = el('g', { 'pointer-events': 'none' });
+  if (preview) drawPreview();
+  renderProps();
+  if (fit()) { applyCam(); requestAnimationFrame(draw); }   // the panel changed size: draw again to fill it
+  scheduleAutosave();
+}
+function drawPreview() {
+  view.overlay.innerHTML = '';
+  // a green ring wherever the wire end or part end being moved will connect
+  for (const [x, y] of (preview && preview.hits) || []) {
+    el('circle', { cx: x, cy: y, r: 15, fill: 'rgba(70,230,130,.18)', stroke: '#46e682', 'stroke-width': 3, class: 'hit' }, view.overlay);
+    el('circle', { cx: x, cy: y, r: 4, fill: '#46e682' }, view.overlay);
+  }
+  if (preview.bar !== undefined) el('rect', { x: preview.bar, y: 6, width: BAR, height: canvasH() - 12, rx: 3, fill: 'rgba(226,204,133,.35)', stroke: '#e2cc85', 'stroke-width': 2, 'stroke-dasharray': '8 6' }, view.overlay);
+  if (preview.wire) for (const [x1, y1, x2, y2] of preview.wire) el('line', { x1, y1, x2, y2, stroke: '#ffc000', 'stroke-width': 4, 'stroke-linecap': 'round', 'stroke-dasharray': '8 6' }, view.overlay);
+  if (preview.part) {
+    const { p, x, y, bad } = preview.part;
+    drawPart(p, el('g', { opacity: bad ? .35 : .75 }, view.overlay), x, y);
+    if (preview.splice) el('rect', { x: x - TERM(p) - 6, y: y - 16, width: 2 * TERM(p) + 12, height: 32, rx: 8, fill: 'none', stroke: '#ffc000', 'stroke-width': 2.4, 'stroke-dasharray': '6 5' }, view.overlay);
+  }
+}
+
+/* ---- js/run.js ---- */
+/* ---------------- run mode ---------------- */
+let prevT = performance.now();
+function frame(now) {
+  const dt = Math.min(.1, (now - prevT) / 1000); prevT = now;
+  if (!editing) {
+    simT += dt * speed;
+    runEvents(simT);
+    if (mode === 'click') for (const L in autoRel) if (!queue.length && simT > busyUntil + .5) { delete autoRel[L]; press(L, false); }
+    paint();
+  }
+  requestAnimationFrame(frame);
+}
+function paint() {
+  for (const it of view.runs) {
+    const cols = it.subs.map(s => lit(s.a, simT) && lit(s.b, simT) ? colAt(s.b, simT) : null), k = cols.join('|');
+    if (k === it.last) continue; it.last = k;
+    // each lit stretch of the wire is one smooth stroke, shaded along its length with a gradient
+    it.g.innerHTML = '';
+    for (let i = 0, k = 0; i < cols.length;) {
+      if (!cols[i]) { i++; continue; }
+      let j = i; while (j + 1 < cols.length && cols[j + 1]) j++;
+      const a = it.subs[i], b = it.subs[j], id = `rg${it.n}_${k++}`, n = j - i + 1;
+      const gr = el('linearGradient', { id, gradientUnits: 'userSpaceOnUse', x1: a.x1, y1: a.y1, x2: b.x2, y2: b.y2 }, it.g);
+      for (let m = i; m <= j; m++) if (m === i || m === j || cols[m] !== cols[m - 1] || cols[m] !== cols[m + 1]) el('stop', { offset: ((m - i + .5) / n).toFixed(4), 'stop-color': cols[m] }, gr);
+      el('path', { d: view.shape(a.x1, a.y1, b.x2, b.y2), fill: 'none', stroke: `url(#${id})`, 'stroke-width': 8.9, 'stroke-linecap': 'round' }, it.g);
+      i = j + 1;
+    }
+  }
+  // parts: each one is only touched when how it looks has changed (redrawing a part, with its shadow, is costly)
+  for (const p of parts) {
+    const v = view.parts.get(p.id);
+    for (const S of ['A', 'B']) paintLead(v.lead[S], p._lead && p._lead[S]);
+    let k;
+    if (p.t === 'btn') {
+      const pr = !!down[p.L]; k = pr ? 1 : 0;
+      if (k === v.k) continue; v.k = k;
+      v.fill.setAttribute('fill', pr ? GREY : p.color);
+      v.text.style.fill = pr ? LIGHT_TEXT : DARK_TEXT;
+      v.press.setAttribute('transform', pr ? `translate(${p.x} ${p.y}) scale(.93) translate(${-p.x} ${-p.y})` : '');
+    } else if (p.t === 'con') {
+      const s = CON[p.id]; if (!s) continue;
+      const f = clamp01((simT - s.t0) / SWING), e = f * f * (3 - 2 * f);   // ease in and out
+      const lift = (s.closing ? lerp(OPEN_LIFT, 0, e) : lerp(0, OPEN_LIFT, e)).toFixed(2);
+      k = lift + (s.shut ? 's' : 'o');
+      if (k === v.k) continue; v.k = k;
+      v.blade.setAttribute('transform', `translate(0 ${-lift})`);
+      v.bladeShape.setAttribute('fill', s.shut ? v.col : BLADE_GREY);
+      v.posts.setAttribute('fill', s.shut ? v.col : GREY);
+    } else {
+      const on = !!coilOn[p.id], f = p._chg == null ? 1 : clamp01((simT - p._chg) / .5);
+      k = (on ? 1 : 0) + ':' + f.toFixed(3);
+      if (k === v.k) continue; v.k = k;
+      v.fill.setAttribute('fill', on ? mixRgb(GREY, p.color, f) : mixRgb(p.color, GREY, f));
+      v.text.style.fill = (on ? f : 1 - f) > .5 ? DARK_TEXT : LIGHT_TEXT;
+    }
+  }
+  const fl = document.getElementById('fault');
+  if (fl.hidden !== !shortNow) {
+    fl.hidden = !shortNow;
+    fl.textContent = 'Short circuit! L1 is connected straight to L2 with no coil in between. In a real panel the fuse or breaker would open. Release the button or change the wiring to clear it.';
+  }
+}
+// a part's lead: the latest change flows along it from where it started (the part's end, or its body), at the same
+// speed as along a wire; ahead of it, the lead still shows what it had before
+function paintLead(L, evs) {
+  let i = -1; if (evs) for (let k = 0; k < evs.length; k++) if (evs[k].t0 <= simT + 1e-9) i = k;
+  const cur = i >= 0 ? evs[i] : null, prev = i > 0 ? evs[i - 1].col : null;
+  const len = Math.abs(L.term - L.body), from = cur && cur.from === 'body' ? L.body : L.term, to = from === L.term ? L.body : L.term;
+  const f = cur ? clamp01((simT - cur.t0) * V / Math.max(len, 1)) : 0, mid = from + (to - from) * f;
+  const k = `${from}|${mid.toFixed(1)}|${cur && cur.col}|${prev}`;
+  if (k === L.k) return; L.k = k;   // nothing has changed: leave it alone
+  const set = (ln, x1, x2, c) => { const show = c && Math.abs(x2 - x1) > 0.5; ln.setAttribute('x1', x1); ln.setAttribute('x2', x2); ln.setAttribute('y1', L.y); ln.setAttribute('y2', L.y); ln.setAttribute('stroke', show ? c : 'transparent'); };
+  set(L.cur, from, mid, cur && cur.col); set(L.old, mid, to, prev);
+}
+function bindButton(g, p) {
+  g.setAttribute('class', 'dev'); g.setAttribute('tabindex', '0'); g.setAttribute('role', 'button'); g.setAttribute('aria-label', captionOf(p));
+  const dn = () => {
+    if (p.maint) return press(p.L, !down[p.L]);
+    if (mode === 'click') { if (down[p.L]) return; press(p.L, true); autoRel[p.L] = true; } else press(p.L, true);
+  };
+  const up = () => { if (mode === 'hold' && !p.maint) press(p.L, false); };
+  g.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); try { g.setPointerCapture(e.pointerId); } catch (_) {} dn(); });
+  g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up);
+  g.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); dn(); } });
+  g.addEventListener('keyup', e => { if (e.key === 'Enter' || e.key === ' ') up(); });
+}
+
+/* ---- js/parts-edit.js ---- */
+/* =====================================================================
+   building
+   ===================================================================== */
+const pt = e => { const q = svg.createSVGPoint(); q.x = e.clientX; q.y = e.clientY; const m = svg.getScreenCTM(); return m ? q.matrixTransform(m.inverse()) : { x: -1e9, y: -1e9 }; };
+const btnLetters = () => new Set(parts.filter(p => p.t === 'btn').map(p => p.L));
+const coilLetters = () => new Set(parts.filter(p => p.t === 'coil').map(p => p.L));
+function newPart(kind, x, y) {
+  if (kind === 'coil') { const u = new Set([...coilLetters(), ...btnLetters()]); const L = [...'XYZW' + ALL].find(c => !u.has(c)); return P('coil', x, y, { L, color: COIL_COL[L] || '#FFDC00' }); }
+  if (kind.startsWith('con')) { const cs = [...coilLetters()]; return P('con', x, y, { L: cs[0] || 'X', nc: kind === 'con-nc' }); }   // worked by the first coil (change it in its settings)
+  const u = new Set([...coilLetters(), ...btnLetters()]); const L = [...'ABCDEFGH' + ALL].find(c => !u.has(c));
+  return P('btn', x, y, { L, nc: kind === 'btn-nc', maint: true, color: BTN_COL[L] || '#FF0032' });
+}
+const kindOf = k => k === 'coil' ? 'coil' : k.startsWith('con') ? 'con' : 'btn';
+// a horizontal wire running right through where a part's ends will be: the part goes into it
+function spliceTarget(x, y, t) { const h = t === 'coil' ? 60 : 40; return wires.find(w => w.y1 === y && w.y2 === y && Math.min(w.x1, w.x2) <= x - h && Math.max(w.x1, w.x2) >= x + h); }
+function placePart(kind, x, y) {
+  [x, y] = clampPart(x, y, kindOf(kind));
+  if (overlaps(null, x, y, kindOf(kind))) { say('There is already a part there.'); return; }
+  snapshot();
+  const p = newPart(kind, x, y);
+  parts.push(p); normalize(); sel = selOne('p', p.id); say(''); draw();
+}
+
+/* ---- js/wires-attach.js ---- */
+/* ---------------- keeping wires attached ----------------
+   A wire attached to a part is followed back along its run of straight pieces (through plain corners) to the first
+   place it really joins something: another part, a junction, a bar. When the part moves, that whole run is redrawn
+   from there to the part's new position with tidy right-angle bends, so wires never pile up into staircases. */
+const onSeg = (w, x, y) => (w.y1 === w.y2 && y === w.y1 && x > Math.min(w.x1, w.x2) && x < Math.max(w.x1, w.x2)) || (w.x1 === w.x2 && x === w.x1 && y > Math.min(w.y1, w.y2) && y < Math.max(w.y1, w.y2));
+const isEnd = (w, x, y) => (w.x1 === x && w.y1 === y) || (w.x2 === x && w.y2 === y);
+function pointInfo(x, y, skip = new Set(), skipPart = null) {
+  let ends = 0, interior = false, term = false;
+  const skipP = skipPart instanceof Set ? skipPart : new Set(skipPart ? [skipPart] : []);
+  for (const w of wires) { if (skip.has(w)) continue; if (isEnd(w, x, y)) ends++; else if (onSeg(w, x, y)) interior = true; }
+  for (const q of parts) if (!skipP.has(q)) for (const [tx, ty] of terms(q)) if (tx === x && ty === y) term = true;
+  return { ends, interior, term, bar: x === 0 || x === W };
+}
+const connects = i => i.ends > 0 || i.interior || i.term || i.bar;
+function chainFrom(S, w, stop) {
+  const segs = [w]; let cur = w, at = S;
+  for (let guard = 0; guard < 200; guard++) {
+    const o = cur.x1 === at[0] && cur.y1 === at[1] ? [cur.x2, cur.y2] : [cur.x1, cur.y1];
+    const inf = pointInfo(o[0], o[1]);
+    if (inf.term || inf.interior || inf.bar || inf.ends !== 2) return { segs, far: o };
+    const next = wires.find(x => x !== cur && isEnd(x, o[0], o[1]));
+    if (!next || segs.includes(next) || (stop && stop.has(next))) return { segs, far: o };
+    segs.push(next); cur = next; at = o;
+  }
+  return { segs, far: at };
+}
+// a tidy path from F to M: straight if they line up, otherwise one or two right-angle bends, arriving level with M
+function route(F, fOri, M, xKeep) {
+  if (F[0] === M[0] && F[1] === M[1]) return [];
+  if (F[0] === M[0] || F[1] === M[1]) return [[F[0], F[1], M[0], M[1]]];
+  if (fOri === 'v') return [[F[0], F[1], F[0], M[1]], [F[0], M[1], M[0], M[1]]];
+  const lo = Math.min(F[0], M[0]), hi = Math.max(F[0], M[0]);
+  const xm = xKeep !== null && xKeep > lo && xKeep < hi ? xKeep : Math.min(hi - G, Math.max(lo + G, snap((F[0] + M[0]) / 2)));
+  return [[F[0], F[1], xm, F[1]], [xm, F[1], xm, M[1]], [xm, M[1], M[0], M[1]]].filter(q => q[0] !== q[2] || q[1] !== q[3]);
+}
+// the wiring with a group of parts and wires shifted by (dx, dy): wires joining the group to the rest of the
+// circuit are redrawn from where they join the rest; also where the moved part ends would make new connections
+/* a wire that something joins partway along (another wire's end, or a part's end) is cut there first, so a run
+   being redrawn stops at that junction instead of carrying on past it (the pieces join up again afterwards) */
+function splitAtJoints(ws, wireIds) {
+  const pts = [];
+  for (const w of ws) pts.push([w.x1, w.y1], [w.x2, w.y2]);
+  for (const q of parts) pts.push(...terms(q));
+  const out = [];
+  for (const w of ws) {
+    const cut = pts.filter(([x, y]) => onSeg(w, x, y)).map(([x, y]) => w.y1 === w.y2 ? x : y);
+    if (!cut.length) { out.push(w); continue; }
+    const hz = w.y1 === w.y2, a = hz ? w.x1 : w.y1, b = hz ? w.x2 : w.y2, dir = Math.sign(b - a);
+    const stops = [...new Set(cut)].sort((u, v) => (u - v) * dir).concat([b]);
+    let prev = a;
+    stops.forEach((c, i) => {
+      const seg = hz ? [prev, w.y1, c, w.y1] : [w.x1, prev, w.x1, c];
+      const piece = i === 0 ? { id: w.id, x1: seg[0], y1: seg[1], x2: seg[2], y2: seg[3] } : Wr(...seg);
+      if (i > 0 && wireIds && wireIds.has(w.id)) wireIds.add(piece.id);
+      out.push(piece); prev = c;
+    });
+  }
+  return out;
+}
+function movedGroup(partIds, wireIds0, dx, dy) {
+  const saved = wires, wireIds = new Set(wireIds0);
+  wires = splitAtJoints(wires, wireIds);
+  try { return movedGroup1(partIds, wireIds, dx, dy); } finally { wires = saved; }
+}
+function movedGroup1(partIds, wireIds, dx, dy) {
+  const P = parts.filter(p => partIds.has(p.id)), PS = new Set(P);
+  // a selected wire fastened to a part that is staying put (or to a bar) stays fastened: it is redrawn, not carried along
+  const fixedPt = (x, y) => x === 0 || x === W || parts.some(q => !partIds.has(q.id) && terms(q).some(([a, b]) => a === x && b === y));
+  const WS = wires.filter(w => wireIds.has(w.id) && !fixedPt(w.x1, w.y1) && !fixedPt(w.x2, w.y2));
+  const pts = new Map();
+  for (const p of P) for (const [x, y] of terms(p)) pts.set(key(x, y), [x + dx, y + dy]);
+  for (const w of WS) for (const [x, y] of [[w.x1, w.y1], [w.x2, w.y2]]) pts.set(key(x, y), [x + dx, y + dy]);
+  const used = new Set(WS), add = WS.map(w => Object.assign([w.x1 + dx, w.y1 + dy, w.x2 + dx, w.y2 + dy], { id: w.id }));
+  for (const [k, NM] of pts) {
+    const [x, y] = k.split(',').map(Number);
+    for (const w of wires) {
+      if (used.has(w) || !isEnd(w, x, y)) continue;
+      const ch = chainFrom([x, y], w, used); ch.segs.forEach(q => used.add(q));
+      if (pts.has(key(ch.far[0], ch.far[1]))) { ch.segs.forEach(q => add.push([q.x1 + dx, q.y1 + dy, q.x2 + dx, q.y2 + dy])); continue; }
+      const last = ch.segs[ch.segs.length - 1], fOri = last.y1 === last.y2 ? 'h' : 'v';
+      const v = [...ch.segs].reverse().find(q => q.x1 === q.x2);
+      add.push(...route(ch.far, fOri, NM, v ? v.x1 : null));
+    }
+  }
+  const hits = [];
+  if (dx || dy) for (const p of P) for (const [x, y] of terms(p)) { const n = [x + dx, y + dy]; if (!pts.has(key(...n)) && connects(pointInfo(n[0], n[1], used, PS))) hits.push(n); }
+  return { wires: wires.filter(w => !used.has(w)).concat(add.map(q => q.id ? { id: q.id, x1: q[0], y1: q[1], x2: q[2], y2: q[3] } : Wr(...q))), hits };
+}
+function movedWires(p, nx, ny) { return movedGroup(new Set([p.id]), new Set(), nx - p.x, ny - p.y); }
+const stateOf = () => JSON.stringify({ parts, wires, W, WU: W_USER }, (k, v) => k.startsWith('_') ? undefined : v);
+function restore(st) { const o = JSON.parse(st); parts = o.parts; wires = o.wires; if (o.W) W = o.W; W_USER = o.WU ?? null; }
+
+/* ---- js/wires-edit.js ---- */
+function routeWire(a, b, horizFirst) {
+  if (a[0] === b[0] || a[1] === b[1]) return [[a[0], a[1], b[0], b[1]]];
+  return horizFirst ? [[a[0], a[1], b[0], a[1]], [b[0], a[1], b[0], b[1]]] : [[a[0], a[1], a[0], b[1]], [a[0], b[1], b[0], b[1]]];
+}
+// tidy the wiring: wires along the same line merge into one, and no wire runs underneath a part
+function normalize() {
+  // each stretch remembers the wires it came from, so a wire keeps its id (and stays selected) when pieces join up
+  const Hs = new Map(), Vs = new Map();
+  const add = (m, k, a, b, id) => { if (a === b) return; if (!m.has(k)) m.set(k, []); m.get(k).push([Math.min(a, b), Math.max(a, b), [id]]); };
+  for (const w of wires) { if (w.y1 === w.y2) add(Hs, w.y1, w.x1, w.x2, w.id); else if (w.x1 === w.x2) add(Vs, w.x1, w.y1, w.y2, w.id); }
+  const merge = list => { list.sort((a, b) => a[0] - b[0]); const out = []; for (const iv of list) { const l = out[out.length - 1]; if (l && iv[0] <= l[1]) { l[1] = Math.max(l[1], iv[1]); l[2] = l[2].concat(iv[2]); } else out.push([iv[0], iv[1], [...iv[2]]]); } return out; };
+  const out = [], used = new Set(), keep = (x1, y1, x2, y2, ids) => {
+    const id = [...ids].sort((u, v) => u - v).find(i => !used.has(i));   // the oldest wire's id
+    if (id !== undefined) { used.add(id); out.push({ id, x1, y1, x2, y2 }); } else out.push(Wr(x1, y1, x2, y2));
+  };
+  for (const [y, list] of Hs) {
+    let ivs = merge(list);
+    for (const p of parts) if (p.y === y) {
+      const a = p.x - TERM(p), b = p.x + TERM(p), next = [];
+      for (const [lo, hi, ids] of ivs) { if (hi <= a || lo >= b) next.push([lo, hi, ids]); else { if (lo < a) next.push([lo, a, ids]); if (hi > b) next.push([b, hi, ids]); } }
+      ivs = next;
+    }
+    for (const [lo, hi, ids] of ivs) keep(lo, y, hi, y, ids);
+  }
+  for (const [x, list] of Vs) for (const [lo, hi, ids] of merge(list)) keep(x, lo, x, hi, ids);
+  wires = out;
+  if (sel) { for (const id of [...sel.wires]) if (!wires.some(w => w.id === id)) sel.wires.delete(id); if (!selCount()) sel = null; }
+}
+function addWire(segs) {
+  segs = segs.filter(s => s[0] !== s[2] || s[1] !== s[3]); if (!segs.length) return;
+  snapshot();
+  for (const s of segs) wires.push(Wr(...s));
+  normalize(); sel = null; say(''); draw();
+}
+function hitWire(p) { return wires.find(w => p.x >= Math.min(w.x1, w.x2) - 10 && p.x <= Math.max(w.x1, w.x2) + 10 && p.y >= Math.min(w.y1, w.y2) - 10 && p.y <= Math.max(w.y1, w.y2) + 10); }
+function hitPart(p) { return parts.find(q => Math.abs(p.x - q.x) < TERM(q) - 8 && Math.abs(p.y - q.y) < (q.t === 'coil' ? COIL : BOX) / 2 + 6); }
+
+/* ---- js/pointer.js ---- */
+// the wire end under the pointer (if several wires end there, the newest one)
+function hitEnd(p) {
+  let best = null;
+  for (const w of wires) for (const [x, y] of [[w.x1, w.y1], [w.x2, w.y2]]) if (Math.hypot(p.x - x, p.y - y) < 11 && (!best || w.id > best.w.id)) best = { w, x, y };
+  return best;
+}
+// a drag that redraws the circuit live: apply(r) changes things from the saved starting state; letting go keeps it
+let dragNow = false;
+const dragging = () => dragNow;
+function liveDrag(e, apply, onClick) {
+  e.preventDefault(); dragNow = true;
+  const start = stateOf(), sx = pt(e).x, sy = pt(e).y; let moved = false;
+  const mv = ev => { const r = pt(ev); if (!moved && Math.hypot(r.x - sx, r.y - sy) > 6) moved = true;
+    if (!moved) return; restore(start); preview = { hits: apply(r) || [] }; draw(); };
+  const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
+    preview = null; dragNow = false;
+    if (!moved) { restore(start); onClick && onClick(); draw(); return; }
+    if (stateOf() !== start) { history.push(start); if (history.length > 100) history.shift(); }
+    for (const x of [...parts, ...wires]) nextId = Math.max(nextId, (x.id || 0) + 1);
+    normalize(); say(''); draw(); };
+  document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+}
+/* dragging a bar's handle. L2 follows the pointer (its wires stretch as it goes); L1 shows where it will go, and the
+   circuit moves over when it is let go (L1 is always at x = 0, so moving it means shifting everything else). */
+function barDrag(e, which) {
+  e.preventDefault(); dragNow = true;
+  const start = stateOf(), x0 = pt(e).x; let dx = 0, moved = false;
+  const mv = ev => {
+    const r = pt(ev); if (!moved && Math.abs(r.x - x0) < 4) return; moved = true;
+    if (which === 'L2') { restore(start); setWidth(Math.min(20000, Math.max(contentRight(BAR_MIN), snap(r.x)))); W_USER = W; preview = null; draw(); }
+    else { const room = leftRoom(); dx = Math.max(-4000, Math.min(room, snap(r.x - x0))); preview = { bar: dx }; drawPreview(); }
+  };
+  const up = () => {
+    document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
+    dragNow = false; preview = null;
+    // a double-click on the handle (two clicks without moving) lets the circuit fit the screen again
+    if (!moved) { const now = performance.now(), dbl = lastBarClick.bar === which && now - lastBarClick.t < 450; lastBarClick = { bar: which, t: now };
+      if (dbl && W_USER) { history.push(start); W_USER = null; fitView(); fit(true); draw(); }
+      return; }
+    if (which === 'L1' && dx) { shiftL1(dx); W_USER = W; }
+    if (stateOf() !== start) { history.push(start); if (history.length > 100) history.shift(); }
+    fitView(); fit(true); draw();
+  };
+  document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+}
+let lastBarClick = { bar: null, t: 0 };
+function groupDrag(e, p0) {
+  const pIds = new Set(sel.parts), wIds = new Set(sel.wires);
+  const P0 = parts.filter(q => pIds.has(q.id)).map(q => ({ id: q.id, x: q.x, y: q.y, t: q.t }));
+  liveDrag(e, r => {
+    let dx = snap(r.x - p0.x), dy = snap(r.y - p0.y);
+    // keep every part on the panel
+    for (let pass = 0; pass < 2; pass++) for (const q of P0) { const [cx, cy] = clampPart(q.x + dx, q.y + dy, q.t); dx = cx - q.x; dy = cy - q.y; }
+    const moving = parts.filter(q => pIds.has(q.id));
+    if (P0.some(q => parts.some(o => !pIds.has(o.id) && Math.abs(o.x - (q.x + dx)) < (q.t === 'coil' ? 60 : 40) + TERM(o) && Math.abs(o.y - (q.y + dy)) < 80))) { say('There is already a part there.'); return []; }
+    say('');
+    const m = movedGroup(pIds, wIds, dx, dy); wires = m.wires;
+    for (const q of moving) { const o = P0.find(z => z.id === q.id); q.x = o.x + dx; q.y = o.y + dy; }
+    normalize(); sel = { parts: pIds, wires: new Set(wires.filter(w => wIds.has(w.id)).map(w => w.id)) }; return m.hits;
+  });
+}
+svg.addEventListener('pointerdown', e => {
+  if (e.button === 1) return panDrag(e);
+  if (!editing || e.button !== 0) return;
+  const p = pt(e);
+  const startWire = a => {
+    e.preventDefault(); let horiz = null;
+    const mv = ev => { const q = pt(ev), b = [clampX(q.x), clampY(q.y)];
+      if (horiz === null && (Math.abs(q.x - a[0]) > 8 || Math.abs(q.y - a[1]) > 8)) horiz = Math.abs(q.x - a[0]) >= Math.abs(q.y - a[1]);
+      preview = { wire: routeWire(a, b, horiz !== false), hits: connects(pointInfo(b[0], b[1])) ? [b] : [] }; drawPreview(); };
+    const up = ev => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
+      const q = pt(ev), b = [clampX(q.x), clampY(q.y)]; preview = null; view.overlay.innerHTML = '';
+      if (b[0] !== a[0] || b[1] !== a[1]) addWire(routeWire(a, b, horiz !== false)); else draw(); };
+    document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+  };
+  if (tool === 'wire') return startWire([clampX(p.x), clampY(p.y)]);
+  if (tool !== 'select') { placePart(tool, p.x, p.y); setTool('select'); return; }
+  const he = hitEnd(p), q = hitPart(p), w = hitWire(p);
+  // shift-click adds a part or wire to the selection, or takes it out
+  if (e.shiftKey && (q || w)) {
+    if (!sel) sel = { parts: new Set(), wires: new Set() };
+    if (q) sel.parts.has(q.id) ? sel.parts.delete(q.id) : sel.parts.add(q.id);
+    else sel.wires.has(w.id) ? sel.wires.delete(w.id) : sel.wires.add(w.id);
+    if (!selCount()) sel = null;
+    return draw();
+  }
+  // several things selected and one of them grabbed: move them all together
+  if (selCount() > 1 && ((q && selHasP(q.id)) || (!q && w && selHasW(w.id)))) return groupDrag(e, { x: p.x, y: p.y });
+  // a wire end, even one fastened to a part or a bar: pull it off and put it somewhere else
+  if (he) {
+    const { w: ww, x, y } = he, ch = chainFrom([x, y], ww), id = ww.id;
+    const last = ch.segs[ch.segs.length - 1], fOri = last.y1 === last.y2 ? 'h' : 'v', F = ch.far, ids = new Set(ch.segs.map(z => z.id));
+    const v = [...ch.segs].reverse().find(z => z.x1 === z.x2);
+    return liveDrag(e, r => {
+      const M = [clampX(r.x), clampY(r.y)];
+      const added = (F[0] === M[0] && F[1] === M[1]) ? [] : route(F, fOri, M, v ? v.x1 : null).map(z => Wr(...z));
+      wires = wires.filter(z => !ids.has(z.id)).concat(added);
+      return connects(pointInfo(M[0], M[1], new Set(added))) ? [M] : [];
+    }, () => { sel = selOne('w', id); });
+  }
+  // a bar's handle: move the bar
+  const onHandle = x => Math.abs(p.x - x) < 16 && p.y >= BAR_HANDLE_Y - 4 && p.y <= BAR_HANDLE_Y + BAR_HANDLE_H + 4;
+  if (onHandle(BAR / 2)) return barDrag(e, 'L1');
+  if (onHandle(W - BAR / 2)) return barDrag(e, 'L2');
+  // the end of a part with nothing on it, or a bar: draw a new wire from it
+  for (const qq of parts) for (const [x, y] of terms(qq)) if (Math.hypot(p.x - x, p.y - y) < 13) return startWire([x, y]);
+  if (p.x < BAR + 6) return startWire([0, clampY(p.y)]);
+  if (p.x > W - BAR - 6) return startWire([W, clampY(p.y)]);
+  // a part: drag it, and its wires follow
+  if (q) {
+    sel = selOne('p', q.id); say(''); draw();
+    const id = q.id, ox = q.x, oy = q.y, sx = p.x, sy = p.y;
+    return liveDrag(e, r => {
+      const qq = parts.find(z => z.id === id);
+      const [x, y] = clampPart(ox + r.x - sx, oy + r.y - sy, qq.t);
+      if (overlaps(qq, x, y, qq.t)) { say('There is already a part there.'); return []; }
+      say('');
+      const m = movedWires(qq, x, y); wires = m.wires; qq.x = x; qq.y = y; normalize(); return m.hits;
+    });
+  }
+  // the middle of a wire: slide that straight run sideways; the runs either side stretch to stay connected
+  if (w) {
+    const id = w.id, horiz = w.y1 === w.y2, sx = p.x, sy = p.y;
+    return liveDrag(e, r => {
+      const ww = wires.find(z => z.id === id); if (!ww) return [];
+      const d = horiz ? snap(r.y - sy) : snap(r.x - sx); if (!d) return [];
+      const ends = [[ww.x1, ww.y1], [ww.x2, ww.y2]], add = [], drop = new Set([ww]);
+      for (const [x, y] of ends) {
+        const [nx, ny] = horiz ? [x, y + d] : [x + d, y];
+        const others = wires.filter(z => z !== ww && isEnd(z, x, y)), inf = pointInfo(x, y, new Set([ww]));
+        const nb = others.length === 1 && !inf.term && !inf.interior && !inf.bar ? others[0] : null;
+        if (nb && (horiz ? nb.x1 === nb.x2 : nb.y1 === nb.y2)) {
+          drop.add(nb);
+          const far = nb.x1 === x && nb.y1 === y ? [nb.x2, nb.y2] : [nb.x1, nb.y1];
+          add.push([far[0], far[1], nx, ny]);
+        } else add.push([x, y, nx, ny]);
+      }
+      add.push([ends[0][0] + (horiz ? 0 : d), ends[0][1] + (horiz ? d : 0), ends[1][0] + (horiz ? 0 : d), ends[1][1] + (horiz ? d : 0)]);
+      wires = wires.filter(z => !drop.has(z)).concat(add.filter(z => z[0] !== z[2] || z[1] !== z[3]).map(z => Wr(...z)));
+      return [];
+    }, () => { sel = selOne('w', id); });
+  }
+  // empty space: drag a box to select everything inside it
+  boxSelect(e, p);
+});
+function boxSelect(e, p0) {
+  e.preventDefault();
+  const keep = e.shiftKey && sel ? { parts: new Set(sel.parts), wires: new Set(sel.wires) } : null;
+  let moved = false;
+  const mv = ev => {
+    const r = pt(ev); if (!moved && Math.hypot(r.x - p0.x, r.y - p0.y) > 4) moved = true; if (!moved) return;
+    view.overlay.innerHTML = '';
+    el('rect', { x: Math.min(p0.x, r.x), y: Math.min(p0.y, r.y), width: Math.abs(r.x - p0.x), height: Math.abs(r.y - p0.y), fill: 'rgba(255,192,0,.08)', stroke: '#ffc000', 'stroke-width': 1.5, 'stroke-dasharray': '6 4' }, view.overlay);
+  };
+  const up = ev => {
+    document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
+    view.overlay.innerHTML = '';
+    if (!moved) { sel = keep; say(''); return draw(); }
+    const r = pt(ev), x1 = Math.min(p0.x, r.x), x2 = Math.max(p0.x, r.x), y1 = Math.min(p0.y, r.y), y2 = Math.max(p0.y, r.y);
+    const inside = (x, y) => x >= x1 && x <= x2 && y >= y1 && y <= y2;
+    const s2 = keep || { parts: new Set(), wires: new Set() };
+    for (const q of parts) if (inside(q.x, q.y)) s2.parts.add(q.id);
+    for (const w of wires) if (inside(w.x1, w.y1) && inside(w.x2, w.y2)) s2.wires.add(w.id);
+    sel = s2.parts.size + s2.wires.size ? s2 : null; say(''); draw();
+  };
+  document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+}
+
+/* ---- js/camera.js ---- */
+/* ---------------- looking around: zoom and pan ----------------
+   Ctrl + scroll wheel zooms in and out where the pointer is; the scroll wheel moves up and down; Shift + scroll wheel
+   moves left and right; dragging with the middle mouse button (the wheel) also moves the view. Works while building
+   and while running. */
+/* The panel fills the width of the page, like a diagram viewer, and the circuit sits on it like a sheet. A circuit
+   opens fitted: the whole sheet in view, as large as the panel allows (at 100% the sheet's width, L1 bar to L2 bar,
+   fills the panel). It stays fitted as the window changes size until you zoom or move the view yourself. */
+let cam = { x: 0, y: 0, z: 1, fit: true };
+const fitView = () => { cam = { x: 0, y: 0, z: 1, fit: true }; };
+const ZMAX = 4;
+const viewW = () => W / cam.z, viewH = () => VIS_H1 / cam.z;
+const zMin = () => Math.max(0.25, Math.min(1, VIS_H1 / canvasH()));
+function applyCam() {
+  if (typeof dragging === 'function' && dragging()) return;   // the view holds still under a drag in progress
+  if (cam.fit) cam.z = zMin();
+  const H = canvasH(), vw = viewW(), vh = viewH();
+  cam.x = vw >= W ? (W - vw) / 2 : Math.min(Math.max(0, cam.x), W - vw);
+  cam.y = vh >= H ? (H - vh) / 2 : Math.min(Math.max(0, cam.y), H - vh);
+  svg.setAttribute('viewBox', `${cam.x} ${cam.y} ${vw} ${vh}`);
+  const lab = document.getElementById('zoom-pct'); if (lab) lab.textContent = Math.round(cam.z * 100) + '%';
+}
+function zoomAt(f, px, py) {
+  const z = Math.min(ZMAX, Math.max(zMin(), cam.z * f)); if (Math.abs(z - cam.z) < 1e-6) return;
+  cam.fit = false;
+  const fx = (px - cam.x) / viewW(), fy = (py - cam.y) / viewH();
+  cam.z = z; cam.x = px - fx * viewW(); cam.y = py - fy * viewH(); applyCam();
+}
+const zoomCentre = f => zoomAt(f, cam.x + viewW() / 2, cam.y + viewH() / 2);
+svg.addEventListener('wheel', e => {
+  const k = e.deltaMode === 1 ? 30 : e.deltaMode === 2 ? 300 : 1, dy = e.deltaY * k, dx = e.deltaX * k;
+  if (e.ctrlKey || e.metaKey) { e.preventDefault(); const p = pt(e); zoomAt(Math.exp(-dy * 0.0015), p.x, p.y); return; }
+  if (viewW() >= W - 1e-6 && viewH() >= canvasH() - 1e-6) return;   // everything is in view: let the page scroll as normal
+  e.preventDefault(); cam.fit = false;
+  const s = viewW() / svg.getBoundingClientRect().width;
+  if (e.shiftKey) cam.x += (dy || dx) * s; else { cam.y += dy * s; cam.x += dx * s; }
+  applyCam();
+}, { passive: false });
+function panDrag(e) {
+  e.preventDefault();
+  const sx = e.clientX, sy = e.clientY, c0 = { ...cam }, s = viewW() / svg.getBoundingClientRect().width;
+  svg.style.cursor = 'grabbing';
+  const mv = ev => { cam.fit = false; cam.x = c0.x - (ev.clientX - sx) * s; cam.y = c0.y - (ev.clientY - sy) * s; applyCam(); };
+  const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); svg.style.cursor = tool === 'select' ? '' : 'crosshair'; };
+  document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+}
+document.getElementById('zoom-in').addEventListener('click', () => zoomCentre(1.25));
+document.getElementById('zoom-out').addEventListener('click', () => zoomCentre(0.8));
+// Fit: the whole circuit, as large as the panel allows (full width, or smaller if the circuit is taller than the window)
+document.getElementById('zoom-fit').addEventListener('click', () => { fitView(); if (editing) fit(true); draw(); });
+
+/* ---- js/toolbar.js ---- */
+// toolbar parts: drag onto the panel, or click the tool and then click the panel
+document.querySelectorAll('.tool[data-part]').forEach(b => {
+  const kind = b.dataset.part;
+  b.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || !editing) return;
+    e.preventDefault();
+    const sx = e.clientX, sy = e.clientY; let moved = false, ghost = null;
+    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind === 'con-nc' } : { t: 'btn', L: '?', nc: kind === 'btn-nc', color: '#9a9a9a' };
+    const mv = ev => {
+      if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 5) { moved = true; ghost = document.createElement('div'); ghost.className = 'ghost'; ghost.innerHTML = b.innerHTML; document.body.append(ghost); document.body.classList.add('dragging'); }
+      if (!moved) return;
+      ghost.style.left = ev.clientX + 'px'; ghost.style.top = ev.clientY + 'px';
+      const r = pt(ev), box = svg.getBoundingClientRect();
+      if (ev.clientY >= box.top && ev.clientY <= box.bottom && ev.clientX >= box.left && ev.clientX <= box.right) {
+        const [x, y] = clampPart(r.x, r.y, sample.t);
+        const T = sample.t === 'coil' ? 60 : 40, hits = [[x - T, y], [x + T, y]].filter(([a, c]) => connects(pointInfo(a, c)));
+        preview = { part: { p: sample, x, y, bad: overlaps(null, x, y, sample.t) }, splice: !!spliceTarget(x, y, sample.t), hits }; drawPreview();
+      } else { preview = null; view.overlay.innerHTML = ''; }
+    };
+    const up = ev => {
+      document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
+      if (moved) { ghost.remove(); document.body.classList.remove('dragging'); preview = null; view.overlay.innerHTML = '';
+        const r = pt(ev), box = svg.getBoundingClientRect();
+        if (ev.clientX >= box.left && ev.clientX <= box.right && ev.clientY >= box.top && ev.clientY <= box.bottom) placePart(kind, r.x, r.y); }
+      else setTool(tool === kind ? 'select' : kind);
+    };
+    document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+  });
+});
+function setTool(t) {
+  tool = t;
+  document.querySelectorAll('.tool[data-tool], .tool[data-part]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.tool || b.dataset.part) === t)));
+  svg.style.cursor = t === 'select' ? '' : 'crosshair';
+  say(t !== 'select' && t !== 'wire' ? 'Click the panel to place it (or drag the tool onto the panel). Press Esc to cancel.' : '');
+}
+document.querySelectorAll('.tool[data-tool]').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
+function del() {
+  if (!sel) return;
+  snapshot();
+  parts = parts.filter(q => !sel.parts.has(q.id));
+  wires = wires.filter(w => !sel.wires.has(w.id));
+  sel = null; draw();
+}
+document.getElementById('del').addEventListener('click', del);
+document.getElementById('undo').addEventListener('click', undo);
+document.getElementById('clear').addEventListener('click', () => { snapshot(); parts = []; wires = []; W_USER = null; sel = null; circuitName = ''; forgetFile(); draw(); });
+document.addEventListener('keydown', e => {
+  if (!editing || /SELECT|INPUT/.test(document.activeElement.tagName)) return;
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); del(); }
+  else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
+  else if (e.key === 'Escape') { setTool('select'); sel = null; draw(); }
+});
+
+/* ---- js/properties.js ---- */
+/* ---------------- the selected part's settings ---------------- */
+function swatches(box, current, onPick) {
+  box.innerHTML = '';
+  for (const [name, hex] of PALETTE) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'sw'; b.style.background = hex; b.title = name;
+    b.setAttribute('role', 'radio'); b.setAttribute('aria-label', name); b.setAttribute('aria-checked', String(hex.toUpperCase() === (current || '').toUpperCase()));
+    b.addEventListener('click', () => onPick(hex)); box.append(b);
+  }
+}
+const selPart = () => sel && sel.parts.size === 1 && !sel.wires.size ? parts.find(p => sel.parts.has(p.id)) : null;
+const blocksOf = L => parts.filter(p => p.t === 'btn' && p.L === L);
+function renderProps() {
+  const p = selPart();
+  const nP = sel ? sel.parts.size : 0, nW = sel ? sel.wires.size : 0;
+  document.getElementById('selname').textContent = !sel ? 'Nothing'
+    : p ? captionOf(p) + (p.t === 'btn' && blocksOf(p.L).length > 1 ? ` · drawn ${blocksOf(p.L).length} times (pressing one presses all)` : '')
+    : nP + nW === 1 ? 'A wire'
+    : [nP ? `${nP} part${nP > 1 ? 's' : ''}` : '', nW ? `${nW} wire${nW > 1 ? 's' : ''}` : ''].filter(Boolean).join(' and ') + ' (drag any of them to move them together, Delete to remove)';
+  document.getElementById('del').disabled = !sel;
+  document.getElementById('undo').disabled = !history.length;
+  document.getElementById('props-btn').hidden = !(p && p.t === 'btn');
+  document.getElementById('props-coil').hidden = !(p && p.t === 'coil');
+  document.getElementById('props-con').hidden = !(p && p.t === 'con');
+  if (p && p.t === 'con') {
+    const cs = document.getElementById('c-of'), coils = [...coilLetters()];
+    cs.innerHTML = '';
+    for (const c of new Set([...coils, p.L])) cs.add(new Option(`${c} Coil` + (coils.includes(c) ? '' : ' (not on the panel)'), c, false, c === p.L));
+    document.querySelectorAll('[data-cnc]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.cnc === +p.nc)));
+  }
+  if (p && p.t === 'btn') {
+    const ls = document.getElementById('p-letter'), others = new Set(parts.filter(q => q.t === 'btn' && q !== p).map(q => q.L)), coils = coilLetters();
+    ls.innerHTML = '';
+    for (const c of ALL) if (!coils.has(c)) ls.add(new Option(others.has(c) && c !== p.L ? `${c} (same button as the other ${c})` : c, c, false, c === p.L));
+    document.querySelectorAll('[data-nc]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.nc === +p.nc)));
+    document.querySelectorAll('[data-maint]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.maint === +p.maint)));
+    swatches(document.getElementById('p-colour'), p.color, hex => { snapshot(); blocksOf(p.L).forEach(k => k.color = hex); draw(); });
+  }
+  if (p && p.t === 'coil') {
+    const os = document.getElementById('o-letter'), used = new Set([...btnLetters(), ...coilLetters()]);
+    os.innerHTML = '';
+    for (const c of ALL) if (c === p.L || !used.has(c)) os.add(new Option(c, c, false, c === p.L));
+    swatches(document.getElementById('o-colour'), p.color, hex => { snapshot(); p.color = hex; draw(); });
+  }
+}
+document.getElementById('p-letter').addEventListener('change', e => {
+  const p = selPart(); if (!p) return; snapshot();
+  const mate = blocksOf(e.target.value).find(q => q !== p);
+  p.L = e.target.value;
+  if (mate) { p.color = mate.color; p.maint = mate.maint; say(`This is now the same button as the other ${p.L}: pressing either presses both.`); }
+  else { p.color = BTN_COL[p.L] || p.color; say(''); }
+  draw();
+});
+document.querySelectorAll('[data-nc]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); p.nc = x.dataset.nc === '1'; draw(); }));
+document.querySelectorAll('[data-maint]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); blocksOf(p.L).forEach(k => k.maint = x.dataset.maint === '1'); draw(); }));
+document.getElementById('o-letter').addEventListener('change', e => { const p = selPart(); if (!p) return; snapshot(); p.L = e.target.value; p.color = COIL_COL[p.L] || p.color; draw(); });
+document.getElementById('c-of').addEventListener('change', e => { const p = selPart(); if (!p) return; snapshot(); p.L = e.target.value; draw(); });
+document.querySelectorAll('[data-cnc]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); p.nc = x.dataset.cnc === '1'; draw(); }));
+document.getElementById('preset').addEventListener('change', e => {
+  const k = e.target.value; if (!k) return;
+  const label = e.target.selectedOptions[0].textContent; e.target.value = '';
+  snapshot(); loadPreset(k); sel = null; say(''); circuitName = k === 'blank' ? '' : label; fitView(); fit(true); forgetFile();
+  if (editing) draw(); else { NET = network(); draw(); startRun(); afterRunStart(); }
+});
+
+/* ---- js/storage.js ---- */
+/* ---------------- saving and opening circuits ----------------
+   A circuit is saved as a small JSON file, or as a short text code (the same JSON, compressed) that can be pasted
+   anywhere. The circuit being worked on is also kept in this browser, so it is still there after a reload.
+
+   File/code contents:  { app: "order-of-operations-circuit-builder", v: 1, name, w, parts: [...], wires: [...] }
+     w: where the L2 bar is (wire ends at x = w are on L2). Saved at the narrowest the circuit allows, so the same
+        circuit saves the same whatever size the window is; it widens again to fill the screen it is opened on.
+     parts: [type, x, y, letter, normallyClosed, maintained, colour]   (type "btn" or "coil")
+     wires: [x1, y1, x2, y2]                                            (straight runs, on the grid)            */
+const APP_ID = 'order-of-operations-circuit-builder', AUTOSAVE_KEY = 'oo-circuit-builder:current';
+let circuitName = '';
+
+function circuitData() {
+  const w = W_USER ? W : contentRight(), x = v => v === W ? w : v;   // (a length set by moving the bars is kept)
+  return {
+    app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}),
+    parts: parts.map(p => [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]),
+    wires: wires.map(q => [x(q.x1), q.y1, x(q.x2), q.y2]),
+  };
+}
+// check a circuit read from a file or code, and turn it back into parts and wires (throws a readable message)
+function readCircuit(d) {
+  if (!d || typeof d !== 'object' || !Array.isArray(d.parts) || !Array.isArray(d.wires)) throw new Error('That is not a circuit from the Circuit Builder.');
+  if (d.app && d.app !== APP_ID) throw new Error('That file is from a different program.');
+  if (d.v > 1) throw new Error('That circuit was saved by a newer version of the Circuit Builder.');
+  const num = v => { const n = Number(v); if (!Number.isFinite(n)) throw new Error('The circuit is damaged (a position is not a number).'); return snap(n); };
+  const hex = c => /^[0-9a-f]{6}$/i.test(c || '') ? '#' + c.toUpperCase() : null;
+  const ps = d.parts.slice(0, 200).map(a => {
+    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : 'btn', L = String(a[3] || 'A').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || 'A';
+    const p = P(t, num(a[1]), num(a[2]), { L, color: hex(a[6]) || (t === 'coil' ? COIL_COL[L] || '#FFDC00' : BTN_COL[L] || '#FF0032') });
+    if (t === 'btn') { p.nc = !!a[4]; p.maint = a[5] !== 0; }
+    if (t === 'con') { p.nc = !!a[4]; delete p.color; }
+    return p;
+  });
+  const w = Math.max(d.fw ? BAR_MIN : W_MIN, Math.min(20000, d.w === undefined ? W_MIN : num(d.w)));
+  const ws = d.wires.slice(0, 2000).map(a => [num(a[0]), num(a[1]), num(a[2]), num(a[3])])
+    .filter(([x1, y1, x2, y2]) => (x1 === x2 || y1 === y2) && (x1 !== x2 || y1 !== y2))
+    .map(([x1, y1, x2, y2]) => Wr(Math.min(w, Math.max(0, x1)), Math.max(0, y1), Math.min(w, Math.max(0, x2)), Math.max(0, y2)));
+  return { w, fixed: !!d.fw, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
+}
+function useCircuit(c, how) {
+  snapshot();
+  parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; circuitName = c.name; normalize(); sel = null;
+  fitView(); fit(true);
+  say(how);
+  if (editing) draw(); else { NET = network(); draw(); startRun(); afterRunStart(); }
+}
+
+// ---- short codes: "OO1." + compressed JSON in URL-safe base64 (or "OO0." + plain JSON where compression is missing)
+const b64 = bytes => { let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const unb64 = str => { const s = atob(str.replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(s, c => c.charCodeAt(0)); };
+async function pipe(bytes, stream) { return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer()); }
+async function encodeCircuit() {
+  const json = new TextEncoder().encode(JSON.stringify(circuitData()));
+  if (typeof CompressionStream === 'function') { try { return 'OO1.' + b64(await pipe(json, new CompressionStream('deflate-raw'))); } catch (_) {} }
+  return 'OO0.' + b64(json);
+}
+async function decodeCircuit(text) {
+  const t = String(text || '').trim().replace(/\s+/g, '');
+  if (!t) throw new Error('Paste a circuit code first.');
+  if (t.startsWith('{')) return readCircuit(JSON.parse(t));
+  const m = /^OO([01])\.([A-Za-z0-9_-]+)$/.exec(t);
+  if (!m) throw new Error('That does not look like a circuit code. It should start with OO1.');
+  let bytes;
+  try { bytes = unb64(m[2]); } catch (_) { throw new Error('The code is incomplete or has been changed. Copy it again.'); }
+  if (m[1] === '1') {
+    if (typeof DecompressionStream !== 'function') throw new Error('This browser cannot open compressed codes. Try an up-to-date browser.');
+    try { bytes = await pipe(bytes, new DecompressionStream('deflate-raw')); } catch (_) { throw new Error('The code is incomplete or has been changed. Copy it again.'); }
+  }
+  let d; try { d = JSON.parse(new TextDecoder().decode(bytes)); } catch (_) { throw new Error('The code is incomplete or has been changed. Copy it again.'); }
+  return readCircuit(d);
+}
+
+// ---- files
+/* Where the browser allows it (Chrome and Edge, with the Circuit Builder opened as its own page), the page keeps
+   hold of the file a circuit was opened from or saved to, and Save writes straight back into that same file.
+   Elsewhere (other browsers, or inside another page such as Claude) Save hands over a new copy to download. */
+let fileHandle = null, savedJSON = null;
+const FILE_TYPES = [{ description: 'Circuit', accept: { 'application/json': ['.json'] } }];
+const canUseFiles = () => typeof window.showSaveFilePicker === 'function' && typeof window.showOpenFilePicker === 'function' && window.self === window.top;
+const fileName = () => (circuitName || 'circuit').replace(/[\\/:*?"<>|]+/g, '').trim().slice(0, 60) + '.json';
+const fileText = () => JSON.stringify(circuitData(), null, 1);
+const isDirty = () => JSON.stringify(circuitData()) !== savedJSON;
+function markSaved() { savedJSON = JSON.stringify(circuitData()); showFileLabel(); }
+function forgetFile() { fileHandle = null; savedJSON = null; showFileLabel(); }
+async function downloadCopy() {
+  const data = fileText(), name = fileName();
+  // inside Claude the page asks the viewer to confirm the download; anywhere else it is an ordinary download
+  const downloads = window.claude && window.claude.use ? await window.claude.use('downloads').catch(() => null) : null;
+  if (downloads) {
+    try { await downloads.save({ filename: name, data }); markSaved(); return 'Saved ' + name + '.'; }
+    catch (e) { return e && e.code === 'declined' ? 'Not saved.' : 'Saving a file is not available here. Use Copy code instead.'; }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' })); a.download = name;
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  markSaved();
+  return 'Saved ' + name + ' to your downloads.';
+}
+// save: into the file this circuit came from, or (asNew, or no file yet) a file the user picks
+async function saveToFile(asNew) {
+  if (!canUseFiles()) return downloadCopy();
+  try {
+    if (!fileHandle || asNew) fileHandle = await window.showSaveFilePicker({ suggestedName: fileName(), types: FILE_TYPES });
+    if (!circuitName) circuitName = fileHandle.name.replace(/\.json$/i, '');
+    const w = await fileHandle.createWritable(); await w.write(fileText()); await w.close();
+    markSaved();
+    return 'Saved to ' + fileHandle.name + '.';
+  } catch (e) {
+    if (e && e.name === 'AbortError') return 'Not saved.';
+    if (e && (e.name === 'SecurityError' || e.name === 'NotAllowedError')) return downloadCopy();
+    return 'Could not save: ' + (e && e.message || e);
+  }
+}
+async function openFile(file, handle) {
+  if (!file) return;
+  if (file.size > 2e6) throw new Error('That file is too big to be a circuit.');
+  let d; try { d = JSON.parse(await file.text()); } catch (_) { throw new Error('That file is not a saved circuit.'); }
+  const c = readCircuit(d);
+  if (!c.name) c.name = file.name.replace(/\.json$/i, '');
+  useCircuit(c, `Opened ${c.name || 'the circuit'}.`);
+  fileHandle = handle || null; markSaved();
+}
+async function pickAndOpen() {
+  if (canUseFiles()) {
+    try { const [h] = await window.showOpenFilePicker({ types: FILE_TYPES }); await openFile(await h.getFile(), h); return true; }
+    catch (e) { if (e && e.name === 'AbortError') return false; if (!(e && (e.name === 'SecurityError' || e.name === 'NotAllowedError'))) throw e; }
+  }
+  document.getElementById('open-input').click();   // the ordinary file chooser (Save will then make a new copy)
+  return false;
+}
+
+// ---- kept in this browser between visits
+let autosaveTimer = 0;
+function scheduleAutosave() {
+  showFileLabel();
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => { try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(circuitData())); } catch (_) {} }, 400);
+}
+function restoreAutosave() {
+  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; circuitName = c.name; normalize(); return true; }
+  catch (_) { return false; }
+}
+
+// ---- which file is open, whether it has unsaved changes, and a short "Saved" notice
+function showFileLabel() {
+  const lab = document.getElementById('file-label'); if (!lab) return;
+  const dirty = savedJSON !== null && isDirty();
+  lab.hidden = !fileHandle;
+  lab.textContent = fileHandle ? (dirty ? '● ' : '') + fileHandle.name : '';
+  lab.title = fileHandle ? (dirty ? 'Changes not saved yet: press Save (Ctrl+S) to write them into ' : 'All changes saved in ') + fileHandle.name : '';
+  lab.classList.toggle('dirty', dirty);
+  document.getElementById('save-btn').dataset.tip = fileHandle ? `Save into ${fileHandle.name} (Ctrl+S)` : 'Save this circuit as a file, or copy a short code you can paste anywhere (Ctrl+S)';
+}
+let toastTimer = 0;
+function toast(text) {
+  const t = document.getElementById('toast'); t.textContent = text; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+}
+
+// ---- the Save and Open buttons and dialogs
+const saveDlg = document.getElementById('save-dlg'), openDlg = document.getElementById('open-dlg');
+async function openSaveDialog() {
+  document.getElementById('save-name').value = circuitName;
+  document.getElementById('copy-msg').textContent = 'Paste it into an email, a document or your class page. Anyone can open it with Open → Paste a code.';
+  document.getElementById('save-code').value = await encodeCircuit();
+  const same = document.getElementById('save-same'), asNew = document.getElementById('save-file');
+  same.hidden = !fileHandle; if (fileHandle) same.textContent = 'Save into ' + fileHandle.name;
+  asNew.textContent = fileHandle ? 'Save as a new file…' : canUseFiles() ? 'Save as a file…' : 'Save as a file';
+  asNew.classList.toggle('primary', !fileHandle);
+  document.getElementById('save-file-hint').textContent = canUseFiles()
+    ? 'After the first save, Save writes your changes back into the same file.'
+    : 'A small .json file you can hand out, collect or open again later. This browser saves a new copy each time.';
+  saveDlg.showModal();
+}
+// the Save button (and Ctrl+S): straight into the open file if there is one, otherwise the Save box
+async function quickSave() {
+  if (fileHandle) toast(await saveToFile(false));
+  else openSaveDialog();
+}
+document.getElementById('save-btn').addEventListener('click', quickSave);
+document.getElementById('save-more').addEventListener('click', openSaveDialog);
+document.getElementById('save-name').addEventListener('input', async e => {
+  circuitName = e.target.value.trim(); scheduleAutosave();
+  document.getElementById('save-code').value = await encodeCircuit();
+});
+document.getElementById('save-same').addEventListener('click', async () => { const m = await saveToFile(false); document.getElementById('copy-msg').textContent = m; if (/^Saved/.test(m)) { saveDlg.close(); toast(m); } });
+document.getElementById('save-file').addEventListener('click', async () => { const m = await saveToFile(true); document.getElementById('copy-msg').textContent = m; if (/^Saved/.test(m) && canUseFiles()) { saveDlg.close(); toast(m); } });
+document.getElementById('copy-code').addEventListener('click', async () => {
+  const ta = document.getElementById('save-code'), msg = document.getElementById('copy-msg');
+  try { await navigator.clipboard.writeText(ta.value); msg.textContent = 'Copied. Paste it wherever you like.'; }
+  catch (_) { ta.focus(); ta.select(); msg.textContent = 'The code is selected: press Ctrl+C (or ⌘C) to copy it.'; }
+});
+document.getElementById('open-btn').addEventListener('click', () => {
+  document.getElementById('open-code').value = ''; document.getElementById('open-msg').textContent = '';
+  openDlg.showModal();
+});
+document.getElementById('open-file').addEventListener('click', async () => {
+  try { if (await pickAndOpen()) openDlg.close(); } catch (err) { document.getElementById('open-msg').textContent = err.message; }
+});
+document.getElementById('open-input').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  try { await openFile(f, null); openDlg.close(); } catch (err) { document.getElementById('open-msg').textContent = err.message; }
+});
+document.getElementById('open-code-btn').addEventListener('click', async () => {
+  try { const c = await decodeCircuit(document.getElementById('open-code').value); useCircuit(c, `Opened ${c.name || 'the circuit'}.`); forgetFile(); openDlg.close(); }
+  catch (err) { document.getElementById('open-msg').textContent = err.message; }
+});
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); if (!saveDlg.open && !openDlg.open) quickSave(); }
+});
+// drop a saved file straight onto the panel (in Chrome and Edge, Save then writes back into that file)
+{
+  const stage = document.getElementById('stage');
+  stage.addEventListener('dragover', e => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); stage.classList.add('dropping'); } });
+  stage.addEventListener('dragleave', () => stage.classList.remove('dropping'));
+  stage.addEventListener('drop', async e => {
+    stage.classList.remove('dropping');
+    const item = e.dataTransfer.items && e.dataTransfer.items[0], f = e.dataTransfer.files && e.dataTransfer.files[0]; if (!f) return;
+    e.preventDefault();
+    let handle = null;
+    if (canUseFiles() && item && item.getAsFileSystemHandle) { try { const h = await item.getAsFileSystemHandle(); if (h && h.kind === 'file') handle = h; } catch (_) {} }
+    try { await openFile(f, handle); } catch (err) { say(err.message); toast(err.message); }
+  });
+}
+
+/* ---- js/main.js ---- */
+/* ---------------- build / run ---------------- */
+function afterRunStart() { document.getElementById('mode-group').hidden = !parts.some(p => p.t === 'btn' && !p.maint); paint(); }
+function setMode(run) {
+  editing = !run;
+  document.getElementById('tab-edit').setAttribute('aria-selected', String(!run));
+  document.getElementById('tab-run').setAttribute('aria-selected', String(run));
+  document.getElementById('toolbar').hidden = run; document.getElementById('editpanel').hidden = run;
+  document.getElementById('runbar').hidden = !run;
+  document.getElementById('fault').hidden = true;
+  sel = null; preview = null; setTool('select');
+  if (cam.fit) { fit(true); fitView(); }
+  if (run) { NET = network(); draw(); startRun(); afterRunStart(); } else draw();
+}
+document.getElementById('tab-edit').addEventListener('click', () => setMode(false));
+document.getElementById('tab-run').addEventListener('click', () => setMode(true));
+document.getElementById('reset-btn').addEventListener('click', () => { startRun(); paint(); });
+document.querySelectorAll('[data-speed]').forEach(b => b.addEventListener('click', () => { speed = +b.dataset.speed; document.querySelectorAll('[data-speed]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); }));
+document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
+  mode = b.dataset.mode; document.querySelectorAll('[data-mode]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  for (const L in down) if (down[L] && !(blocksOf(L)[0] || {}).maint) press(L, false);
+  autoRel = {};
+}));
+// fit the panel in the window without scrolling
+// the panel spans the page and takes the height the window has left; returns true if its size changed
+// (with widen, the sheet is also made as wide as the panel needs, so the whole circuit fills it edge to edge)
+let fitKey = '';
+function fit(widen) {
+  if (typeof dragging === 'function' && dragging()) return false;   // never rescale the view under a drag in progress
+  const st = document.getElementById('stage');
+  const top = st.getBoundingClientRect().top + window.scrollY;
+  // the panel's height is worked out again only when the window or the mode changes (not when selecting something
+  // shows or hides its settings below the panel, which would rescale the view under the pointer)
+  const k = `${window.innerWidth}x${window.innerHeight}:${editing}`;
+  let h = parseFloat(st.style.height);
+  if (widen || k !== fitKey || !h) {
+    const below = editing ? document.getElementById('editpanel').getBoundingClientRect().height + 24 : 16;
+    h = Math.round(Math.max(320, window.innerHeight - top - below));
+    if (st.style.height !== h + 'px') st.style.height = h + 'px';
+    fitKey = k;
+  }
+  const w = st.clientWidth || 1;
+  const widened = !!widen && setWidth(fitWidth(w, h));
+  const vis = W * h / w;
+  if (widened) { VIS_H1 = vis; return true; }
+  if (Math.abs(vis - VIS_H1) < 0.5) return false;
+  VIS_H1 = vis; return true;
+}
+// a new window size refits the sheet while building (while running, the circuit just scales)
+window.addEventListener('resize', () => { if (fit(editing && !dragging())) { if (editing) fitView(); draw(); } });
+
+if (!restoreAutosave()) loadPreset('andor');   // carry on with the circuit from last time, if there is one
+fit(true); draw();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
