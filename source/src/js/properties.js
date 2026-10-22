@@ -13,10 +13,11 @@ function renderProps() {
   const p = selPart();
   const nP = sel ? sel.parts.size : 0, nW = sel ? sel.wires.size : 0;
   document.getElementById('selname').textContent = !sel ? 'Nothing'
-    : p ? captionOf(p) + (p.t === 'btn' && blocksOf(p.L).length > 1 ? ` · drawn ${blocksOf(p.L).length} times (pressing one presses all)` : '')
+    : p ? captionOf(p) + (p.t === 'btn' && blocksOf(p.L).length > 1 ? (mainBtn(p.L) === p ? ` · the main one of ${blocksOf(p.L).length}` : ` · an extra contact block`) + ' (pressing one presses all)' : '')
     : nP + nW === 1 ? 'A wire'
     : [nP ? `${nP} part${nP > 1 ? 's' : ''}` : '', nW ? `${nW} wire${nW > 1 ? 's' : ''}` : ''].filter(Boolean).join(' and ') + ' (drag any of them to move them together, Delete to remove)';
   document.getElementById('del').disabled = !sel;
+  document.getElementById('p-main').hidden = !(p && p.t === 'btn' && mainBtn(p.L) !== p);
   document.getElementById('undo').disabled = !history.length;
   document.getElementById('props-btn').hidden = !(p && p.t === 'btn');
   document.getElementById('props-coil').hidden = !(p && p.t === 'coil');
@@ -62,6 +63,11 @@ document.getElementById('p-letter').addEventListener('change', e => {
   if (mate) { p.color = mate.color; p.maint = mate.maint; say(`This is now the same button as the other ${p.L}: pressing either presses both.`); }
   else { p.color = BTN_COL[p.L] || p.color; say(''); }
   draw();
+});
+// make this drawing the main pushbutton (it moves ahead of the others with its letter)
+document.getElementById('p-main').addEventListener('click', () => {
+  const p = selPart(); if (!p) return; snapshot();
+  const m = mainBtn(p.L); parts = parts.filter(q => q !== p); parts.splice(parts.indexOf(m), 0, p); draw();
 });
 document.querySelectorAll('[data-nc]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); p.nc = x.dataset.nc === '1'; draw(); }));
 document.querySelectorAll('[data-maint]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); blocksOf(p.L).forEach(k => k.maint = x.dataset.maint === '1'); draw(); }));

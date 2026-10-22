@@ -776,6 +776,27 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('A button drawn more than once: the first is drawn as the main one, the rest as secondary; Make main swaps them', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'stress');   // E is drawn twice
+    const looks = () => page.evaluate(() => parts.filter(p => p.t === 'btn' && p.L === 'E').map(p => [p.id, !!view.parts.get(p.id).sec]));
+    let l = await looks();
+    if (l[0][1] || !l[1][1]) out.push('expected the first E main and the second secondary: ' + JSON.stringify(l));
+    const pos = await page.evaluate(id => { const p = parts.find(q => q.id === id); return [p.x, p.y]; }, l[1][0]);
+    await page.mouse.click(...await scr(page, ...pos)); await page.waitForTimeout(60);
+    if (await page.isHidden('#p-main')) out.push('no Make main button on the secondary E');
+    await page.click('#p-main'); await page.waitForTimeout(60);
+    if ((await looks()).map(x => x[1]).join() !== 'false,true') out.push('after Make main the looks are wrong');
+    const mainNow = await page.evaluate(() => mainBtn('E').id);
+    if (mainNow !== (await page.evaluate(p => parts.find(q => q.x === p[0] && q.y === p[1] && q.t === 'btn').id, pos))) out.push('Make main did not make the selected E the main one');
+    // pressing the secondary presses both, and it greys like any pressed button
+    await page.click('#tab-run');
+    const r = await page.evaluate(new Function(STEP + `step(1); press('E', true); step(1); paint();
+      return parts.filter(p => p.t === 'btn' && p.L === 'E').map(p => view.parts.get(p.id).fill.getAttribute('fill'));`));
+    if (r.some(f => f !== '#404040')) out.push('pressed E drawings not grey: ' + JSON.stringify(r));
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

@@ -219,6 +219,7 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
         <div class="tgroup"><span class="label">Action</span>
           <div class="seg" role="group" aria-label="Button action"><button type="button" data-maint="1" data-tip="Stays in when pressed; press again to release">Maintained</button><button type="button" data-maint="0" data-tip="Springs back when released">Momentary</button></div></div>
         <div class="tgroup"><span class="label">Colour</span><div class="swatches" id="p-colour" role="radiogroup" aria-label="Button colour"></div></div>
+        <button type="button" class="tool plain" id="p-main" hidden data-tip="This drawing becomes the pushbutton itself, drawn as normal; the others with its letter are drawn as its extra contact blocks">Make main</button>
       </div>
       <div class="props" id="props-con" hidden>
         <div class="tgroup"><span class="label">Worked by</span><select id="c-of" aria-label="The relay coil that works this contact"></select></div>
@@ -1142,6 +1143,10 @@ const captionOf = p => p.t === 'coil' ? `${p.L} Coil` : p.t === 'lamp' ? (p.L ? 
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
    colour. */
+/* One button drawn more than once: the first one placed is the pushbutton itself (the operator), drawn as normal; the
+   others are its extra contact blocks, drawn as secondary (a dark cap with a coloured rim and letter). Pressing any of
+   them presses them all. A light built into the button shows on the main one only, as the lamp is in the operator. */
+const mainBtn = L => parts.find(q => q.t === 'btn' && q.L === L);
 const lampsOf = L => parts.filter(q => q.t === 'lamp' && q.L && q.L === L);
 const lampColour = p => p.L ? (parts.find(q => q.t === 'btn' && q.L === p.L) || p).color || '#00B050' : p.color || '#00B050';
 // how lit a light is right now, 0 to 1 (it comes on and goes off over a moment, as a filament does)
@@ -1165,22 +1170,24 @@ function drawPart(p, g, x, y, chan) {
   const lead = () => el('line', { x1: x, y1: y, x2: x, y2: y, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g);
   v.lead = { A: { old: lead(), cur: lead(), term: x - T, body: x - half, y }, B: { old: lead(), cur: lead(), term: x + T, body: x + half, y } };
   if (p.t === 'btn') {
-    v.lit = lampsOf(p.L).length > 0;
+    v.sec = mainBtn(p.L) !== p && parts.includes(p);
+    v.lit = !v.sec && lampsOf(p.L).length > 0;
+    v.secFill = v.sec ? mixOk(p.color, '#262626', .72) : null;
     // a button with a light built in: a glow behind it when the light is on
     if (v.lit) v.halo = el('rect', { x: x - BOX / 2 - 4, y: y - BOX / 2 - 4, width: BOX + 8, height: BOX + 8, rx: BOX * .22, fill: p.color, opacity: 0, filter: 'url(#fGlow)' }, g);
     if (p.nc) {
       const RB = BOX / 2 * 1.08, RI = BTN_IN / 2 * 1.1;
       el('path', { d: hexPath(x, y, RB, RB * .17), fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
       v.press = el('g', {}, g);
-      v.fill = el('path', { d: hexPath(x, y, RI, RI * .17), fill: p.color, stroke: '#1d2733', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, v.press);
+      v.fill = el('path', { d: hexPath(x, y, RI, RI * .17), fill: v.sec ? v.secFill : p.color, stroke: v.sec ? p.color : '#1d2733', 'stroke-width': v.sec ? 1.8 : 1.2, filter: 'url(#fShadow)' }, v.press);
       el('path', { d: hexPath(x, y, RI, RI * .17), fill: 'url(#gGloss)' }, v.press);
     } else {
       el('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
       v.press = el('g', {}, g);
-      v.fill = el('rect', { x: x - BTN_IN / 2, y: y - BTN_IN / 2, width: BTN_IN, height: BTN_IN, rx: BTN_IN * .1667, fill: p.color, stroke: '#1d2733', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, v.press);
+      v.fill = el('rect', { x: x - BTN_IN / 2, y: y - BTN_IN / 2, width: BTN_IN, height: BTN_IN, rx: BTN_IN * .1667, fill: v.sec ? v.secFill : p.color, stroke: v.sec ? p.color : '#1d2733', 'stroke-width': v.sec ? 1.8 : 1.2, filter: 'url(#fShadow)' }, v.press);
       el('rect', { x: x - BTN_IN / 2, y: y - BTN_IN / 2, width: BTN_IN, height: BTN_IN, rx: BTN_IN * .1667, fill: 'url(#gGloss)' }, v.press);
     }
-    v.text = el('text', { x, y: y + 6.6, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: DARK_TEXT }, v.press); v.text.textContent = p.L;
+    v.text = el('text', { x, y: y + 6.6, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: DARK_TEXT, style: v.sec ? `fill:${p.color}` : '' }, v.press); v.text.textContent = p.L;
     // the same button drawn more than once (one operator with several contact blocks: pressing one presses them
     // all): a chain-link badge on each one's top left corner
     if (parts.filter(q => q.t === 'btn' && q.L === p.L).length > 1) {
@@ -1406,8 +1413,8 @@ function paint() {
       // a button with a light built in: its cap is dim while the light is off, and lights up with it
       const pr = !!down[p.L], lit = v.lit ? Math.max(0, ...lampsOf(p.L).map(litOf)) : 0; k = (pr ? 1 : 0) + ':' + lit.toFixed(3);
       if (k === v.k) continue; v.k = k;
-      v.fill.setAttribute('fill', v.lit ? mixOk(pr ? GREY : mixOk(p.color, GREY, .55), p.color, lit) : pr ? GREY : p.color);
-      v.text.style.fill = pr && lit < .5 ? LIGHT_TEXT : DARK_TEXT;
+      v.fill.setAttribute('fill', v.lit ? mixOk(pr ? GREY : mixOk(p.color, GREY, .55), p.color, lit) : pr ? GREY : v.sec ? v.secFill : p.color);
+      v.text.style.fill = v.sec ? (pr ? LIGHT_TEXT : p.color) : pr && lit < .5 ? LIGHT_TEXT : DARK_TEXT;
       if (v.lit) {
         v.halo.setAttribute('opacity', (lit * .6).toFixed(3));
         v.badge.setAttribute('fill', mixRgb(GREY, p.color, lit));
@@ -1973,10 +1980,11 @@ function renderProps() {
   const p = selPart();
   const nP = sel ? sel.parts.size : 0, nW = sel ? sel.wires.size : 0;
   document.getElementById('selname').textContent = !sel ? 'Nothing'
-    : p ? captionOf(p) + (p.t === 'btn' && blocksOf(p.L).length > 1 ? ` · drawn ${blocksOf(p.L).length} times (pressing one presses all)` : '')
+    : p ? captionOf(p) + (p.t === 'btn' && blocksOf(p.L).length > 1 ? (mainBtn(p.L) === p ? ` · the main one of ${blocksOf(p.L).length}` : ` · an extra contact block`) + ' (pressing one presses all)' : '')
     : nP + nW === 1 ? 'A wire'
     : [nP ? `${nP} part${nP > 1 ? 's' : ''}` : '', nW ? `${nW} wire${nW > 1 ? 's' : ''}` : ''].filter(Boolean).join(' and ') + ' (drag any of them to move them together, Delete to remove)';
   document.getElementById('del').disabled = !sel;
+  document.getElementById('p-main').hidden = !(p && p.t === 'btn' && mainBtn(p.L) !== p);
   document.getElementById('undo').disabled = !history.length;
   document.getElementById('props-btn').hidden = !(p && p.t === 'btn');
   document.getElementById('props-coil').hidden = !(p && p.t === 'coil');
@@ -2022,6 +2030,11 @@ document.getElementById('p-letter').addEventListener('change', e => {
   if (mate) { p.color = mate.color; p.maint = mate.maint; say(`This is now the same button as the other ${p.L}: pressing either presses both.`); }
   else { p.color = BTN_COL[p.L] || p.color; say(''); }
   draw();
+});
+// make this drawing the main pushbutton (it moves ahead of the others with its letter)
+document.getElementById('p-main').addEventListener('click', () => {
+  const p = selPart(); if (!p) return; snapshot();
+  const m = mainBtn(p.L); parts = parts.filter(q => q !== p); parts.splice(parts.indexOf(m), 0, p); draw();
 });
 document.querySelectorAll('[data-nc]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); p.nc = x.dataset.nc === '1'; draw(); }));
 document.querySelectorAll('[data-maint]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); blocksOf(p.L).forEach(k => k.maint = x.dataset.maint === '1'); draw(); }));
