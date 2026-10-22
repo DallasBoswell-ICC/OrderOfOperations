@@ -613,6 +613,14 @@ const DEF_CIRCUIT = `
     const info = () => page.evaluate(() => ({ W, WU: W_USER, issues: wiringIssues(network()).size, A: parts.find(p => p.L === 'A').x }));
     const drag = async (x0, x1) => { const A = await scr(page, x0, 36), B = await scr(page, x1, 36); await page.mouse.move(...A); await page.mouse.down(); await page.mouse.move(...B, { steps: 10 }); await page.mouse.up(); await page.waitForTimeout(120); };
     let v = await info();
+    // like L1, L2 shows a ghost bar while dragging and only moves when let go
+    { const A = await scr(page, v.W - 7, 36), B = await scr(page, 1000, 36); await page.mouse.move(...A); await page.mouse.down(); await page.mouse.move(...B, { steps: 8 });
+      const mid = await page.evaluate(() => ({ W, ghost: preview && preview.bar, bar: BAR }));
+      if (mid.W !== v.W) out.push('L2 moved before it was let go');
+      if (mid.ghost !== 1000 - mid.bar) out.push('no ghost bar where L2 will go (' + mid.ghost + ')');
+      await page.mouse.up(); await page.waitForTimeout(120);
+      if ((await info()).W !== 1000) out.push('L2 did not move to where it was let go (W ' + (await info()).W + ')'); }
+    v = await info();
     await drag(v.W - 7, 600);
     v = await info();
     if (v.W !== 800 || v.WU !== 800) out.push('L2 did not stop just past the X coil (W ' + v.W + ')');

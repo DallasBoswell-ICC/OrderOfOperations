@@ -20,15 +20,16 @@ function liveDrag(e, apply, onClick) {
     normalize(); say(''); draw(); };
   document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
 }
-/* dragging a bar's handle. L2 follows the pointer (its wires stretch as it goes); L1 shows where it will go, and the
-   circuit moves over when it is let go (L1 is always at x = 0, so moving it means shifting everything else). */
+/* dragging a bar's handle: a ghost bar shows where it will go, and the bar moves there when it is let go (L2's wires
+   stretch or shrink to meet it; moving L1 shifts everything else over, as L1 is always at x = 0). */
 function barDrag(e, which) {
   e.preventDefault(); dragNow = true;
-  const start = stateOf(), x0 = pt(e).x; let dx = 0, moved = false;
+  const start = stateOf(), x0 = pt(e).x; let dx = 0, nw = W, moved = false;
   const mv = ev => {
     const r = pt(ev); if (!moved && Math.abs(r.x - x0) < 4) return; moved = true;
-    if (which === 'L2') { restore(start); setWidth(Math.min(20000, Math.max(contentRight(BAR_MIN), snap(r.x)))); W_USER = W; preview = null; draw(); }
-    else { const room = leftRoom(); dx = Math.max(-4000, Math.min(room, snap(r.x - x0))); preview = { bar: dx }; drawPreview(); }
+    if (which === 'L2') { nw = Math.min(20000, Math.max(contentRight(BAR_MIN), snap(W + r.x - x0))); preview = { bar: nw - BAR }; }
+    else { dx = Math.max(-4000, Math.min(leftRoom(), snap(r.x - x0))); preview = { bar: dx }; }
+    drawPreview();
   };
   const up = () => {
     document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
@@ -38,6 +39,7 @@ function barDrag(e, which) {
       if (dbl && W_USER) { history.push(start); W_USER = null; fitView(); fit(true); draw(); }
       return; }
     if (which === 'L1' && dx) { shiftL1(dx); W_USER = W; }
+    if (which === 'L2' && nw !== W) { setWidth(nw); W_USER = W; }
     if (stateOf() !== start) { history.push(start); if (history.length > 100) history.shift(); }
     fitView(); fit(true); draw();
   };
