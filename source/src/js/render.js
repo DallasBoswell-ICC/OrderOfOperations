@@ -1,4 +1,5 @@
 function draw() {
+  needPaint = true;
   const H = canvasH();
   applyCam();
   svg.innerHTML = '';

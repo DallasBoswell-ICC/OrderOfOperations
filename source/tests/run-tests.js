@@ -91,7 +91,7 @@ const DEF_CIRCUIT = `
 
   await check('Every ready-made circuit is wired correctly', async page => {
     const out = [];
-    for (const k of ['io', 'and', 'or', 'andor', 'three']) {
+    for (const k of ['io', 'and', 'or', 'andor', 'three', 'seal', 'abc', 'traffic', 'stress']) {
       await page.selectOption('#preset', k);
       const iss = await issuesNow(page);
       if (iss.length) out.push(`${k}: ${JSON.stringify(iss)}`);
@@ -719,6 +719,26 @@ const DEF_CIRCUIT = `
     const fr = await page.evaluate(() => new Promise(res => { const ts = []; let last = performance.now(); const f = () => { const n = performance.now(); ts.push(n - last); last = n; if (ts.length < 90) requestAnimationFrame(f); else res(ts); }; requestAnimationFrame(f); }));
     fr.sort((a, b) => a - b); if (fr[45] > 40) out.push('frames take ' + Math.round(fr[45]) + ' ms with the buzzer going at 300×');
     await page.click('[data-speed="1"]');
+    return out;
+  });
+
+  await check('Traffic light preset: opens exactly as saved, runs through to S; a settled circuit is not repainted until something happens', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'traffic');
+    const d = await page.evaluate(() => circuitData());
+    if (d.w !== 800 || !d.fw || d.parts.length !== 27 || d.wires.length !== 39) out.push('traffic light not as saved: ' + JSON.stringify([d.w, d.fw, d.parts.length, d.wires.length]));
+    await page.click('#tab-run'); await page.waitForTimeout(100);
+    const r = await page.evaluate(new Function(STEP + `const res = []; step(2); press('A', true); step(12); press('A', false); step(4);
+      for (const p of parts) if (LOADT(p.t) && !coilOn[p.id]) res.push((p.L || p.color) + ' is off at the end of the sequence');
+      return res;`));
+    out.push(...r);
+    // idle: no painting; a press wakes it up and the pressed button repaints
+    const count = () => page.evaluate(() => new Promise(res => { let n = 0; const P = paint; window.paint = function () { n++; P(); }; setTimeout(() => { window.paint = P; res(n); }, 600); }));
+    await page.waitForTimeout(800);
+    const idle = await count(); if (idle > 0) out.push('a settled circuit was painted ' + idle + ' times in 0.6 s');
+    const n = await page.evaluate(() => new Promise(res => { let n = 0; const P = paint; window.paint = function () { n++; P(); }; press('B', true); setTimeout(() => { window.paint = P; res(n); }, 400); }));
+    if (n < 5) out.push('pressing B did not wake the painting up (' + n + ' paints)');
+    if (await page.evaluate(() => view.parts.get(parts.find(p => p.t === 'btn' && p.L === 'B').id).fill.getAttribute('fill')) !== '#404040') out.push('the pressed button did not repaint');
     return out;
   });
 

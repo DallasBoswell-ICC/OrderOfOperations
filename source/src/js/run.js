@@ -8,7 +8,9 @@ function frame(now) {
     const target = simT + dt * speed;
     if (runEvents(target, performance.now() + 12)) simT = target;
     if (mode === 'click') for (const L in autoRel) if (!queue.length && simT > busyUntil + .5) { delete autoRel[L]; press(L, false); }
-    paint();
+    // once the circuit has settled (nothing on its way, and the last coil, light and contact has finished changing)
+    // nothing on the panel moves, so it is not painted again until something happens: an idle circuit costs nothing
+    if (needPaint || queue.length || simT <= busyUntil + 0.6) { paint(); needPaint = false; }
   }
   requestAnimationFrame(frame);
 }

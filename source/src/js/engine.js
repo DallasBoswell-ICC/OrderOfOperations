@@ -40,7 +40,7 @@ function addLane(e, from) {
 function startRun() {
   NET = network();
   simT = 0; queue = []; seq = 0; busyUntil = 0; autoRel = {}; down = {}; coilOn = {};
-  FED_AT = {}; COMP = null;
+  FED_AT = {}; COMP = null; needPaint = true;
   CON = {}; for (const p of parts) if (p.t === 'con') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };   // every coil starts off
   tl = NET.nodes.map(() => [[-1e9, null]]);
   for (const p of parts) { delete p._chg; delete p._lead; }
@@ -322,7 +322,7 @@ function checkShort() { const f = components(NET, conducts); shortNow = f(NET.L1
 const allowKey = A => A ? [...A].sort().join() : '';
 function press(L, v) {
   if (!!down[L] === v) return;
-  down[L] = v;
+  down[L] = v; needPaint = true;
   switched(parts.filter(p => p.t === 'btn' && p.L === L), simT);
 }
 // a relay contact's bar starts to move: it stops passing current as soon as it lifts, and passes current again

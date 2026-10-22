@@ -6,6 +6,8 @@
    ===================================================================== */
 let NET = null, simT = 0, speed = 1, mode = 'click', queue = [], seq = 0, evT = 0, busyUntil = 0;
 let tl = [], coilOn = {}, down = {}, autoRel = {}, shortNow = false;
+// paint again even though the circuit has settled (something was pressed, or the panel was drawn afresh)
+let needPaint = true;
 const btnColour = L => (parts.find(p => p.t === 'btn' && p.L === L) || {}).color || '#888888';
 function schedule(t, fn) { queue.push({ t, s: seq++, fn }); if (t > busyUntil) busyUntil = t; }
 // run what is due up to upTo; true once it has all been run. With a deadline (a time from performance.now()) it stops
