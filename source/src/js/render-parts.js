@@ -67,6 +67,16 @@ function drawPart(p, g, x, y, chan) {
       el('rect', { x: x - BTN_IN / 2, y: y - BTN_IN / 2, width: BTN_IN, height: BTN_IN, rx: BTN_IN * .1667, fill: 'url(#gGloss)' }, v.press);
     }
     v.text = el('text', { x, y: y + 6.6, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: DARK_TEXT }, v.press); v.text.textContent = p.L;
+    // the same button drawn more than once (one operator with several contact blocks: pressing one presses them
+    // all): a chain-link badge on each one's top left corner
+    if (parts.filter(q => q.t === 'btn' && q.L === p.L).length > 1) {
+      const bx = x - BOX / 2 + 3, by = y - BOX / 2 + 3;
+      el('circle', { cx: bx, cy: by, r: 9, fill: '#1f1f1f', stroke: p.color, 'stroke-width': 1.4 }, g);
+      const ln = el('g', { transform: `rotate(-45 ${bx} ${by})`, fill: 'none', stroke: '#e6e6e6', 'stroke-width': 1.5 }, g);
+      el('rect', { x: bx - 6, y: by - 2.3, width: 6.6, height: 4.6, rx: 2.3 }, ln);
+      el('rect', { x: bx - 0.6, y: by - 2.3, width: 6.6, height: 4.6, rx: 2.3 }, ln);
+      v.linked = true;
+    }
     if (v.lit) {   // the lamp badge, on the button's top right corner
       const bx = x + BOX / 2 - 3, by = y - BOX / 2 + 3;
       el('circle', { cx: bx, cy: by, r: 9, fill: '#1f1f1f', stroke: p.color, 'stroke-width': 1.4 }, g);

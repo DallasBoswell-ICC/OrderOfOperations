@@ -764,6 +764,18 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('A button drawn more than once shows a link badge on each drawing, and selecting one outlines the others', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'stress');   // E is drawn twice
+    const badges = await page.evaluate(() => parts.filter(p => p.t === 'btn').map(p => [p.L, !!view.parts.get(p.id).linked]));
+    for (const [L, b] of badges) { const many = badges.filter(x => x[0] === L).length > 1; if (b !== many) out.push(`${L}: badge ${b} but drawn ${badges.filter(x => x[0] === L).length} time(s)`); }
+    const es = await page.evaluate(() => parts.filter(p => p.t === 'btn' && p.L === 'E').map(p => [p.x, p.y]));
+    await page.mouse.click(...await scr(page, ...es[0])); await page.waitForTimeout(60);
+    const outlined = await page.evaluate(() => parts.filter(p => p.t === 'btn' && p.L === 'E').map(p => !!svg.querySelector(`[data-part="${p.id}"] rect[stroke-dasharray]`)));
+    if (!outlined.every(Boolean)) out.push('the other E is not outlined when one is selected');
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');
