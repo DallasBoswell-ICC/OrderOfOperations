@@ -71,24 +71,28 @@ function startRun() {
   updateCoils(0);
 }
 /* Long plain stretches of wire (no junctions or parts along them, only corners) carry the current faster in the
-   middle, so it does not keep everyone waiting: it leaves a junction at normal speed, speeds up to V_MAX times
-   normal, and slows back down before it reaches the next junction, part or bar. Each run of wire gets, for every
-   point along it, the time the stream takes to get there along its stretch. */
+   middle. In a real panel a change reaches the far end of any wire almost at once, so the coil whose button was
+   pressed first is in first however long its wire; here the current is slowed right down so it can be watched, so a
+   long wire would otherwise keep its coil waiting for seconds and let a coil on a short wire, pressed later, get in
+   first. So the current leaves a junction at normal speed, speeds up smoothly the longer the stretch, and slows back
+   down before the next junction, part or bar. Stretches up to about 650 units (a rung across the panel) keep normal
+   speed throughout. Each run of wire gets, for every point along it, the time the stream takes to get there. */
 /* One plain stretch of length S. The speed rises and falls smoothly (no sudden changes): normal for V_LEAD units
-   from either end, then easing up to V_MAX times normal over V_RAMP units. Tf(s): time to travel s units from the
-   start (past the far end it carries on at normal speed); Ti: the reverse. Streams on a stretch travel together like
-   cars of a train: one that follows another keeps the same spacing behind it (see send), so streams that set off a
-   moment apart, such as the colours of several branches arriving one after another, stay together and never pull
-   apart as the stretch speeds them up. lead/out (one for each way along it): when the train's first stream set off,
-   and when its last one gets out the far end. */
+   from either end, then easing up to its top speed over a ramp that lengthens with the stretch. Tf(s): time to travel
+   s units from the start (past the far end it carries on at normal speed); Ti: the reverse. Streams on a stretch
+   travel together like cars of a train: one that follows close behind another (a colour arriving a moment after
+   another, as the branches of a mix do) keeps the same spacing behind it (see send), so a mix never pulls apart as
+   the stretch speeds up. lead/out (one for each way along it): when the train's first stream set off, and when its
+   last one gets out the far end. */
 function stretch(S) {
-  const ease = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
-  const speed = s => V * (1 + (V_MAX - 1) * ease((Math.min(s, S - s) - V_LEAD) / V_RAMP));
+  const ease = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x), mid = Math.max(0, S - 2 * V_LEAD);
+  const top = Math.min(V_TOP, Math.max(1, mid / V_GAIN)), R = Math.max(1, Math.min(mid / 2, Math.max(V_RAMP, mid * 0.3)));
+  const rel = s => 1 + (top - 1) * ease((Math.min(s, S - s) - V_LEAD) / R);   // speed at s, as a multiple of normal
   const n = Math.ceil(S), T = new Float64Array(n + 1);
-  for (let i = 1; i <= n; i++) T[i] = T[i - 1] + 1 / speed(i - 0.5);
+  for (let i = 1; i <= n; i++) T[i] = T[i - 1] + 1 / (V * rel(i - 0.5));
   const Tf = s => { if (s <= 0) return s / V; if (s >= n) return T[n] + (s - n) / V; const i = Math.floor(s); return T[i] + (T[i + 1] - T[i]) * (s - i); };
   const Ti = t => { if (t <= 0) return t * V; if (t >= T[n]) return n + (t - T[n]) * V; let lo = 0, hi = n; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (T[m] <= t) lo = m; else hi = m; } return lo + (t - T[lo]) / (T[hi] - T[lo]); };
-  return { S, Tf, Ti, lead: [-Infinity, -Infinity], out: [-Infinity, -Infinity] };
+  return { S, Tf, Ti, rel: s => s >= S ? 1 : rel(s), top, lead: [-Infinity, -Infinity], out: [-Infinity, -Infinity] };
 }
 // how long the current takes along one small step of wire, or through a part (used by the checks)
 let STEP_T = new Map();
@@ -143,15 +147,15 @@ function findPaths() {
 }
 // which colours each lane may carry right now: along every path, from L1 up to the first button not passing current,
 // each lane carries the colour of the last button before it ('' for plain egg, 'ret' after a coil)
-// how far it is from L1 to the far end of each lane along any path carrying each colour: the end of a colour's
-// stream can still be on its way for as long as it takes to travel that far (a button keeps sending its colour
+// how long the current takes from L1 to the far end of each lane along any path carrying each colour: the end of a
+// colour's stream can still be on its way for that long (a button keeps sending its colour
 // until the change upstream of it has reached it)
 function findReach() {
   REACH = new Map();
   for (const path of PATHS) {
-    let label = '', s = 0;
+    let label = '', s = 0;   // (s: how long the current takes to get there, in seconds)
     for (const d of path) {
-      s += d.e.len;
+      s += d.e.kind === 'seg' ? d.delay : d.e.len / V;
       if (d.e.kind === 'part' && d.e.part.t !== 'con') { if (d.e.part.t === 'btn') label = d.e.part.L; else if (d.e.part.t === 'coil') label = 'ret'; continue; }
       const m = REACH.get(d) || {}; m[label] = Math.max(m[label] || 0, s); REACH.set(d, m);
     }
@@ -219,21 +223,27 @@ function send(d, r, t, atOnce) {
     schedule(tOut, () => { d.arrived = out; reeval(d.to, evT); });
     return;
   }
-  const m = d.chain.length - 1;
-  if (V_MAX === 1) {   // one steady speed everywhere (the speed-up is switched off)
-    for (let k = 1; k < m; k++) { const s = d.e.len * k / m; setAt(d.chain[k], t + s / V, colAtRec(along(r, s)), d.li); }
-    schedule(t + d.e.len / V, () => { d.arrived = out; reeval(d.to, evT); });
-    return;
+  const m = d.chain.length - 1, st = d.e.st, w = d.dir;
+  // where this stream sits in its stretch's train: a set distance (dd) behind the train's first stream. Carried on
+  // from the run before when the stream has just come along the same stretch; otherwise it joins the train already
+  // on the stretch only if it is close enough behind that the train is still at (nearly) normal speed where it is,
+  // so it never lurches forward as it joins; any further behind and it leads a new train of its own
+  let tl, dd;
+  if (CARRY && CARRY.st === st && CARRY.w === w) ({ tl, dd } = CARRY);
+  else {
+    tl = st.lead[w];
+    dd = t < st.out[w] ? st.Ti(t - tl) - d.off : Infinity;
+    if (!(dd >= -1e-6 && d.off + dd < st.S / 2 && st.rel(d.off + dd) <= 1.15)) { tl = t - st.Tf(d.off); dd = 0; st.lead[w] = tl; }
+    dd = Math.max(0, dd);
   }
-  // where this stream sits in its stretch's train: a set distance (dd) behind the train's first stream
-  const st = d.e.st, w = d.dir;
-  if (!(t < st.out[w])) st.lead[w] = t - st.Tf(d.off);                 // nothing still on the stretch: it leads a new train
-  const tl = st.lead[w], dd = Math.max(0, st.Ti(t - tl) - d.off), at = s => tl + st.Tf(d.off + s + dd);
+  const at = s => tl + st.Tf(d.off + s + dd);
   for (let k = 1; k < m; k++) { const s = d.e.len * k / m; setAt(d.chain[k], Math.max(t, at(s)), colAtRec(along(r, s)), d.li); }
   const tEnd = Math.max(t, at(d.e.len));
   st.out[w] = Math.max(st.out[w], tl + st.Tf(st.S + dd));
-  schedule(tEnd, () => { d.arrived = out; reeval(d.to, evT); });
+  const carry = { st, w, tl, dd };
+  schedule(tEnd, () => { d.arrived = out; const was = CARRY; CARRY = carry; try { reeval(d.to, evT); } finally { CARRY = was; } });
 }
+let CARRY = null;   // the train a stream arriving at a corner belongs to, while it is passed on along the stretch
 // a lead's latest changes (what it shows, from when, flowing from the part's end or from its body)
 function leadEvent(p, S, t0, rec, from) { const L = (p._lead || (p._lead = { A: [], B: [] }))[S]; L.push({ t0, col: colAtRec(rec), from }); if (L.length > 6) L.shift(); }
 let INLEAD = new Map();   // junction -> the part leads current flows in along from there
@@ -341,7 +351,7 @@ function refreshAllow(t) {
   const old = ALLOW; ALLOW = allowNow();
   for (const d of DIRS) if (filtered(d)) {
     const a = old.get(d), b = ALLOW.get(d);
-    if (a) for (const x of a) if (!b || !b.has(x)) (d.drain || (d.drain = {}))[x] = t + ((REACH.get(d) || {})[x] || 0) / V + 0.3;
+    if (a) for (const x of a) if (!b || !b.has(x)) (d.drain || (d.drain = {}))[x] = t + ((REACH.get(d) || {})[x] || 0) + 0.3;
     if (b && [...b].some(x => !a || !a.has(x))) send(d, REC.get(d.from) || null, t);
   }
 }

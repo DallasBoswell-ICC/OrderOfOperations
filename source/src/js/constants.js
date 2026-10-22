@@ -5,7 +5,9 @@
 const W_MIN = 880;                   // narrowest the sheet gets (L1 is its left edge, x = 0; L2 its right edge, x = W: see geometry.js)
 const G = 20, SUB = 5;               // grid spacing; wires are traced in 5-unit steps for smooth flow
 const V = 450;                       // how fast the current front travels (units per second)
-const V_MAX = 1, V_LEAD = 160, V_RAMP = 220;  // speed-up on long plain stretches: switched off for now (V_MAX = 4 speeds them up to 4×)
+// long plain stretches of wire carry the current faster in the middle (see stretch in engine.js): normal speed for V_LEAD
+// units from either end, then up to 1× more for every V_GAIN units of wire between those, at most V_TOP× normal
+const V_LEAD = 160, V_GAIN = 350, V_TOP = 12, V_RAMP = 220;
 const RAMP = 110, FADE = 160;        // colour shading after a button / from a coil back to egg
 const BOX = 65.8368, BTN_IN = 43.8912, COIL = 82.296, COIL_IN = 60.3504;
 const OFF_WHITE = '#ffffd7', GREY = '#404040';

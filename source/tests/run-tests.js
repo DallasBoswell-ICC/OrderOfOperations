@@ -360,15 +360,36 @@ const DEF_CIRCUIT = `
     return out.concat(r.slice(0, 6));
   });
 
-  await check('The current keeps one steady speed everywhere (the speed-up on long stretches is switched off)', async page => {
+  await check('Long stretches speed the current up smoothly; a rung-length wire keeps normal speed', async page => {
+    const out = [];
+    // a rung across the panel (about 600 units of wire after the button): normal speed all the way
+    await loadCircuit(page, `parts = [B('A', 120, 200), C('X', 760, 200)]; wires = [Wr(0, 200, 80, 200), Wr(160, 200, 700, 200), Wr(820, 200, 880, 200)]; W = 880;`);
+    await page.click('#tab-run');
+    out.push(...await page.evaluate(new Function(STEP + `
+      const out = [], n = NET.nodes.findIndex(q => q.x === 600 && q.y === 200);
+      step(2); press('A', true); const t0 = simT; while (!colAt(n, simT) && simT < t0 + 10) step(1 / 240);
+      const want = (80 + 440) / V;
+      if (Math.abs(simT - t0 - want) > 0.02) out.push('short stretch: the current reached 600 after ' + (simT - t0).toFixed(2) + ' s, not ' + want.toFixed(2) + ' s');
+      return out;`)));
+    // a long stretch (1680 units, four corners): much sooner than at normal speed, and no sudden change of speed
+    await page.click('#tab-edit');
     await loadCircuit(page, `parts = [B('A', 120, 200), C('X', 1500, 200)]; wires = [Wr(0, 200, 80, 200), Wr(160, 200, 600, 200), Wr(600, 200, 600, 400), Wr(600, 400, 1440, 400), Wr(1440, 400, 1440, 200), Wr(1560, 200, 1600, 200)]; W = 1600;`);
     await page.click('#tab-run');
-    return page.evaluate(new Function(STEP + `
-      const out = [], n = NET.nodes.findIndex(q => q.x === 1000 && q.y === 400);
-      step(2); press('A', true); const t0 = simT; while (!colAt(n, simT) && simT < t0 + 10) step(1 / 240);
-      const want = (80 + 440 + 200 + 400) / V;   // through A, then along the wire to that point
-      if (Math.abs(simT - t0 - want) > 0.02) out.push('the current reached the middle of the long stretch after ' + (simT - t0).toFixed(2) + ' s, not ' + want.toFixed(2) + ' s');
-      return out;`));
+    out.push(...await page.evaluate(new Function(STEP + `
+      const out = [], node = (x, y) => NET.nodes.findIndex(q => q.x === x && q.y === y), path = [];
+      for (let x = 165; x <= 600; x += 5) path.push(node(x, 200)); for (let y = 205; y <= 400; y += 5) path.push(node(600, y));
+      for (let x = 605; x <= 1440; x += 5) path.push(node(x, 400)); for (let y = 395; y >= 200; y -= 5) path.push(node(1440, y));
+      step(2); press('A', true); const t0 = simT, dt = 1 / 120, fr = [];
+      let k = 0; while (k < path.length && simT < t0 + 10) { step(dt); while (k < path.length && colAt(path[k], simT)) k++; fr.push(k * 5); }
+      const plain = (80 + 1680) / V, took = simT - t0;
+      if (took > plain * 0.6) out.push('long stretch took ' + took.toFixed(2) + ' s, hardly faster than ' + plain.toFixed(2) + ' s at normal speed');
+      // speed over a sliding tenth of a second: it should never jump
+      const sp = []; for (let i = 12; i < fr.length; i++) if (fr[i - 12] > 0 && fr[i] < (path.length - 1) * 5) sp.push((fr[i] - fr[i - 12]) / (12 * dt));
+      let worst = 0; for (let i = 12; i < sp.length; i++) worst = Math.max(worst, Math.abs(sp[i] - sp[i - 12]) / Math.max(sp[i], sp[i - 12]));
+      if (worst > 0.45) out.push('the speed changed by ' + Math.round(worst * 100) + '% within a tenth of a second: ' + sp.filter((_, i) => i % 6 === 0).map(v => (v / V).toFixed(1)).join(' '));
+      const top = Math.max(...sp); if (top < 2.5 * V) out.push('top speed only ' + (top / V).toFixed(1) + '× normal');
+      return out;`)));
+    return out;
   });
 
   // the staircase from the speed-up videos: A (NC) feeds six rungs whose colours join one after another onto a long run to X
@@ -602,6 +623,8 @@ const DEF_CIRCUIT = `
     if (!r.Y || r.X) out.push('B first: Y should be in and X out, got X ' + +r.X + ' Y ' + +r.Y);
     if (r.flips > 3) out.push('B first: the coils kept switching (' + r.flips + ' changes)');
     if (r.slips) out.push('B first: current got past Y while it was out');
+    r = await run(INTERLOCK(false), `press('B', true); let k = 0; while (!on('Y') && k++ < 600) step(1 / 60); return { Y: on('Y'), t: k / 60 };`);
+    if (!r.Y || r.t > 3.5) out.push('the long winding wire should speed the current up: Y took ' + (r.t ?? '?') + ' s to pick up');
     r = await run(INTERLOCK(false), `press('A', true); watch(2); press('B', true); watch(20);`);
     if (!r.X || r.Y) out.push('A first: X should be in and Y out, got X ' + +r.X + ' Y ' + +r.Y);
     r = await run(INTERLOCK(false), `press('A', true); press('B', true); watch(25);`);
