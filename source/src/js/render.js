@@ -48,15 +48,14 @@ function draw() {
   }
   // a square screw terminal wherever a wire meets a bar, and the bar's name next to it. The screw has a combination
   // head: a slot right across it for a flat screwdriver, and a cross for a Phillips
-  const terminal = (x, y) => {
+  const terminal = (x, y) => {   // (a little wider than the wire's channel, and than the bar it sits on)
     const g = el('g', {});
-    el('rect', { x: x - 8.5, y: y - 8.5, width: 17, height: 17, rx: 2.2, fill: 'url(#gTerm)', stroke: '#2a2a2a', 'stroke-width': 1 }, g);
-    el('rect', { x: x - 6.6, y: y - 6.6, width: 13.2, height: 13.2, rx: 1.4, fill: 'none', stroke: 'rgba(0,0,0,.28)', 'stroke-width': .8 }, g);
-    el('circle', { cx: x, cy: y, r: 5.6, fill: 'url(#gStud)', stroke: '#3a3a3a', 'stroke-width': .9 }, g);
-    el('rect', { x: x - 5.6, y: y - 0.8, width: 11.2, height: 1.6, fill: '#2a2a2a' }, g);   // the flat slot, right across the head
-    el('rect', { x: x - 0.8, y: y - 2.7, width: 1.6, height: 5.4, fill: '#2a2a2a' }, g);     // with it, a short cross arm: the Phillips recess
-    el('rect', { x: x - 1.6, y: y - 1.6, width: 3.2, height: 3.2, fill: '#2a2a2a', transform: `rotate(45 ${x} ${y})` }, g);   // its deeper centre
-    el('circle', { cx: x - 1.6, cy: y - 2.2, r: 1.1, fill: '#fff', opacity: .35 }, g);   // a glint
+    el('rect', { x: x - 13, y: y - 13, width: 26, height: 26, rx: 3, fill: 'url(#gTerm)', stroke: '#2a2a2a', 'stroke-width': 1.2 }, g);
+    el('rect', { x: x - 10.4, y: y - 10.4, width: 20.8, height: 20.8, rx: 2, fill: 'none', stroke: 'rgba(0,0,0,.28)', 'stroke-width': 1 }, g);
+    el('circle', { cx: x, cy: y, r: 8.6, fill: 'url(#gStud)', stroke: '#3a3a3a', 'stroke-width': 1 }, g);
+    el('rect', { x: x - 8.6, y: y - 1.2, width: 17.2, height: 2.4, fill: '#2a2a2a' }, g);   // the flat slot, right across the head
+    el('rect', { x: x - 1.2, y: y - 4.2, width: 2.4, height: 8.4, fill: '#2a2a2a' }, g);     // with it, a short cross arm: the Phillips recess
+    el('rect', { x: x - 2.4, y: y - 2.4, width: 4.8, height: 4.8, fill: '#2a2a2a', transform: `rotate(45 ${x} ${y})` }, g);   // its deeper centre
   };
   // a terminal screw wherever a wire meets a bar, and the bar's name next to it, as in the simulators
   const seen = new Set();
@@ -64,7 +63,7 @@ function draw() {
     const k = fd.t + fd.y; if (seen.has(k)) continue; seen.add(k);
     const sx = fd.t === 'L1' ? BAR / 2 : W - BAR / 2;
     terminal(sx, fd.y);
-    el('text', fd.t === 'L1' ? { x: BAR + 8, y: fd.y - 20, class: 'rail' } : { x: W - BAR - 8, y: fd.y + 36, class: 'rail', 'text-anchor': 'end' }).textContent = fd.t;
+    el('text', fd.t === 'L1' ? { x: BAR + 8, y: fd.y - 22, class: 'rail' } : { x: W - BAR - 8, y: fd.y + 38, class: 'rail', 'text-anchor': 'end' }).textContent = fd.t;
   }
   const issues = editing ? wiringIssues(net) : new Map();
   view.parts = new Map();

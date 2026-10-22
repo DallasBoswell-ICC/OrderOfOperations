@@ -34,6 +34,7 @@ MODULES = [
     "pointer.js",        # mouse and touch in Build mode (drag, reshape, box select)
     "camera.js",         # zoom and pan
     "toolbar.js",        # the toolbar, Delete/Undo/Clear, keyboard shortcuts
+    "clipboard.js",      # copy, cut and paste
     "properties.js",     # the selected part's settings
     "storage.js",        # saving and opening circuits (files, codes, kept in the browser)
     "main.js",           # Build/Run switching, fitting to the window, start-up

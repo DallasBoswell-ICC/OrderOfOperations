@@ -800,6 +800,37 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Copy and paste: a copied circuit goes in below with letters of its own and works by itself; cut; undo', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'seal');
+    const before = await page.evaluate(() => [parts.length, wires.length]);
+    // select everything with a box, then Ctrl+C, Ctrl+V
+    await page.evaluate(() => { sel = { parts: new Set(parts.map(p => p.id)), wires: new Set(wires.map(w => w.id)) }; draw(); });
+    await page.keyboard.press('Control+c'); await page.keyboard.press('Control+v'); await page.waitForTimeout(80);
+    const r = await page.evaluate(() => ({ n: [parts.length, wires.length], coils: parts.filter(p => p.t === 'coil').map(p => p.L), cons: parts.filter(p => p.t === 'con').map(p => p.L),
+      btns: parts.filter(p => p.t === 'btn').map(p => p.L), sel: selCount(), iss: [...wiringIssues(network()).entries()] }));
+    if (r.n[0] !== before[0] * 2) out.push('parts after paste: ' + r.n[0]);
+    if (r.iss.length) out.push('wiring issues after paste: ' + JSON.stringify(r.iss));
+    if (new Set(r.coils).size !== 2 || new Set(r.btns).size !== 4) out.push('pasted letters not new: ' + JSON.stringify(r));
+    if (r.cons.sort().join() !== r.coils.sort().join()) out.push('the pasted seal-in contact did not go with the pasted coil: ' + JSON.stringify(r));
+    if (!r.sel) out.push('the pasted copy is not selected');
+    // both work, each by itself
+    await page.click('#tab-run');
+    const w = await page.evaluate(new Function(STEP + `const [c1, c2] = parts.filter(p => p.t === 'coil'), b = parts.filter(p => p.t === 'btn' && !p.nc).map(p => p.L);
+      step(1); press(b[1], true); step(3); press(b[1], false); step(3); return [!!coilOn[c1.id], !!coilOn[c2.id]];`));
+    if (w[0] || !w[1]) out.push('pressing the copy\'s start should seal in only the copy: ' + JSON.stringify(w));
+    await page.click('#tab-edit');
+    // undo takes the paste away; cut removes and paste brings it back
+    await page.keyboard.press('Control+z'); await page.waitForTimeout(50);
+    if ((await page.evaluate(() => parts.length)) !== before[0]) out.push('undo did not remove the paste');
+    const coilXY = await page.evaluate(() => { const p = parts.find(q => q.t === 'coil'); return [p.x, p.y]; });
+    await page.mouse.click(...await scr(page, ...coilXY)); await page.keyboard.press('Control+x'); await page.waitForTimeout(50);
+    if (await page.evaluate(() => parts.some(p => p.t === 'coil'))) out.push('cut did not remove the coil');
+    await page.click('#paste'); await page.waitForTimeout(50);
+    if (!(await page.evaluate(() => parts.some(p => p.t === 'coil')))) out.push('Paste did not bring the coil back');
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

@@ -17,6 +17,7 @@ function renderProps() {
     : nP + nW === 1 ? 'A wire'
     : [nP ? `${nP} part${nP > 1 ? 's' : ''}` : '', nW ? `${nW} wire${nW > 1 ? 's' : ''}` : ''].filter(Boolean).join(' and ') + ' (drag any of them to move them together, Delete to remove)';
   document.getElementById('del').disabled = !sel;
+  if (typeof updateClipButtons === 'function') updateClipButtons();
   document.getElementById('p-main').hidden = !(p && p.t === 'btn' && mainBtn(p.L) !== p);
   document.getElementById('undo').disabled = !history.length;
   document.getElementById('props-btn').hidden = !(p && p.t === 'btn');

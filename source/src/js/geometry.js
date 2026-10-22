@@ -51,5 +51,5 @@ function overlaps(p, x, y, t) {
   const hw = LOADT(t) ? 60 : 40;
   return parts.some(q => q !== p && Math.abs(q.x - x) < hw + TERM(q) && Math.abs(q.y - y) < 80);
 }
-const clampPart = (x, y, t) => { const h = LOADT(t) ? 60 : 40; return [Math.min(W - h - 20, Math.max(h + 20, snap(x))), Math.max(60, snap(y))]; };
+const clampPart = (x, y, t) => { const h = LOADT(t) ? 60 : 40; return [Math.min(W - h - 40, Math.max(h + 40, snap(x))), Math.max(60, snap(y))]; };   // (clear of the bars)
 const clampX = x => Math.min(W, Math.max(0, snap(x))), clampY = y => Math.max(40, snap(y));

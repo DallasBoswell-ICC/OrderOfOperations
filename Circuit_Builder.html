@@ -88,7 +88,7 @@ select { font: inherit; font-size: .88rem; color: var(--ink); background: var(--
   padding: 5px 10px 5px 6px; display: flex; align-items: center; gap: 7px; font-size: .84rem; box-shadow: 0 8px 20px rgba(0,0,0,.5); }
 .ghost svg { width: 30px; height: 26px; }
 [data-tip] { position: relative; }
-[data-tip]::after { content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 8px); z-index: 5; width: max-content; max-width: min(260px, calc(100vw - 40px)); display: none;
+[data-tip]::after { content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 8px); z-index: 5; width: max-content; max-width: min(280px, calc(100vw - 40px)); display: none; white-space: normal; overflow-wrap: break-word;
   padding: 7px 10px; border-radius: 6px; background: #111214; color: #ececec; font-size: .8rem; font-weight: 400; line-height: 1.35; text-align: left; box-shadow: 0 6px 18px rgba(0,0,0,.45); pointer-events: none; }
 .runbar [data-tip]::after { top: auto; bottom: calc(100% + 10px); }
 [data-tip]:hover::after { display: block; }
@@ -203,6 +203,8 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
       </div>
     </div>
     <div class="tgrp">
+      <button type="button" class="tool plain" id="copy" disabled data-tip="Copy the selected parts and wires (Ctrl+C; Ctrl+X cuts)">Copy</button>
+      <button type="button" class="tool plain" id="paste" disabled data-tip="Paste a copy below the circuit, with letters of its own (Ctrl+V)">Paste</button>
       <button type="button" class="tool plain danger" id="del" data-tip="Delete the selected part or wire (Delete key)">Delete</button>
       <button type="button" class="tool plain" id="undo" data-tip="Undo (Ctrl+Z)">Undo</button>
       <button type="button" class="tool plain" id="clear" data-tip="Start with an empty panel">Clear</button>
@@ -493,7 +495,7 @@ function overlaps(p, x, y, t) {
   const hw = LOADT(t) ? 60 : 40;
   return parts.some(q => q !== p && Math.abs(q.x - x) < hw + TERM(q) && Math.abs(q.y - y) < 80);
 }
-const clampPart = (x, y, t) => { const h = LOADT(t) ? 60 : 40; return [Math.min(W - h - 20, Math.max(h + 20, snap(x))), Math.max(60, snap(y))]; };
+const clampPart = (x, y, t) => { const h = LOADT(t) ? 60 : 40; return [Math.min(W - h - 40, Math.max(h + 40, snap(x))), Math.max(60, snap(y))]; };   // (clear of the bars)
 const clampX = x => Math.min(W, Math.max(0, snap(x))), clampY = y => Math.max(40, snap(y));
 
 /* ---- js/network.js ---- */
@@ -1137,7 +1139,7 @@ const DEFS = `
   <filter id="fGlow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="7"/></filter>
   <linearGradient id="gTerm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d4d4d4"/><stop offset=".5" stop-color="#a3a3a3"/><stop offset="1" stop-color="#6e6e6e"/></linearGradient>
   <radialGradient id="gStud" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#e8e8e8"/><stop offset=".6" stop-color="#9a9a9a"/><stop offset="1" stop-color="#5a5a5a"/></radialGradient>`;
-const BAR = 14;   // the L1 and L2 connection bars along the left and right edges
+const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
 const captionOf = p => p.t === 'coil' ? `${p.L} Coil` : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
@@ -1321,15 +1323,14 @@ function draw() {
   }
   // a square screw terminal wherever a wire meets a bar, and the bar's name next to it. The screw has a combination
   // head: a slot right across it for a flat screwdriver, and a cross for a Phillips
-  const terminal = (x, y) => {
+  const terminal = (x, y) => {   // (a little wider than the wire's channel, and than the bar it sits on)
     const g = el('g', {});
-    el('rect', { x: x - 8.5, y: y - 8.5, width: 17, height: 17, rx: 2.2, fill: 'url(#gTerm)', stroke: '#2a2a2a', 'stroke-width': 1 }, g);
-    el('rect', { x: x - 6.6, y: y - 6.6, width: 13.2, height: 13.2, rx: 1.4, fill: 'none', stroke: 'rgba(0,0,0,.28)', 'stroke-width': .8 }, g);
-    el('circle', { cx: x, cy: y, r: 5.6, fill: 'url(#gStud)', stroke: '#3a3a3a', 'stroke-width': .9 }, g);
-    el('rect', { x: x - 5.6, y: y - 0.8, width: 11.2, height: 1.6, fill: '#2a2a2a' }, g);   // the flat slot, right across the head
-    el('rect', { x: x - 0.8, y: y - 2.7, width: 1.6, height: 5.4, fill: '#2a2a2a' }, g);     // with it, a short cross arm: the Phillips recess
-    el('rect', { x: x - 1.6, y: y - 1.6, width: 3.2, height: 3.2, fill: '#2a2a2a', transform: `rotate(45 ${x} ${y})` }, g);   // its deeper centre
-    el('circle', { cx: x - 1.6, cy: y - 2.2, r: 1.1, fill: '#fff', opacity: .35 }, g);   // a glint
+    el('rect', { x: x - 13, y: y - 13, width: 26, height: 26, rx: 3, fill: 'url(#gTerm)', stroke: '#2a2a2a', 'stroke-width': 1.2 }, g);
+    el('rect', { x: x - 10.4, y: y - 10.4, width: 20.8, height: 20.8, rx: 2, fill: 'none', stroke: 'rgba(0,0,0,.28)', 'stroke-width': 1 }, g);
+    el('circle', { cx: x, cy: y, r: 8.6, fill: 'url(#gStud)', stroke: '#3a3a3a', 'stroke-width': 1 }, g);
+    el('rect', { x: x - 8.6, y: y - 1.2, width: 17.2, height: 2.4, fill: '#2a2a2a' }, g);   // the flat slot, right across the head
+    el('rect', { x: x - 1.2, y: y - 4.2, width: 2.4, height: 8.4, fill: '#2a2a2a' }, g);     // with it, a short cross arm: the Phillips recess
+    el('rect', { x: x - 2.4, y: y - 2.4, width: 4.8, height: 4.8, fill: '#2a2a2a', transform: `rotate(45 ${x} ${y})` }, g);   // its deeper centre
   };
   // a terminal screw wherever a wire meets a bar, and the bar's name next to it, as in the simulators
   const seen = new Set();
@@ -1337,7 +1338,7 @@ function draw() {
     const k = fd.t + fd.y; if (seen.has(k)) continue; seen.add(k);
     const sx = fd.t === 'L1' ? BAR / 2 : W - BAR / 2;
     terminal(sx, fd.y);
-    el('text', fd.t === 'L1' ? { x: BAR + 8, y: fd.y - 20, class: 'rail' } : { x: W - BAR - 8, y: fd.y + 36, class: 'rail', 'text-anchor': 'end' }).textContent = fd.t;
+    el('text', fd.t === 'L1' ? { x: BAR + 8, y: fd.y - 22, class: 'rail' } : { x: W - BAR - 8, y: fd.y + 38, class: 'rail', 'text-anchor': 'end' }).textContent = fd.t;
   }
   const issues = editing ? wiringIssues(net) : new Map();
   view.parts = new Map();
@@ -1983,6 +1984,66 @@ document.querySelectorAll('.pgroup').forEach(g => {
 document.addEventListener('pointerdown', e => { if (!e.target.closest('.pgroup')) closeMenus(); }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus(); });
 
+/* ---- js/clipboard.js ---- */
+/* ---------------- copy, cut and paste ----------------
+   Ctrl+C copies the selected parts and wires, Ctrl+X cuts them, Ctrl+V pastes (or the Copy and Paste buttons).
+   The copy goes in below everything on the panel, so it never joins up with what is there by accident (wires that
+   ran to L1 or L2 still do: a copied rung is a new rung), and it is left selected, ready to drag where it is wanted.
+   Pasted buttons and coils get letters of their own, so the copy works on its own: a contact copied with its coil
+   goes with the new coil, and a light built into a copied button goes with the new button. A contact or light
+   copied without its coil or button stays with the original. */
+let clip = null;
+function copySel() {
+  if (!sel || !selCount()) { say('Select something to copy first.'); return false; }
+  const ps = parts.filter(p => sel.parts.has(p.id)), ws = wires.filter(w => sel.wires.has(w.id));
+  clip = JSON.parse(JSON.stringify({ parts: ps, wires: ws }, (k, v) => k.startsWith('_') ? undefined : v));
+  const n = ps.length + ws.length; say(`Copied ${n} item${n > 1 ? 's' : ''}. Press Ctrl+V (or Paste) to put a copy in.`);
+  updateClipButtons(); return true;
+}
+function cutSel() { if (copySel()) { del(); say('Cut. Press Ctrl+V (or Paste) to put it back in.'); } }
+function pasteClip() {
+  if (!clip || !(clip.parts.length + clip.wires.length)) { say('Copy something first.'); return; }
+  snapshot();
+  // new letters: each button letter and coil letter in the copy gets an unused one (the same for every drawing of it)
+  const used = new Set([...btnLetters(), ...coilLetters()]), map = {};
+  const fresh = pref => { const L = [...pref + ALL].find(c => !used.has(c)); used.add(L); return L; };
+  for (const p of clip.parts) if (p.t === 'btn' && !map['b' + p.L]) map['b' + p.L] = fresh('ABCDEFGH');
+  for (const p of clip.parts) if (p.t === 'coil' && !map['c' + p.L]) map['c' + p.L] = fresh('XYZW');
+  // below everything on the panel, lined up with where it came from
+  const ys = [...clip.parts.map(p => p.y), ...clip.wires.flatMap(w => [w.y1, w.y2])];
+  const bottom = Math.max(0, ...parts.map(p => p.y + 60), ...wires.map(w => Math.max(w.y1, w.y2)));
+  const dy = snap(bottom + 100 - Math.min(...ys) + (LOADT(clip.parts.find(p => p.y === Math.min(...ys))?.t) ? 20 : 0));
+  const fx = x => x === 0 ? 0 : x >= W ? W : x;   // (wires to the bars stay on the bars)
+  const np = clip.parts.map(p => {
+    const q = { ...p, id: nextId++, y: p.y + dy };
+    if (p.t === 'btn') q.L = map['b' + p.L];
+    if (p.t === 'coil') q.L = map['c' + p.L];
+    if (p.t === 'con' && map['c' + p.L]) q.L = map['c' + p.L];
+    if (p.t === 'lamp' && p.L && map['b' + p.L]) q.L = map['b' + p.L];
+    return q;
+  });
+  const nw = clip.wires.map(w => Wr(fx(w.x1), w.y1 + dy, fx(w.x2), w.y2 + dy));
+  parts.push(...np); wires.push(...nw);
+  const ids = new Set(nw.map(w => w.id));
+  normalize();
+  sel = { parts: new Set(np.map(p => p.id)), wires: new Set(wires.filter(w => ids.has(w.id)).map(w => w.id)) };
+  if (!selCount()) sel = null;
+  const renamed = Object.keys(map).length;
+  say(`Pasted below the circuit` + (renamed ? ', with letters of its own' : '') + '. Drag it where you want it.');
+  if (!cam.fit) cam.y = Math.min(...ys) + dy - 80;   // bring it into view
+  draw();
+}
+function updateClipButtons() { const b = document.getElementById('paste'); if (b) b.disabled = !clip; const c = document.getElementById('copy'); if (c) c.disabled = !selCount(); }
+document.getElementById('copy').addEventListener('click', copySel);
+document.getElementById('paste').addEventListener('click', pasteClip);
+document.addEventListener('keydown', e => {
+  if (!editing || /SELECT|INPUT|TEXTAREA/.test(document.activeElement.tagName) || !(e.ctrlKey || e.metaKey)) return;
+  const k = e.key.toLowerCase();
+  if (k === 'c') { e.preventDefault(); copySel(); }
+  else if (k === 'x') { e.preventDefault(); cutSel(); }
+  else if (k === 'v') { e.preventDefault(); pasteClip(); }
+});
+
 /* ---- js/properties.js ---- */
 /* ---------------- the selected part's settings ---------------- */
 function swatches(box, current, onPick) {
@@ -2003,6 +2064,7 @@ function renderProps() {
     : nP + nW === 1 ? 'A wire'
     : [nP ? `${nP} part${nP > 1 ? 's' : ''}` : '', nW ? `${nW} wire${nW > 1 ? 's' : ''}` : ''].filter(Boolean).join(' and ') + ' (drag any of them to move them together, Delete to remove)';
   document.getElementById('del').disabled = !sel;
+  if (typeof updateClipButtons === 'function') updateClipButtons();
   document.getElementById('p-main').hidden = !(p && p.t === 'btn' && mainBtn(p.L) !== p);
   document.getElementById('undo').disabled = !history.length;
   document.getElementById('props-btn').hidden = !(p && p.t === 'btn');
