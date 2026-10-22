@@ -1,5 +1,4 @@
 > **On this site:** this folder is the Circuit Builder's source. The page students use is `Circuit_Builder.html` at the top of the repository: after a change, run `python3 build.py` here and copy `dist/Circuit_Builder.html` up over it.
-# Order of Operations: Circuit Builder
 
 # Order of Operations: Circuit Builder
 
