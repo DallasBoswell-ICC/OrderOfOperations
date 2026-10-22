@@ -40,6 +40,7 @@ function addLane(e, from) {
 function startRun() {
   NET = network();
   simT = 0; queue = []; seq = 0; busyUntil = 0; autoRel = {}; down = {}; coilOn = {};
+  FED_AT = {}; COMP = null;
   CON = {}; for (const p of parts) if (p.t === 'con') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };   // every coil starts off
   tl = NET.nodes.map(() => [[-1e9, null]]);
   for (const p of parts) { delete p._chg; delete p._lead; }
@@ -198,7 +199,8 @@ function through(d, r) {
   // through a coil that is in: the return side, fading to egg. Through a coil that cannot pick up: the colour
   // waiting at it, on up to whatever is open past it
   if (r.ret) return null;
-  return coilOn[d.e.part.id] ? { ret: true, base: colourOf(r), along: 0 } : along(r, d.e.len);
+  if (coilOn[d.e.part.id]) return { ret: true, base: colourOf(r), along: 0 };
+  return fedNow(d.from) ? along(r, d.e.len) : null;   // (the end of a broken stream stops at the coil)
 }
 // send a stream into run d starting now: the points along it change one after another as it travels
 function send(d, r, t, atOnce) {
@@ -247,15 +249,42 @@ function reeval(v, t) {
   if (isFeed1(v)) return;
   setRec(v, mergeRecs((INS.get(v) || []).filter(d => d.arrived).map(d => d.arrived)), t);
 }
+// what is joined to what right now, through wires and closed switches (worked out again whenever a switch moves)
+let COMP = null;
+const compNow = () => COMP || (COMP = components(NET, conducts));
+// is junction v joined to L1 right now (so what has reached it is still fed, not the end of a broken stream)?
+const fedNow = v => { const f = compNow(); return f(v) === f(NET.L1); };
+/* Which coil was first: when the path from L1 through a coil to L2 is completed (a button pressed), the time is noted.
+   In a real panel current is there at once, so the coil whose path was completed first is in first, and its contacts
+   act first. Here current takes time to travel, so a coil whose current arrives sooner (a shorter wire) waits rather
+   than pick up ahead of a coil that was first, if picking up would cut that coil off (an interlock). */
+let FED_AT = {};
+const fedBy = (f, c) => { const a = f(c._a), b = f(c._b), l1 = f(NET.L1), l2 = f(NET.L2); return (a === l1 && b === l2) || (a === l2 && b === l1); };
+function wouldCutOff(x, f0) {
+  // with x in (its contacts moved), would any coil that was first and whose current is on its way lose its path?
+  // (a coil that was first counts until its own contacts have finished moving: its current still on its way, or just in)
+  const settling = c => !coilOn[c.id] || simT < (c._chg ?? -1e9) + CT + SWING + 1e-6;
+  const others = parts.filter(c => c.t === 'coil' && c !== x && settling(c) && FED_AT[c.id] !== undefined && FED_AT[c.id] < FED_AT[x.id] - 1e-9 && fedBy(f0, c));
+  if (!others.length) return false;
+  const alt = e => e.kind === 'w' || (isSw(e.part) && (e.part.t === 'con' && e.part.L === x.L ? !e.part.nc : closed(e.part)));
+  const f1 = components(NET, alt);
+  return others.some(c => !fedBy(f1, c));
+}
 // a coil picks up when current reaches it and it has a way through to L2; it drops out when its current is gone
 let coilIns = new Set();
 function updateCoils(t) {
-  const f = components(NET, conducts), c2 = f(NET.L2);
+  const f = compNow(), c2 = f(NET.L2);
   coilIns = new Set(); let changed = false;
+  for (const p of parts) if (p.t === 'coil') { if (fedBy(f, p)) { if (FED_AT[p.id] === undefined) FED_AT[p.id] = t; } else delete FED_AT[p.id]; }
   for (const p of parts) if (p.t === 'coil') {
     const d = DIRS.find(x => x.e.part === p); if (!d) continue;
     coilIns.add(d.from);
-    const r = REC.get(d.from), want = !shortNow && !!r && !r.ret && f(d.to) === c2;
+    const r = REC.get(d.from);
+    // a coil that is in stays in until the last of its current has reached it; it picks up only with current whose
+    // path back to L1 is unbroken right now (never from the end of a stream that has been cut off), and not ahead of
+    // a coil that was first and that it would cut off
+    let want = !shortNow && !!r && !r.ret && f(d.to) === c2;
+    if (want && !coilOn[p.id] && (f(d.from) !== f(NET.L1) || wouldCutOff(p, f))) want = false;
     let atOnce = false; const wasOn = !!coilOn[p.id];
     if (want !== wasOn) {
       coilOn[p.id] = want; p._chg = t;
@@ -289,6 +318,7 @@ function moveContact(c, t) {
 }
 // some pushbuttons or contacts have just opened or closed
 function switched(sw, t) {
+  COMP = null;
   const was = shortNow;
   checkShort();
   if (was !== shortNow) for (const [id, fv] of NET.feedV) if (fv === 1) setRec(id, shortNow ? null : EGG(), t);

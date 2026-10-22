@@ -583,6 +583,36 @@ const DEF_CIRCUIT = `
     });
   });
 
+  // the interlock from the video: X = (A or X) and not Y; Y = (B or Y) and not X, with Y's rung down a long winding wire
+  const INTERLOCK = (oneSided) => `W = W_MIN; const Bt = (L, x, y, col) => P('btn', x, y, { L, maint: true, color: col });
+    parts = [Bt('A', 120, 80, '#FF0032'), P('con', 120, 180, { L: 'X' }), C('X', 700, 80), Bt('B', 120, 320, '#0070C0'), P('con', 120, 420, { L: 'Y' }), P('con', 300, 320, { L: 'X', nc: true }), C('Y', 700, 320)];
+    wires = [Wr(0, 80, 80, 80), Wr(40, 80, 40, 180), Wr(40, 180, 80, 180), Wr(160, 80, 260, 80), Wr(160, 180, 200, 180), Wr(200, 180, 200, 80), Wr(340, 80, 640, 80), Wr(760, 80, W, 80),
+             Wr(0, 320, 80, 320), Wr(40, 320, 40, 420), Wr(40, 420, 80, 420), Wr(160, 320, 260, 320), Wr(160, 420, 200, 420), Wr(200, 420, 200, 320), Wr(760, 320, W, 320)];
+    ${oneSided ? "wires.push(Wr(260, 80, 340, 80));" : "parts.push(P('con', 300, 80, { L: 'Y', nc: true }));"}
+    let x = 380, yy = 320; wires.push(Wr(340, 320, 380, 320)); for (let i = 0; i < 5; i++) { const y2 = i % 2 ? 260 : 720; wires.push(Wr(x, yy, x, y2), Wr(x, y2, x + 40, y2)); yy = y2; x += 40; } wires.push(Wr(x, yy, x, 320), Wr(x, 320, 640, 320));`;
+  await check('Interlock: the coil whose button was pressed first wins, even when the other current has less wire to travel; no endless switching', async page => {
+    const out = [];
+    const run = async (circ, script) => { await page.click('#tab-edit'); await loadCircuit(page, circ); await page.click('#tab-run'); return page.evaluate(new Function(STEP + `
+      const on = L => !!coilOn[parts.find(p => p.t === 'coil' && p.L === L).id], Y = parts.find(p => p.t === 'coil' && p.L === 'Y');
+      let slips = 0, flips = 0, last = '';
+      const watch = s => { for (let i = 0; i < s * 60; i++) { step(1 / 60); const r = REC.get(Y._b); if (!on('Y') && r && !r.ret) slips++; const k = +on('X') + '' + +on('Y'); if (k !== last) { flips++; last = k; } } };
+      step(2); ` + script + `
+      return { X: on('X'), Y: on('Y'), slips, flips };`)); };
+    let r = await run(INTERLOCK(false), `press('B', true); watch(2); press('A', true); watch(20);`);
+    if (!r.Y || r.X) out.push('B first: Y should be in and X out, got X ' + +r.X + ' Y ' + +r.Y);
+    if (r.flips > 3) out.push('B first: the coils kept switching (' + r.flips + ' changes)');
+    if (r.slips) out.push('B first: current got past Y while it was out');
+    r = await run(INTERLOCK(false), `press('A', true); watch(2); press('B', true); watch(20);`);
+    if (!r.X || r.Y) out.push('A first: X should be in and Y out, got X ' + +r.X + ' Y ' + +r.Y);
+    r = await run(INTERLOCK(false), `press('A', true); press('B', true); watch(25);`);
+    if (r.X === r.Y) out.push('both at once: exactly one coil should win, got X ' + +r.X + ' Y ' + +r.Y);
+    if (r.flips > 4) out.push('both at once: the coils kept switching (' + r.flips + ' changes)');
+    // one-sided: Y has X's NC contact but X has nothing from Y: X must still win when A is pressed after Y is in
+    r = await run(INTERLOCK(true), `press('B', true); watch(10); press('A', true); watch(15);`);
+    if (!r.X || r.Y) out.push('one-sided interlock: pressing A with Y in should bring X in and drop Y, got X ' + +r.X + ' Y ' + +r.Y);
+    return out;
+  });
+
   await check('Building by hand: wires from the bars, parts dropped onto wires, a working circuit', async page => {
     const out = [];
     await page.selectOption('#preset', 'blank');
