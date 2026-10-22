@@ -1,0 +1,37 @@
+{
+ "name": "Order of Operations: Circuit Builder",
+ "short_name": "Circuit Builder",
+ "id": "./Circuit_Builder.html",
+ "start_url": "./Circuit_Builder.html",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#1c1d1f",
+ "theme_color": "#1c1d1f",
+ "description": "Build relay-logic circuits and watch the current flow, for the Order of Operations troubleshooting class.",
+ "icons": [
+  {
+   "src": "icons/icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icons/icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icons/maskable-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  },
+  {
+   "src": "icons/icon.svg",
+   "sizes": "any",
+   "type": "image/svg+xml",
+   "purpose": "any"
+  }
+ ]
+}

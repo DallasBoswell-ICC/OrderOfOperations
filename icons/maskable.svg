@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1c1d1f"/>
+  <g transform="translate(256 256) scale(.78) translate(-256 -256)">
+    <ellipse cx="208" cy="296" rx="128" ry="146" fill="none" stroke="#ffc000" stroke-width="62"/>
+    <text x="402" y="232" text-anchor="middle" font-family="Arial, Helvetica, 'DejaVu Sans', sans-serif" font-weight="700" font-size="200" fill="#ffc000">3</text>
+  </g>
+</svg>
