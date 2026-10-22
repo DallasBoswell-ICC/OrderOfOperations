@@ -75,19 +75,28 @@ function startRun() {
    pressed first is in first however long its wire; here the current is slowed right down so it can be watched, so a
    long wire would otherwise keep its coil waiting for seconds and let a coil on a short wire, pressed later, get in
    first. So the current leaves a junction at normal speed, speeds up smoothly the longer the stretch, and slows back
-   down before the next junction, part or bar. Stretches up to about 650 units (a rung across the panel) keep normal
-   speed throughout. Each run of wire gets, for every point along it, the time the stream takes to get there. */
+   down before the next junction, part or bar. Stretches up to 400 units keep normal speed throughout; past that the
+   time hardly grows (a 3000-unit stretch takes about 1.3 s, against 6.7 s at normal speed). Each run of wire gets, for every point along it, the time the stream takes to get there. */
 /* One plain stretch of length S. The speed rises and falls smoothly (no sudden changes): normal for V_LEAD units
-   from either end, then easing up to its top speed over a ramp that lengthens with the stretch. Tf(s): time to travel
+   from either end, then speeding up steadily to its top in the middle and back down. Tf(s): time to travel
    s units from the start (past the far end it carries on at normal speed); Ti: the reverse. Streams on a stretch
    travel together like cars of a train: one that follows close behind another (a colour arriving a moment after
    another, as the branches of a mix do) keeps the same spacing behind it (see send), so a mix never pulls apart as
    the stretch speeds up. lead/out (one for each way along it): when the train's first stream set off, and when its
    last one gets out the far end. */
 function stretch(S) {
-  const ease = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x), mid = Math.max(0, S - 2 * V_LEAD);
-  const top = Math.min(V_TOP, Math.max(1, mid / V_GAIN)), R = Math.max(1, Math.min(mid / 2, Math.max(V_RAMP, mid * 0.3)));
-  const rel = s => 1 + (top - 1) * ease((Math.min(s, S - s) - V_LEAD) / R);   // speed at s, as a multiple of normal
+  const half = Math.max(0, S - 2 * V_LEAD) / 2;
+  // how long it should take: as long as at normal speed up to V_SHORT, then only slowly longer, so a longer stretch
+  // never gets there sooner than a shorter one, and a very long one hardly later
+  const want = S <= V_SHORT ? S / V : V_SHORT / V + V_TAU * Math.log(1 + (S - V_SHORT) / (V * V_TAU));
+  // past V_LEAD the speed grows steadily with the distance travelled (1× more every K units), which over time is a
+  // steady, gentle acceleration (it doubles, then doubles again, each in the same short time), up to the middle,
+  // then falls back the same way. K is chosen so the stretch takes the time wanted.
+  const timeFor = K => 2 * V_LEAD / V + 2 * (K / V) * Math.log(1 + half / K);
+  let K = Infinity;
+  if (S > V_SHORT) { let lo = Math.max(1e-3, half / (V_TOP - 1)), hi = 1e7; for (let k = 0; k < 60; k++) { const m = Math.sqrt(lo * hi); if (timeFor(m) > want) hi = m; else lo = m; } K = lo; }
+  const top = 1 + half / K;
+  const rel = s => 1 + Math.max(0, Math.min(s, S - s) - V_LEAD) / K;   // speed at s, as a multiple of normal
   const n = Math.ceil(S), T = new Float64Array(n + 1);
   for (let i = 1; i <= n; i++) T[i] = T[i - 1] + 1 / (V * rel(i - 0.5));
   const Tf = s => { if (s <= 0) return s / V; if (s >= n) return T[n] + (s - n) / V; const i = Math.floor(s); return T[i] + (T[i + 1] - T[i]) * (s - i); };
