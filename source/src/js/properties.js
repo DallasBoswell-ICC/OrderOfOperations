@@ -20,6 +20,17 @@ function renderProps() {
   document.getElementById('undo').disabled = !history.length;
   document.getElementById('props-btn').hidden = !(p && p.t === 'btn');
   document.getElementById('props-coil').hidden = !(p && p.t === 'coil');
+  document.getElementById('props-lamp').hidden = !(p && p.t === 'lamp');
+  if (p && p.t === 'lamp') {
+    // a light of its own, or built into one of the pushbuttons (it then lights that button up, in the button's colour)
+    const ls = document.getElementById('l-btn'), btns = [...btnLetters()].sort();
+    ls.innerHTML = '';
+    ls.add(new Option('None', '', false, !p.L));
+    for (const c of new Set([...btns, ...(p.L ? [p.L] : [])])) ls.add(new Option(`${c} Button` + (btns.includes(c) ? '' : ' (not on the panel)'), c, false, c === p.L));
+    document.getElementById('l-colour-group').hidden = !!p.L;
+    document.getElementById('l-colour-note').hidden = !p.L;
+    if (!p.L) swatches(document.getElementById('l-colour'), p.color, hex => { snapshot(); p.color = hex; draw(); });
+  }
   document.getElementById('props-con').hidden = !(p && p.t === 'con');
   if (p && p.t === 'con') {
     const cs = document.getElementById('c-of'), coils = [...coilLetters()];
@@ -44,8 +55,10 @@ function renderProps() {
 }
 document.getElementById('p-letter').addEventListener('change', e => {
   const p = selPart(); if (!p) return; snapshot();
-  const mate = blocksOf(e.target.value).find(q => q !== p);
+  const mate = blocksOf(e.target.value).find(q => q !== p), old = p.L;
   p.L = e.target.value;
+  // a light built into this button goes with it (unless the old letter is still on another button)
+  if (!blocksOf(old).length) parts.forEach(q => { if (q.t === 'lamp' && q.L === old) q.L = p.L; });
   if (mate) { p.color = mate.color; p.maint = mate.maint; say(`This is now the same button as the other ${p.L}: pressing either presses both.`); }
   else { p.color = BTN_COL[p.L] || p.color; say(''); }
   draw();
@@ -53,6 +66,10 @@ document.getElementById('p-letter').addEventListener('change', e => {
 document.querySelectorAll('[data-nc]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); p.nc = x.dataset.nc === '1'; draw(); }));
 document.querySelectorAll('[data-maint]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); blocksOf(p.L).forEach(k => k.maint = x.dataset.maint === '1'); draw(); }));
 document.getElementById('o-letter').addEventListener('change', e => { const p = selPart(); if (!p) return; snapshot(); p.L = e.target.value; p.color = COIL_COL[p.L] || p.color; draw(); });
+document.getElementById('l-btn').addEventListener('change', e => {
+  const p = selPart(); if (!p) return; snapshot(); p.L = e.target.value;
+  say(p.L ? `The ${p.L} button lights up with this light.` : ''); draw();
+});
 document.getElementById('c-of').addEventListener('change', e => { const p = selPart(); if (!p) return; snapshot(); p.L = e.target.value; draw(); });
 document.querySelectorAll('[data-cnc]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); p.nc = x.dataset.cnc === '1'; draw(); }));
 document.getElementById('preset').addEventListener('change', e => {

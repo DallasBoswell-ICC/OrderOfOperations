@@ -23,5 +23,8 @@ const ALL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const CON_H = 53.986176;             // a relay contact's box is as wide as a button's and a little shorter
 const CT = 0.2, SWING = 0.4;         // relay contacts start to move this long after their coil changes, and take this long to swing
 const OPEN_LIFT = 15, BLADE_GREY = '#a6a6a6';   // how far an open contact's bar lifts off its posts
-const TERM = p => p.t === 'coil' ? 60 : 40;
+// loads: things current passes through to L2 (a relay coil, or a pilot light). They are the same size and are
+// passed through the same way; only a coil works contacts
+const LOADT = t => t === 'coil' || t === 'lamp';
+const TERM = p => LOADT(p.t) ? 60 : 40;
 const isSw = p => p.t === 'btn' || p.t === 'con';   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre

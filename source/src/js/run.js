@@ -32,10 +32,16 @@ function paint() {
     for (const S of ['A', 'B']) paintLead(v.lead[S], p._lead && p._lead[S]);
     let k;
     if (p.t === 'btn') {
-      const pr = !!down[p.L]; k = pr ? 1 : 0;
+      // a button with a light built in: its cap is dim while the light is off, and lights up with it
+      const pr = !!down[p.L], lit = v.lit ? Math.max(0, ...lampsOf(p.L).map(litOf)) : 0; k = (pr ? 1 : 0) + ':' + lit.toFixed(3);
       if (k === v.k) continue; v.k = k;
-      v.fill.setAttribute('fill', pr ? GREY : p.color);
-      v.text.style.fill = pr ? LIGHT_TEXT : DARK_TEXT;
+      v.fill.setAttribute('fill', v.lit ? mixOk(pr ? GREY : mixOk(p.color, GREY, .55), p.color, lit) : pr ? GREY : p.color);
+      v.text.style.fill = pr && lit < .5 ? LIGHT_TEXT : DARK_TEXT;
+      if (v.lit) {
+        v.halo.setAttribute('opacity', (lit * .6).toFixed(3));
+        v.badge.setAttribute('fill', mixRgb(GREY, p.color, lit));
+        v.badgeFil.setAttribute('stroke', lit > .5 ? 'rgba(255,255,255,.85)' : 'rgba(30,30,30,.55)');
+      }
       v.press.setAttribute('transform', pr ? `translate(${p.x} ${p.y}) scale(.93) translate(${-p.x} ${-p.y})` : '');
     } else if (p.t === 'con') {
       const s = CON[p.id]; if (!s) continue;
@@ -46,6 +52,13 @@ function paint() {
       v.blade.setAttribute('transform', `translate(0 ${-lift})`);
       v.bladeShape.setAttribute('fill', s.shut ? v.col : BLADE_GREY);
       v.posts.setAttribute('fill', s.shut ? v.col : GREY);
+    } else if (p.t === 'lamp') {
+      const lit = litOf(p); k = lit.toFixed(3);
+      if (k === v.k) continue; v.k = k;
+      v.fill.setAttribute('fill', mixRgb(GREY, v.col, lit));
+      v.glow.setAttribute('opacity', (lit * .55).toFixed(3));
+      v.rays.setAttribute('stroke', mixRgb('#5a5a5a', v.col, lit));
+      v.fil.setAttribute('stroke', lit > .5 ? 'rgba(255,255,255,.85)' : 'rgba(30,30,30,.55)');
     } else {
       const on = !!coilOn[p.id], f = p._chg == null ? 1 : clamp01((simT - p._chg) / .5);
       k = (on ? 1 : 0) + ':' + f.toFixed(3);

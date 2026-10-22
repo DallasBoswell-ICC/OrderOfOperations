@@ -80,7 +80,7 @@ function groupDrag(e, p0) {
     // keep every part on the panel
     for (let pass = 0; pass < 2; pass++) for (const q of P0) { const [cx, cy] = clampPart(q.x + dx, q.y + dy, q.t); dx = cx - q.x; dy = cy - q.y; }
     const moving = parts.filter(q => pIds.has(q.id));
-    if (P0.some(q => parts.some(o => !pIds.has(o.id) && Math.abs(o.x - (q.x + dx)) < (q.t === 'coil' ? 60 : 40) + TERM(o) && Math.abs(o.y - (q.y + dy)) < 80))) { say('There is already a part there.'); return []; }
+    if (P0.some(q => parts.some(o => !pIds.has(o.id) && Math.abs(o.x - (q.x + dx)) < (LOADT(q.t) ? 60 : 40) + TERM(o) && Math.abs(o.y - (q.y + dy)) < 80))) { say('There is already a part there.'); return []; }
     say('');
     const m = movedGroup(pIds, wIds, dx, dy); wires = m.wires;
     for (const q of moving) { const o = P0.find(z => z.id === q.id); q.x = o.x + dx; q.y = o.y + dy; }

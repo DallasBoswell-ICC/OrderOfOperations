@@ -5,7 +5,8 @@
    File/code contents:  { app: "order-of-operations-circuit-builder", v: 1, name, w, parts: [...], wires: [...] }
      w: where the L2 bar is (wire ends at x = w are on L2). Saved at the narrowest the circuit allows, so the same
         circuit saves the same whatever size the window is; it widens again to fill the screen it is opened on.
-     parts: [type, x, y, letter, normallyClosed, maintained, colour]   (type "btn" or "coil")
+     parts: [type, x, y, letter, normallyClosed, maintained, colour]   (type "btn", "coil", "con" or "lamp"; a pilot
+            light's letter is the button it is built into, or "")
      wires: [x1, y1, x2, y2]                                            (straight runs, on the grid)            */
 const APP_ID = 'order-of-operations-circuit-builder', AUTOSAVE_KEY = 'oo-circuit-builder:current';
 let circuitName = '';
@@ -26,8 +27,8 @@ function readCircuit(d) {
   const num = v => { const n = Number(v); if (!Number.isFinite(n)) throw new Error('The circuit is damaged (a position is not a number).'); return snap(n); };
   const hex = c => /^[0-9a-f]{6}$/i.test(c || '') ? '#' + c.toUpperCase() : null;
   const ps = d.parts.slice(0, 200).map(a => {
-    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : 'btn', L = String(a[3] || 'A').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || 'A';
-    const p = P(t, num(a[1]), num(a[2]), { L, color: hex(a[6]) || (t === 'coil' ? COIL_COL[L] || '#FFDC00' : BTN_COL[L] || '#FF0032') });
+    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : 'btn', L = String(a[3] || (t === 'lamp' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' ? '' : 'A');
+    const p = P(t, num(a[1]), num(a[2]), { L, color: hex(a[6]) || (t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : BTN_COL[L] || '#FF0032') });
     if (t === 'btn') { p.nc = !!a[4]; p.maint = a[5] !== 0; }
     if (t === 'con') { p.nc = !!a[4]; delete p.color; }
     return p;

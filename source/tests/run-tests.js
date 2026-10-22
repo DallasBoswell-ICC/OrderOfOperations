@@ -652,6 +652,55 @@ const DEF_CIRCUIT = `
     return out.concat(r);
   });
 
+  await check('Pilot lights: placed from the toolbar, light while fed, and one built into a button lights that button up; saved and opened again', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank');
+    // rung 1: button A into a light of its own; rung 2: button B into a light built into A
+    await mouseDrag(page, [4, 160], [876, 160]); await mouseDrag(page, [4, 320], [876, 320]);
+    await toolbarDrop(page, 'btn-no', 200, 160); await toolbarDrop(page, 'lamp', 700, 160);
+    await toolbarDrop(page, 'btn-no', 200, 320); await toolbarDrop(page, 'lamp', 700, 320);
+    const iss = await issuesNow(page); if (iss.length) out.push('wiring issues: ' + JSON.stringify(iss));
+    const [A, B] = await page.evaluate(() => parts.filter(p => p.t === 'btn').sort((a, b) => a.y - b.y).map(p => p.L));
+    // the second light's settings: build it into A
+    const lamp2 = await scr(page, 700, 320); await page.mouse.click(...lamp2); await page.waitForTimeout(60);
+    if (await page.isHidden('#props-lamp')) out.push('the light\'s settings did not show');
+    await page.selectOption('#l-btn', A);
+    const st = await page.evaluate(() => parts.filter(p => p.t === 'lamp').sort((a, b) => a.y - b.y).map(p => p.L));
+    if (st[0] !== '' || st[1] !== A) out.push('links wrong: ' + JSON.stringify(st));
+    if (!(await page.evaluate(L => view.parts.get(parts.find(p => p.t === 'btn' && p.L === L).id).badge, A))) out.push('no lamp badge on the button the light is built into');
+    const before = await page.evaluate(() => JSON.stringify(circuitData()));
+    await page.click('#tab-run');
+    const r = await page.evaluate(new Function('o', STEP + `
+      const { A, B } = o, res = [], [l1, l2] = parts.filter(p => p.t === 'lamp').sort((a, b) => a.y - b.y), bA = parts.find(p => p.t === 'btn' && p.L === A);
+      const cap = () => view.parts.get(bA.id).fill.getAttribute('fill'), halo = () => +view.parts.get(bA.id).halo.getAttribute('opacity');
+      step(3); paint(); const dim = cap();
+      if (coilOn[l1.id] || coilOn[l2.id]) res.push('a light is on before anything is pressed');
+      press(A, true); step(4); paint();
+      if (!coilOn[l1.id]) res.push('A pressed but its light is off'); if (coilOn[l2.id]) res.push('A pressed lit the light built into A (it is wired to B)');
+      if (halo() > 0.01) res.push('the A button glows although its light is off');
+      press(A, false); press(B, true); step(4); paint();
+      if (!coilOn[l2.id]) res.push('B pressed but the light built into A is off');
+      if (halo() < 0.5) res.push('the light built into A is on but the A button does not glow');
+      if (cap() === dim) res.push('the A button cap did not light up');
+      press(B, false); step(4); paint();
+      if (coilOn[l2.id] || halo() > 0.01) res.push('B let go but the A button is still lit');
+      return res;`), { A, B });
+    out.push(...r);
+    // save and open: the light and its link come back
+    await page.click('#tab-edit');
+    await page.click('#save-btn'); await page.waitForTimeout(150);
+    const code = await page.inputValue('#save-code'); await page.keyboard.press('Escape');
+    await page.selectOption('#preset', 'blank');
+    await page.click('#open-btn'); await page.fill('#open-code', code); await page.click('#open-code-btn'); await page.waitForTimeout(150);
+    if ((await page.evaluate(() => JSON.stringify(circuitData()))) !== before) out.push('the circuit changed after saving and opening');
+    // renaming the button takes its light with it
+    const bA = await page.evaluate(L => { const p = parts.find(q => q.t === 'btn' && q.L === L); return [p.x, p.y]; }, A);
+    await page.mouse.click(...await scr(page, ...bA)); await page.waitForTimeout(60);
+    await page.selectOption('#p-letter', 'Q');
+    if ((await page.evaluate(() => parts.filter(p => p.t === 'lamp').map(p => p.L).join(','))) !== ',Q') out.push('renaming the button lost its light');
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

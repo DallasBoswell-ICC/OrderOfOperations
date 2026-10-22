@@ -25,7 +25,7 @@ function mergeRecs(ins) {
 const EGG = () => ({ set: new Set(), from: OFF_WHITE, rd: Infinity });
 const isFeed1 = id => NET.feedV.get(id) === 1;
 function addLane(e, from) {
-  const d = { e, from, to: from === e.a ? e.b : e.a, delay: e.len / V, arrived: null, sent: null, sentKey: e.kind === 'part' && e.part.t === 'coil' ? '-|out' : '-' };   // (nothing sent yet: dark)
+  const d = { e, from, to: from === e.a ? e.b : e.a, delay: e.len / V, arrived: null, sent: null, sentKey: e.kind === 'part' && LOADT(e.part.t) ? '-|out' : '-' };   // (nothing sent yet: dark)
   if (e.kind === 'seg') {
     d.chain = from === e.a ? e.chain : [...e.chain].reverse(); d.li = from === e.a ? 0 : 1;
     // when the stream reaches each point along it (seconds after it enters)
@@ -148,7 +148,7 @@ function findPaths() {
       const w = d.to;
       if (seen.has(w) || !toL2.has(w) || isL1(w)) continue;
       seen.add(w); path.push(d);
-      dfs(w, coil || (d.e.kind === 'part' && d.e.part.t === 'coil'));
+      dfs(w, coil || (d.e.kind === 'part' && LOADT(d.e.part.t)));
       path.pop(); seen.delete(w);
     }
   };
@@ -165,7 +165,7 @@ function findReach() {
     let label = '', s = 0;   // (s: how long the current takes to get there, in seconds)
     for (const d of path) {
       s += d.e.kind === 'seg' ? d.delay : d.e.len / V;
-      if (d.e.kind === 'part' && d.e.part.t !== 'con') { if (d.e.part.t === 'btn') label = d.e.part.L; else if (d.e.part.t === 'coil') label = 'ret'; continue; }
+      if (d.e.kind === 'part' && d.e.part.t !== 'con') { if (d.e.part.t === 'btn') label = d.e.part.L; else if (LOADT(d.e.part.t)) label = 'ret'; continue; }
       const m = REACH.get(d) || {}; m[label] = Math.max(m[label] || 0, s); REACH.set(d, m);
     }
   }
@@ -219,14 +219,14 @@ function through(d, r) {
 function send(d, r, t, atOnce) {
   r = filt(d, r, t);
   if (d.draining && !(r && r.ret)) { d.draining = false; if (!closed(d.e.part)) r = null; }   // the end of the return current has gone through; the switch is open
-  const key = recKey(r) + (d.e.kind === 'part' && d.e.part.t === 'coil' ? (coilOn[d.e.part.id] ? '|in' : '|out') : '');
+  const key = recKey(r) + (d.e.kind === 'part' && LOADT(d.e.part.t) ? (coilOn[d.e.part.id] ? '|in' : '|out') : '');
   if (d.sent !== undefined && d.sentKey === key) return;
   d.sent = r; d.sentKey = key;
   const out = through(d, r);
   if (d.e.kind !== 'seg') {
     // the part's leads: the current flows in from the end it enters at, and out along the far lead just in time to
     // reach the far end when it arrives there
-    const p = d.e.part, outS = d.from === p._a ? 'B' : 'A', Ls = TERM(p) - (p.t === 'coil' ? COIL : BOX) / 2;
+    const p = d.e.part, outS = d.from === p._a ? 'B' : 'A', Ls = TERM(p) - (LOADT(p.t) ? COIL : BOX) / 2;
     const tOut = t + (atOnce ? 0 : d.delay);
     leadEvent(p, outS, tOut - Ls / V, out, 'body');
     schedule(tOut, () => { d.arrived = out; reeval(d.to, evT); });
@@ -294,8 +294,8 @@ let coilIns = new Set();
 function updateCoils(t) {
   const f = compNow(), c2 = f(NET.L2);
   coilIns = new Set(); let changed = false;
-  for (const p of parts) if (p.t === 'coil') { if (fedBy(f, p)) { if (FED_AT[p.id] === undefined) FED_AT[p.id] = t; } else delete FED_AT[p.id]; }
-  for (const p of parts) if (p.t === 'coil') {
+  for (const p of parts) if (LOADT(p.t)) { if (fedBy(f, p)) { if (FED_AT[p.id] === undefined) FED_AT[p.id] = t; } else delete FED_AT[p.id]; }
+  for (const p of parts) if (LOADT(p.t)) {   // (a pilot light lights just as a coil picks up)
     const d = DIRS.find(x => x.e.part === p); if (!d) continue;
     coilIns.add(d.from);
     const r = REC.get(d.from);
@@ -303,11 +303,11 @@ function updateCoils(t) {
     // path back to L1 is unbroken right now (never from the end of a stream that has been cut off), and not ahead of
     // a coil that was first and that it would cut off
     let want = !shortNow && !!r && !r.ret && f(d.to) === c2;
-    if (want && !coilOn[p.id] && (f(d.from) !== f(NET.L1) || wouldCutOff(p, f))) want = false;
+    if (want && !coilOn[p.id] && (f(d.from) !== f(NET.L1) || (p.t === 'coil' && wouldCutOff(p, f)))) want = false;
     let atOnce = false; const wasOn = !!coilOn[p.id];
     if (want !== wasOn) {
       coilOn[p.id] = want; p._chg = t;
-      for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(t + CT, () => moveContact(c, evT));   // its contacts follow
+      if (p.t === 'coil') for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(t + CT, () => moveContact(c, evT));   // its contacts follow
       // current already at the coil, and its way back to L2 opening or closing: the coil drops out or picks up there
       // and then, so the change starts at its far end at once (rather than travelling through it like new current)
       atOnce = !!r && !r.ret && p._inKey === recKey(r);

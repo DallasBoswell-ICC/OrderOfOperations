@@ -33,4 +33,4 @@ function addWire(segs) {
   normalize(); sel = null; say(''); draw();
 }
 function hitWire(p) { return wires.find(w => p.x >= Math.min(w.x1, w.x2) - 10 && p.x <= Math.max(w.x1, w.x2) + 10 && p.y >= Math.min(w.y1, w.y2) - 10 && p.y <= Math.max(w.y1, w.y2) + 10); }
-function hitPart(p) { return parts.find(q => Math.abs(p.x - q.x) < TERM(q) - 8 && Math.abs(p.y - q.y) < (q.t === 'coil' ? COIL : BOX) / 2 + 6); }
+function hitPart(p) { return parts.find(q => Math.abs(p.x - q.x) < TERM(q) - 8 && Math.abs(p.y - q.y) < (LOADT(q.t) ? COIL : BOX) / 2 + 6); }

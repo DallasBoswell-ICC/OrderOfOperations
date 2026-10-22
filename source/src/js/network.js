@@ -61,7 +61,7 @@ function wiringIssues(net) {
   if (l1 === l2) out.set('short', true);
   for (const p of parts) {
     const a = f(p._a), b = f(p._b);
-    if (p.t === 'coil') { if (!((a === l1 && b === l2) || (a === l2 && b === l1))) out.set(p.id, 'Not wired from L1 to L2'); }
+    if (LOADT(p.t)) { if (!((a === l1 && b === l2) || (a === l2 && b === l1))) out.set(p.id, 'Not wired from L1 to L2'); }
     else if (net.adj[p._a].length < 2 || net.adj[p._b].length < 2) out.set(p.id, 'An end is not connected');
   }
   return out;
