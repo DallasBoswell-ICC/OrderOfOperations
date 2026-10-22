@@ -39,8 +39,14 @@ function paint() {
       // a button with a light built in: its cap is dim while the light is off, and lights up with it
       const pr = !!down[p.L], lit = v.lit ? Math.max(0, ...lampsOf(p.L).map(litOf)) : 0; k = (pr ? 1 : 0) + ':' + lit.toFixed(3);
       if (k === v.k) continue; v.k = k;
-      v.fill.setAttribute('fill', v.lit ? mixOk(pr ? GREY : mixOk(p.color, GREY, .55), p.color, lit) : pr ? GREY : v.sec ? v.secFill : p.color);
-      v.text.style.fill = v.sec ? (pr ? LIGHT_TEXT : p.color) : pr && lit < .5 ? LIGHT_TEXT : DARK_TEXT;
+      if (v.sec) {   // a secondary drawing pressed: its rim and letter go grey (where the main one's whole cap goes grey)
+        v.fill.setAttribute('fill', pr ? SEC_PRESSED : v.secFill);
+        v.fill.setAttribute('stroke', pr ? SEC_PRESSED_RIM : p.color);
+        v.text.style.fill = pr ? SEC_PRESSED_RIM : p.color;
+      } else {
+        v.fill.setAttribute('fill', v.lit ? mixOk(pr ? GREY : mixOk(p.color, GREY, .55), p.color, lit) : pr ? GREY : p.color);
+        v.text.style.fill = pr && lit < .5 ? LIGHT_TEXT : DARK_TEXT;
+      }
       if (v.lit) {
         v.halo.setAttribute('opacity', (lit * .6).toFixed(3));
         v.badge.setAttribute('fill', mixRgb(GREY, p.color, lit));

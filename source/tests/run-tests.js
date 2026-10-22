@@ -792,8 +792,11 @@ const DEF_CIRCUIT = `
     // pressing the secondary presses both, and it greys like any pressed button
     await page.click('#tab-run');
     const r = await page.evaluate(new Function(STEP + `step(1); press('E', true); step(1); paint();
-      return parts.filter(p => p.t === 'btn' && p.L === 'E').map(p => view.parts.get(p.id).fill.getAttribute('fill'));`));
-    if (r.some(f => f !== '#404040')) out.push('pressed E drawings not grey: ' + JSON.stringify(r));
+      return parts.filter(p => p.t === 'btn' && p.L === 'E').map(p => { const v = view.parts.get(p.id); return [!!v.sec, v.fill.getAttribute('fill'), v.fill.getAttribute('stroke'), v.press.getAttribute('transform')]; });`));
+    const m = r.find(x => !x[0]), s2 = r.find(x => x[0]);
+    if (m[1] !== '#404040') out.push('the main E pressed is not grey: ' + m[1]);
+    if (s2[1] === m[1] || s2[2] !== '#8c8c8c') out.push('the secondary E pressed does not look its own way: ' + JSON.stringify(s2));
+    if (!m[3] || !s2[3]) out.push('a pressed E did not sink in');
     return out;
   });
 

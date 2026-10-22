@@ -31,6 +31,7 @@ const captionOf = p => p.t === 'coil' ? `${p.L} Coil` : p.t === 'lamp' ? (p.L ? 
 /* One button drawn more than once: the first one placed is the pushbutton itself (the operator), drawn as normal; the
    others are its extra contact blocks, drawn as secondary (a dark cap with a coloured rim and letter). Pressing any of
    them presses them all. A light built into the button shows on the main one only, as the lamp is in the operator. */
+const SEC_PRESSED = '#2a2a2a', SEC_PRESSED_RIM = '#8c8c8c';
 const mainBtn = L => parts.find(q => q.t === 'btn' && q.L === L);
 const lampsOf = L => parts.filter(q => q.t === 'lamp' && q.L && q.L === L);
 const lampColour = p => p.L ? (parts.find(q => q.t === 'btn' && q.L === p.L) || p).color || '#00B050' : p.color || '#00B050';

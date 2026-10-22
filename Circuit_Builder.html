@@ -1146,6 +1146,7 @@ const captionOf = p => p.t === 'coil' ? `${p.L} Coil` : p.t === 'lamp' ? (p.L ? 
 /* One button drawn more than once: the first one placed is the pushbutton itself (the operator), drawn as normal; the
    others are its extra contact blocks, drawn as secondary (a dark cap with a coloured rim and letter). Pressing any of
    them presses them all. A light built into the button shows on the main one only, as the lamp is in the operator. */
+const SEC_PRESSED = '#2a2a2a', SEC_PRESSED_RIM = '#8c8c8c';
 const mainBtn = L => parts.find(q => q.t === 'btn' && q.L === L);
 const lampsOf = L => parts.filter(q => q.t === 'lamp' && q.L && q.L === L);
 const lampColour = p => p.L ? (parts.find(q => q.t === 'btn' && q.L === p.L) || p).color || '#00B050' : p.color || '#00B050';
@@ -1413,8 +1414,14 @@ function paint() {
       // a button with a light built in: its cap is dim while the light is off, and lights up with it
       const pr = !!down[p.L], lit = v.lit ? Math.max(0, ...lampsOf(p.L).map(litOf)) : 0; k = (pr ? 1 : 0) + ':' + lit.toFixed(3);
       if (k === v.k) continue; v.k = k;
-      v.fill.setAttribute('fill', v.lit ? mixOk(pr ? GREY : mixOk(p.color, GREY, .55), p.color, lit) : pr ? GREY : v.sec ? v.secFill : p.color);
-      v.text.style.fill = v.sec ? (pr ? LIGHT_TEXT : p.color) : pr && lit < .5 ? LIGHT_TEXT : DARK_TEXT;
+      if (v.sec) {   // a secondary drawing pressed: its rim and letter go grey (where the main one's whole cap goes grey)
+        v.fill.setAttribute('fill', pr ? SEC_PRESSED : v.secFill);
+        v.fill.setAttribute('stroke', pr ? SEC_PRESSED_RIM : p.color);
+        v.text.style.fill = pr ? SEC_PRESSED_RIM : p.color;
+      } else {
+        v.fill.setAttribute('fill', v.lit ? mixOk(pr ? GREY : mixOk(p.color, GREY, .55), p.color, lit) : pr ? GREY : p.color);
+        v.text.style.fill = pr && lit < .5 ? LIGHT_TEXT : DARK_TEXT;
+      }
       if (v.lit) {
         v.halo.setAttribute('opacity', (lit * .6).toFixed(3));
         v.badge.setAttribute('fill', mixRgb(GREY, p.color, lit));
