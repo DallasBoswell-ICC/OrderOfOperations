@@ -74,7 +74,7 @@ function barDrag(e, which) {
 let lastBarClick = { bar: null, t: 0 };
 function groupDrag(e, p0) {
   const pIds = new Set(sel.parts), wIds = new Set(sel.wires);
-  const P0 = parts.filter(q => pIds.has(q.id)).map(q => ({ id: q.id, x: q.x, y: q.y, t: q.t }));
+  const P0 = parts.filter(q => pIds.has(q.id)).map(q => ({ id: q.id, x: q.x, y: q.y, t: q.t })), st0 = stateOf();
   liveDrag(e, r => {
     let dx = snap(r.x - p0.x), dy = snap(r.y - p0.y);
     // keep every part on the panel
@@ -84,7 +84,9 @@ function groupDrag(e, p0) {
     say('');
     const m = movedGroup(pIds, wIds, dx, dy); wires = m.wires;
     for (const q of moving) { const o = P0.find(z => z.id === q.id); q.x = o.x + dx; q.y = o.y + dy; }
-    normalize(); sel = { parts: pIds, wires: new Set(wires.filter(w => wIds.has(w.id)).map(w => w.id)) }; return m.hits;
+    normalize();
+    if (parts.some(q => pIds.has(q.id) && wireInTheWay(q))) { restore(st0); say('There is a wire in the way.'); return []; }
+    sel = { parts: pIds, wires: new Set(wires.filter(w => wIds.has(w.id)).map(w => w.id)) }; return m.hits;
   });
 }
 svg.addEventListener('pointerdown', e => {
@@ -137,13 +139,15 @@ svg.addEventListener('pointerdown', e => {
   // a part: drag it, and its wires follow
   if (q) {
     sel = selOne('p', q.id); say(''); draw();
-    const id = q.id, ox = q.x, oy = q.y, sx = p.x, sy = p.y;
+    const id = q.id, ox = q.x, oy = q.y, sx = p.x, sy = p.y, st0 = stateOf();
     return liveDrag(e, r => {
       const qq = parts.find(z => z.id === id);
       const [x, y] = clampPart(ox + r.x - sx, oy + r.y - sy, qq.t);
       if (overlaps(qq, x, y, qq.t)) { say('There is already a part there.'); return []; }
       say('');
-      const m = movedWires(qq, x, y); wires = m.wires; qq.x = x; qq.y = y; normalize(); return m.hits;
+      const m = movedWires(qq, x, y); wires = m.wires; qq.x = x; qq.y = y; normalize();
+      if (wireInTheWay(qq)) { restore(st0); say('There is a wire in the way.'); return []; }
+      return m.hits;
     });
   }
   // the middle of a wire: slide that straight run sideways; the runs either side stretch to stay connected

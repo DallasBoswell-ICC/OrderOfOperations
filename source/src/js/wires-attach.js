@@ -81,6 +81,10 @@ function movedGroup1(partIds, wireIds, dx, dy) {
       const v = [...ch.segs].reverse().find(q => q.x1 === q.x2);
       add.push(...route(ch.far, fOri, NM, v ? v.x1 : null));
     }
+    // an end sitting right on the end of a part that stays put (or on a bar), joined with no wire between: a wire is
+    // drawn to keep them joined
+    if ((dx || dy) && (x === 0 || x === W || parts.some(q => !partIds.has(q.id) && terms(q).some(([a, b]) => a === x && b === y))))
+      add.push(...route([x, y], 'h', NM, null));
   }
   const hits = [];
   if (dx || dy) for (const p of P) for (const [x, y] of terms(p)) { const n = [x + dx, y + dy]; if (!pts.has(key(...n)) && connects(pointInfo(n[0], n[1], used, PS))) hits.push(n); }
@@ -89,3 +93,12 @@ function movedGroup1(partIds, wireIds, dx, dy) {
 function movedWires(p, nx, ny) { return movedGroup(new Set([p.id]), new Set(), nx - p.x, ny - p.y); }
 const stateOf = () => JSON.stringify({ parts, wires, W, WU: W_USER }, (k, v) => k.startsWith('_') ? undefined : v);
 function restore(st) { const o = JSON.parse(st); parts = o.parts; wires = o.wires; if (o.W) W = o.W; W_USER = o.WU ?? null; }
+
+// a wire running across a part's body (other than the run it sits in, along its own line): a part can't go there, as
+// the wire would be hidden under it and cut
+function wireInTheWay(p) {
+  const h = (p.t === 'coil' ? COIL : BOX) / 2, L = p.x - TERM(p), R = p.x + TERM(p);
+  return wires.some(w => w.x1 === w.x2
+    ? w.x1 > L && w.x1 < R && Math.max(w.y1, w.y2) > p.y - h && Math.min(w.y1, w.y2) < p.y + h
+    : w.y1 !== p.y && Math.abs(w.y1 - p.y) < h && Math.max(w.x1, w.x2) > L && Math.min(w.x1, w.x2) < R);
+}

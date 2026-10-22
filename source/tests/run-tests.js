@@ -513,6 +513,76 @@ const DEF_CIRCUIT = `
       return out;`));
   });
 
+  // the "Stress test" circuit: master seal-in, forward/reverse with interlocks, a contact behind a coil, a button
+  // drawn twice, a self-switching buzzer, a three-relay cascade and a cross-feed, all at once
+  const STRESS_LOGIC = `const expect = (prev, b) => { let c = { ...prev }; for (let k = 0; k < 30; k++) { const n = { ...c };
+      n.M = !b.S && (b.A || c.M); n.F = c.M && (b.B || c.F) && !c.R; n.R = c.M && (b.C || c.R) && !c.F; n.Y = b.E || c.F; n.X = (b.D || b.E) && !c.Y;
+      n.P = b.J; n.Q = c.P; n.T = c.Q; n.U = b.H || b.K; n.V = b.H || b.K; n.Z = false;
+      if (JSON.stringify(n) === JSON.stringify(c)) break; c = n; } return c; };`;
+  await check('Stress test circuit: random taps and toggles always match the ladder logic, no flicker, buzzer keeps buzzing', async page => {
+    await page.selectOption('#preset', 'stress');
+    if ((await issuesNow(page)).length) return ['stress circuit not wired: ' + JSON.stringify(await issuesNow(page))];
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + STRESS_LOGIC + `
+      const out = []; let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      const coils = () => Object.fromEntries(parts.filter(p => p.t === 'coil').map(p => [p.L, !!coilOn[p.id]]));
+      const btns = () => Object.fromEntries('SABCDEGJHK'.split('').map(L => [L, !!down[L]]));
+      const watch = (secs, flips) => { let pc = coils(); for (let i = 0; i < secs * 60; i++) { step(1 / 60); const c = coils(); for (const k in c) if (k !== 'Z' && c[k] !== pc[k]) flips[k] = (flips[k] || 0) + 1; pc = c; } };
+      step(3); let exp = expect(coils(), btns());
+      for (let n = 0; n < 60 && out.length < 6; n++) {
+        const flips = {}; let what;
+        if (rnd() < 0.45) { const L = 'SABC'[Math.floor(rnd() * 4)]; what = 'tap ' + L; press(L, true); watch(2, flips); exp = expect(exp, btns()); press(L, false); watch(5, flips); }
+        else { const L = 'DEGJHK'[Math.floor(rnd() * 6)]; what = (down[L] ? 'release ' : 'press ') + L; press(L, !down[L]); watch(6, flips); }
+        exp = expect(exp, btns());
+        for (const k in flips) if (flips[k] > 1) out.push(what + ': ' + k + ' switched ' + flips[k] + ' times');
+        const c = coils(); for (const k in exp) if (k !== 'Z' && c[k] !== exp[k]) out.push(what + ': ' + k + ' is ' + (c[k] ? 'in' : 'out') + ', the logic says ' + (exp[k] ? 'in' : 'out'));
+        if (down.G) { let z = 0, pz = c.Z; for (let i = 0; i < 300; i++) { step(1 / 60); const zz = coils().Z; if (zz !== pz) z++; pz = zz; } if (z < 3) out.push('G is in but the buzzer Z switched only ' + z + ' times in 5 s'); }
+      }
+      return out;`));
+  });
+
+  await check('Stress test circuit: button mashing faster than the relays can follow always settles back to a clean start', async page => {
+    await page.selectOption('#preset', 'stress'); await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + `
+      const out = []; let seed = 3; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647, all = 'SABCDEGJHK';
+      let maxQ = 0; const stepQ = dt => { const end = simT + dt; while (simT < end - 1e-9) { simT = Math.min(end, simT + 1 / 60); runEvents(simT); maxQ = Math.max(maxQ, queue.length); } };
+      for (let n = 0; n < 250; n++) { const L = all[Math.floor(rnd() * all.length)]; press(L, !down[L]); stepQ(0.02 + rnd() * 0.35); }
+      for (const L of all) press(L, false); press('S', true); stepQ(1); press('S', false); stepQ(25);
+      const look = () => NET.nodes.map((_, i) => colAt(i, simT)).join('|') + parts.map(p => coilOn[p.id] ? 1 : 0).join('');
+      const a = look(), stuck = parts.filter(p => p.t === 'coil' && coilOn[p.id]).map(p => p.L);
+      startRun(); step(25);
+      if (stuck.length) out.push('coils still in after letting go of everything: ' + stuck.join(' '));
+      if (look() !== a) out.push('the colours did not settle back to what a clean start shows');
+      if (maxQ > 400) out.push('the event queue grew to ' + maxQ);
+      return out;`));
+  });
+
+  await check('Stress test circuit: moving parts at random never changes what connects to what; save, open and undo bring it back exactly', async page => {
+    await page.selectOption('#preset', 'stress');
+    return page.evaluate(() => {
+      const out = []; let seed = 5; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      const groups = () => { const net = network(), f = components(net, e => e.kind === 'w'), m = new Map();
+        for (const p of parts) for (const [s, n] of [['a', p._a], ['b', p._b]]) { const g = f(n); if (!m.has(g)) m.set(g, []); m.get(g).push(p.id + s); }
+        for (const [s, n] of [['L1', net.L1], ['L2', net.L2]]) { const g = f(n); if (m.has(g)) m.get(g).push(s); }
+        return [...m.values()].map(a => a.sort().join(',')).sort().join(' | '); };
+      const base = groups(), orig = JSON.stringify(wires.map(w => [w.x1, w.y1, w.x2, w.y2]).sort()); let moves = 0;
+      for (let n = 0; n < 80; n++) {
+        const p = parts[Math.floor(rnd() * parts.length)], dx = (Math.floor(rnd() * 5) - 2) * 20, dy = (Math.floor(rnd() * 5) - 2) * 20;
+        const [x, y] = clampPart(p.x + dx, p.y + dy, p.t); if (overlaps(p, x, y, p.t)) continue;
+        snapshot(); const m = movedWires(p, x, y); wires = m.wires; p.x = x; p.y = y; normalize();
+        if (wireInTheWay(p) || m.hits.length) { restore(history.pop()); normalize(); continue; }   // (moves the editor refuses, or that join something on purpose)
+        moves++;
+        if (groups() !== base) { out.push('moving ' + p.t + ' ' + p.L + ' by ' + dx + ', ' + dy + ' changed what connects to what'); restore(history.pop()); normalize(); }
+      }
+      const d = circuitData(), c = readCircuit(JSON.parse(JSON.stringify(d))); parts = c.parts; wires = c.wires; W = c.w; normalize();
+      if (JSON.stringify(circuitData()) !== JSON.stringify(d)) out.push('saving and opening changed the circuit');
+      for (let i = 0; i < moves; i++) undo();
+      if (JSON.stringify(wires.map(w => [w.x1, w.y1, w.x2, w.y2]).sort()) !== orig) out.push('undoing every move did not bring back the original wiring');
+      if (moves < 30) out.push('only ' + moves + ' moves were tried');
+      return out.slice(0, 6);
+    });
+  });
+
   await check('Building by hand: wires from the bars, parts dropped onto wires, a working circuit', async page => {
     const out = [];
     await page.selectOption('#preset', 'blank');

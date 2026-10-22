@@ -16,6 +16,7 @@ function spliceTarget(x, y, t) { const h = t === 'coil' ? 60 : 40; return wires.
 function placePart(kind, x, y) {
   [x, y] = clampPart(x, y, kindOf(kind));
   if (overlaps(null, x, y, kindOf(kind))) { say('There is already a part there.'); return; }
+  if (wireInTheWay({ t: kindOf(kind), x, y })) { say('There is a wire in the way.'); return; }
   snapshot();
   const p = newPart(kind, x, y);
   parts.push(p); normalize(); sel = selOne('p', p.id); say(''); draw();
