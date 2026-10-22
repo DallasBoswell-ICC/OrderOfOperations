@@ -1,0 +1,741 @@
+/* Automatic checks for the Circuit Builder.
+
+   Run after every change:   node tests/run-tests.js        (build first: python3 build.py)
+
+   Each check opens the built page (dist/Circuit_Builder.html) in a headless browser and either drives the
+   simulation directly, in fast time, or uses the mouse the way a student would. The page's own functions are
+   all visible to the checks, so they can set up circuits and read back exactly what is lit and when.
+   Needs Node.js and Playwright (npm install playwright, or set NODE_PATH to where it is installed). */
+const path = require('path');
+const { chromium } = require('playwright');
+
+const PAGE = 'file://' + path.resolve(__dirname, '..', 'dist', 'Circuit_Builder.html');
+const results = [];
+let browser;
+
+async function openPage(width = 1300, height = 1000, context) {
+  // each check gets its own browser profile, so nothing saved in one check carries into the next
+  const ctx = context || await browser.newContext({ viewport: { width, height }, acceptDownloads: true });
+  const page = await ctx.newPage();
+  page.errors = [];
+  page.on('pageerror', e => page.errors.push(e.message));
+  await page.goto(PAGE);
+  await page.waitForTimeout(200);
+  return page;
+}
+async function check(name, fn) {
+  const t0 = Date.now();
+  let page;
+  try {
+    page = await openPage();
+    const problems = (await fn(page)) || [];
+    if (page.errors.length) problems.push('page errors: ' + page.errors.join('; '));
+    results.push({ name, ok: !problems.length, problems, ms: Date.now() - t0 });
+  } catch (e) {
+    results.push({ name, ok: false, problems: [String(e && e.stack || e)], ms: Date.now() - t0 });
+  } finally { if (page) await page.context().close(); }
+  const r = results[results.length - 1];
+  console.log(`${r.ok ? 'PASS' : 'FAIL'}  ${name}  (${(r.ms / 1000).toFixed(1)} s)`);
+  if (!r.ok) for (const p of r.problems.slice(0, 8)) console.log('      - ' + p);
+}
+
+// helpers that run inside the page ------------------------------------------------------------------------
+// a step function that advances the simulation in fast time (no waiting for the real clock)
+// when a point last changed (a point partway along a wire has a timeline for each way along it)
+const LAST = `const lastChange = i => Math.max(...(ltl.get(i) || [tl[i]]).map(a => a[a.length - 1][0]));`;
+const STEP = LAST + `const step = dt => { const end = simT + dt; while (simT < end) { simT = Math.min(end, simT + 1 / 60); runEvents(simT); } };`;
+// put the page into Run mode with a given ready-made circuit
+async function runPreset(page, name) {
+  await page.selectOption('#preset', name);
+  await page.click('#tab-run');
+}
+// build a circuit from data inside the page
+async function loadCircuit(page, fnBody) {
+  await page.evaluate(new Function(fnBody + '; normalize(); draw();'));
+}
+// screen position of a point in panel units
+const scr = (page, x, y) => page.evaluate(([x, y]) => { const m = svg.getScreenCTM(); return [m.a * x + m.e, m.d * y + m.f]; }, [x, y]);
+async function mouseDrag(page, a, b, opts = {}) {
+  const A = await scr(page, ...a), B = await scr(page, ...b);
+  if (opts.shift) await page.keyboard.down('Shift');
+  await page.mouse.move(...A); await page.mouse.down();
+  await page.mouse.move((A[0] + B[0]) / 2, (A[1] + B[1]) / 2, { steps: 4 }); await page.mouse.move(...B, { steps: 4 });
+  await page.mouse.up();
+  if (opts.shift) await page.keyboard.up('Shift');
+  await page.waitForTimeout(40);
+}
+async function toolbarDrop(page, kind, x, y) {
+  const bx = await page.locator(`[data-part="${kind}"]`).boundingBox(), B = await scr(page, x, y);
+  await page.mouse.move(bx.x + 10, bx.y + 10); await page.mouse.down();
+  await page.mouse.move(bx.x + 40, bx.y + 60, { steps: 3 }); await page.mouse.move(...B, { steps: 6 }); await page.mouse.up();
+  await page.waitForTimeout(40);
+}
+const wiresNow = page => page.evaluate(() => wires.map(w => [w.x1, w.y1, w.x2, w.y2]));
+const issuesNow = page => page.evaluate(() => [...wiringIssues(network()).entries()]);
+
+// the user's three-rung circuit: X = (¬A·(B+C)) + (¬D·(F+G)) + (¬E·(H+I))
+const THREE_RULE = `const d = L => !!down[L]; return (!d('A') && (d('B') || d('C'))) || (!d('D') && (d('F') || d('G'))) || (!d('E') && (d('H') || d('I')));`;
+// the D/E/F circuit from the screen share: X = (¬A·(B+C)) + (¬D·(E+F))
+const DEF_CIRCUIT = `
+  const Bt = (L, x, y, nc, col) => P('btn', x, y, { L, nc: !!nc, maint: true, color: col });
+  parts = [Bt('A', 140, 200, true, '#FF0032'), Bt('B', 360, 140, false, '#0070C0'), Bt('C', 360, 260, false, '#00B050'), C('X', 700, 200),
+           Bt('D', 140, 460, true, '#FFDC00'), Bt('E', 360, 400, false, '#00D2BE'), Bt('F', 360, 500, false, '#7030A0')];
+  wires = [Wr(0,200,100,200), Wr(180,200,240,200), Wr(240,140,240,260), Wr(240,140,320,140), Wr(240,260,320,260), Wr(400,140,480,140), Wr(400,260,480,260),
+    Wr(480,140,480,260), Wr(480,200,640,200), Wr(760,200,880,200),
+    Wr(0,460,100,460), Wr(180,460,240,460), Wr(240,400,240,500), Wr(240,400,320,400), Wr(240,500,320,500), Wr(400,400,480,400), Wr(400,500,480,500), Wr(480,260,480,500)];`;
+
+(async () => {
+  browser = await chromium.launch();
+
+  await check('Every ready-made circuit is wired correctly', async page => {
+    const out = [];
+    for (const k of ['io', 'and', 'or', 'andor', 'three']) {
+      await page.selectOption('#preset', k);
+      const iss = await issuesNow(page);
+      if (iss.length) out.push(`${k}: ${JSON.stringify(iss)}`);
+    }
+    return out;
+  });
+
+  await check('Truth tables of the small ready-made circuits', async page => {
+    const out = [];
+    const cases = { io: [['', 0], ['A', 1]], and: [['', 0], ['A', 0], ['B', 0], ['AB', 1]], or: [['', 0], ['A', 1], ['B', 1], ['AB', 1]],
+      andor: [['', 0], ['A', 0], ['B', 0], ['AB', 1], ['AC', 1], ['ABC', 1], ['BC', 0]] };
+    for (const [k, rows] of Object.entries(cases)) {
+      await runPreset(page, k);
+      const r = await page.evaluate(new Function('rows', STEP + `
+        const res = []; step(4);
+        for (const [pressed, want] of rows) {
+          for (const p of parts) if (p.t === 'btn') press(p.L, pressed.includes(p.L));
+          step(8);
+          const got = parts.filter(p => p.t === 'coil').every(p => !!coilOn[p.id]) ? 1 : 0;
+          if (got !== want) res.push(pressed + ' gave ' + got);
+        }
+        return res;`), rows);
+      r.forEach(x => out.push(`${k}: ${x}`));
+      await page.click('#tab-edit');
+    }
+    return out;
+  });
+
+  await check('Three rungs into X: all 512 combinations, no backflow, no bleeding between rungs', async page => {
+    await runPreset(page, 'three');
+    return page.evaluate(new Function(STEP + `
+      const out = [], Ls = 'ABCDEFGHI'.split('');
+      const want = () => { ${THREE_RULE} };
+      const X = parts.find(p => p.t === 'coil');
+      const check = tag => {
+        if (want() !== !!coilOn[X.id]) out.push(tag + ': X wrong');
+        for (const [N, top, bot] of [['A','B','C'], ['D','F','G'], ['E','H','I']]) {
+          const n = parts.find(p => p.L === N), t = parts.find(p => p.L === top), b = parts.find(p => p.L === bot);
+          if (down[N] && (lit(n._b, simT) || lit(t._a, simT) || lit(b._a, simT))) out.push(tag + ': rung ' + N + ' lit while ' + N + ' is open');
+          if (!down[N] && !(lit(t._a, simT) && lit(b._a, simT))) out.push(tag + ': rung ' + N + ' not lit up to its buttons');
+          for (const p of [t, b]) if (!(!down[N] && closed(p)) && lit(p._b, simT)) out.push(tag + ': current backward at ' + p.L);
+        }
+        if (queue.length) out.push(tag + ': still busy');
+      };
+      step(4);
+      for (let m = 0; m < 512; m++) { Ls.forEach((L, i) => press(L, !!(m >> i & 1))); step(7); check('combo ' + Ls.filter((L, i) => m >> i & 1).join('')); }
+      let seed = 5; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      for (let t = 0; t < 300; t++) { const L = Ls[Math.floor(rnd() * 9)]; press(L, !down[L]); step(rnd() < .5 ? rnd() * .5 : 0); if (t % 5 === 4) { step(8); check('random ' + t); } }
+      return out.slice(0, 20);`));
+  });
+
+  await check('D/E/F circuit: all 64 combinations, and the far side of an open button never lights', async page => {
+    await loadCircuit(page, DEF_CIRCUIT);
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + `
+      const out = [], Ls = 'ABCDEF'.split(''), X = parts.find(p => p.t === 'coil');
+      step(4);
+      for (let m = 0; m < 64; m++) {
+        Ls.forEach((L, i) => press(L, !!(m >> i & 1))); step(8);
+        const d = L => !!down[L], want = (!d('A') && (d('B') || d('C'))) || (!d('D') && (d('E') || d('F')));
+        if (want !== !!coilOn[X.id]) out.push(m + ': X wrong');
+        for (const p of parts) if (p.t === 'btn' && !closed(p)) {
+          const outEnd = btnIn(p) === p._a ? p._b : p._a;
+          if (lit(outEnd, simT)) out.push(m + ': far side of open ' + p.L + ' lit');
+        }
+      }
+      return out.slice(0, 20);`));
+  });
+
+  await check('A button wired with power coming in on its right still works', async page => {
+    await loadCircuit(page, `parts = [P('btn', 220, 200, { L: 'A', nc: false, maint: true, color: '#FF0032' }), C('X', 700, 200)];
+      wires = [Wr(0, 120, 340, 120), Wr(340, 120, 340, 200), Wr(340, 200, 260, 200), Wr(180, 200, 60, 200), Wr(60, 200, 60, 320), Wr(60, 320, 480, 320), Wr(480, 320, 480, 200), Wr(480, 200, 640, 200), Wr(760, 200, 880, 200)];`);
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + `
+      const out = [], X = parts.find(p => p.t === 'coil'); step(4);
+      press('A', true); step(8); if (!coilOn[X.id]) out.push('A pressed but X off');
+      press('A', false); step(8); if (coilOn[X.id]) out.push('A released but X on');
+      return out;`));
+  });
+
+  await check('Current flows the right way: L2 wires fill and drain toward the right edge', async page => {
+    await loadCircuit(page, `const Bt = (L, x, y, col) => P('btn', x, y, { L, nc: false, maint: true, color: col });
+      parts = [Bt('B', 300, 160, '#0070C0'), C('X', 700, 160), Bt('C', 300, 320, '#00B050'), C('Y', 700, 320)];
+      wires = [Wr(0, 160, 260, 160), Wr(340, 160, 640, 160), Wr(760, 160, 880, 160), Wr(0, 320, 260, 320), Wr(340, 320, 640, 320), Wr(760, 320, 880, 320)];`);
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + `
+      const out = []; step(3);
+      const times = y => NET.nodes.map((n, i) => [n, i]).filter(([n]) => n.y === y && n.x >= 760 && n.x <= 880).sort((a, b) => a[0].x - b[0].x).map(([, i]) => lastChange(i));
+      press('C', true); step(4); press('B', true); step(4);
+      for (const y of [160, 320]) { const t = times(y); if (!(t[0] < t[t.length - 1])) out.push('return wire at ' + y + ' filled the wrong way'); }
+      press('B', false); step(5);
+      { const t = times(160); if (!(t[0] < t[t.length - 1])) out.push('return wire drained the wrong way'); }
+      return out;`));
+  });
+
+  await check("No gap when a branch switches off: the other branch's stream carries on to the coil", async page => {
+    await runPreset(page, 'three');
+    return page.evaluate(new Function(STEP + `
+      const out = []; step(3); press('H', true); press('I', true); step(6);
+      press('E', true); step(10);
+      const at = (x, y) => { const i = NET.nodes.findIndex(n => n.x === x && n.y === y); return lastChange(i); };
+      const iRight = at(380, 640), corner = at(480, 640), mid = at(480, 590), hJunction = at(480, 540), top = at(480, 140);
+      if (!(iRight < corner && corner < mid && mid < hJunction && hJunction < top)) out.push('switch-off order wrong: ' + [iRight, corner, mid, hJunction, top].map(t => t.toFixed(2)).join(' '));
+      return out;`));
+  });
+
+  // the circuit from the "outputs not energizing" video: AND + OR, with Y teed off between C and where B and C meet
+  const TEE_CIRCUIT = `[parts, wires] = PRESETS.andor(); parts.push(C('Y', 700, 320)); wires.push(Wr(460, 260, 460, 320), Wr(460, 320, 640, 320), Wr(760, 320, W, 320));`;
+  await check('Y teed off between two branches: energizes from either branch, never flickers', async page => {
+    await loadCircuit(page, TEE_CIRCUIT);
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + `
+      const out = [], coils = parts.filter(p => p.t === 'coil'), step1 = () => { simT += 1 / 60; runEvents(simT); };
+      let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      step(3);
+      for (const s of ['AB', 'AC', 'ABC', 'A', 'AB', 'ABC', 'AC', 'A']) {
+        for (const p of parts) if (p.t === 'btn') press(p.L, s.includes(p.L));
+        step(6);
+        for (const c of coils) if (!coilOn[c.id]) { if (s !== 'A') out.push(s + ': ' + c.L + ' off'); } else if (s === 'A') out.push('A: ' + c.L + ' on');
+      }
+      let lastSettled = true;
+      for (let n = 0; n < 200; n++) {
+        const L = 'ABC'[Math.floor(rnd() * 3)], quick = rnd() < 0.3;
+        press(L, !down[L]);
+        const want = !!down.A && (!!down.B || !!down.C), flips = {}, prev = coils.map(c => !!coilOn[c.id]);
+        for (let i = 0; i < (quick ? 10 : 180); i++) { step1(); coils.forEach((c, j) => { if (!!coilOn[c.id] !== prev[j]) { flips[c.L] = (flips[c.L] || 0) + 1; prev[j] = !prev[j]; } }); }
+        if (!quick && lastSettled) for (const c of coils) {
+          if (!!coilOn[c.id] !== want) out.push('after ' + L + ': ' + c.L + ' in the wrong state');
+          if ((flips[c.L] || 0) > 1) out.push('after ' + L + ': ' + c.L + ' flickered');
+        }
+        lastSettled = !quick;
+      }
+      return out.slice(0, 10);`));
+  });
+
+  // the circuit from the "flicker" and "flow jumps" videos: B and C in parallel; X fed from B, or from C up a riser;
+  // Y teed off C's wire, so it is fed from C, or from B down the riser
+  const CROSS_CIRCUIT = `parts = [B('B', 380, 140), B('C', 160, 260), C('X', 700, 140), C('Y', 700, 380)];
+    wires = [Wr(0, 200, 80, 200), Wr(80, 140, 80, 260), Wr(80, 140, 340, 140), Wr(80, 260, 120, 260), Wr(420, 140, 640, 140), Wr(440, 140, 440, 260),
+             Wr(200, 260, 440, 260), Wr(240, 260, 240, 380), Wr(240, 380, 640, 380), Wr(760, 140, W, 140), Wr(760, 380, W, 380)];`;
+  for (const [label, circ] of [['B and C feeding X and Y across each other', CROSS_CIRCUIT], ['Y teed off between two branches', TEE_CIRCUIT]]) {
+    await check(label + ': current never jumps ahead of itself, coils never flicker', async page => {
+      await loadCircuit(page, circ);
+      await page.click('#tab-run');
+      return page.evaluate(new Function(`
+        const out = [], step1 = () => { simT += 1 / 60; runEvents(simT); };
+        let seed = 5; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+        const Ls = [...new Set(parts.filter(p => p.t === 'btn').map(p => p.L))], coils = parts.filter(p => p.t === 'coil');
+        // how soon the current could reach each point from the button that changed (seconds)
+        const reach = starts => { const d = new Map(starts.map(s => [s, 0])), q = starts.map(s => [0, s]);
+          while (q.length) { q.sort((a, b) => a[0] - b[0]); const [dd, u] = q.shift(); if (dd > d.get(u)) continue;
+            for (const ei of NET.adj[u]) { const e = NET.edges[ei], w = e.a === u ? e.b : e.a, nd = dd + stepTime(e); if (!d.has(w) || nd < d.get(w)) { d.set(w, nd); q.push([nd, w]); } } }
+          return d; };
+        for (let i = 0; i < 120; i++) step1();
+        let settled = true;
+        for (let n = 0; n < 120; n++) {
+          const L = Ls[Math.floor(rnd() * Ls.length)], quick = rnd() < 0.25, judge = settled && !quick && busyUntil <= simT;
+          const t0 = simT, before = NET.nodes.map((_, i) => colAt(i, t0));
+          press(L, !down[L]);
+          const D = reach(parts.filter(p => p.L === L).flatMap(p => [p._a, p._b])), seen = new Set(), prev = coils.map(c => !!coilOn[c.id]), flips = {};
+          for (let i = 0; i < (quick ? 12 : 200); i++) {
+            step1();
+            coils.forEach((c, j) => { if (!!coilOn[c.id] !== prev[j]) { flips[c.L] = (flips[c.L] || 0) + 1; prev[j] = !prev[j]; } });
+            if (judge) NET.nodes.forEach((_, k) => {
+              if (seen.has(k) || colAt(k, simT) === before[k]) return;
+              seen.add(k);
+              const need = D.get(k) ?? 0;
+              if (simT - t0 < need - 0.15) out.push(L + ': the wire at (' + NET.nodes[k].x + ', ' + NET.nodes[k].y + ') changed after ' + (simT - t0).toFixed(2) + ' s, before the current could get there (' + need.toFixed(2) + ' s)');
+            });
+          }
+          if (judge) for (const k in flips) if (flips[k] > 1) out.push(k + ' flickered after ' + L + (down[L] ? ' was pressed' : ' was let go'));
+          settled = !quick;
+        }
+        return out.slice(0, 8);`));
+    });
+  }
+
+  // the circuit from the "flows separating" video: G (NC) feeds F and five rungs A to E, all onto one bus to X
+  const FAN_CIRCUIT = `const Bt = (L, x, y, nc, col) => P('btn', x, y, { L, nc: !!nc, maint: true, color: col });
+    parts = [Bt('G', 80, 600, 1, '#EC008C'), Bt('F', 220, 600, 0, '#7030A0'), Bt('A', 720, 100, 0, '#FF0032'), Bt('B', 620, 200, 0, '#0070C0'),
+             Bt('C', 520, 300, 0, '#00B050'), Bt('D', 420, 400, 0, '#FF9600'), Bt('E', 320, 500, 0, '#00D2BE'), C('X', 700, 700)];
+    wires = [Wr(0, 600, 40, 600), Wr(120, 600, 180, 600), Wr(140, 100, 140, 600), Wr(260, 600, 800, 600), Wr(540, 600, 540, 700), Wr(540, 700, 640, 700), Wr(760, 700, W, 700)];
+    for (const [x, y, dx] of [[720, 100, 800], [620, 200, 720], [520, 300, 620], [420, 400, 520], [320, 500, 420]]) wires.push(Wr(140, y, x - 40, y), Wr(x + 40, y, dx, y), Wr(dx, y, dx, 600));`;
+  await check('B and C both pressed: X and Y each show the mix of both (teal), and so do the wires between', async page => {
+    await loadCircuit(page, CROSS_CIRCUIT);
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + `
+      const out = [], at = (x, y) => colAt(NET.nodes.findIndex(n => n.x === x && n.y === y), simT);
+      step(2); press('B', true); press('C', true); step(6);
+      const teal = blend([flowOf(btnColour('B')), flowOf(btnColour('C'))]);
+      for (const [x, y, what] of [[600, 380, 'the wire into Y'], [600, 140, 'the wire into X'], [440, 200, 'the riser between them'], [340, 260, 'the wire along the middle']])
+        if (at(x, y) !== teal) out.push(what + ' is ' + at(x, y) + ', not the mix ' + teal);
+      press('B', false); step(6);
+      if (at(600, 380) !== flowOf(btnColour('C'))) out.push('after letting go of B, Y is not plain green');
+      return out;`));
+  });
+
+  await check('Whatever order buttons are pressed in, the colours settle the same as starting fresh (nothing stuck)', async page => {
+    const out = [];
+    for (const [name, circ] of [['B and C across', CROSS_CIRCUIT], ['Y tee', TEE_CIRCUIT], ['three rungs', 'loadPreset("three")'], ['G and six branches', FAN_CIRCUIT]]) {
+      await loadCircuit(page, circ);
+      await page.click('#tab-run');
+      const r = await page.evaluate(new Function(STEP + `
+        const res = []; let seed = 3; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+        const Ls = [...new Set(parts.filter(p => p.t === 'btn').map(p => p.L))], look = () => NET.nodes.map((_, i) => colAt(i, simT)).join('|') + parts.map(p => coilOn[p.id] ? 1 : 0).join('');
+        step(3);
+        for (let n = 0; n < 48; n++) {
+          const L = Ls[Math.floor(rnd() * Ls.length)]; press(L, !down[L]); step(rnd() < 0.4 ? rnd() * 0.4 : 3);
+          if (n % 6 === 5) {
+            step(8); const st = Object.keys(down).filter(k => down[k]), a = look();
+            startRun(); for (const k of st) press(k, true); step(10);
+            if (look() !== a) res.push('pressed ' + (st.join('') || 'nothing') + ': colours differ from a fresh start');
+          }
+        }
+        return res;`));
+      r.slice(0, 3).forEach(x => out.push(name + ': ' + x));
+      await page.click('#tab-edit');
+    }
+    return out;
+  });
+
+  await check('G cutting off six branches at once: every stream runs out to X behind its own tail, no wire goes dark early', async page => {
+    await loadCircuit(page, FAN_CIRCUIT);
+    if ((await issuesNow(page)).length) return ['circuit not wired: ' + JSON.stringify(await issuesNow(page))];
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + `
+      step(2); for (const L of 'ABCDEF') press(L, true); step(8);
+      const G = parts.find(p => p.L === 'G'), t0 = simT, latest = new Map();
+      press('G', true);
+      // the latest moment any stream can still be passing each point: its distance from G along the longest path
+      // (in seconds: the time the stream takes along each run, faster in the middle of long plain stretches)
+      for (const path of PATHS) { let d = 0, on = false;
+        for (const ln of path) { if (ln.e.part === G) on = true; if (!on) continue;
+          const ns = ln.e.kind === 'seg' ? ln.chain : [ln.to];
+          ns.forEach((n, k) => { const dd = ln.e.kind === 'seg' ? d + ln.tk[k] : d + ln.delay; if (dd > (latest.get(n) || 0)) latest.set(n, dd); });
+          d += ln.delay; } }
+      const darkAt = new Map();
+      for (let i = 0; i < 600; i++) { step(1 / 60); NET.nodes.forEach((_, k) => { if (!darkAt.has(k) && colAt(k, simT) === null) darkAt.set(k, simT - t0); }); }
+      const out = [];
+      for (const [n, dd] of latest) { const da = darkAt.get(n); if (da === undefined) out.push('(' + NET.nodes[n].x + ', ' + NET.nodes[n].y + ') never went dark');
+        else if (da < dd - 0.12) out.push('(' + NET.nodes[n].x + ', ' + NET.nodes[n].y + ') went dark at ' + da.toFixed(2) + ' s, but a stream is still passing until ' + dd.toFixed(2) + ' s'); }
+      return out.slice(0, 6);`));
+  });
+
+  await check('Moving any part up or down keeps every wire connected (junctions partway along a wire stay put)', async page => {
+    const out = [];
+    await loadCircuit(page, TEE_CIRCUIT);
+    // with the mouse, the move from the video: C up one grid square
+    await mouseDrag(page, [360, 262], [360, 240]);
+    if ((await issuesNow(page)).length) out.push('moving C up disconnected: ' + JSON.stringify(await issuesNow(page)));
+    // and every part, both ways, compared by what connects to what
+    const r = await page.evaluate(new Function(TEE_CIRCUIT + `
+      normalize();
+      const groups = () => { const net = network(), f = components(net, e => e.kind === 'w'), m = new Map();
+        for (const p of parts) for (const [s, n] of [['a', p._a], ['b', p._b]]) { const g = f(n); if (!m.has(g)) m.set(g, []); m.get(g).push(p.L + s); }
+        for (const [s, n] of [['L1', net.L1], ['L2', net.L2]]) { const g = f(n); if (m.has(g)) m.get(g).push(s); }
+        return [...m.values()].map(a => a.sort().join(',')).sort().join(' | '); };
+      const base = groups(), res = [];
+      for (const p0 of parts) for (const dy of [-40, -20, 20, 40]) {
+        const st = stateOf(); const p = parts.find(q => q.id === p0.id);
+        const m = movedWires(p, p.x, p.y + dy); wires = m.wires; p.y += dy; normalize();
+        const g = groups(); if (g !== base) res.push('moving ' + p.L + ' by ' + dy + ' changed the wiring: ' + g);
+        restore(st);
+      }
+      return res;`));
+    return out.concat(r.slice(0, 6));
+  });
+
+  await check('The current keeps one steady speed everywhere (the speed-up on long stretches is switched off)', async page => {
+    await loadCircuit(page, `parts = [B('A', 120, 200), C('X', 1500, 200)]; wires = [Wr(0, 200, 80, 200), Wr(160, 200, 600, 200), Wr(600, 200, 600, 400), Wr(600, 400, 1440, 400), Wr(1440, 400, 1440, 200), Wr(1560, 200, 1600, 200)]; W = 1600;`);
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + `
+      const out = [], n = NET.nodes.findIndex(q => q.x === 1000 && q.y === 400);
+      step(2); press('A', true); const t0 = simT; while (!colAt(n, simT) && simT < t0 + 10) step(1 / 240);
+      const want = (80 + 440 + 200 + 400) / V;   // through A, then along the wire to that point
+      if (Math.abs(simT - t0 - want) > 0.02) out.push('the current reached the middle of the long stretch after ' + (simT - t0).toFixed(2) + ' s, not ' + want.toFixed(2) + ' s');
+      return out;`));
+  });
+
+  // the staircase from the speed-up videos: A (NC) feeds six rungs whose colours join one after another onto a long run to X
+  const STAIR_CIRCUIT = `const Bt = (L, x, y, col, nc) => P('btn', x, y, { L, nc: !!nc, maint: true, color: col });
+    W = 1500; parts = [Bt('A', 80, 100, '#FFFFFF', 1), C('X', 1300, 600)]; wires = [Wr(0, 100, 40, 100), Wr(120, 100, 160, 100), Wr(160, 100, 160, 600), Wr(1360, 600, 1500, 600)];
+    [['R', '#FF0032'], ['O', '#FF9600'], ['Y', '#FFDC00'], ['G', '#00B050'], ['B', '#0070C0'], ['M', '#EC008C']].forEach(([L, col], i) => {
+      const y = 100 + 100 * i; parts.push(Bt(L, 240, y, col)); wires.push(Wr(160, y, 200, y));
+      if (i < 5) { const x = 320 + 40 * i; wires.push(Wr(280, y, x, y), Wr(x, y, x, y + 100)); } else wires.push(Wr(280, y, 1240, y)); });`;
+  await check('Streams that join a long stretch one after another stay together as it speeds them up (no pulling apart)', async page => {
+    await loadCircuit(page, STAIR_CIRCUIT);
+    if ((await issuesNow(page)).length) return ['circuit not wired: ' + JSON.stringify(await issuesNow(page))];
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + `
+      const out = [], node = (x, y) => NET.nodes.findIndex(n => n.x === x && n.y === y);
+      const bus = []; for (let x = 485; x < 1240; x += 5) bus.push(node(x, 600));
+      step(4);
+      // the rung buttons pressed one after another, a moment apart, so their colours join the long run one by one
+      const changes = []; let last = colAt(bus[0], simT), snap = null;
+      const watch = () => { const c = colAt(bus[0], simT); if (c !== last) { changes.push(simT); last = c; }
+        if (!snap && colAt(bus[Math.floor(bus.length * 0.75)], simT)) snap = bus.map(n => colAt(n, simT)); };
+      for (const L of 'MBGYOR') { press(L, true); for (let i = 0; i < 8; i++) { step(1 / 120); watch(); } }
+      for (let i = 0; i < 600; i++) { step(1 / 120); watch(); }
+      if (changes.length < 3 || !snap) return ['the colours did not arrive (' + changes.length + ' changes)'];
+      // the first colour's band along the wire, once the front has sped well along, against how long it was when it joined
+      let front = snap.length - 1; while (front > 0 && !snap[front]) front--;
+      let k = front; while (k > 0 && snap[k - 1] === snap[front]) k--;
+      const band = (front - k + 1) * 5, joined = (changes[1] - changes[0]) * V;
+      if (band > joined * 1.35 + 20) out.push('the first colour pulled ' + band + ' units ahead of the next, but they joined ' + Math.round(joined) + ' units apart');
+      return out;`));
+  });
+
+  await check('Relay contacts: a seal-in holds X in after the start button springs back; stop drops it; the bar lands before it passes current', async page => {
+    await page.selectOption('#preset', 'seal');
+    if ((await issuesNow(page)).length) return ['seal-in circuit not wired: ' + JSON.stringify(await issuesNow(page))];
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + `
+      const out = [], X = parts.find(p => p.t === 'coil'), seal = parts.find(p => p.t === 'con');
+      step(2); press('A', true);
+      let t = simT; while (!coilOn[X.id] && simT < t + 5) step(1 / 120);
+      const picked = simT;
+      while (!CON[seal.id].shut && simT < picked + 3) step(1 / 120);
+      const landed = simT - picked;
+      if (Math.abs(landed - (CT + SWING)) > 0.03) out.push('the seal-in closed ' + landed.toFixed(2) + ' s after X picked up, not ' + (CT + SWING) + ' s');
+      step(1); press('A', false); step(4);   // (in Click mode a momentary button springs back once the circuit has settled)
+      if (!coilOn[X.id]) out.push('X dropped out when A was let go: the seal-in did not hold it');
+      press('D', true); step(1); press('D', false); step(4);
+      if (coilOn[X.id]) out.push('pressing stop (D) did not drop X out');
+      if (CON[seal.id].shut) out.push('the seal-in did not open when X dropped out');
+      press('A', true); step(0.2); press('A', false); step(4);
+      if (coilOn[X.id]) out.push('a tap too short for the seal-in to close still latched X');
+      return out;`));
+  });
+
+  await check('Relay contacts: ABC sequence start, every order of taps, and NC contacts open when their coil picks up', async page => {
+    await page.selectOption('#preset', 'abc');
+    if ((await issuesNow(page)).length) return ['ABC circuit not wired: ' + JSON.stringify(await issuesNow(page))];
+    await page.click('#tab-run');
+    const r = await page.evaluate(new Function(STEP + `
+      const out = [], on = L => !!coilOn[parts.find(p => p.t === 'coil' && p.L === L).id];
+      let x = false, y = false, z = false;
+      let seed = 9; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      step(2);
+      for (let n = 0; n < 40; n++) {
+        const L = 'ABCD'[Math.floor(rnd() * 4)];
+        press(L, true); step(2); press(L, false); step(3);
+        if (L === 'D') x = y = z = false; else if (L === 'A') x = true; else if (L === 'B') y = y || x; else z = z || (x && y);
+        if (on('X') !== x || on('Y') !== y || on('Z') !== z) { out.push('after tapping ' + L + ': X Y Z = ' + [on('X'), on('Y'), on('Z')].map(Number).join('') + ', expected ' + [x, y, z].map(Number).join('')); break; }
+      }
+      return out;`));
+    // an NC contact: X's NC contact feeding Y opens when X picks up
+    await page.click('#tab-edit');
+    await loadCircuit(page, `parts = [B('A', 120, 200), C('X', 700, 200), P('con', 300, 400, { L: 'X', nc: true }), C('Y', 700, 400)];
+      wires = [Wr(0, 200, 80, 200), Wr(160, 200, 640, 200), Wr(760, 200, W, 200), Wr(0, 400, 260, 400), Wr(340, 400, 640, 400), Wr(760, 400, W, 400)];`);
+    await page.click('#tab-run');
+    const nc = await page.evaluate(new Function(STEP + `
+      const out = [], on = L => !!coilOn[parts.find(p => p.t === 'coil' && p.L === L).id];
+      step(4); if (!on('Y')) out.push('Y is not in at rest through the NC contact');
+      press('A', true); step(4); if (!on('X')) out.push('X did not pick up'); if (on('Y')) out.push('X picked up but its NC contact did not drop Y out');
+      press('A', false); step(4); if (!on('Y')) out.push('Y did not come back in when X dropped out');
+      return out;`));
+    return r.concat(nc);
+  });
+
+  await check('A contact past a coil: while it is open, the coil is out and the colour waits at the contact; only the coil\'s return current ever gets past it', async page => {
+    await loadCircuit(page, `W = W_MIN; parts = [B('A', 120, 200, true), B('C', 300, 200), C('X', 500, 200), P('con', 700, 200, { L: 'Y', nc: true }), B('E', 300, 340), C('Y', 500, 340)];
+      wires = [Wr(0, 200, 80, 200), Wr(160, 200, 260, 200), Wr(340, 200, 440, 200), Wr(560, 200, 660, 200), Wr(740, 200, W, 200), Wr(200, 200, 200, 340), Wr(200, 340, 260, 340), Wr(340, 340, 440, 340), Wr(560, 340, W, 340)];`);
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + `
+      const out = [], node = (x, y) => NET.nodes.findIndex(n => n.x === x && n.y === y), at = (x, y) => colAt(node(x, y), simT);
+      const on = L => !!coilOn[parts.find(p => p.t === 'coil' && p.L === L).id], past = node(740, 200);
+      let leaked = false; const watch = () => { const r = REC.get(past); if (r && !r.ret) leaked = true; };   // past the contact: only return current, ever
+      step(2); press('C', true); for (let i = 0; i < 480; i++) { step(1 / 120); watch(); }
+      if (!on('X')) out.push('X did not pick up');
+      const ret = at(600, 200), green = flowOf(btnColour('C'));
+      // Y picks up and its NC contact past X opens: X drops out at once, and the colour waits at the contact
+      press('E', true); const t0 = simT; let dropAt = null, waitAt = null;
+      for (let i = 0; i < 600; i++) { step(1 / 120); watch(); if (dropAt === null && !on('X')) dropAt = simT - t0; if (waitAt === null && at(565, 200) === green) waitAt = simT - t0; }
+      if (on('X')) out.push('X stayed in with its L2-side contact open');
+      if (dropAt === null || waitAt === null || waitAt - dropAt > 0.08) out.push('X dropped out, but return current kept coming out of it (waiting colour reached the back of X ' + (waitAt === null ? 'never' : (waitAt - dropAt).toFixed(2) + ' s later') + ')');
+      if (at(655, 200) !== green) out.push('the colour is not waiting at the open contact (' + at(655, 200) + ')');
+      if (at(800, 200) !== null) out.push('the wire past the open contact is still lit');
+      for (let k = 0; k < 4; k++) { press('C', !down.C); for (let i = 0; i < 60; i++) { step(1 / 120); watch(); } }
+      press('C', true); for (let i = 0; i < 240; i++) { step(1 / 120); watch(); }
+      // the contact closes: X picks up, and its return current comes out of it straight away
+      press('E', false); let up = null, lit = null; const t1 = simT;
+      for (let i = 0; i < 600; i++) { step(1 / 120); watch(); if (up === null && on('X')) up = simT - t1; if (lit === null && at(565, 200) === ret) lit = simT - t1; }
+      if (!on('X')) out.push('X did not pick up again when the contact closed');
+      if (up !== null && lit !== null && lit - up > 0.08) out.push('X picked up, but its current took ' + (lit - up).toFixed(2) + ' s to come out of it');
+      if (at(600, 200) !== ret) out.push('after the contact closed, the wire past X is not back to the return colour');
+      if (leaked) out.push('the colour waiting at the contact got past it (only return current should)');
+      return out;`));
+  });
+
+  await check('Pulsing a button: every pulse runs the whole length of a long winding wire to the coil', async page => {
+    await loadCircuit(page, `W = 1500; parts = [B('A', 120, 100), C('X', 1200, 520)]; wires = [Wr(0, 100, 80, 100)];
+      let y = 100; const pts = [[160, 100]]; for (let i = 0; i < 6; i++) { const nx = i % 2 ? 80 : 1360; pts.push([nx, y]); y += 60; pts.push([nx, y]); }
+      pts.push([1140, y], [1140, 520]); for (let i = 1; i < pts.length; i++) wires.push(Wr(...pts[i - 1], ...pts[i])); wires.push(Wr(1260, 520, W, 520));`);
+    await page.click('#tab-run');
+    return page.evaluate(() => {
+      const step1 = () => { simT += 1 / 120; runEvents(simT); }, n0 = NET.nodes.findIndex(n => n.x === 200 && n.y === 100), X = parts.find(p => p.t === 'coil');
+      let a0 = false, x0 = false, ins = 0, outs = 0;
+      const watch = () => { const a = !!colAt(n0, simT), c = !!REC.get(X._a); if (a && !a0) ins++; if (c && !x0) outs++; a0 = a; x0 = c; };
+      for (let i = 0; i < 120; i++) { step1(); watch(); }
+      for (let k = 0; k < 8; k++) { press('A', !down.A); for (let i = 0; i < 40; i++) { step1(); watch(); } }
+      for (let i = 0; i < 3600; i++) { step1(); watch(); }   // (about 20 s of wire at normal speed)
+      return ins === 4 && outs === 4 ? [] : [ins + ' pulses went in, ' + outs + ' reached X'];
+    });
+  });
+
+  await check('Current flows along the short leads into and out of a part, rather than jumping onto them', async page => {
+    await page.selectOption('#preset', 'io'); await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + `
+      const out = [], X = parts.find(p => p.t === 'coil'), v = view.parts.get(X.id);
+      const shown = L => L.cur.getAttribute('stroke') === 'transparent' ? 0 : Math.abs(L.cur.getAttribute('x2') - L.cur.getAttribute('x1'));
+      step(2); press('A', true);
+      const seenIn = [], seenOut = [];
+      for (let i = 0; i < 120; i++) { step(1 / 60); paint(); seenIn.push(shown(v.lead.A)); seenOut.push(shown(v.lead.B)); }
+      const full = TERM(X) - COIL / 2, part = a => a.some(x => x > 0.5 && x < full - 0.5);
+      if (!part(seenIn)) out.push('the lead into X lit all at once');
+      if (!part(seenOut)) out.push('the lead out of X lit all at once');
+      if (Math.max(...seenIn) < full - 0.5 || Math.max(...seenOut) < full - 0.5) out.push('a lead never lit all the way');
+      return out;`));
+  });
+
+  await check('Building by hand: wires from the bars, parts dropped onto wires, a working circuit', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank');
+    await mouseDrag(page, [4, 160], [876, 160]);
+    await toolbarDrop(page, 'coil', 700, 160); await toolbarDrop(page, 'btn-nc', 200, 160); await toolbarDrop(page, 'btn-no', 400, 160);
+    const iss = await issuesNow(page); if (iss.length) out.push('wiring issues: ' + JSON.stringify(iss));
+    await page.click('#tab-run');
+    const r = await page.evaluate(new Function(STEP + `const X = parts.find(p => p.t === 'coil'), res = []; step(4);
+      const nc = parts.find(p => p.t === 'btn' && p.nc).L, no = parts.find(p => p.t === 'btn' && !p.nc).L;
+      press(no, true); step(8); if (!coilOn[X.id]) res.push('NO pressed but coil off');
+      press(nc, true); step(8); if (coilOn[X.id]) res.push('NC pressed but coil on'); return res;`));
+    return out.concat(r);
+  });
+
+  await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'io');
+    const start = JSON.stringify(await wiresNow(page));
+    await mouseDrag(page, [220, 200], [220, 320]);
+    if ((await issuesNow(page)).length) out.push('wires came loose when A moved');
+    await mouseDrag(page, [220, 320], [220, 200]);
+    if (JSON.stringify(await wiresNow(page)) !== start) out.push('moving A back did not straighten its wires');
+    await mouseDrag(page, [260, 200], [400, 320]);
+    if (!(await issuesNow(page)).length) out.push('pulling the wire off A did not disconnect it');
+    await page.click('#undo');
+    if (JSON.stringify(await wiresNow(page)) !== start) out.push('undo did not restore the wire');
+    await mouseDrag(page, [450, 200], [450, 280]);
+    if ((await issuesNow(page)).length) out.push('sliding a wire disconnected it');
+    return out;
+  });
+
+  await check('Selection box and moving a group keeps it connected', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'io');
+    await mouseDrag(page, [140, 120], [660, 260]);
+    const n = await page.evaluate(() => sel ? sel.parts.size + sel.wires.size : 0);
+    if (n !== 2) out.push('box selected ' + n + ' items, expected 2');
+    await mouseDrag(page, [220, 200], [220, 300]);
+    if ((await issuesNow(page)).length) out.push('group move disconnected something: ' + JSON.stringify(await issuesNow(page)));
+    return out;
+  });
+
+  await check('Zoom and pan: Ctrl + wheel zooms, wheel and Shift + wheel move, Fit resets', async page => {
+    const out = [];
+    const c = await scr(page, 700, 200); await page.mouse.move(...c);
+    await page.keyboard.down('Control'); await page.mouse.wheel(0, -400); await page.keyboard.up('Control'); await page.waitForTimeout(80);
+    const z = await page.evaluate(() => ({ ...cam }));
+    if (!(z.z > 1.2)) out.push('Ctrl + wheel did not zoom in');
+    if (z.fit) out.push('still fitted after zooming');
+    await page.mouse.wheel(0, 200); await page.waitForTimeout(80);
+    if (!((await page.evaluate(() => cam.y)) > z.y)) out.push('wheel did not move down');
+    await page.keyboard.down('Shift'); await page.mouse.wheel(0, -300); await page.keyboard.up('Shift'); await page.waitForTimeout(80);
+    if (!((await page.evaluate(() => cam.x)) < z.x)) out.push('Shift + wheel did not move left');
+    await page.click('#zoom-fit');
+    if (!(await page.evaluate(() => cam.fit && Math.abs(cam.z - zMin()) < 1e-9))) out.push('Fit did not show the whole circuit');
+    return out;
+  });
+
+  await check('The panel spans the page and a circuit opens fitted (the whole circuit in view)', async page => {
+    const out = [];
+    for (const [w, h] of [[1600, 900], [1100, 800]]) {
+      await page.setViewportSize({ width: w, height: h }); await page.waitForTimeout(150);
+      await page.selectOption('#preset', 'three'); await page.waitForTimeout(150);
+      const r = await page.evaluate(() => { const st = document.getElementById('stage').getBoundingClientRect(), vb = svg.viewBox.baseVal;
+        return { stageW: st.width, x: vb.x, y: vb.y, w: vb.width, h: vb.height, H: canvasH(), W }; });
+      if (r.stageW < w - 40) out.push(`${w}px window: panel only ${Math.round(r.stageW)}px wide`);
+      if (r.x > 0.5 || r.y > 0.5 || r.x + r.w < r.W - 0.5 || r.y + r.h < r.H - 0.5) out.push(`${w}px window: whole circuit not in view`);
+    }
+    return out;
+  });
+
+  await check('A tall circuit on a wide screen fills the panel edge to edge: L2 moves out, its wires stretch, files stay the same', async page => {
+    const out = [];
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await page.selectOption('#preset', 'three'); await page.waitForTimeout(150);
+    const look = () => page.evaluate(() => { const st = document.getElementById('stage').getBoundingClientRect(), m = svg.getScreenCTM();
+      return { left: m.e + 0 * m.a, right: m.e + W * m.a, sl: st.left, sr: st.right, top: m.f, bottom: m.f + canvasH() * m.d, sb: st.bottom, W, issues: wiringIssues(network()).size, data: JSON.stringify(circuitData()) }; });
+    let v = await look();
+    if (v.W <= 880) out.push('the sheet did not widen (W ' + v.W + ')');
+    if (Math.abs(v.left - v.sl) > 4 || Math.abs(v.right - v.sr) > 4) out.push('the sheet does not reach both edges of the panel: ' + [v.left, v.right, v.sl, v.sr].map(Math.round).join(' '));
+    if (v.issues) out.push('L2 wires came loose when the sheet widened');
+    const saved = v.data;
+    await page.click('#tab-run'); await page.waitForTimeout(150);
+    v = await look();
+    if (Math.abs(v.left - v.sl) > 4 || Math.abs(v.right - v.sr) > 4) out.push('in Run, the sheet does not reach both edges');
+    const on = await page.evaluate(new Function(STEP + `step(2); press('B', true); step(8); return !!coilOn[parts.find(p => p.t === 'coil').id];`));
+    if (!on) out.push('X did not pick up on the widened sheet');
+    await page.click('#tab-edit');
+    await page.setViewportSize({ width: 1000, height: 900 }); await page.waitForTimeout(250);
+    v = await look();
+    if (v.issues) out.push('L2 wires came loose when the window narrowed');
+    if (v.data !== saved) out.push('the saved circuit changed with the window size');
+    await page.click('#undo'); await page.waitForTimeout(100);
+    return out;
+  });
+
+  await check('Moving the L1 and L2 bars sets the circuit length: wires follow, it is kept when the window changes and when saved', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'andor'); await page.waitForTimeout(100);
+    const info = () => page.evaluate(() => ({ W, WU: W_USER, issues: wiringIssues(network()).size, A: parts.find(p => p.L === 'A').x }));
+    const drag = async (x0, x1) => { const A = await scr(page, x0, 36), B = await scr(page, x1, 36); await page.mouse.move(...A); await page.mouse.down(); await page.mouse.move(...B, { steps: 10 }); await page.mouse.up(); await page.waitForTimeout(120); };
+    let v = await info();
+    await drag(v.W - 7, 600);
+    v = await info();
+    if (v.W !== 800 || v.WU !== 800) out.push('L2 did not stop just past the X coil (W ' + v.W + ')');
+    if (v.issues) out.push('wires came loose moving L2');
+    await drag(7, 60);
+    const v2 = await info();
+    if (v2.W !== 740 || v2.A !== 80) out.push('moving L1 60 to the right did not shorten the circuit by 60 (W ' + v2.W + ', A at ' + v2.A + ')');
+    if (v2.issues) out.push('wires came loose moving L1');
+    await page.setViewportSize({ width: 1000, height: 900 }); await page.waitForTimeout(200);
+    if ((await info()).W !== 740) out.push('the window size changed the circuit length');
+    const saved = await page.evaluate(() => circuitData());
+    if (!saved.fw || saved.w !== 740) out.push('the length was not saved with the circuit');
+    await page.evaluate(d => useCircuit(readCircuit(d), ''), saved); await page.waitForTimeout(100);
+    if ((await info()).W !== 740) out.push('opening it again did not keep the length');
+    const H = await scr(page, 740 - 7, 36); await page.mouse.dblclick(...H); await page.waitForTimeout(150);
+    if ((await info()).WU !== null) out.push('double-clicking the handle did not go back to fitting the screen');
+    await page.click('#tab-run');
+    const on = await page.evaluate(new Function(STEP + `step(2); press('A', true); press('B', true); step(6); return parts.filter(p => p.t === 'coil').every(p => coilOn[p.id]);`));
+    if (!on) out.push('the circuit does not work after moving the bars');
+    return out;
+  });
+
+  await check('Fits a phone screen without sideways scrolling', async page => {
+    await page.setViewportSize({ width: 390, height: 800 }); await page.waitForTimeout(150);
+    const out = [];
+    for (const tab of ['#tab-edit', '#tab-run']) {
+      await page.click(tab); await page.waitForTimeout(100);
+      const w = await page.evaluate(() => document.documentElement.scrollWidth);
+      if (w > 390) out.push(tab + ': page is ' + w + 'px wide');
+    }
+    return out;
+  });
+
+  await check('Saving and opening: a circuit code brings back exactly the same circuit', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'three');
+    const before = await page.evaluate(() => JSON.stringify(circuitData()));
+    await page.click('#save-btn'); await page.waitForTimeout(150);
+    const code = await page.inputValue('#save-code');
+    if (!/^OO[01]\./.test(code)) out.push('code looks wrong: ' + code.slice(0, 20));
+    await page.keyboard.press('Escape');
+    await page.selectOption('#preset', 'blank');
+    await page.click('#open-btn'); await page.fill('#open-code', code); await page.click('#open-code-btn'); await page.waitForTimeout(150);
+    const after = await page.evaluate(() => JSON.stringify(circuitData()));
+    if (after !== before) out.push('circuit changed after a round trip through a code');
+    if (await page.evaluate(() => document.getElementById('open-dlg').open)) out.push('Open dialog did not close');
+    // a damaged code gives a readable message and changes nothing
+    await page.click('#open-btn'); await page.fill('#open-code', code.slice(0, 30)); await page.click('#open-code-btn'); await page.waitForTimeout(100);
+    const msg = await page.textContent('#open-msg');
+    if (!msg || !/incomplete|changed|circuit/i.test(msg)) out.push('no message for a damaged code: ' + msg);
+    if ((await page.evaluate(() => JSON.stringify(circuitData()))) !== before) out.push('a damaged code changed the circuit');
+    return out;
+  });
+
+  await check('Saving and opening (browsers that save a new copy): a saved file opens again with its name', async page => {
+    const out = [];
+    await page.evaluate(() => { delete window.showSaveFilePicker; delete window.showOpenFilePicker; window.showSaveFilePicker = undefined; window.showOpenFilePicker = undefined; });
+    await page.selectOption('#preset', 'andor');
+    const before = await page.evaluate(() => JSON.stringify({ p: circuitData().parts, w: circuitData().wires }));
+    await page.click('#save-btn'); await page.fill('#save-name', 'Test circuit');
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#save-file')]);
+    if (dl.suggestedFilename() !== 'Test circuit.json') out.push('file name was ' + dl.suggestedFilename());
+    const file = await dl.path();
+    await page.keyboard.press('Escape');
+    await page.selectOption('#preset', 'blank');
+    await page.click('#open-btn'); await page.setInputFiles('#open-input', file); await page.waitForTimeout(200);
+    const after = await page.evaluate(() => JSON.stringify({ p: circuitData().parts, w: circuitData().wires }));
+    if (after !== before) out.push('circuit changed after saving and opening a file');
+    if ((await page.evaluate(() => circuitName)) !== 'Test circuit') out.push('name not kept');
+    return out;
+  });
+
+  await check('Save writes back into the file that was opened (browsers that allow it)', async page => {
+    // stand in for the browser's file picker: files live in window.__files, keyed by name
+    await page.evaluate(() => {
+      window.__files = { 'Lab 3.json': '' }; window.__pickSave = 'New copy.json';
+      const handle = name => ({ kind: 'file', name, getFile: async () => new File([window.__files[name]], name),
+        createWritable: async () => { let buf = ''; return { write: async d => { buf += d; }, close: async () => { window.__files[name] = buf; } }; } });
+      window.showOpenFilePicker = async () => [handle('Lab 3.json')];
+      window.showSaveFilePicker = async () => { window.__files[window.__pickSave] = ''; return handle(window.__pickSave); };
+    });
+    const out = [];
+    // put a circuit into "Lab 3.json", then open it
+    await page.selectOption('#preset', 'andor');
+    await page.evaluate(() => { window.__files['Lab 3.json'] = JSON.stringify(circuitData()); });
+    await page.click('#open-btn'); await page.click('#open-file'); await page.waitForTimeout(150);
+    if ((await page.textContent('#file-label')) !== 'Lab 3.json') out.push('file name not shown after opening: ' + await page.textContent('#file-label'));
+    // change it, then Save: no dialog, written back into the same file
+    await mouseDrag(page, [140, 200], [140, 320]);
+    if (!/^● /.test(await page.textContent('#file-label'))) out.push('unsaved changes not shown');
+    await page.click('#save-btn'); await page.waitForTimeout(150);
+    if (await page.evaluate(() => document.getElementById('save-dlg').open)) out.push('Save opened the dialog instead of saving');
+    const written = await page.evaluate(() => JSON.parse(window.__files['Lab 3.json']).parts.find(p => p[3] === 'A'));
+    if (!written || written[2] !== 320) out.push('the change was not written into Lab 3.json');
+    if (/^● /.test(await page.textContent('#file-label'))) out.push('still shows unsaved changes after saving');
+    // Ctrl+S saves into the same file too
+    await mouseDrag(page, [140, 320], [140, 200]);
+    await page.keyboard.press('Control+s'); await page.waitForTimeout(150);
+    if (await page.evaluate(() => JSON.parse(window.__files['Lab 3.json']).parts.find(p => p[3] === 'A')[2]) !== 200) out.push('Ctrl+S did not save into the file');
+    // Save as a new file leaves the original alone and switches to the new one
+    await page.click('#save-more'); await page.click('#save-file'); await page.waitForTimeout(150);
+    if (!(await page.evaluate(() => window.__files['New copy.json']))) out.push('Save as a new file did not write the new file');
+    if ((await page.textContent('#file-label')) !== 'New copy.json') out.push('did not switch to the new file');
+    // a ready-made circuit is not tied to any file
+    await page.selectOption('#preset', 'or');
+    if (!(await page.evaluate(() => document.getElementById('file-label').hidden))) out.push('a ready-made circuit still shows a file name');
+    return out;
+  });
+
+  await check('The circuit is still there after the page is reloaded', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'three');
+    await mouseDrag(page, [340, 340], [340, 360]);   // change something
+    const before = await page.evaluate(() => JSON.stringify(circuitData()));
+    await page.waitForTimeout(600);
+    await page.reload(); await page.waitForTimeout(300);
+    const after = await page.evaluate(() => JSON.stringify(circuitData()));
+    if (after !== before) out.push('circuit not restored after reload');
+    return out;
+  });
+
+  await browser.close();
+  const failed = results.filter(r => !r.ok);
+  console.log(`\n${results.length - failed.length} of ${results.length} checks passed.`);
+  process.exit(failed.length ? 1 : 0);
+})();

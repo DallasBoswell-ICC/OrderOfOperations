@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Circuit Builder</title>
+<style>
+/*@@CSS@@*/
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Order of Operations: <span>Circuit Builder</span></h1>
+    <div class="top-right">
+      <label class="row"><span class="label">Start from</span>
+        <select id="preset">
+          <option value="">Choose a circuit…</option>
+          <option value="blank">Blank</option>
+          <option value="seal">Start / Stop with a seal-in</option>
+          <option value="abc">ABC sequence start</option>
+          <option value="io">A → X</option>
+          <option value="and">AND</option>
+          <option value="or">OR</option>
+          <option value="andor">AND + OR</option>
+          <option value="three">Three rungs into X</option>
+        </select>
+      </label>
+      <div class="row">
+        <span class="file-label" id="file-label" hidden></span>
+        <span class="splitbtn">
+          <button type="button" class="filebtn" id="save-btn" data-tip="Save this circuit as a file, or copy a short code you can paste anywhere (Ctrl+S)">
+            <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M4 3h9l3 3v11H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 3v4h6V3M7 17v-5h6v5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>Save</button><button type="button" class="filebtn more" id="save-more" aria-label="More ways to save" data-tip="Save as a new file, rename, or copy a code">
+            <svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </span>
+        <button type="button" class="filebtn" id="open-btn" data-tip="Open a saved circuit file, or paste a circuit code">
+          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M3 5h5l2 2h7v9H3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Open</button>
+      </div>
+      <div class="seg" role="tablist" aria-label="Mode">
+        <button type="button" role="tab" id="tab-edit" aria-selected="true">Build</button>
+        <button type="button" role="tab" id="tab-run" aria-selected="false">Run</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="toolbar" id="toolbar" role="toolbar" aria-label="Parts and tools">
+    <div class="tgrp">
+      <button type="button" class="tool plain" data-tool="select" aria-pressed="true" data-tip="Select: click a part or wire to change it. Drag a part to move it (its wires follow), a wire's middle to slide it, or a wire end to pull it off and move it. Drag across empty space to select several things. Drag from a free part end or a bar to draw a wire.">
+        <svg viewBox="0 0 30 26"><path d="M9 3l13 10-6 1 3 7-3 1-3-7-4 4z" fill="#cfcfcf"/></svg>Select</button>
+      <button type="button" class="tool plain" data-tool="wire" aria-pressed="false" data-tip="Wire: press anywhere and drag. The wire bends once, at a right angle.">
+        <svg viewBox="0 0 30 26"><path d="M3 20h12V6h12" stroke="#cfcfcf" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Wire</button>
+    </div>
+    <div class="tgrp">
+      <button type="button" class="tool" data-part="btn-no" data-tip="Pushbutton, normally open. Drag it onto the panel, or onto a wire to put it in that wire.">
+        <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FF0032" stroke-width="1.6"/><rect x="8.5" y="6.5" width="13" height="13" rx="2.4" fill="#FF0032"/></svg>Button NO</button>
+      <button type="button" class="tool" data-part="btn-nc" data-tip="Pushbutton, normally closed">
+        <svg viewBox="0 0 30 26"><path d="M15 1 L26 7.3 L26 18.7 L15 25 L4 18.7 L4 7.3 Z" fill="#222" stroke="#FF9600" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 6 L21.5 9.7 L21.5 16.3 L15 20 L8.5 16.3 L8.5 9.7 Z" fill="#FF9600"/></svg>Button NC</button>
+      <button type="button" class="tool" data-part="coil" data-tip="Relay coil">
+        <svg viewBox="0 0 30 26"><circle cx="15" cy="13" r="11.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="15" cy="13" r="7.5" fill="#555"/></svg>Coil</button>
+      <button type="button" class="tool" data-part="con-no" data-tip="Relay contact, normally open: closes when its coil picks up. Choose which coil works it in its settings.">
+        <svg viewBox="0 0 30 26"><rect x="3" y="5" width="24" height="17" rx="3" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="8" width="14" height="2.6" rx="1.3" fill="#a6a6a6"/><circle cx="10" cy="15" r="2.4" fill="#555"/><circle cx="20" cy="15" r="2.4" fill="#555"/></svg>Contact NO</button>
+      <button type="button" class="tool" data-part="con-nc" data-tip="Relay contact, normally closed: opens when its coil picks up. Choose which coil works it in its settings.">
+        <svg viewBox="0 0 30 26"><rect x="3" y="5" width="24" height="17" rx="3" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="13.7" width="14" height="2.6" rx="1.3" fill="#FFDC00"/><circle cx="10" cy="15" r="2.4" fill="#FFDC00"/><circle cx="20" cy="15" r="2.4" fill="#FFDC00"/></svg>Contact NC</button>
+    </div>
+    <div class="tgrp">
+      <button type="button" class="tool plain danger" id="del" data-tip="Delete the selected part or wire (Delete key)">Delete</button>
+      <button type="button" class="tool plain" id="undo" data-tip="Undo (Ctrl+Z)">Undo</button>
+      <button type="button" class="tool plain" id="clear" data-tip="Start with an empty panel">Clear</button>
+    </div>
+  </div>
+
+  <div class="runbar" id="runbar" hidden>
+    <div class="row"><span class="label">Speed</span>
+      <div class="seg" role="group" aria-label="Speed">
+        <button type="button" data-speed="0.25" data-tip="Quarter speed: follow the current step by step">¼×</button><button type="button" data-speed="0.5" data-tip="Half speed">½×</button><button type="button" data-speed="1" aria-pressed="true" data-tip="Normal speed">1×</button><button type="button" data-speed="2" data-tip="Double speed">2×</button>
+      </div>
+    </div>
+    <div class="row" id="mode-group"><span class="label">Pushbuttons</span>
+      <div class="seg" role="group" aria-label="Pushbutton mode">
+        <button type="button" data-mode="click" aria-pressed="true" data-tip="One click presses a momentary button; it lets go once the circuit settles">Click</button>
+        <button type="button" data-mode="hold" data-tip="A momentary button stays down only while you hold it">Press and hold</button>
+      </div>
+    </div>
+    <button type="button" class="reset" id="reset-btn" data-tip="Turn everything off and start over">
+      <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M15.5 10a5.5 5.5 0 1 1-1.6-3.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14.4 2.8l.1 3.9-3.9.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Reset</button>
+  </div>
+
+  <div class="fault" id="fault" role="alert" hidden></div>
+  <div class="stage" id="stage"><svg id="svg" role="img" aria-label="Circuit diagram"></svg>
+    <div class="zoombar" role="group" aria-label="Zoom">
+      <button type="button" id="zoom-out" aria-label="Zoom out" data-tip="Zoom out (Ctrl + scroll wheel)">−</button>
+      <span id="zoom-pct">100%</span>
+      <button type="button" id="zoom-in" aria-label="Zoom in" data-tip="Zoom in (Ctrl + scroll wheel). Then scroll to move up and down, Shift + scroll to move left and right, or drag with the scroll wheel held down.">+</button>
+      <button type="button" id="zoom-fit" data-tip="Show the whole circuit">Fit</button>
+    </div>
+  </div>
+
+  <div id="editpanel">
+    <p class="hint">Power comes in from the <b>L1 bar</b> on the left and goes out to the <b>L2 bar</b> on the right. Drag buttons, coils and relay contacts onto the panel, or onto a wire to put them in it. A contact is worked by a coil: pick which one in its settings (it follows its coil a moment after the coil picks up or drops out). Draw wires by dragging from a free end of a part or from either bar (or anywhere, with the Wire tool). Drag the middle of a wire to slide it; drag any wire end, even one fastened to a part, to pull it off and put it somewhere else; when you move a part, its wires follow. A green ring shows where a wire or part will connect. Drag across empty space to select several things (Shift-click adds or removes one), then drag any of them to move them together. Drag the handle at the top of the L1 or L2 bar to make the circuit longer or shorter (double-click it to fit the screen again). Ctrl + scroll wheel zooms; scroll and Shift + scroll move around. Then press Run.</p>
+    <div class="props" style="margin-top:10px">
+      <div class="tgroup"><span class="label">Selected</span><span class="selname" id="selname">Nothing</span></div>
+      <div class="props" id="props-btn" hidden>
+        <div class="tgroup"><span class="label">Letter</span><select id="p-letter" aria-label="Button letter"></select></div>
+        <div class="tgroup"><span class="label">Contact</span>
+          <div class="seg" role="group" aria-label="Normally open or closed"><button type="button" data-nc="0" data-tip="Normally open: passes current only while pressed">NO</button><button type="button" data-nc="1" data-tip="Normally closed: passes current until pressed">NC</button></div></div>
+        <div class="tgroup"><span class="label">Action</span>
+          <div class="seg" role="group" aria-label="Button action"><button type="button" data-maint="1" data-tip="Stays in when pressed; press again to release">Maintained</button><button type="button" data-maint="0" data-tip="Springs back when released">Momentary</button></div></div>
+        <div class="tgroup"><span class="label">Colour</span><div class="swatches" id="p-colour" role="radiogroup" aria-label="Button colour"></div></div>
+      </div>
+      <div class="props" id="props-con" hidden>
+        <div class="tgroup"><span class="label">Worked by</span><select id="c-of" aria-label="The relay coil that works this contact"></select></div>
+        <div class="tgroup"><span class="label">Contact</span>
+          <div class="seg" role="group" aria-label="Normally open or closed"><button type="button" data-cnc="0" data-tip="Normally open: closes when its coil picks up">NO</button><button type="button" data-cnc="1" data-tip="Normally closed: opens when its coil picks up">NC</button></div></div>
+      </div>
+      <div class="props" id="props-coil" hidden>
+        <div class="tgroup"><span class="label">Letter</span><select id="o-letter" aria-label="Coil letter"></select></div>
+        <div class="tgroup"><span class="label">Colour</span><div class="swatches" id="o-colour" role="radiogroup" aria-label="Coil colour"></div></div>
+      </div>
+    </div>
+    <p class="msg" id="msg" role="status"></p>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+<dialog id="save-dlg" aria-labelledby="save-title">
+  <form method="dialog" class="dlg">
+    <h2 id="save-title">Save this circuit</h2>
+    <label class="field"><span class="label">Name</span><input id="save-name" type="text" maxlength="60" placeholder="My circuit" autocomplete="off"></label>
+    <div class="dlg-row"><button type="button" class="primary" id="save-same" hidden>Save</button><button type="button" class="primary" id="save-file">Save as a file</button><span class="hint" id="save-file-hint">A small .json file you can hand out, collect or open again later.</span></div>
+    <div class="dlg-sep"></div>
+    <span class="label">Or share it as a code</span>
+    <textarea id="save-code" readonly rows="3" aria-label="Circuit code"></textarea>
+    <div class="dlg-row"><button type="button" id="copy-code">Copy code</button><span class="hint" id="copy-msg">Paste it into an email, a document or your class page. Anyone can open it with Open → Paste a code.</span></div>
+    <div class="dlg-end"><button value="close">Done</button></div>
+  </form>
+</dialog>
+<dialog id="open-dlg" aria-labelledby="open-title">
+  <form method="dialog" class="dlg">
+    <h2 id="open-title">Open a circuit</h2>
+    <div class="dlg-row"><button type="button" class="primary" id="open-file">Choose a file…</button><span class="hint">A circuit saved with Save (you can also drop the file onto the panel).</span></div>
+    <input id="open-input" type="file" accept=".json,application/json" hidden>
+    <div class="dlg-sep"></div>
+    <span class="label">Or paste a circuit code</span>
+    <textarea id="open-code" rows="3" aria-label="Circuit code to open" placeholder="Paste the code here"></textarea>
+    <p class="msg" id="open-msg" role="status"></p>
+    <div class="dlg-end"><button value="close">Cancel</button><button type="button" class="primary" id="open-code-btn">Open code</button></div>
+  </form>
+</dialog>
+<script>
+/*@@JS@@*/
+</script>
+</body>
+</html>

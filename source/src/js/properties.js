@@ -1,0 +1,63 @@
+/* ---------------- the selected part's settings ---------------- */
+function swatches(box, current, onPick) {
+  box.innerHTML = '';
+  for (const [name, hex] of PALETTE) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'sw'; b.style.background = hex; b.title = name;
+    b.setAttribute('role', 'radio'); b.setAttribute('aria-label', name); b.setAttribute('aria-checked', String(hex.toUpperCase() === (current || '').toUpperCase()));
+    b.addEventListener('click', () => onPick(hex)); box.append(b);
+  }
+}
+const selPart = () => sel && sel.parts.size === 1 && !sel.wires.size ? parts.find(p => sel.parts.has(p.id)) : null;
+const blocksOf = L => parts.filter(p => p.t === 'btn' && p.L === L);
+function renderProps() {
+  const p = selPart();
+  const nP = sel ? sel.parts.size : 0, nW = sel ? sel.wires.size : 0;
+  document.getElementById('selname').textContent = !sel ? 'Nothing'
+    : p ? captionOf(p) + (p.t === 'btn' && blocksOf(p.L).length > 1 ? ` · drawn ${blocksOf(p.L).length} times (pressing one presses all)` : '')
+    : nP + nW === 1 ? 'A wire'
+    : [nP ? `${nP} part${nP > 1 ? 's' : ''}` : '', nW ? `${nW} wire${nW > 1 ? 's' : ''}` : ''].filter(Boolean).join(' and ') + ' (drag any of them to move them together, Delete to remove)';
+  document.getElementById('del').disabled = !sel;
+  document.getElementById('undo').disabled = !history.length;
+  document.getElementById('props-btn').hidden = !(p && p.t === 'btn');
+  document.getElementById('props-coil').hidden = !(p && p.t === 'coil');
+  document.getElementById('props-con').hidden = !(p && p.t === 'con');
+  if (p && p.t === 'con') {
+    const cs = document.getElementById('c-of'), coils = [...coilLetters()];
+    cs.innerHTML = '';
+    for (const c of new Set([...coils, p.L])) cs.add(new Option(`${c} Coil` + (coils.includes(c) ? '' : ' (not on the panel)'), c, false, c === p.L));
+    document.querySelectorAll('[data-cnc]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.cnc === +p.nc)));
+  }
+  if (p && p.t === 'btn') {
+    const ls = document.getElementById('p-letter'), others = new Set(parts.filter(q => q.t === 'btn' && q !== p).map(q => q.L)), coils = coilLetters();
+    ls.innerHTML = '';
+    for (const c of ALL) if (!coils.has(c)) ls.add(new Option(others.has(c) && c !== p.L ? `${c} (same button as the other ${c})` : c, c, false, c === p.L));
+    document.querySelectorAll('[data-nc]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.nc === +p.nc)));
+    document.querySelectorAll('[data-maint]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.maint === +p.maint)));
+    swatches(document.getElementById('p-colour'), p.color, hex => { snapshot(); blocksOf(p.L).forEach(k => k.color = hex); draw(); });
+  }
+  if (p && p.t === 'coil') {
+    const os = document.getElementById('o-letter'), used = new Set([...btnLetters(), ...coilLetters()]);
+    os.innerHTML = '';
+    for (const c of ALL) if (c === p.L || !used.has(c)) os.add(new Option(c, c, false, c === p.L));
+    swatches(document.getElementById('o-colour'), p.color, hex => { snapshot(); p.color = hex; draw(); });
+  }
+}
+document.getElementById('p-letter').addEventListener('change', e => {
+  const p = selPart(); if (!p) return; snapshot();
+  const mate = blocksOf(e.target.value).find(q => q !== p);
+  p.L = e.target.value;
+  if (mate) { p.color = mate.color; p.maint = mate.maint; say(`This is now the same button as the other ${p.L}: pressing either presses both.`); }
+  else { p.color = BTN_COL[p.L] || p.color; say(''); }
+  draw();
+});
+document.querySelectorAll('[data-nc]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); p.nc = x.dataset.nc === '1'; draw(); }));
+document.querySelectorAll('[data-maint]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); blocksOf(p.L).forEach(k => k.maint = x.dataset.maint === '1'); draw(); }));
+document.getElementById('o-letter').addEventListener('change', e => { const p = selPart(); if (!p) return; snapshot(); p.L = e.target.value; p.color = COIL_COL[p.L] || p.color; draw(); });
+document.getElementById('c-of').addEventListener('change', e => { const p = selPart(); if (!p) return; snapshot(); p.L = e.target.value; draw(); });
+document.querySelectorAll('[data-cnc]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); p.nc = x.dataset.cnc === '1'; draw(); }));
+document.getElementById('preset').addEventListener('change', e => {
+  const k = e.target.value; if (!k) return;
+  const label = e.target.selectedOptions[0].textContent; e.target.value = '';
+  snapshot(); loadPreset(k); sel = null; say(''); circuitName = k === 'blank' ? '' : label; fitView(); fit(true); forgetFile();
+  if (editing) draw(); else { NET = network(); draw(); startRun(); afterRunStart(); }
+});
