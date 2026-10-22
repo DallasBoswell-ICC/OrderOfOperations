@@ -17,6 +17,7 @@ document.getElementById('reset-btn').addEventListener('click', () => { startRun(
 /* Speed: the preset buttons, or the slider for any speed from 0.1× to 300× (on a log scale: every step along it
    makes the circuit the same proportion faster). Turned right up, a change runs through the whole circuit in a
    blink, as it does in a real panel. */
+const SPEED_SNAPS = [0.25, 0.5, 1, 2, 10, 50, 100, 200, 300];
 const SPEED_MIN = 0.1, SPEED_MAX = 300, sliderOf = s => 100 * Math.log10(s / SPEED_MIN) / Math.log10(SPEED_MAX / SPEED_MIN);
 const fmtSpeed = s => (s < 1 ? +s.toFixed(2) : s < 10 ? +s.toFixed(1) : Math.round(s)) + '×';
 function setSpeed(s, fromSlider) {
@@ -29,7 +30,8 @@ function setSpeed(s, fromSlider) {
 document.querySelectorAll('[data-speed]').forEach(b => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
 document.getElementById('speed-slider').addEventListener('input', e => {
   let s = SPEED_MIN * Math.pow(SPEED_MAX / SPEED_MIN, +e.target.value / 100);
-  for (const k of [0.25, 0.5, 1, 2]) if (Math.abs(Math.log(s / k)) < 0.05) s = k;   // (lands on a preset when close to one)
+  // it snaps to the round speeds when close to one (within about 13%: from 9× it lands on 10×)
+  for (const k of SPEED_SNAPS) if (Math.abs(Math.log(s / k)) < 0.13) s = k;
   setSpeed(s, true);
 });
 document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {

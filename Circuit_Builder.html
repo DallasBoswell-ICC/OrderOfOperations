@@ -2012,7 +2012,14 @@ document.getElementById('p-letter').addEventListener('change', e => {
 });
 document.querySelectorAll('[data-nc]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); p.nc = x.dataset.nc === '1'; draw(); }));
 document.querySelectorAll('[data-maint]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); blocksOf(p.L).forEach(k => k.maint = x.dataset.maint === '1'); draw(); }));
-document.getElementById('o-letter').addEventListener('change', e => { const p = selPart(); if (!p) return; snapshot(); p.L = e.target.value; p.color = COIL_COL[p.L] || p.color; draw(); });
+document.getElementById('o-letter').addEventListener('change', e => {
+  const p = selPart(); if (!p) return; snapshot();
+  const old = p.L; p.L = e.target.value; p.color = COIL_COL[p.L] || p.color;
+  // its contacts go with it (unless another coil still has the old letter)
+  const n = parts.filter(q => q.t === 'con' && q.L === old).length;
+  if (!parts.some(q => q.t === 'coil' && q.L === old)) parts.forEach(q => { if (q.t === 'con' && q.L === old) q.L = p.L; });
+  say(n ? `Its ${n} contact${n > 1 ? 's' : ''} now belong${n > 1 ? '' : 's'} to ${p.L}.` : ''); draw();
+});
 document.getElementById('l-btn').addEventListener('change', e => {
   const p = selPart(); if (!p) return; snapshot(); p.L = e.target.value;
   say(p.L ? `The ${p.L} button lights up with this light.` : ''); draw();
@@ -2274,6 +2281,7 @@ document.getElementById('reset-btn').addEventListener('click', () => { startRun(
 /* Speed: the preset buttons, or the slider for any speed from 0.1× to 300× (on a log scale: every step along it
    makes the circuit the same proportion faster). Turned right up, a change runs through the whole circuit in a
    blink, as it does in a real panel. */
+const SPEED_SNAPS = [0.25, 0.5, 1, 2, 10, 50, 100, 200, 300];
 const SPEED_MIN = 0.1, SPEED_MAX = 300, sliderOf = s => 100 * Math.log10(s / SPEED_MIN) / Math.log10(SPEED_MAX / SPEED_MIN);
 const fmtSpeed = s => (s < 1 ? +s.toFixed(2) : s < 10 ? +s.toFixed(1) : Math.round(s)) + '×';
 function setSpeed(s, fromSlider) {
@@ -2286,7 +2294,8 @@ function setSpeed(s, fromSlider) {
 document.querySelectorAll('[data-speed]').forEach(b => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
 document.getElementById('speed-slider').addEventListener('input', e => {
   let s = SPEED_MIN * Math.pow(SPEED_MAX / SPEED_MIN, +e.target.value / 100);
-  for (const k of [0.25, 0.5, 1, 2]) if (Math.abs(Math.log(s / k)) < 0.05) s = k;   // (lands on a preset when close to one)
+  // it snaps to the round speeds when close to one (within about 13%: from 9× it lands on 10×)
+  for (const k of SPEED_SNAPS) if (Math.abs(Math.log(s / k)) < 0.13) s = k;
   setSpeed(s, true);
 });
 document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {

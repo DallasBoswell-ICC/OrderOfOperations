@@ -742,6 +742,28 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Renaming a coil takes its contacts with it; the slider snaps to round speeds', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'abc');   // X has three contacts (seal-in and two interlocks)
+    const xy = await page.evaluate(() => { const p = parts.find(q => q.t === 'coil' && q.L === 'X'); return [p.x, p.y]; });
+    await page.mouse.click(...await scr(page, ...xy)); await page.waitForTimeout(60);
+    await page.selectOption('#o-letter', 'Q');
+    const L = await page.evaluate(() => parts.filter(p => p.t === 'con').map(p => p.L).sort().join(''));
+    if (L !== 'QQQYYZ') out.push('contacts after renaming X to Q: ' + L);
+    await page.click('#tab-run');
+    const r = await page.evaluate(new Function(STEP + `step(1); press('A', true); step(2); press('A', false); press('B', true); step(2); press('B', false); step(2);
+      return [coilOnL('Q'), coilOnL('Y')];`));
+    if (!r[0] || !r[1]) out.push('the renamed coil\'s contacts do not work: Q ' + r[0] + ', Y ' + r[1]);
+    // the slider: near 10× it lands on 10×; between the round speeds it stays where it is put
+    const at = async v => { await page.locator('#speed-slider').fill(String(v)); return page.evaluate(() => speed); };
+    const v9 = Math.round(100 * Math.log10(9 / 0.1) / Math.log10(3000)), v6 = Math.round(100 * Math.log10(6 / 0.1) / Math.log10(3000));
+    if (await at(v9) !== 10) out.push('9× did not snap to 10×');
+    if (Math.abs(await at(v6) - 6) > 0.5) out.push('6× snapped somewhere: ' + await at(v6));
+    for (const k of [50, 100, 200]) { const v = Math.round(100 * Math.log10(k * 0.93 / 0.1) / Math.log10(3000)); if (await at(v) !== k) out.push(`${k * 0.93}× did not snap to ${k}×`); }
+    await page.click('[data-speed="1"]');
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

@@ -65,7 +65,14 @@ document.getElementById('p-letter').addEventListener('change', e => {
 });
 document.querySelectorAll('[data-nc]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); p.nc = x.dataset.nc === '1'; draw(); }));
 document.querySelectorAll('[data-maint]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); blocksOf(p.L).forEach(k => k.maint = x.dataset.maint === '1'); draw(); }));
-document.getElementById('o-letter').addEventListener('change', e => { const p = selPart(); if (!p) return; snapshot(); p.L = e.target.value; p.color = COIL_COL[p.L] || p.color; draw(); });
+document.getElementById('o-letter').addEventListener('change', e => {
+  const p = selPart(); if (!p) return; snapshot();
+  const old = p.L; p.L = e.target.value; p.color = COIL_COL[p.L] || p.color;
+  // its contacts go with it (unless another coil still has the old letter)
+  const n = parts.filter(q => q.t === 'con' && q.L === old).length;
+  if (!parts.some(q => q.t === 'coil' && q.L === old)) parts.forEach(q => { if (q.t === 'con' && q.L === old) q.L = p.L; });
+  say(n ? `Its ${n} contact${n > 1 ? 's' : ''} now belong${n > 1 ? '' : 's'} to ${p.L}.` : ''); draw();
+});
 document.getElementById('l-btn').addEventListener('change', e => {
   const p = selPart(); if (!p) return; snapshot(); p.L = e.target.value;
   say(p.L ? `The ${p.L} button lights up with this light.` : ''); draw();
