@@ -242,7 +242,7 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
       <div class="seg" role="group" aria-label="Speed">
         <button type="button" data-speed="0.25" data-tip="Quarter speed: follow the current step by step">¼×</button><button type="button" data-speed="0.5" data-tip="Half speed">½×</button><button type="button" data-speed="1" aria-pressed="true" data-tip="Normal speed">1×</button><button type="button" data-speed="2" data-tip="Double speed">2×</button>
       </div>
-      <input type="range" id="speed-slider" min="0" max="100" step="1" value="25" aria-label="Speed, from a tenth of normal to a thousand times normal" data-tip="Any speed from 0.1× up to 1000×. Turned all the way up, the circuit acts almost at once, as a real one does.">
+      <input type="range" id="speed-slider" min="0" max="100" step="1" value="29" aria-label="Speed, from a tenth of normal to three hundred times normal" data-tip="Any speed from 0.1× up to 300×. Turned all the way up, the circuit acts almost at once, as a real one does.">
       <output id="speed-out" for="speed-slider">1×</output>
     </div>
     <div class="row" id="mode-group"><span class="label">Pushbuttons</span>
@@ -300,7 +300,7 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
    ===================================================================== */
 const W_MIN = 880;                   // narrowest the sheet gets (L1 is its left edge, x = 0; L2 its right edge, x = W: see geometry.js)
 const G = 20, SUB = 5;               // grid spacing; wires are traced in 5-unit steps for smooth flow
-const V = 450;                       // how fast the current front travels (units per second)
+const V = 500;                       // how fast the current front travels at 1× (units per second), as in the other Order of Operations simulators
 // long plain stretches of wire carry the current faster in the middle (see stretch in engine.js): normal speed for V_LEAD
 // units from either end. A stretch up to V_SHORT units long keeps normal speed; a longer one takes only a little longer
 // than that (about V_TAU s more each time its length grows by V·V_TAU, ever less), up to V_TOP× normal speed
@@ -815,7 +815,7 @@ function startRun() {
    long wire would otherwise keep its coil waiting for seconds and let a coil on a short wire, pressed later, get in
    first. So the current leaves a junction at normal speed, speeds up smoothly the longer the stretch, and slows back
    down before the next junction, part or bar. Stretches up to 400 units keep normal speed throughout; past that the
-   time hardly grows (a 3000-unit stretch takes about 1.3 s, against 6.7 s at normal speed). Each run of wire gets, for every point along it, the time the stream takes to get there. */
+   time hardly grows (a 3000-unit stretch takes about 1.2 s, against 6 s at normal speed). Each run of wire gets, for every point along it, the time the stream takes to get there. */
 /* One plain stretch of length S. The speed rises and falls smoothly (no sudden changes): normal for V_LEAD units
    from either end, then speeding up steadily to its top in the middle and back down. Tf(s): time to travel
    s units from the start (past the far end it carries on at normal speed); Ti: the reverse. Streams on a stretch
@@ -2261,10 +2261,10 @@ function setMode(run) {
 document.getElementById('tab-edit').addEventListener('click', () => setMode(false));
 document.getElementById('tab-run').addEventListener('click', () => setMode(true));
 document.getElementById('reset-btn').addEventListener('click', () => { startRun(); paint(); });
-/* Speed: the preset buttons, or the slider for any speed from 0.1× to 1000× (on a log scale: each quarter of the
-   slider is ten times faster than the one before). Turned right up, a change runs through the whole circuit in a
+/* Speed: the preset buttons, or the slider for any speed from 0.1× to 300× (on a log scale: every step along it
+   makes the circuit the same proportion faster). Turned right up, a change runs through the whole circuit in a
    blink, as it does in a real panel. */
-const SPEED_MIN = 0.1, SPEED_MAX = 1000, sliderOf = s => 100 * Math.log10(s / SPEED_MIN) / Math.log10(SPEED_MAX / SPEED_MIN);
+const SPEED_MIN = 0.1, SPEED_MAX = 300, sliderOf = s => 100 * Math.log10(s / SPEED_MIN) / Math.log10(SPEED_MAX / SPEED_MIN);
 const fmtSpeed = s => (s < 1 ? +s.toFixed(2) : s < 10 ? +s.toFixed(1) : Math.round(s)) + '×';
 function setSpeed(s, fromSlider) {
   speed = s;

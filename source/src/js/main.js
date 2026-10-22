@@ -14,10 +14,10 @@ function setMode(run) {
 document.getElementById('tab-edit').addEventListener('click', () => setMode(false));
 document.getElementById('tab-run').addEventListener('click', () => setMode(true));
 document.getElementById('reset-btn').addEventListener('click', () => { startRun(); paint(); });
-/* Speed: the preset buttons, or the slider for any speed from 0.1× to 1000× (on a log scale: each quarter of the
-   slider is ten times faster than the one before). Turned right up, a change runs through the whole circuit in a
+/* Speed: the preset buttons, or the slider for any speed from 0.1× to 300× (on a log scale: every step along it
+   makes the circuit the same proportion faster). Turned right up, a change runs through the whole circuit in a
    blink, as it does in a real panel. */
-const SPEED_MIN = 0.1, SPEED_MAX = 1000, sliderOf = s => 100 * Math.log10(s / SPEED_MIN) / Math.log10(SPEED_MAX / SPEED_MIN);
+const SPEED_MIN = 0.1, SPEED_MAX = 300, sliderOf = s => 100 * Math.log10(s / SPEED_MIN) / Math.log10(SPEED_MAX / SPEED_MIN);
 const fmtSpeed = s => (s < 1 ? +s.toFixed(2) : s < 10 ? +s.toFixed(1) : Math.round(s)) + '×';
 function setSpeed(s, fromSlider) {
   speed = s;

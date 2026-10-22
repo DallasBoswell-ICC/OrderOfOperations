@@ -76,7 +76,7 @@ function startRun() {
    long wire would otherwise keep its coil waiting for seconds and let a coil on a short wire, pressed later, get in
    first. So the current leaves a junction at normal speed, speeds up smoothly the longer the stretch, and slows back
    down before the next junction, part or bar. Stretches up to 400 units keep normal speed throughout; past that the
-   time hardly grows (a 3000-unit stretch takes about 1.3 s, against 6.7 s at normal speed). Each run of wire gets, for every point along it, the time the stream takes to get there. */
+   time hardly grows (a 3000-unit stretch takes about 1.2 s, against 6 s at normal speed). Each run of wire gets, for every point along it, the time the stream takes to get there. */
 /* One plain stretch of length S. The speed rises and falls smoothly (no sudden changes): normal for V_LEAD units
    from either end, then speeding up steadily to its top in the middle and back down. Tf(s): time to travel
    s units from the start (past the far end it carries on at normal speed); Ti: the reverse. Streams on a stretch

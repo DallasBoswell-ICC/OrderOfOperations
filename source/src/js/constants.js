@@ -4,7 +4,7 @@
    ===================================================================== */
 const W_MIN = 880;                   // narrowest the sheet gets (L1 is its left edge, x = 0; L2 its right edge, x = W: see geometry.js)
 const G = 20, SUB = 5;               // grid spacing; wires are traced in 5-unit steps for smooth flow
-const V = 450;                       // how fast the current front travels (units per second)
+const V = 500;                       // how fast the current front travels at 1× (units per second), as in the other Order of Operations simulators
 // long plain stretches of wire carry the current faster in the middle (see stretch in engine.js): normal speed for V_LEAD
 // units from either end. A stretch up to V_SHORT units long keeps normal speed; a longer one takes only a little longer
 // than that (about V_TAU s more each time its length grows by V·V_TAU, ever less), up to V_TOP× normal speed

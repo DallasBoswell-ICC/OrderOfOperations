@@ -701,23 +701,23 @@ const DEF_CIRCUIT = `
     return out;
   });
 
-  await check('Speed slider: any speed from 0.1× to 1000×; turned right up the circuit acts at once and the page keeps up', async page => {
+  await check('Speed slider: any speed from 0.1× to 300×; turned right up the circuit acts at once and the page keeps up', async page => {
     const out = [];
     await page.selectOption('#preset', 'seal'); await page.click('#tab-run'); await page.waitForTimeout(200);
     await page.locator('#speed-slider').fill('0'); if ((await page.evaluate(() => speed)) !== 0.1 || (await page.textContent('#speed-out')) !== '0.1×') out.push('slider at the left is not 0.1×');
     await page.click('[data-speed="2"]');
-    if (Math.abs((await page.locator('#speed-slider').inputValue()) - 32.5) > 1) out.push('a preset did not move the slider');
+    if (Math.abs((await page.locator('#speed-slider').inputValue()) - 37.4) > 1) out.push('a preset did not move the slider');
     await page.locator('#speed-slider').fill('100');
-    if ((await page.evaluate(() => speed)) !== 1000 || (await page.textContent('#speed-out')) !== '1000×') out.push('slider at the right is not 1000×');
+    if ((await page.evaluate(() => speed)) !== 300 || (await page.textContent('#speed-out')) !== '300×') out.push('slider at the right is not 300×');
     if (await page.evaluate(() => [...document.querySelectorAll('[data-speed]')].some(b => b.getAttribute('aria-pressed') === 'true'))) out.push('a preset still shows as chosen');
     // a click on START: X picks up and seals in within a moment of real time
     const t0 = await page.evaluate(() => { press('A', true); autoRel.A = true; return performance.now(); });
-    try { await page.waitForFunction(() => coilOn[parts.find(p => p.t === 'coil').id], null, { timeout: 1000, polling: 'raf' }); } catch (_) { out.push('X not in within a second at 1000×'); }
-    const ms = await page.evaluate(t0 => performance.now() - t0, t0); if (ms > 400) out.push('X took ' + Math.round(ms) + ' ms at 1000×');
+    try { await page.waitForFunction(() => coilOn[parts.find(p => p.t === 'coil').id], null, { timeout: 1000, polling: 'raf' }); } catch (_) { out.push('X not in within a second at 300×'); }
+    const ms = await page.evaluate(t0 => performance.now() - t0, t0); if (ms > 400) out.push('X took ' + Math.round(ms) + ' ms at 300×');
     // the stress circuit with its buzzer going: frames stay short
     await page.selectOption('#preset', 'stress'); await page.waitForTimeout(150); await page.evaluate(() => press('G', true));
     const fr = await page.evaluate(() => new Promise(res => { const ts = []; let last = performance.now(); const f = () => { const n = performance.now(); ts.push(n - last); last = n; if (ts.length < 90) requestAnimationFrame(f); else res(ts); }; requestAnimationFrame(f); }));
-    fr.sort((a, b) => a - b); if (fr[45] > 40) out.push('frames take ' + Math.round(fr[45]) + ' ms with the buzzer going at 1000×');
+    fr.sort((a, b) => a - b); if (fr[45] > 40) out.push('frames take ' + Math.round(fr[45]) + ' ms with the buzzer going at 300×');
     await page.click('[data-speed="1"]');
     return out;
   });
