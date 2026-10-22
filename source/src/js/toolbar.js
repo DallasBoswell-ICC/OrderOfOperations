@@ -7,7 +7,7 @@ document.querySelectorAll('.tool[data-part]').forEach(b => {
     const sx = e.clientX, sy = e.clientY; let moved = false, ghost = null;
     const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind === 'con-nc' } : { t: 'btn', L: '?', nc: kind === 'btn-nc', color: '#9a9a9a' };
     const mv = ev => {
-      if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 5) { moved = true; ghost = document.createElement('div'); ghost.className = 'ghost'; ghost.innerHTML = b.innerHTML; document.body.append(ghost); document.body.classList.add('dragging'); }
+      if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 5) { moved = true; closeMenus(); ghost = document.createElement('div'); ghost.className = 'ghost'; ghost.innerHTML = b.innerHTML; document.body.append(ghost); document.body.classList.add('dragging'); }
       if (!moved) return;
       ghost.style.left = ev.clientX + 'px'; ghost.style.top = ev.clientY + 'px';
       const r = pt(ev), box = svg.getBoundingClientRect();
@@ -28,9 +28,10 @@ document.querySelectorAll('.tool[data-part]').forEach(b => {
   });
 });
 function setTool(t) {
-  tool = t;
+  tool = t; closeMenus();
   document.querySelectorAll('.tool[data-tool], .tool[data-part]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.tool || b.dataset.part) === t)));
   svg.style.cursor = t === 'select' ? '' : 'crosshair';
+  document.querySelectorAll('.pgroup').forEach(g => g.querySelector('.group').classList.toggle('has-tool', !!g.querySelector(`.tool[data-part="${t}"]`)));
   say(t !== 'select' && t !== 'wire' ? 'Click the panel to place it (or drag the tool onto the panel). Press Esc to cancel.' : '');
 }
 document.querySelectorAll('.tool[data-tool]').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
@@ -50,3 +51,14 @@ document.addEventListener('keydown', e => {
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
   else if (e.key === 'Escape') { setTool('select'); sel = null; draw(); }
 });
+
+// part groups: each opens a menu of its parts; picking one (or dragging it out) closes the menu
+function closeMenus(except) {
+  document.querySelectorAll('.pgroup').forEach(g => { if (g === except) return; g.querySelector('.pmenu').hidden = true; g.querySelector('.group').setAttribute('aria-expanded', 'false'); });
+}
+document.querySelectorAll('.pgroup').forEach(g => {
+  const b = g.querySelector('.group'), m = g.querySelector('.pmenu');
+  b.addEventListener('click', () => { const open = m.hidden; closeMenus(g); m.hidden = !open; b.setAttribute('aria-expanded', String(open)); if (open) { const f = m.querySelector('.tool'); f && f.focus({ preventScroll: true }); } });
+});
+document.addEventListener('pointerdown', e => { if (!e.target.closest('.pgroup')) closeMenus(); }, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus(); });

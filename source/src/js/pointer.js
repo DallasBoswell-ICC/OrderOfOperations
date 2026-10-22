@@ -21,19 +21,45 @@ function liveDrag(e, apply, onClick) {
   document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
 }
 /* dragging a bar's handle: a ghost bar shows where it will go, and the bar moves there when it is let go (L2's wires
-   stretch or shrink to meet it; moving L1 shifts everything else over, as L1 is always at x = 0). */
+   stretch or shrink to meet it; moving L1 shifts everything else over, as L1 is always at x = 0). Held past the edge of
+   the panel, the bar keeps moving outward (faster the further past), and the view slides along to keep it in sight. */
 function barDrag(e, which) {
   e.preventDefault(); dragNow = true;
-  const start = stateOf(), x0 = pt(e).x; let dx = 0, nw = W, moved = false;
+  const start = stateOf(), x0 = pt(e).x, stage = document.getElementById('stage');
+  let dx = 0, nw = W, moved = false, cx = e.clientX, last = performance.now(), live = true;
+  const vb = (svg.getAttribute('viewBox') || `0 0 ${W} ${VIS_H1}`).split(/\s+/).map(Number);
+  const show = () => { preview = { bar: which === 'L2' ? snap(nw) - BAR : snap(dx) }; drawPreview(); };
   const mv = ev => {
+    cx = ev.clientX;
     const r = pt(ev); if (!moved && Math.abs(r.x - x0) < 4) return; moved = true;
-    if (which === 'L2') { nw = Math.min(20000, Math.max(contentRight(BAR_MIN), snap(W + r.x - x0))); preview = { bar: nw - BAR }; }
-    else { dx = Math.max(-4000, Math.min(leftRoom(), snap(r.x - x0))); preview = { bar: dx }; }
-    drawPreview();
+    if (overshoot() > 0) return;   // past the edge: the bar keeps moving on its own (see tick)
+    if (which === 'L2') nw = Math.min(20000, Math.max(contentRight(BAR_MIN), W + r.x - x0));
+    else dx = Math.max(-20000, Math.min(leftRoom(), r.x - x0));
+    show();
   };
+  // how far past the panel's edge (on the bar's side) the pointer is, in screen pixels
+  const overshoot = () => { const b = stage.getBoundingClientRect(); return which === 'L2' ? cx - b.right : b.left - cx; };
+  const tick = now => {
+    if (!live) return;
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    const over = overshoot();
+    if (moved && over > 0) {
+      const v = 250 + over * 12;   // panel units a second
+      if (which === 'L2') nw = Math.min(20000, Math.max(nw, contentRight(BAR_MIN)) + v * dt); else dx = Math.max(-20000, dx - v * dt);
+      // slide the view along so the bar stays in sight
+      const edge = which === 'L2' ? snap(nw) : snap(dx);
+      if (which === 'L2' && edge > vb[0] + vb[2] - 20) vb[0] = edge + 20 - vb[2];
+      if (which === 'L1' && edge < vb[0] + 20) vb[0] = edge - 20;
+      svg.setAttribute('viewBox', vb.join(' '));
+      show();
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
   const up = () => {
     document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
-    dragNow = false; preview = null;
+    live = false; dragNow = false; preview = null;
+    dx = snap(dx); nw = snap(nw);
     // a double-click on the handle (two clicks without moving) lets the circuit fit the screen again
     if (!moved) { const now = performance.now(), dbl = lastBarClick.bar === which && now - lastBarClick.t < 450; lastBarClick = { bar: which, t: now };
       if (dbl && W_USER) { history.push(start); W_USER = null; fitView(); fit(true); draw(); }

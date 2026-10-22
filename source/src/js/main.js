@@ -33,7 +33,7 @@ function fit(widen) {
   const k = `${window.innerWidth}x${window.innerHeight}:${editing}`;
   let h = parseFloat(st.style.height);
   if (widen || k !== fitKey || !h) {
-    const below = editing ? document.getElementById('editpanel').getBoundingClientRect().height + 24 : 16;
+    const below = 16;
     h = Math.round(Math.max(320, window.innerHeight - top - below));
     if (st.style.height !== h + 'px') st.style.height = h + 'px';
     fitKey = k;

@@ -65,6 +65,8 @@ async function mouseDrag(page, a, b, opts = {}) {
   await page.waitForTimeout(40);
 }
 async function toolbarDrop(page, kind, x, y) {
+  // parts sit in their kind's menu: open it first
+  if (!(await page.locator(`[data-part="${kind}"]`).isVisible())) await page.locator(`.pgroup:has([data-part="${kind}"]) .group`).click();
   const bx = await page.locator(`[data-part="${kind}"]`).boundingBox(), B = await scr(page, x, y);
   await page.mouse.move(bx.x + 10, bx.y + 10); await page.mouse.down();
   await page.mouse.move(bx.x + 40, bx.y + 60, { steps: 3 }); await page.mouse.move(...B, { steps: 6 }); await page.mouse.up();
@@ -614,12 +616,26 @@ const DEF_CIRCUIT = `
     const drag = async (x0, x1) => { const A = await scr(page, x0, 36), B = await scr(page, x1, 36); await page.mouse.move(...A); await page.mouse.down(); await page.mouse.move(...B, { steps: 10 }); await page.mouse.up(); await page.waitForTimeout(120); };
     let v = await info();
     // like L1, L2 shows a ghost bar while dragging and only moves when let go
-    { const A = await scr(page, v.W - 7, 36), B = await scr(page, 1000, 36); await page.mouse.move(...A); await page.mouse.down(); await page.mouse.move(...B, { steps: 8 });
+    { const to = v.W - 60, A = await scr(page, v.W - 7, 36), B = await scr(page, to - 7, 36); await page.mouse.move(...A); await page.mouse.down(); await page.mouse.move(...B, { steps: 8 });
       const mid = await page.evaluate(() => ({ W, ghost: preview && preview.bar, bar: BAR }));
       if (mid.W !== v.W) out.push('L2 moved before it was let go');
-      if (mid.ghost !== 1000 - mid.bar) out.push('no ghost bar where L2 will go (' + mid.ghost + ')');
+      if (mid.ghost !== to - mid.bar) out.push('no ghost bar where L2 will go (' + mid.ghost + ', expected ' + (to - mid.bar) + ')');
       await page.mouse.up(); await page.waitForTimeout(120);
-      if ((await info()).W !== 1000) out.push('L2 did not move to where it was let go (W ' + (await info()).W + ')'); }
+      if ((await info()).W !== to) out.push('L2 did not move to where it was let go (W ' + (await info()).W + ')'); }
+    // held past the edge of the panel, each bar keeps moving outward until it is let go
+    for (const which of ['L2', 'L1']) {
+      const w0 = (await info()).W, st = await page.locator('#stage').boundingBox();
+      const A = await scr(page, which === 'L2' ? w0 - 7 : 7, 36);
+      await page.mouse.move(...A); await page.mouse.down();
+      await page.mouse.move(which === 'L2' ? st.x + st.width + 40 : st.x - 40 + 30, A[1], { steps: 6 });
+      if (which === 'L1') await page.mouse.move(Math.max(1, st.x - 10), A[1], { steps: 3 });
+      await page.waitForTimeout(900);
+      await page.mouse.up(); await page.waitForTimeout(150);
+      const w1 = (await info()).W;
+      if (!(w1 > w0 + 200)) out.push('holding ' + which + ' past the edge did not keep it moving outward (' + w0 + ' to ' + w1 + ')');
+      if ((await info()).issues) out.push('wires came loose running ' + which + ' outward');
+    }
+    await page.click('#undo'); await page.click('#undo');
     v = await info();
     await drag(v.W - 7, 600);
     v = await info();
