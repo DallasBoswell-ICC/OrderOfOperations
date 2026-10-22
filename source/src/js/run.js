@@ -3,8 +3,10 @@ let prevT = performance.now();
 function frame(now) {
   const dt = Math.min(.1, (now - prevT) / 1000); prevT = now;
   if (!editing) {
-    simT += dt * speed;
-    runEvents(simT);
+    // at high speed a busy circuit (a buzzer, say) can have more to do in one frame than the computer can manage: it
+    // does what it can in a set time and carries on from there next frame, so the page never stalls
+    const target = simT + dt * speed;
+    if (runEvents(target, performance.now() + 12)) simT = target;
     if (mode === 'click') for (const L in autoRel) if (!queue.length && simT > busyUntil + .5) { delete autoRel[L]; press(L, false); }
     paint();
   }

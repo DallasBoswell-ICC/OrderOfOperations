@@ -14,7 +14,24 @@ function setMode(run) {
 document.getElementById('tab-edit').addEventListener('click', () => setMode(false));
 document.getElementById('tab-run').addEventListener('click', () => setMode(true));
 document.getElementById('reset-btn').addEventListener('click', () => { startRun(); paint(); });
-document.querySelectorAll('[data-speed]').forEach(b => b.addEventListener('click', () => { speed = +b.dataset.speed; document.querySelectorAll('[data-speed]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); }));
+/* Speed: the preset buttons, or the slider for any speed from 0.1× to 1000× (on a log scale: each quarter of the
+   slider is ten times faster than the one before). Turned right up, a change runs through the whole circuit in a
+   blink, as it does in a real panel. */
+const SPEED_MIN = 0.1, SPEED_MAX = 1000, sliderOf = s => 100 * Math.log10(s / SPEED_MIN) / Math.log10(SPEED_MAX / SPEED_MIN);
+const fmtSpeed = s => (s < 1 ? +s.toFixed(2) : s < 10 ? +s.toFixed(1) : Math.round(s)) + '×';
+function setSpeed(s, fromSlider) {
+  speed = s;
+  const sl = document.getElementById('speed-slider');
+  if (!fromSlider) sl.value = sliderOf(s);
+  document.getElementById('speed-out').textContent = fmtSpeed(s);
+  document.querySelectorAll('[data-speed]').forEach(x => x.setAttribute('aria-pressed', String(Math.abs(+x.dataset.speed - s) < 1e-9)));
+}
+document.querySelectorAll('[data-speed]').forEach(b => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
+document.getElementById('speed-slider').addEventListener('input', e => {
+  let s = SPEED_MIN * Math.pow(SPEED_MAX / SPEED_MIN, +e.target.value / 100);
+  for (const k of [0.25, 0.5, 1, 2]) if (Math.abs(Math.log(s / k)) < 0.05) s = k;   // (lands on a preset when close to one)
+  setSpeed(s, true);
+});
 document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
   mode = b.dataset.mode; document.querySelectorAll('[data-mode]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
   for (const L in down) if (down[L] && !(blocksOf(L)[0] || {}).maint) press(L, false);

@@ -121,6 +121,10 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 .file-label { font-size: .8rem; color: var(--muted); max-width: 28ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .file-label.dirty { color: var(--gold); }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60; background: #26272a; color: var(--ink); border: 1px solid var(--gold); border-radius: 10px; padding: 9px 16px; font-size: .9rem; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+
+/* the speed slider beside the preset speed buttons */
+#speed-slider { width: 190px; accent-color: #ffc000; cursor: pointer; }
+#speed-out { min-width: 3.6em; font-variant-numeric: tabular-nums; color: #ffc000; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -238,6 +242,8 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
       <div class="seg" role="group" aria-label="Speed">
         <button type="button" data-speed="0.25" data-tip="Quarter speed: follow the current step by step">¼×</button><button type="button" data-speed="0.5" data-tip="Half speed">½×</button><button type="button" data-speed="1" aria-pressed="true" data-tip="Normal speed">1×</button><button type="button" data-speed="2" data-tip="Double speed">2×</button>
       </div>
+      <input type="range" id="speed-slider" min="0" max="100" step="1" value="25" aria-label="Speed, from a tenth of normal to a thousand times normal" data-tip="Any speed from 0.1× up to 1000×. Turned all the way up, the circuit acts almost at once, as a real one does.">
+      <output id="speed-out" for="speed-slider">1×</output>
     </div>
     <div class="row" id="mode-group"><span class="label">Pushbuttons</span>
       <div class="seg" role="group" aria-label="Pushbutton mode">
@@ -602,12 +608,18 @@ let NET = null, simT = 0, speed = 1, mode = 'click', queue = [], seq = 0, evT = 
 let tl = [], coilOn = {}, down = {}, autoRel = {}, shortNow = false;
 const btnColour = L => (parts.find(p => p.t === 'btn' && p.L === L) || {}).color || '#888888';
 function schedule(t, fn) { queue.push({ t, s: seq++, fn }); if (t > busyUntil) busyUntil = t; }
-function runEvents(upTo) {
+// run what is due up to upTo; true once it has all been run. With a deadline (a time from performance.now()) it stops
+// when the deadline passes, leaving the rest for the next frame (the clock then follows the events it has reached)
+function runEvents(upTo, deadline) {
   for (let guard = 0; guard < 5000 && queue.length; guard++) {
     let bi = 0; for (let i = 1; i < queue.length; i++) { const a = queue[i], b = queue[bi]; if (a.t < b.t - 1e-9 || (Math.abs(a.t - b.t) <= 1e-9 && a.s < b.s)) bi = i; }
-    if (queue[bi].t > upTo) return;
-    const ev = queue.splice(bi, 1)[0]; evT = ev.t; ev.fn();
+    if (queue[bi].t > upTo) return true;
+    if (deadline && (guard & 15) === 15 && performance.now() > deadline) return false;
+    const ev = queue.splice(bi, 1)[0]; evT = ev.t;
+    if (deadline && ev.t > simT) simT = ev.t;
+    ev.fn();
   }
+  return !queue.length || !deadline;
 }
 const conducts = e => e.kind === 'w' || (isSw(e.part) && closed(e.part));
 // a point partway along a wire keeps one timeline for each way along it (a wire between two branches can carry
@@ -1337,8 +1349,10 @@ let prevT = performance.now();
 function frame(now) {
   const dt = Math.min(.1, (now - prevT) / 1000); prevT = now;
   if (!editing) {
-    simT += dt * speed;
-    runEvents(simT);
+    // at high speed a busy circuit (a buzzer, say) can have more to do in one frame than the computer can manage: it
+    // does what it can in a set time and carries on from there next frame, so the page never stalls
+    const target = simT + dt * speed;
+    if (runEvents(target, performance.now() + 12)) simT = target;
     if (mode === 'click') for (const L in autoRel) if (!queue.length && simT > busyUntil + .5) { delete autoRel[L]; press(L, false); }
     paint();
   }
@@ -2247,7 +2261,24 @@ function setMode(run) {
 document.getElementById('tab-edit').addEventListener('click', () => setMode(false));
 document.getElementById('tab-run').addEventListener('click', () => setMode(true));
 document.getElementById('reset-btn').addEventListener('click', () => { startRun(); paint(); });
-document.querySelectorAll('[data-speed]').forEach(b => b.addEventListener('click', () => { speed = +b.dataset.speed; document.querySelectorAll('[data-speed]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); }));
+/* Speed: the preset buttons, or the slider for any speed from 0.1× to 1000× (on a log scale: each quarter of the
+   slider is ten times faster than the one before). Turned right up, a change runs through the whole circuit in a
+   blink, as it does in a real panel. */
+const SPEED_MIN = 0.1, SPEED_MAX = 1000, sliderOf = s => 100 * Math.log10(s / SPEED_MIN) / Math.log10(SPEED_MAX / SPEED_MIN);
+const fmtSpeed = s => (s < 1 ? +s.toFixed(2) : s < 10 ? +s.toFixed(1) : Math.round(s)) + '×';
+function setSpeed(s, fromSlider) {
+  speed = s;
+  const sl = document.getElementById('speed-slider');
+  if (!fromSlider) sl.value = sliderOf(s);
+  document.getElementById('speed-out').textContent = fmtSpeed(s);
+  document.querySelectorAll('[data-speed]').forEach(x => x.setAttribute('aria-pressed', String(Math.abs(+x.dataset.speed - s) < 1e-9)));
+}
+document.querySelectorAll('[data-speed]').forEach(b => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
+document.getElementById('speed-slider').addEventListener('input', e => {
+  let s = SPEED_MIN * Math.pow(SPEED_MAX / SPEED_MIN, +e.target.value / 100);
+  for (const k of [0.25, 0.5, 1, 2]) if (Math.abs(Math.log(s / k)) < 0.05) s = k;   // (lands on a preset when close to one)
+  setSpeed(s, true);
+});
 document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
   mode = b.dataset.mode; document.querySelectorAll('[data-mode]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
   for (const L in down) if (down[L] && !(blocksOf(L)[0] || {}).maint) press(L, false);
