@@ -53,6 +53,8 @@ function renderProps() {
     os.innerHTML = '';
     for (const c of ALL) if (c === p.L || !used.has(c)) os.add(new Option(c, c, false, c === p.L));
     swatches(document.getElementById('o-colour'), p.color, hex => { snapshot(); p.color = hex; draw(); });
+    document.getElementById('o-delay-group').hidden = !isTimer(p);
+    if (isTimer(p) && document.activeElement !== document.getElementById('o-delay')) document.getElementById('o-delay').value = p.delay;
   }
 }
 document.getElementById('p-letter').addEventListener('change', e => {
@@ -72,6 +74,13 @@ document.getElementById('p-main').addEventListener('click', () => {
 });
 document.querySelectorAll('[data-nc]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); p.nc = x.dataset.nc === '1'; draw(); }));
 document.querySelectorAll('[data-maint]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); blocksOf(p.L).forEach(k => k.maint = x.dataset.maint === '1'); draw(); }));
+// a timer's delay: whole seconds, 1 to 999
+document.getElementById('o-delay').addEventListener('change', e => {
+  const p = selPart(); if (!p || !isTimer(p)) return;
+  const n = Math.min(999, Math.max(1, Math.round(+e.target.value || p.delay)));
+  e.target.value = n; if (n === p.delay) return;
+  snapshot(); p.delay = n; draw();
+});
 document.getElementById('o-letter').addEventListener('change', e => {
   const p = selPart(); if (!p) return; snapshot();
   const old = p.L; p.L = e.target.value; p.color = COIL_COL[p.L] || p.color;

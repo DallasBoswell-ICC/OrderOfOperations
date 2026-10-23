@@ -15,6 +15,7 @@ const DEFS = `
   <linearGradient id="gWell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#303030"/><stop offset="1" stop-color="#1f1f1f"/></linearGradient>
   <linearGradient id="gGloss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".38"/><stop offset=".45" stop-color="#fff" stop-opacity=".06"/><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></linearGradient>
   <radialGradient id="gDome" cx=".38" cy=".3" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient>
+  <linearGradient id="gWin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000"/><stop offset=".35" stop-color="#0b0b0b"/><stop offset="1" stop-color="#161616"/></linearGradient>
   <filter id="fShadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="2.2" stdDeviation="2.2" flood-color="#000" flood-opacity=".55"/></filter>
   <pattern id="grid" width="${G}" height="${G}" patternUnits="userSpaceOnUse"><path d="M ${G} 0 L 0 0 0 ${G}" fill="none" stroke="#4b4b4b" stroke-width="1"/></pattern>
   <pattern id="gridMajor" width="${G * 5}" height="${G * 5}" patternUnits="userSpaceOnUse"><rect width="${G * 5}" height="${G * 5}" fill="url(#grid)"/><path d="M ${G * 5} 0 L 0 0 0 ${G * 5}" fill="none" stroke="#555" stroke-width="1.4"/></pattern>
@@ -24,7 +25,7 @@ const DEFS = `
   <radialGradient id="gStud" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#e8e8e8"/><stop offset=".6" stop-color="#9a9a9a"/><stop offset="1" stop-color="#5a5a5a"/></radialGradient>`;
 const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
-const captionOf = p => p.t === 'coil' ? `${p.L} Coil` : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'coil' ? (isTimer(p) ? `${p.L} Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? 'Timed ' : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -123,7 +124,8 @@ function drawPart(p, g, x, y, chan) {
     el('circle', { cx: x, cy: y, r: COIL / 2, fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
     v.fill = el('circle', { cx: x, cy: y, r: COIL_IN / 2, fill: GREY, stroke: '#1d2733', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, g);
     el('circle', { cx: x, cy: y, r: COIL_IN / 2, fill: 'url(#gDome)' }, g);
-    v.text = el('text', { x, y: y + 7.5, 'text-anchor': 'middle', class: 'devtext', 'font-size': 21, fill: LIGHT_TEXT }, g); v.text.textContent = p.L;
+    if (!isTimer(p)) { v.text = el('text', { x, y: y + 7.5, 'text-anchor': 'middle', class: 'devtext', 'font-size': 21, fill: LIGHT_TEXT }, g); v.text.textContent = p.L; }
+    else drawTimer(p, g, x, y, v);
   }
   el('text', { x, y: y + capH + 14 + (p.t === 'btn' && p.nc ? 4 : 0), 'text-anchor': 'middle', class: 'cap' }, g).textContent = captionOf(p);
   return v;
@@ -137,4 +139,37 @@ function hPath(lo, hi, y, hops) {
   let d = `M${lo} ${yAt(lo)}`;
   for (let i = 1; i < bps.length; i++) { const a = bps[i - 1], b = bps[i], mid = (a + b) / 2; d += hx.some(h => mid > h - 10 && mid < h + 10) ? `A10 10 0 0 1 ${b} ${yAt(b)}` : `L${b} ${y}`; }
   return d;
+}
+
+/* An on-delay timer: drawn as a relay coil (it is one), with its letter moved up a little, a view window under it
+   showing the time (whole seconds), and a square badge with an hourglass on its top right. The badge stays the same
+   as it times; it lights up while the timer is energized, as the lamp badge does. */
+function drawTimer(p, g, x, y, v) {
+  v.timer = true;
+  v.text = el('text', { x, y: y + 1, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: LIGHT_TEXT }, g); v.text.textContent = p.L;
+  v.win = el('g', {}, g); v.winY = y + 6.5; v.x = x;
+  setReadout(v, p, p.delay, false);
+  const R = COIL / 2, bx = x + R * .72, by = y - R * .72, h = 13, gH = 7.6, gB = gH / 1.41;
+  el('rect', { x: bx - h, y: by - h, width: 2 * h, height: 2 * h, rx: 4, fill: '#1f1f1f', stroke: p.color, 'stroke-width': 1.5 }, g);
+  v.badge = el('rect', { x: bx - h + 3, y: by - h + 3, width: 2 * h - 6, height: 2 * h - 6, rx: 2.5, fill: GREY }, g);
+  const P = pts => 'M ' + pts.map(q => q.map(n => n.toFixed(2)).join(' ')).join(' L ') + ' Z';
+  v.glass = el('g', { stroke: '#d8d8d8', fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+  el('path', { d: P([[bx - gB, by - gH], [bx + gB, by - gH], [bx + gB * .28, by], [bx + gB, by + gH], [bx - gB, by + gH], [bx - gB * .28, by]]), 'stroke-width': 1.4 }, v.glass);
+  el('line', { x1: bx - gB - 1.5, y1: by - gH, x2: bx + gB + 1.5, y2: by - gH, 'stroke-width': 1.8 }, v.glass);
+  el('line', { x1: bx - gB - 1.5, y1: by + gH, x2: bx + gB + 1.5, y2: by + gH, 'stroke-width': 1.8 }, v.glass);
+  v.sand = el('g', { fill: '#d8d8d8' }, g);
+  el('path', { d: P([[bx - gB * .62, by - gH * .55], [bx + gB * .62, by - gH * .55], [bx + gB * .22, by - gH * .1], [bx - gB * .22, by - gH * .1]]) }, v.sand);
+  el('path', { d: P([[bx - gB * .8, by + gH * .86], [bx + gB * .8, by + gH * .86], [bx + gB * .35, by + gH * .45], [bx - gB * .35, by + gH * .45]]) }, v.sand);
+}
+// the view window: a black recess in the cap, a little wider for longer numbers, the digits in the timer's colour
+function setReadout(v, p, n, on) {
+  const txt = n + ' s', key = txt + (on ? '|on' : '|off');
+  if (v.winKey === key) return; v.winKey = key;
+  const w = Math.max(24, 13 + 5.6 * String(n).length), h = 13, x0 = v.x - w / 2, y0 = v.winY;
+  v.win.innerHTML = '';
+  el('rect', { x: x0 - 1.6, y: y0 - 1.6, width: w + 3.2, height: h + 3.2, rx: 4.2, fill: on ? 'rgba(0,0,0,.28)' : 'rgba(255,255,255,.10)' }, v.win);
+  el('rect', { x: x0, y: y0, width: w, height: h, rx: 3.4, fill: 'url(#gWin)' }, v.win);
+  el('rect', { x: x0 + .5, y: y0 + .5, width: w - 1, height: h - 1, rx: 3, fill: 'none', stroke: 'rgba(0,0,0,.9)', 'stroke-width': 1 }, v.win);
+  const t = el('text', { x: v.x, y: y0 + 9.6, 'text-anchor': 'middle', 'font-weight': 700, 'font-size': 9.5, fill: on ? p.color : mixOk(p.color, '#262626', .55), style: 'font-variant-numeric:tabular-nums' }, v.win); t.textContent = txt;
+  el('path', { d: `M ${x0 + 3} ${y0 + 2.2} H ${x0 + w - 3}`, stroke: 'rgba(255,255,255,.22)', 'stroke-width': 1, 'stroke-linecap': 'round' }, v.win);
 }

@@ -118,3 +118,8 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 /* the speed slider beside the preset speed buttons */
 #speed-slider { width: 190px; accent-color: #ffc000; cursor: pointer; }
 #speed-out { min-width: 3.6em; font-variant-numeric: tabular-nums; color: #ffc000; font-weight: 600; }
+
+/* a timer's delay */
+#o-delay { width: 4.6em; font: inherit; font-size: .9rem; color: var(--ink); background: #1f2022; border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
+#o-delay:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+.unit { color: #aaa; font-size: .85rem; margin-left: 3px; }

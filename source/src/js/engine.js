@@ -39,7 +39,7 @@ function addLane(e, from) {
 }
 function startRun() {
   NET = network();
-  simT = 0; queue = []; seq = 0; busyUntil = 0; autoRel = {}; down = {}; coilOn = {};
+  simT = 0; queue = []; seq = 0; busyUntil = 0; autoRel = {}; down = {}; coilOn = {}; TIMER = {};
   FED_AT = {}; COMP = null; needPaint = true;
   CON = {}; for (const p of parts) if (p.t === 'con') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };   // every coil starts off
   tl = NET.nodes.map(() => [[-1e9, null]]);
@@ -303,11 +303,18 @@ function updateCoils(t) {
     // path back to L1 is unbroken right now (never from the end of a stream that has been cut off), and not ahead of
     // a coil that was first and that it would cut off
     let want = !shortNow && !!r && !r.ret && f(d.to) === c2;
-    if (want && !coilOn[p.id] && (f(d.from) !== f(NET.L1) || (p.t === 'coil' && wouldCutOff(p, f)))) want = false;
+    if (want && !coilOn[p.id] && (f(d.from) !== f(NET.L1) || (p.t === 'coil' && !isTimer(p) && wouldCutOff(p, f)))) want = false;
     let atOnce = false; const wasOn = !!coilOn[p.id];
     if (want !== wasOn) {
       coilOn[p.id] = want; p._chg = t;
-      if (p.t === 'coil') for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(t + CT, () => moveContact(c, evT));   // its contacts follow
+      const moveAll = at => { for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(at + CT, () => moveContact(c, evT)); };
+      if (isTimer(p)) {
+        // a timer starts timing as it is energized; its contacts change when it times out. Losing power resets it
+        // at once (and puts its contacts back, if it had timed out)
+        const was = TIMER[p.id], st = TIMER[p.id] = { from: t, out: false };
+        if (want) scheduleIdle(t + p.delay, () => { if (TIMER[p.id] === st && coilOn[p.id]) { st.out = true; needPaint = true; moveAll(evT); } });
+        else if (was && was.out) moveAll(t);
+      } else if (p.t === 'coil') for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(t + CT, () => moveContact(c, evT));   // its contacts follow
       // current already at the coil, and its way back to L2 opening or closing: the coil drops out or picks up there
       // and then, so the change starts at its far end at once (rather than travelling through it like new current)
       atOnce = !!r && !r.ret && p._inKey === recKey(r);

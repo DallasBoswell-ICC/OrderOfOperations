@@ -10,6 +10,10 @@ let tl = [], coilOn = {}, down = {}, autoRel = {}, shortNow = false;
 let needPaint = true;
 const btnColour = L => (parts.find(p => p.t === 'btn' && p.L === L) || {}).color || '#888888';
 function schedule(t, fn) { queue.push({ t, s: seq++, fn }); if (t > busyUntil) busyUntil = t; }
+// an event that is only waited for (a timer timing out): nothing moves until it comes, so it does not keep the panel
+// being painted, or a clicked button held down, in the meantime
+function scheduleIdle(t, fn) { queue.push({ t, s: seq++, fn, idle: true }); }
+const busyQueue = () => queue.some(e => !e.idle);
 // run what is due up to upTo; true once it has all been run. With a deadline (a time from performance.now()) it stops
 // when the deadline passes, leaving the rest for the next frame (the clock then follows the events it has reached)
 function runEvents(upTo, deadline) {
@@ -53,5 +57,14 @@ const colourOf = r => r.rd < RAMP ? mixOk(r.from, setCol(r.set), r.rd / RAMP) : 
 const closed = p => p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.nc ? !down[p.L] : !!down[p.L];
 // relay contacts: { closing: moving toward closed, t0: when it started moving, shut: passing current }
 let CON = {};
-const coilOnL = L => parts.some(q => q.t === 'coil' && q.L === L && coilOn[q.id]);
+/* On-delay timers. A timer is a relay coil with a delay (p.delay, whole seconds): it is energized as a coil is, but
+   its contacts only change once it has been energized for the whole delay (it has timed out); when it loses power it
+   resets at once and its contacts go back. TIMER[id]: { from: when it started timing, out: timed out }. */
+let TIMER = {};
+const isTimer = p => p.t === 'coil' && p.delay > 0;
+// the contacts worked by letter L are actuated: its coil is in (and, for a timer, has timed out)
+const coilOnL = L => parts.some(q => q.t === 'coil' && q.L === L && coilOn[q.id] && (!isTimer(q) || (TIMER[q.id] && TIMER[q.id].out)));
+// the time a timer shows: what it is set to while off, the whole seconds left (rounded up) while it times, 0 once out
+const timerLeft = p => { const s = TIMER[p.id]; if (!coilOn[p.id] || !s) return p.delay; if (s.out) return 0; return Math.max(0, Math.ceil(p.delay - (simT - s.from) - 1e-9)); };
+const anyTiming = () => parts.some(p => isTimer(p) && coilOn[p.id] && TIMER[p.id] && !TIMER[p.id].out);
 const coilColour = L => (parts.find(q => q.t === 'coil' && q.L === L) || {}).color || '#9a9a9a';

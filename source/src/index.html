@@ -75,6 +75,8 @@
         <div class="pmenu" role="menu" aria-label="Relays" hidden>
           <button type="button" class="tool" data-part="coil" data-tip="Relay coil">
         <svg viewBox="0 0 30 26"><circle cx="15" cy="13" r="11.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="15" cy="13" r="7.5" fill="#555"/></svg>Coil</button>
+          <button type="button" class="tool" data-part="timer" data-tip="On-delay timer: a relay coil whose contacts change only once it has been energized for its set time. Losing power resets it at once. Set the time in its settings.">
+        <svg viewBox="0 0 30 26"><circle cx="13" cy="14" r="10.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="13" cy="14" r="6.8" fill="#555"/><rect x="18" y="1" width="11" height="11" rx="2" fill="#222" stroke="#FFDC00" stroke-width="1.2"/><path d="M21 3.5h5l-2.5 3 2.5 3h-5l2.5-3z" fill="#d8d8d8"/></svg>Timer (on-delay)</button>
           <button type="button" class="tool" data-part="con-no" data-tip="Relay contact, normally open: closes when its coil picks up. Choose which coil works it in its settings.">
         <svg viewBox="0 0 30 26"><rect x="3" y="5" width="24" height="17" rx="3" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="8" width="14" height="2.6" rx="1.3" fill="#a6a6a6"/><circle cx="10" cy="15" r="2.4" fill="#555"/><circle cx="20" cy="15" r="2.4" fill="#555"/></svg>Contact NO</button>
           <button type="button" class="tool" data-part="con-nc" data-tip="Relay contact, normally closed: opens when its coil picks up. Choose which coil works it in its settings.">
@@ -122,6 +124,7 @@
       </div>
       <div class="props" id="props-coil" hidden>
         <div class="tgroup"><span class="label">Letter</span><select id="o-letter" aria-label="Coil letter"></select></div>
+        <div class="tgroup" id="o-delay-group" hidden><span class="label">On-delay</span><input type="number" id="o-delay" min="1" max="999" step="1" inputmode="numeric" aria-label="Timer delay in seconds" data-tip="How long the timer must be energized before its contacts change (whole seconds, 1 to 999)"><span class="unit">s</span></div>
         <div class="tgroup"><span class="label">Colour</span><div class="swatches" id="o-colour" role="radiogroup" aria-label="Coil colour"></div></div>
       </div>
     </div>

@@ -831,6 +831,57 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('On-delay timer: contacts change only after its set time energized; losing power resets it; readout counts down whole seconds', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank');
+    // rung 1: A into a timer placed from the toolbar; rung 2: the timer's NO contact into a pilot light
+    await mouseDrag(page, [4, 160], [876, 160]); await mouseDrag(page, [4, 320], [876, 320]);
+    await toolbarDrop(page, 'btn-no', 200, 160); await toolbarDrop(page, 'timer', 700, 160);
+    await toolbarDrop(page, 'con-no', 300, 320); await toolbarDrop(page, 'lamp', 700, 320);
+    const T = await page.evaluate(() => { const p = parts.find(q => q.t === 'coil'); return { L: p.L, delay: p.delay, x: p.x, y: p.y }; });
+    if (!(T.delay > 0)) out.push('the toolbar timer has no delay');
+    // its settings: set it to 3 s, and make the contact the timer's
+    await page.mouse.click(...await scr(page, T.x, T.y)); await page.waitForTimeout(60);
+    if (await page.isHidden('#o-delay-group')) out.push('no delay setting for the timer');
+    await page.fill('#o-delay', '3'); await page.press('#o-delay', 'Enter'); await page.waitForTimeout(60);
+    await page.evaluate(L => { parts.find(p => p.t === 'con').L = L; draw(); }, T.L);
+    if ((await page.evaluate(() => parts.find(p => p.t === 'coil').delay)) !== 3) out.push('delay not set to 3');
+    const iss = await issuesNow(page); if (iss.length) out.push('wiring issues: ' + JSON.stringify(iss));
+    if (!/Timed Contact/.test(await page.evaluate(() => captionOf(parts.find(p => p.t === 'con'))))) out.push('the contact is not captioned as timed');
+    const saved = await page.evaluate(() => JSON.stringify(circuitData()));
+    await page.click('#tab-run');
+    const r = await page.evaluate(new Function(STEP + `const res = [], T = parts.find(p => p.t === 'coil'), Lp = parts.find(p => p.t === 'lamp'), A = parts.find(p => p.t === 'btn').L;
+      const read = () => view.parts.get(T.id).win.textContent;
+      step(1); paint(); if (read() !== '3 s') res.push('off readout ' + read());
+      press(A, true); let k = 0; while (!coilOn[T.id] && k++ < 600) step(1 / 60);
+      const t0 = simT, seen = new Set();
+      while (simT < t0 + 2.9) { step(1 / 30); paint(); seen.add(read()); if (coilOnL(T.L)) { res.push('contacts changed after ' + (simT - t0).toFixed(2) + ' s of a 3 s delay'); break; } }
+      if ([...seen].join() !== '3 s,2 s,1 s') res.push('readout went ' + [...seen].join(' / '));
+      step(0.3); paint(); if (!coilOnL(T.L)) res.push('contacts did not change once timed out'); if (read() !== '0 s') res.push('timed-out readout ' + read());
+      step(3); if (!coilOn[Lp.id]) res.push('the light did not come on after the timer timed out');
+      // losing power: resets at once, contacts back
+      press(A, false); step(3); paint();
+      if (coilOn[T.id] || coilOnL(T.L)) res.push('the timer did not reset when A was let go'); if (coilOn[Lp.id]) res.push('the light stayed on');
+      if (read() !== '3 s') res.push('readout after reset ' + read());
+      // a press shorter than the delay never times it out
+      press(A, true); step(2.2); press(A, false); step(4);
+      if (coilOn[Lp.id] || coilOnL(T.L)) res.push('a press shorter than the delay timed it out');
+      return res;`));
+    out.push(...r);
+    // while it only counts down, the panel is not repainted (just the readout)
+    const n = await page.evaluate(() => new Promise(res => { parts.find(p => p.t === 'coil').delay = 8; press(parts.find(p => p.t === 'btn').L, true);
+      setTimeout(() => { let k = 0; const P = paint; window.paint = function () { k++; P(); }; setTimeout(() => { window.paint = P; res(k); }, 1000); }, 3500); }));
+    await page.evaluate(() => { parts.find(p => p.t === 'coil').delay = 3; });
+    if (n > 3) out.push('the whole panel was repainted ' + n + ' times while the timer only counted down');
+    await page.click('#tab-edit');
+    // saved and opened again with its delay
+    const code = await page.evaluate(async () => encodeCircuit());
+    await page.selectOption('#preset', 'blank');
+    await page.evaluate(async c => useCircuit(await decodeCircuit(c), ''), code);
+    if ((await page.evaluate(() => JSON.stringify(circuitData()))) !== saved) out.push('the timer changed after saving and opening');
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');
