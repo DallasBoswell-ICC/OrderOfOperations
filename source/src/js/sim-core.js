@@ -16,12 +16,13 @@ function scheduleIdle(t, fn) { queue.push({ t, s: seq++, fn, idle: true }); }
 const busyQueue = () => queue.some(e => !e.idle);
 // run what is due up to upTo; true once it has all been run. With a deadline (a time from performance.now()) it stops
 // when the deadline passes, leaving the rest for the next frame (the clock then follows the events it has reached)
+let eventsRun = 0;   // (how many events have been run: anything run in a frame means the panel is painted)
 function runEvents(upTo, deadline) {
   for (let guard = 0; guard < 5000 && queue.length; guard++) {
     let bi = 0; for (let i = 1; i < queue.length; i++) { const a = queue[i], b = queue[bi]; if (a.t < b.t - 1e-9 || (Math.abs(a.t - b.t) <= 1e-9 && a.s < b.s)) bi = i; }
     if (queue[bi].t > upTo) return true;
     if (deadline && (guard & 15) === 15 && performance.now() > deadline) return false;
-    const ev = queue.splice(bi, 1)[0]; evT = ev.t;
+    const ev = queue.splice(bi, 1)[0]; evT = ev.t; eventsRun++;
     if (deadline && ev.t > simT) simT = ev.t;
     ev.fn();
   }

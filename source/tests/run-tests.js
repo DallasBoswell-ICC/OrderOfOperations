@@ -914,6 +914,26 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('At 300x what is drawn keeps up: a timer timing out mid-frame shows its contact closed and the light on (the video)', async page => {
+    const out = [];
+    await page.evaluate(() => { W = W_MIN; parts = [P('btn', 100, 200, { L: 'D', nc: true, maint: true, color: '#FF9600' }), P('btn', 280, 200, { L: 'A', maint: true, color: '#FF0032' }), P('con', 280, 300, { L: 'X' }), C('X', 660, 200),
+        P('con', 280, 460, { L: 'X' }), P('coil', 660, 460, { L: 'T', color: '#FFFFFF', delay: 2 }), P('con', 280, 600, { L: 'T' }), P('lamp', 660, 600, { L: '', color: '#00B050' })];
+      wires = [Wr(0, 200, 60, 200), Wr(140, 200, 240, 200), Wr(200, 200, 200, 300), Wr(200, 300, 240, 300), Wr(320, 200, 600, 200), Wr(320, 300, 360, 300), Wr(360, 300, 360, 200), Wr(720, 200, W, 200),
+        Wr(0, 460, 240, 460), Wr(320, 460, 600, 460), Wr(720, 460, W, 460), Wr(0, 600, 240, 600), Wr(320, 600, 600, 600), Wr(720, 600, W, 600)]; normalize(); draw(); });
+    for (const real of [true, false]) {
+      await page.click('#tab-edit'); await page.click('#tab-run'); await page.waitForTimeout(100);
+      await page.click(real ? '[data-treal="1"]' : '[data-treal="0"]'); await page.evaluate(() => setSpeed(300));
+      const r = await page.evaluate(() => new Promise(res => { press('A', true);
+        setTimeout(() => { const c = parts.find(p => p.t === 'con' && p.L === 'T'), L = parts.find(p => p.t === 'lamp');
+          res({ state: [CON[c.id].shut, !!coilOn[L.id]], drawn: [/s$/.test(view.parts.get(c.id).k), view.parts.get(L.id).k] }); }, 3200); }));
+      if (!r.state[0] || !r.state[1]) out.push((real ? 'real time' : 'follow speed') + ': the contact or light did not come on: ' + JSON.stringify(r));
+      else if (!r.drawn[0] || r.drawn[1] !== '1.000') out.push((real ? 'real time' : 'follow speed') + ': on, but not drawn on screen: ' + JSON.stringify(r));
+    }
+    await page.evaluate(() => { setSpeed(1); setTimersReal(false); });
+    await page.click('#tab-edit');
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

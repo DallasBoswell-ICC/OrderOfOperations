@@ -5,13 +5,14 @@ function frame(now) {
   if (!editing) {
     // at high speed a busy circuit (a buzzer, say) can have more to do in one frame than the computer can manage: it
     // does what it can in a set time and carries on from there next frame, so the page never stalls
-    const target = simT + dt * speed;
+    const target = simT + dt * speed, ran = eventsRun;
+    tickRealTimers(real);   // (timers counting real time go by the clock; one timing out now is acted on below)
     if (runEvents(target, performance.now() + 12)) simT = target;
-    tickRealTimers(real);   // (timers counting real time go by the clock, not the simulation)
     if (mode === 'click') for (const L in autoRel) if (!busyQueue() && simT > busyUntil + .5) { delete autoRel[L]; press(L, false); }
     // once the circuit has settled (nothing on its way, and the last coil, light and contact has finished changing)
     // nothing on the panel moves, so it is not painted again until something happens: an idle circuit costs nothing
-    if (needPaint || busyQueue() || simT <= busyUntil + 0.6) { paint(); needPaint = false; }
+    // (at high speed a whole chain of changes can start and finish within one frame: whatever happened is painted)
+    if (needPaint || eventsRun !== ran || busyQueue() || simT <= busyUntil + 0.6) { paint(); needPaint = false; }
     else if (anyTiming()) paintTimers();   // (a timer counting down: only its readout changes)
   }
   requestAnimationFrame(frame);
