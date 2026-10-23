@@ -882,22 +882,31 @@ const DEF_CIRCUIT = `
     return out;
   });
 
-  await check('Timers in real time: speeding the simulation up does not speed the timer up; switching mid-way carries on', async page => {
+  await check('Timers in real time: they go by the clock, whatever the speed or however far behind the simulation falls; switching mid-way carries on', async page => {
     const out = [];
     await page.evaluate(() => { W = W_MIN; parts = [P('btn', 140, 160, { L: 'A', maint: true, color: '#00B050' }), P('coil', 700, 160, { L: 'T', color: '#FFDC00', delay: 4 })];
       wires = [Wr(0, 160, 100, 160), Wr(180, 160, 640, 160), Wr(760, 160, W, 160)]; normalize(); draw(); });
     await page.click('#tab-run');
     await page.click('[data-treal="1"]');
-    await page.evaluate(() => setSpeed(10));
     const r = await page.evaluate(new Function(STEP + `const res = [], T = parts.find(p => p.t === 'coil');
+      // real seconds (rt) and simulation seconds (sim per real second, as at a speed of 300 or as a computer that falls behind)
+      const run = (rt, perSec) => { for (let i = 0; i < rt * 30; i++) { step(perSec / 30); tickRealTimers(1 / 30); } };
       press('A', true); let k = 0; while (!coilOn[T.id] && k++ < 600) step(1 / 60);
-      step(10 * 3.5); if (TIMER[T.id].out) res.push('at 10x with real-time timers, a 4 s timer timed out after 3.5 real seconds');
+      run(3.5, 300); if (TIMER[T.id].out) res.push('at 300x, a 4 s real-time timer timed out after 3.5 real seconds');
       if (timerLeft(T) !== 1) res.push('readout should show 1 s left, shows ' + timerLeft(T));
-      step(10 * 0.6); if (!TIMER[T.id].out) res.push('it had not timed out after 4.1 real seconds');
+      run(0.6, 300); if (!TIMER[T.id].out) res.push('at 300x it had not timed out after 4.1 real seconds');
+      // a computer that only manages 20x: still 4 real seconds
+      press('A', false); step(5); press('A', true); k = 0; while (!coilOn[T.id] && k++ < 600) step(1 / 60);
+      run(3.8, 20); if (TIMER[T.id].out) res.push('timed out early when the simulation fell behind');
+      run(0.3, 20); if (!TIMER[T.id].out) res.push('late when the simulation fell behind');
       // switching back to follow the speed mid-way: it carries on from what it has counted
       press('A', false); step(5); press('A', true); k = 0; while (!coilOn[T.id] && k++ < 600) step(1 / 60);
-      step(10 * 2); setTimersReal(false); step(1.9); if (TIMER[T.id].out) res.push('timed out early after switching to follow speed');
+      run(2, 50); setTimersReal(false); step(1.9); if (TIMER[T.id].out) res.push('timed out early after switching to follow speed');
       step(0.3); if (!TIMER[T.id].out) res.push('did not time out after 2 real + 2 sim seconds');
+      // and from following the speed to real time
+      press('A', false); step(5); press('A', true); k = 0; while (!coilOn[T.id] && k++ < 600) step(1 / 60);
+      step(1); setTimersReal(true); run(2.9, 100); if (TIMER[T.id].out) res.push('timed out early after switching to real time');
+      run(0.2, 100); if (!TIMER[T.id].out) res.push('did not time out after 1 sim + 3 real seconds');
       return res;`));
     out.push(...r);
     await page.evaluate(() => { setSpeed(1); setTimersReal(false); });

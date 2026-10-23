@@ -21,7 +21,7 @@ const SPEED_SNAPS = [0.25, 0.5, 1, 2, 10, 50, 100, 200, 300];
 const SPEED_MIN = 0.1, SPEED_MAX = 300, sliderOf = s => 100 * Math.log10(s / SPEED_MIN) / Math.log10(SPEED_MAX / SPEED_MIN);
 const fmtSpeed = s => (s < 1 ? +s.toFixed(2) : s < 10 ? +s.toFixed(1) : Math.round(s)) + '×';
 function setSpeed(s, fromSlider) {
-  speed = s; retimeTimers();   // (a timer counting real time carries on at the new rate)
+  speed = s;
   const sl = document.getElementById('speed-slider');
   if (!fromSlider) sl.value = sliderOf(s);
   document.getElementById('speed-out').textContent = fmtSpeed(s);

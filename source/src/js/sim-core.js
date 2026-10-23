@@ -60,23 +60,33 @@ let CON = {};
 /* On-delay timers. A timer is a relay coil with a delay (p.delay, whole seconds): it is energized as a coil is, but
    its contacts only change once it has been energized for the whole delay (it has timed out); when it loses power it
    resets at once and its contacts go back.
-   A timer counts either at the simulation's speed (it is sped up and slowed down with everything else), or in real
-   time (timersReal: actual seconds, whatever the speed, so the current can be sped up while a 5 s timer still takes
-   5 s). TIMER[id]: { base: seconds counted by sim time t0, t0, rate: seconds counted per sim second, out: timed out,
-   onOut: what happens when it times out }. Whenever the rate changes (the speed or the setting), each running timer
-   carries on from what it has counted, at the new rate. */
+   A timer counts either at the simulation's speed (sped up and slowed down with everything else), or in real time
+   (timersReal): it counts the computer's own clock, so 10 s on it is 10 s on the wall whatever the speed, even if a
+   slow computer cannot keep the simulation up to that speed. TIMER[id]: { out: timed out, onOut: what happens when it
+   times out, and either real: true with counted (real seconds so far), or base, t0 (seconds counted by sim time t0) }.
+   Switching between the two carries a running timer on from what it has counted. */
 let TIMER = {}, timersReal = false;
-const timerRate = () => timersReal ? 1 / speed : 1;
-const timerCounted = st => st.base + (simT - st.t0) * st.rate;
-// (re)schedule a running timer's time-out from what it has counted so far
+const timerCounted = st => st.real ? st.counted : st.base + (simT - st.t0);
+// schedule a timer counting simulation time to time out (dropping one scheduled before)
 function armTimer(p, st) {
-  queue = queue.filter(e => e.tid !== p.id);   // (its earlier time-out, at the old rate)
-  queue.push({ t: st.t0 + Math.max(0, p.delay - st.base) / st.rate, s: seq++, idle: true, tid: p.id,
-    fn: () => { if (TIMER[p.id] === st && coilOn[p.id] && !st.out) { st.out = true; needPaint = true; st.onOut(evT); } } });
+  queue = queue.filter(e => e.tid !== p.id);
+  if (st.real) return;
+  queue.push({ t: st.t0 + Math.max(0, p.delay - st.base), s: seq++, idle: true, tid: p.id,
+    fn: () => { if (TIMER[p.id] === st && coilOn[p.id] && !st.out) timeOut(st, evT); } });
 }
+function timeOut(st, at) { st.out = true; needPaint = true; st.onOut(at); }
+const running = p => { const st = TIMER[p.id]; return isTimer(p) && st && !st.out && coilOn[p.id] ? st : null; };
+// timers counting real time: called every frame with the real seconds since the last one
+function tickRealTimers(dt) {
+  for (const p of parts) { const st = running(p); if (!st || !st.real) continue;
+    st.counted += dt; if (st.counted >= p.delay - 1e-9) timeOut(st, simT); }
+}
+// switch how timers count; running ones carry on from what they have counted
 function retimeTimers() {
-  for (const p of parts) { const st = TIMER[p.id]; if (!isTimer(p) || !st || st.out || !coilOn[p.id]) continue;
-    st.base = timerCounted(st); st.t0 = simT; st.rate = timerRate(); armTimer(p, st); }
+  for (const p of parts) { const st = running(p); if (!st || st.real === timersReal) continue;
+    const c = timerCounted(st); st.real = timersReal;
+    if (st.real) st.counted = c; else { st.base = c; st.t0 = simT; }
+    armTimer(p, st); }
 }
 const isTimer = p => p.t === 'coil' && p.delay > 0;
 // the contacts worked by letter L are actuated: its coil is in (and, for a timer, has timed out)
