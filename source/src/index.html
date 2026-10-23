@@ -139,6 +139,12 @@
       <input type="range" id="speed-slider" min="0" max="100" step="1" value="29" aria-label="Speed, from a tenth of normal to three hundred times normal" data-tip="Any speed from 0.1× up to 300×. Turned all the way up, the circuit acts almost at once, as a real one does.">
       <output id="speed-out" for="speed-slider">1×</output>
     </div>
+    <div class="row" id="timer-group"><span class="label">Timers</span>
+      <div class="seg" role="group" aria-label="How timers count">
+        <button type="button" data-treal="0" aria-pressed="true" data-tip="Timers run at the simulation's speed, sped up or slowed down with everything else">Follow speed</button>
+        <button type="button" data-treal="1" data-tip="Timers count real seconds whatever the speed: speed the current up and a 5 s timer still takes 5 s">Real time</button>
+      </div>
+    </div>
     <div class="row" id="mode-group"><span class="label">Pushbuttons</span>
       <div class="seg" role="group" aria-label="Pushbutton mode">
         <button type="button" data-mode="click" aria-pressed="true" data-tip="One click presses a momentary button; it lets go once the circuit settles">Click</button>

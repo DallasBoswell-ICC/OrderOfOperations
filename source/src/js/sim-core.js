@@ -59,12 +59,29 @@ const closed = p => p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.nc
 let CON = {};
 /* On-delay timers. A timer is a relay coil with a delay (p.delay, whole seconds): it is energized as a coil is, but
    its contacts only change once it has been energized for the whole delay (it has timed out); when it loses power it
-   resets at once and its contacts go back. TIMER[id]: { from: when it started timing, out: timed out }. */
-let TIMER = {};
+   resets at once and its contacts go back.
+   A timer counts either at the simulation's speed (it is sped up and slowed down with everything else), or in real
+   time (timersReal: actual seconds, whatever the speed, so the current can be sped up while a 5 s timer still takes
+   5 s). TIMER[id]: { base: seconds counted by sim time t0, t0, rate: seconds counted per sim second, out: timed out,
+   onOut: what happens when it times out }. Whenever the rate changes (the speed or the setting), each running timer
+   carries on from what it has counted, at the new rate. */
+let TIMER = {}, timersReal = false;
+const timerRate = () => timersReal ? 1 / speed : 1;
+const timerCounted = st => st.base + (simT - st.t0) * st.rate;
+// (re)schedule a running timer's time-out from what it has counted so far
+function armTimer(p, st) {
+  queue = queue.filter(e => e.tid !== p.id);   // (its earlier time-out, at the old rate)
+  queue.push({ t: st.t0 + Math.max(0, p.delay - st.base) / st.rate, s: seq++, idle: true, tid: p.id,
+    fn: () => { if (TIMER[p.id] === st && coilOn[p.id] && !st.out) { st.out = true; needPaint = true; st.onOut(evT); } } });
+}
+function retimeTimers() {
+  for (const p of parts) { const st = TIMER[p.id]; if (!isTimer(p) || !st || st.out || !coilOn[p.id]) continue;
+    st.base = timerCounted(st); st.t0 = simT; st.rate = timerRate(); armTimer(p, st); }
+}
 const isTimer = p => p.t === 'coil' && p.delay > 0;
 // the contacts worked by letter L are actuated: its coil is in (and, for a timer, has timed out)
 const coilOnL = L => parts.some(q => q.t === 'coil' && q.L === L && coilOn[q.id] && (!isTimer(q) || (TIMER[q.id] && TIMER[q.id].out)));
 // the time a timer shows: what it is set to while off, the whole seconds left (rounded up) while it times, 0 once out
-const timerLeft = p => { const s = TIMER[p.id]; if (!coilOn[p.id] || !s) return p.delay; if (s.out) return 0; return Math.max(0, Math.ceil(p.delay - (simT - s.from) - 1e-9)); };
+const timerLeft = p => { const s = TIMER[p.id]; if (!coilOn[p.id] || !s) return p.delay; if (s.out) return 0; return Math.max(0, Math.ceil(p.delay - timerCounted(s) - 1e-9)); };
 const anyTiming = () => parts.some(p => isTimer(p) && coilOn[p.id] && TIMER[p.id] && !TIMER[p.id].out);
 const coilColour = L => (parts.find(q => q.t === 'coil' && q.L === L) || {}).color || '#9a9a9a';

@@ -123,3 +123,5 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 #o-delay { width: 4.6em; font: inherit; font-size: .9rem; color: var(--ink); background: #1f2022; border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
 #o-delay:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
 .unit { color: #aaa; font-size: .85rem; margin-left: 3px; }
+
+#timer-group [data-tip]::after { left: auto; right: 0; }

@@ -311,8 +311,8 @@ function updateCoils(t) {
       if (isTimer(p)) {
         // a timer starts timing as it is energized; its contacts change when it times out. Losing power resets it
         // at once (and puts its contacts back, if it had timed out)
-        const was = TIMER[p.id], st = TIMER[p.id] = { from: t, out: false };
-        if (want) scheduleIdle(t + p.delay, () => { if (TIMER[p.id] === st && coilOn[p.id]) { st.out = true; needPaint = true; moveAll(evT); } });
+        const was = TIMER[p.id], st = TIMER[p.id] = { base: 0, t0: t, rate: timerRate(), out: false, onOut: moveAll };
+        if (want) armTimer(p, st);
         else if (was && was.out) moveAll(t);
       } else if (p.t === 'coil') for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(t + CT, () => moveContact(c, evT));   // its contacts follow
       // current already at the coil, and its way back to L2 opening or closing: the coil drops out or picks up there

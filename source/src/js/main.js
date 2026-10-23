@@ -1,5 +1,5 @@
 /* ---------------- build / run ---------------- */
-function afterRunStart() { document.getElementById('mode-group').hidden = !parts.some(p => p.t === 'btn' && !p.maint); paint(); }
+function afterRunStart() { document.getElementById('mode-group').hidden = !parts.some(p => p.t === 'btn' && !p.maint); document.getElementById('timer-group').hidden = !parts.some(isTimer); paint(); }
 function setMode(run) {
   editing = !run;
   document.getElementById('tab-edit').setAttribute('aria-selected', String(!run));
@@ -21,13 +21,21 @@ const SPEED_SNAPS = [0.25, 0.5, 1, 2, 10, 50, 100, 200, 300];
 const SPEED_MIN = 0.1, SPEED_MAX = 300, sliderOf = s => 100 * Math.log10(s / SPEED_MIN) / Math.log10(SPEED_MAX / SPEED_MIN);
 const fmtSpeed = s => (s < 1 ? +s.toFixed(2) : s < 10 ? +s.toFixed(1) : Math.round(s)) + '×';
 function setSpeed(s, fromSlider) {
-  speed = s;
+  speed = s; retimeTimers();   // (a timer counting real time carries on at the new rate)
   const sl = document.getElementById('speed-slider');
   if (!fromSlider) sl.value = sliderOf(s);
   document.getElementById('speed-out').textContent = fmtSpeed(s);
   document.querySelectorAll('[data-speed]').forEach(x => x.setAttribute('aria-pressed', String(Math.abs(+x.dataset.speed - s) < 1e-9)));
 }
 document.querySelectorAll('[data-speed]').forEach(b => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
+// how timers count: at the simulation's speed, or in real time (remembered in this browser)
+function setTimersReal(v) {
+  timersReal = v; retimeTimers();
+  document.querySelectorAll('[data-treal]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.treal === +v)));
+  try { localStorage.setItem('oo-circuit-builder:timers-real', v ? '1' : '0'); } catch (_) {}
+}
+document.querySelectorAll('[data-treal]').forEach(b => b.addEventListener('click', () => setTimersReal(b.dataset.treal === '1')));
+try { if (localStorage.getItem('oo-circuit-builder:timers-real') === '1') setTimersReal(true); } catch (_) {}
 document.getElementById('speed-slider').addEventListener('input', e => {
   let s = SPEED_MIN * Math.pow(SPEED_MAX / SPEED_MIN, +e.target.value / 100);
   // it snaps to the round speeds when close to one (within about 13%: from 9× it lands on 10×)

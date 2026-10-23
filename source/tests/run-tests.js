@@ -882,6 +882,29 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Timers in real time: speeding the simulation up does not speed the timer up; switching mid-way carries on', async page => {
+    const out = [];
+    await page.evaluate(() => { W = W_MIN; parts = [P('btn', 140, 160, { L: 'A', maint: true, color: '#00B050' }), P('coil', 700, 160, { L: 'T', color: '#FFDC00', delay: 4 })];
+      wires = [Wr(0, 160, 100, 160), Wr(180, 160, 640, 160), Wr(760, 160, W, 160)]; normalize(); draw(); });
+    await page.click('#tab-run');
+    await page.click('[data-treal="1"]');
+    await page.evaluate(() => setSpeed(10));
+    const r = await page.evaluate(new Function(STEP + `const res = [], T = parts.find(p => p.t === 'coil');
+      press('A', true); let k = 0; while (!coilOn[T.id] && k++ < 600) step(1 / 60);
+      step(10 * 3.5); if (TIMER[T.id].out) res.push('at 10x with real-time timers, a 4 s timer timed out after 3.5 real seconds');
+      if (timerLeft(T) !== 1) res.push('readout should show 1 s left, shows ' + timerLeft(T));
+      step(10 * 0.6); if (!TIMER[T.id].out) res.push('it had not timed out after 4.1 real seconds');
+      // switching back to follow the speed mid-way: it carries on from what it has counted
+      press('A', false); step(5); press('A', true); k = 0; while (!coilOn[T.id] && k++ < 600) step(1 / 60);
+      step(10 * 2); setTimersReal(false); step(1.9); if (TIMER[T.id].out) res.push('timed out early after switching to follow speed');
+      step(0.3); if (!TIMER[T.id].out) res.push('did not time out after 2 real + 2 sim seconds');
+      return res;`));
+    out.push(...r);
+    await page.evaluate(() => { setSpeed(1); setTimersReal(false); });
+    await page.click('#tab-edit');
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

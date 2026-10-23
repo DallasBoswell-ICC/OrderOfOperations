@@ -136,6 +136,8 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 #o-delay { width: 4.6em; font: inherit; font-size: .9rem; color: var(--ink); background: #1f2022; border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
 #o-delay:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
 .unit { color: #aaa; font-size: .85rem; margin-left: 3px; }
+
+#timer-group [data-tip]::after { left: auto; right: 0; }
 </style>
 </head>
 <body>
@@ -262,6 +264,12 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
       </div>
       <input type="range" id="speed-slider" min="0" max="100" step="1" value="29" aria-label="Speed, from a tenth of normal to three hundred times normal" data-tip="Any speed from 0.1× up to 300×. Turned all the way up, the circuit acts almost at once, as a real one does.">
       <output id="speed-out" for="speed-slider">1×</output>
+    </div>
+    <div class="row" id="timer-group"><span class="label">Timers</span>
+      <div class="seg" role="group" aria-label="How timers count">
+        <button type="button" data-treal="0" aria-pressed="true" data-tip="Timers run at the simulation's speed, sped up or slowed down with everything else">Follow speed</button>
+        <button type="button" data-treal="1" data-tip="Timers count real seconds whatever the speed: speed the current up and a 5 s timer still takes 5 s">Real time</button>
+      </div>
     </div>
     <div class="row" id="mode-group"><span class="label">Pushbuttons</span>
       <div class="seg" role="group" aria-label="Pushbutton mode">
@@ -681,13 +689,30 @@ const closed = p => p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.nc
 let CON = {};
 /* On-delay timers. A timer is a relay coil with a delay (p.delay, whole seconds): it is energized as a coil is, but
    its contacts only change once it has been energized for the whole delay (it has timed out); when it loses power it
-   resets at once and its contacts go back. TIMER[id]: { from: when it started timing, out: timed out }. */
-let TIMER = {};
+   resets at once and its contacts go back.
+   A timer counts either at the simulation's speed (it is sped up and slowed down with everything else), or in real
+   time (timersReal: actual seconds, whatever the speed, so the current can be sped up while a 5 s timer still takes
+   5 s). TIMER[id]: { base: seconds counted by sim time t0, t0, rate: seconds counted per sim second, out: timed out,
+   onOut: what happens when it times out }. Whenever the rate changes (the speed or the setting), each running timer
+   carries on from what it has counted, at the new rate. */
+let TIMER = {}, timersReal = false;
+const timerRate = () => timersReal ? 1 / speed : 1;
+const timerCounted = st => st.base + (simT - st.t0) * st.rate;
+// (re)schedule a running timer's time-out from what it has counted so far
+function armTimer(p, st) {
+  queue = queue.filter(e => e.tid !== p.id);   // (its earlier time-out, at the old rate)
+  queue.push({ t: st.t0 + Math.max(0, p.delay - st.base) / st.rate, s: seq++, idle: true, tid: p.id,
+    fn: () => { if (TIMER[p.id] === st && coilOn[p.id] && !st.out) { st.out = true; needPaint = true; st.onOut(evT); } } });
+}
+function retimeTimers() {
+  for (const p of parts) { const st = TIMER[p.id]; if (!isTimer(p) || !st || st.out || !coilOn[p.id]) continue;
+    st.base = timerCounted(st); st.t0 = simT; st.rate = timerRate(); armTimer(p, st); }
+}
 const isTimer = p => p.t === 'coil' && p.delay > 0;
 // the contacts worked by letter L are actuated: its coil is in (and, for a timer, has timed out)
 const coilOnL = L => parts.some(q => q.t === 'coil' && q.L === L && coilOn[q.id] && (!isTimer(q) || (TIMER[q.id] && TIMER[q.id].out)));
 // the time a timer shows: what it is set to while off, the whole seconds left (rounded up) while it times, 0 once out
-const timerLeft = p => { const s = TIMER[p.id]; if (!coilOn[p.id] || !s) return p.delay; if (s.out) return 0; return Math.max(0, Math.ceil(p.delay - (simT - s.from) - 1e-9)); };
+const timerLeft = p => { const s = TIMER[p.id]; if (!coilOn[p.id] || !s) return p.delay; if (s.out) return 0; return Math.max(0, Math.ceil(p.delay - timerCounted(s) - 1e-9)); };
 const anyTiming = () => parts.some(p => isTimer(p) && coilOn[p.id] && TIMER[p.id] && !TIMER[p.id].out);
 const coilColour = L => (parts.find(q => q.t === 'coil' && q.L === L) || {}).color || '#9a9a9a';
 
@@ -1087,8 +1112,8 @@ function updateCoils(t) {
       if (isTimer(p)) {
         // a timer starts timing as it is energized; its contacts change when it times out. Losing power resets it
         // at once (and puts its contacts back, if it had timed out)
-        const was = TIMER[p.id], st = TIMER[p.id] = { from: t, out: false };
-        if (want) scheduleIdle(t + p.delay, () => { if (TIMER[p.id] === st && coilOn[p.id]) { st.out = true; needPaint = true; moveAll(evT); } });
+        const was = TIMER[p.id], st = TIMER[p.id] = { base: 0, t0: t, rate: timerRate(), out: false, onOut: moveAll };
+        if (want) armTimer(p, st);
         else if (was && was.out) moveAll(t);
       } else if (p.t === 'coil') for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(t + CT, () => moveContact(c, evT));   // its contacts follow
       // current already at the coil, and its way back to L2 opening or closing: the coil drops out or picks up there
@@ -2462,7 +2487,7 @@ document.addEventListener('keydown', e => {
 
 /* ---- js/main.js ---- */
 /* ---------------- build / run ---------------- */
-function afterRunStart() { document.getElementById('mode-group').hidden = !parts.some(p => p.t === 'btn' && !p.maint); paint(); }
+function afterRunStart() { document.getElementById('mode-group').hidden = !parts.some(p => p.t === 'btn' && !p.maint); document.getElementById('timer-group').hidden = !parts.some(isTimer); paint(); }
 function setMode(run) {
   editing = !run;
   document.getElementById('tab-edit').setAttribute('aria-selected', String(!run));
@@ -2484,13 +2509,21 @@ const SPEED_SNAPS = [0.25, 0.5, 1, 2, 10, 50, 100, 200, 300];
 const SPEED_MIN = 0.1, SPEED_MAX = 300, sliderOf = s => 100 * Math.log10(s / SPEED_MIN) / Math.log10(SPEED_MAX / SPEED_MIN);
 const fmtSpeed = s => (s < 1 ? +s.toFixed(2) : s < 10 ? +s.toFixed(1) : Math.round(s)) + '×';
 function setSpeed(s, fromSlider) {
-  speed = s;
+  speed = s; retimeTimers();   // (a timer counting real time carries on at the new rate)
   const sl = document.getElementById('speed-slider');
   if (!fromSlider) sl.value = sliderOf(s);
   document.getElementById('speed-out').textContent = fmtSpeed(s);
   document.querySelectorAll('[data-speed]').forEach(x => x.setAttribute('aria-pressed', String(Math.abs(+x.dataset.speed - s) < 1e-9)));
 }
 document.querySelectorAll('[data-speed]').forEach(b => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
+// how timers count: at the simulation's speed, or in real time (remembered in this browser)
+function setTimersReal(v) {
+  timersReal = v; retimeTimers();
+  document.querySelectorAll('[data-treal]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.treal === +v)));
+  try { localStorage.setItem('oo-circuit-builder:timers-real', v ? '1' : '0'); } catch (_) {}
+}
+document.querySelectorAll('[data-treal]').forEach(b => b.addEventListener('click', () => setTimersReal(b.dataset.treal === '1')));
+try { if (localStorage.getItem('oo-circuit-builder:timers-real') === '1') setTimersReal(true); } catch (_) {}
 document.getElementById('speed-slider').addEventListener('input', e => {
   let s = SPEED_MIN * Math.pow(SPEED_MAX / SPEED_MIN, +e.target.value / 100);
   // it snaps to the round speeds when close to one (within about 13%: from 9× it lands on 10×)
