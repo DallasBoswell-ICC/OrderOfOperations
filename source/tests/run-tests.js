@@ -934,6 +934,44 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('A timer\'s contacts: instantaneous ones change as soon as it is energized, timed ones once it times out; set in the contact\'s settings; saved', async page => {
+    const out = [];
+    // A into timer T (3 s); three contacts of T into three lights: an instant NO, a timed NO, an instant NC
+    await page.evaluate(() => { W = W_MIN; parts = [P('btn', 140, 160, { L: 'A', maint: true, color: '#00B050' }), P('coil', 700, 160, { L: 'T', color: '#FFDC00', delay: 3 }),
+        P('con', 300, 300, { L: 'T' }), P('lamp', 700, 300, { L: '', color: '#FF0032' }), P('con', 300, 440, { L: 'T' }), P('lamp', 700, 440, { L: '', color: '#0070C0' }),
+        P('con', 300, 580, { L: 'T', nc: true }), P('lamp', 700, 580, { L: '', color: '#FF9600' })];
+      wires = [Wr(0, 160, 100, 160), Wr(180, 160, 640, 160), Wr(760, 160, W, 160)];
+      for (const y of [300, 440, 580]) wires.push(Wr(0, y, 260, y), Wr(340, y, 640, y), Wr(760, y, W, y));
+      normalize(); fit(true); draw(); });
+    // make the first and third instantaneous in their settings
+    for (const y of [300, 580]) {
+      await page.mouse.click(...await scr(page, 300, y)); await page.waitForTimeout(50);
+      if (await page.isHidden('#c-inst-group')) { out.push('no Timed / Instant setting on a timer\'s contact'); break; }
+      await page.click('[data-cinst="1"]'); await page.waitForTimeout(40);
+    }
+    const caps = await page.evaluate(() => parts.filter(p => p.t === 'con').map(captionOf));
+    if (caps.join() !== 'T Instant Contact (NO),T Timed Contact (NO),T Instant Contact (NC)') out.push('captions: ' + caps.join(' / '));
+    const badges = await page.evaluate(() => parts.filter(p => p.t === 'con').map(p => !!svg.querySelector(`[data-part="${p.id}"] path[fill="none"]`)));
+    if (badges.join() !== 'false,true,false') out.push('hourglass badges on contacts: ' + badges.join());
+    const saved = await page.evaluate(() => JSON.stringify(circuitData()));
+    await page.click('#tab-run');
+    const r = await page.evaluate(new Function(STEP + `const res = [], T = parts.find(p => p.t === 'coil'), [l1, l2, l3] = parts.filter(p => p.t === 'lamp');
+      const on = () => [l1, l2, l3].map(l => +!!coilOn[l.id]).join('');
+      step(3); if (on() !== '001') res.push('before: lights ' + on() + ', expected 001');
+      press('A', true); let k = 0; while (!coilOn[T.id] && k++ < 600) step(1 / 60);
+      step(1.5); if (on() !== '100') res.push('1.5 s after the timer is energized: lights ' + on() + ', expected 100 (instant ones changed, timed one not yet)');
+      step(3); if (on() !== '110') res.push('after it times out: lights ' + on() + ', expected 110');
+      press('A', false); step(4); if (on() !== '001') res.push('after letting go: lights ' + on() + ', expected 001');
+      return res;`));
+    out.push(...r);
+    await page.click('#tab-edit');
+    const code = await page.evaluate(async () => encodeCircuit());
+    await page.selectOption('#preset', 'blank');
+    await page.evaluate(async c => useCircuit(await decodeCircuit(c), ''), code);
+    if ((await page.evaluate(() => JSON.stringify(circuitData()))) !== saved) out.push('instant / timed changed after saving and opening');
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

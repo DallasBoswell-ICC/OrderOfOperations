@@ -116,6 +116,8 @@
         <div class="tgroup"><span class="label">Worked by</span><select id="c-of" aria-label="The relay coil that works this contact"></select></div>
         <div class="tgroup"><span class="label">Contact</span>
           <div class="seg" role="group" aria-label="Normally open or closed"><button type="button" data-cnc="0" data-tip="Normally open: closes when its coil picks up">NO</button><button type="button" data-cnc="1" data-tip="Normally closed: opens when its coil picks up">NC</button></div></div>
+        <div class="tgroup" id="c-inst-group" hidden><span class="label">Action</span>
+          <div class="seg" role="group" aria-label="Timed or instantaneous"><button type="button" data-cinst="0" data-tip="Timed: changes only once the timer has timed out">Timed</button><button type="button" data-cinst="1" data-tip="Instantaneous: changes as soon as the timer is energized, like an ordinary relay contact">Instant</button></div></div>
       </div>
       <div class="props" id="props-lamp" hidden>
         <div class="tgroup"><span class="label">Built into</span><select id="l-btn" aria-label="The pushbutton this light is built into"></select></div>

@@ -242,6 +242,8 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
         <div class="tgroup"><span class="label">Worked by</span><select id="c-of" aria-label="The relay coil that works this contact"></select></div>
         <div class="tgroup"><span class="label">Contact</span>
           <div class="seg" role="group" aria-label="Normally open or closed"><button type="button" data-cnc="0" data-tip="Normally open: closes when its coil picks up">NO</button><button type="button" data-cnc="1" data-tip="Normally closed: opens when its coil picks up">NC</button></div></div>
+        <div class="tgroup" id="c-inst-group" hidden><span class="label">Action</span>
+          <div class="seg" role="group" aria-label="Timed or instantaneous"><button type="button" data-cinst="0" data-tip="Timed: changes only once the timer has timed out">Timed</button><button type="button" data-cinst="1" data-tip="Instantaneous: changes as soon as the timer is energized, like an ordinary relay contact">Instant</button></div></div>
       </div>
       <div class="props" id="props-lamp" hidden>
         <div class="tgroup"><span class="label">Built into</span><select id="l-btn" aria-label="The pushbutton this light is built into"></select></div>
@@ -722,6 +724,10 @@ function retimeTimers() {
 const isTimer = p => p.t === 'coil' && p.delay > 0;
 // the contacts worked by letter L are actuated: its coil is in (and, for a timer, has timed out)
 const coilOnL = L => parts.some(q => q.t === 'coil' && q.L === L && coilOn[q.id] && (!isTimer(q) || (TIMER[q.id] && TIMER[q.id].out)));
+/* A timer's contacts are timed (they change once it times out) or instantaneous (c.inst: they change as soon as it
+   is energized, like an ordinary relay's). Is contact c's coil holding it changed over right now? */
+const isTimed = c => c.t === 'con' && !c.inst && parts.some(q => isTimer(q) && q.L === c.L);
+const conActuated = c => parts.some(q => q.t === 'coil' && q.L === c.L && coilOn[q.id] && (!isTimer(q) || c.inst || (TIMER[q.id] && TIMER[q.id].out)));
 // the time a timer shows: what it is set to while off, the whole seconds left (rounded up) while it times, 0 once out
 const timerLeft = p => { const s = TIMER[p.id]; if (!coilOn[p.id] || !s) return p.delay; if (s.out) return 0; return Math.max(0, Math.ceil(p.delay - timerCounted(s) - 1e-9)); };
 const anyTiming = () => parts.some(p => isTimer(p) && coilOn[p.id] && TIMER[p.id] && !TIMER[p.id].out);
@@ -1097,7 +1103,10 @@ function wouldCutOff(x, f0) {
   const settling = c => !coilOn[c.id] || simT < (c._chg ?? -1e9) + CT + SWING + 1e-6;
   const others = parts.filter(c => c.t === 'coil' && c !== x && settling(c) && FED_AT[c.id] !== undefined && FED_AT[c.id] < FED_AT[x.id] - 1e-9 && fedBy(f0, c));
   if (!others.length) return false;
-  const alt = e => e.kind === 'w' || (isSw(e.part) && (e.part.t === 'con' && e.part.L === x.L ? !e.part.nc : closed(e.part)));
+  // (a timer's timed contacts stay as they are as it picks up; only its instantaneous ones change)
+  const flips = c => c.t === 'con' && c.L === x.L && (!isTimer(x) || c.inst);
+  if (isTimer(x) && !parts.some(flips)) return false;
+  const alt = e => e.kind === 'w' || (isSw(e.part) && (flips(e.part) ? !e.part.nc : closed(e.part)));
   const f1 = components(NET, alt);
   return others.some(c => !fedBy(f1, c));
 }
@@ -1115,17 +1124,18 @@ function updateCoils(t) {
     // path back to L1 is unbroken right now (never from the end of a stream that has been cut off), and not ahead of
     // a coil that was first and that it would cut off
     let want = !shortNow && !!r && !r.ret && f(d.to) === c2;
-    if (want && !coilOn[p.id] && (f(d.from) !== f(NET.L1) || (p.t === 'coil' && !isTimer(p) && wouldCutOff(p, f)))) want = false;
+    if (want && !coilOn[p.id] && (f(d.from) !== f(NET.L1) || (p.t === 'coil' && wouldCutOff(p, f)))) want = false;
     let atOnce = false; const wasOn = !!coilOn[p.id];
     if (want !== wasOn) {
       coilOn[p.id] = want; p._chg = t;
       const moveAll = at => { for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(at + CT, () => moveContact(c, evT)); };
       if (isTimer(p)) {
-        // a timer starts timing as it is energized; its contacts change when it times out. Losing power resets it
-        // at once (and puts its contacts back, if it had timed out)
+        // a timer starts timing as it is energized: its instantaneous contacts change at once, its timed ones when it
+        // times out. Losing power resets it at once, and puts its contacts back (each contact works out for itself
+        // whether it has anything to do)
         const was = TIMER[p.id], st = TIMER[p.id] = { real: timersReal, counted: 0, base: 0, t0: t, out: false, onOut: moveAll };
         if (want) armTimer(p, st);
-        else if (was && was.out) moveAll(t);
+        moveAll(t);
       } else if (p.t === 'coil') for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(t + CT, () => moveContact(c, evT));   // its contacts follow
       // current already at the coil, and its way back to L2 opening or closing: the coil drops out or picks up there
       // and then, so the change starts at its far end at once (rather than travelling through it like new current)
@@ -1147,7 +1157,7 @@ function press(L, v) {
 // a relay contact's bar starts to move: it stops passing current as soon as it lifts, and passes current again
 // only once it has landed
 function moveContact(c, t) {
-  const want = coilOnL(c.L) !== !!c.nc, s = CON[c.id];
+  const want = conActuated(c) !== !!c.nc, s = CON[c.id];
   if (!s || s.closing === want) return;
   CON[c.id] = { t0: t, closing: want, shut: s.shut };
   if (t + SWING > busyUntil) busyUntil = t + SWING;
@@ -1212,7 +1222,7 @@ const DEFS = `
   <radialGradient id="gStud" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#e8e8e8"/><stop offset=".6" stop-color="#9a9a9a"/><stop offset="1" stop-color="#5a5a5a"/></radialGradient>`;
 const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
-const captionOf = p => p.t === 'coil' ? (isTimer(p) ? `${p.L} Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? 'Timed ' : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'coil' ? (isTimer(p) ? `${p.L} Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -1298,6 +1308,16 @@ function drawPart(p, g, x, y, chan) {
     el('rect', { x: bx1, y: y - bh / 2, width: bx2 - bx1, height: bh, rx: bh / 2, fill: 'url(#gGloss)' }, v.blade);
     g.insertBefore(v.blade, v.posts);   // the bar sits behind the contact points
     v.col = col;
+    if (isTimed(p)) {   // a timed contact: the timer's square hourglass badge, small, on its top right corner
+      const bx = x + B / 2 - 2, by = y - H / 2 + 2, h = 9.5, gH = 5.4, gB = gH / 1.41;
+      el('rect', { x: bx - h, y: by - h, width: 2 * h, height: 2 * h, rx: 3, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.3 }, g);
+      el('rect', { x: bx - h + 2.5, y: by - h + 2.5, width: 2 * h - 5, height: 2 * h - 5, rx: 2, fill: GREY }, g);
+      const P = pts => 'M ' + pts.map(q => q.map(n => n.toFixed(2)).join(' ')).join(' L ') + ' Z';
+      el('path', { d: P([[bx - gB, by - gH], [bx + gB, by - gH], [bx + gB * .28, by], [bx + gB, by + gH], [bx - gB, by + gH], [bx - gB * .28, by]]), fill: 'none', stroke: '#d8d8d8', 'stroke-width': 1.1, 'stroke-linejoin': 'round' }, g);
+      for (const yy of [by - gH, by + gH]) el('line', { x1: bx - gB - 1.2, y1: yy, x2: bx + gB + 1.2, y2: yy, stroke: '#d8d8d8', 'stroke-width': 1.4, 'stroke-linecap': 'round' }, g);
+      el('path', { d: P([[bx - gB * .62, by - gH * .55], [bx + gB * .62, by - gH * .55], [bx + gB * .22, by - gH * .1], [bx - gB * .22, by - gH * .1]]), fill: '#d8d8d8' }, g);
+      el('path', { d: P([[bx - gB * .8, by + gH * .86], [bx + gB * .8, by + gH * .86], [bx + gB * .35, by + gH * .45], [bx - gB * .35, by + gH * .45]]), fill: '#d8d8d8' }, g);
+    }
   } else if (p.t === 'lamp') {
     // a pilot light: a lens with a filament, that glows and sends out rays when lit
     const col = lampColour(p); v.col = col;
@@ -2203,8 +2223,11 @@ function renderProps() {
   if (p && p.t === 'con') {
     const cs = document.getElementById('c-of'), coils = [...coilLetters()];
     cs.innerHTML = '';
-    for (const c of new Set([...coils, p.L])) cs.add(new Option(`${c} Coil` + (coils.includes(c) ? '' : ' (not on the panel)'), c, false, c === p.L));
+    for (const c of new Set([...coils, p.L])) cs.add(new Option(`${c} ${parts.some(q => isTimer(q) && q.L === c) ? 'Timer' : 'Coil'}` + (coils.includes(c) ? '' : ' (not on the panel)'), c, false, c === p.L));
     document.querySelectorAll('[data-cnc]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.cnc === +p.nc)));
+    // a timer's contact: timed or instantaneous
+    document.getElementById('c-inst-group').hidden = !parts.some(q => isTimer(q) && q.L === p.L);
+    document.querySelectorAll('[data-cinst]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.cinst === +!!p.inst)));
   }
   if (p && p.t === 'btn') {
     const ls = document.getElementById('p-letter'), others = new Set(parts.filter(q => q.t === 'btn' && q !== p).map(q => q.L)), coils = coilLetters();
@@ -2260,6 +2283,7 @@ document.getElementById('l-btn').addEventListener('change', e => {
   say(p.L ? `The ${p.L} button lights up with this light.` : ''); draw();
 });
 document.getElementById('c-of').addEventListener('change', e => { const p = selPart(); if (!p) return; snapshot(); p.L = e.target.value; draw(); });
+document.querySelectorAll('[data-cinst]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); p.inst = x.dataset.cinst === '1'; if (!p.inst) delete p.inst; draw(); }));
 document.querySelectorAll('[data-cnc]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); p.nc = x.dataset.cnc === '1'; draw(); }));
 document.getElementById('preset').addEventListener('change', e => {
   const k = e.target.value; if (!k) return;
@@ -2278,7 +2302,7 @@ document.getElementById('preset').addEventListener('change', e => {
         circuit saves the same whatever size the window is; it widens again to fill the screen it is opened on.
      parts: [type, x, y, letter, normallyClosed, maintained, colour, delay]
             (type "btn", "coil", "con" or "lamp"; a pilot light's letter is the button it is built into, or "";
-            delay only on an on-delay timer, which is a coil: its seconds)
+            the eighth field: an on-delay timer's seconds (a timer is a coil), or 1 on a timer's instantaneous contact)
      wires: [x1, y1, x2, y2]                                            (straight runs, on the grid)            */
 const APP_ID = 'order-of-operations-circuit-builder', AUTOSAVE_KEY = 'oo-circuit-builder:current';
 let circuitName = '';
@@ -2287,7 +2311,7 @@ function circuitData() {
   const w = W_USER ? W : contentRight(), x = v => v === W ? w : v;   // (a length set by moving the bars is kept)
   return {
     app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}),
-    parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) a.push(p.delay); return a; }),
+    parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) a.push(p.delay); if (p.t === 'con' && p.inst) a.push(1); return a; }),
     wires: wires.map(q => [x(q.x1), q.y1, x(q.x2), q.y2]),
   };
 }
@@ -2302,7 +2326,7 @@ function readCircuit(d) {
     const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : 'btn', L = String(a[3] || (t === 'lamp' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' ? '' : 'A');
     const p = P(t, num(a[1]), num(a[2]), { L, color: hex(a[6]) || (t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : BTN_COL[L] || '#FF0032') });
     if (t === 'btn') { p.nc = !!a[4]; p.maint = a[5] !== 0; }
-    if (t === 'con') { p.nc = !!a[4]; delete p.color; }
+    if (t === 'con') { p.nc = !!a[4]; delete p.color; if (a[7] === 1) p.inst = true; }   // (a timer's instantaneous contact)
     if (t === 'coil' && a[7] !== undefined) { const n = Math.round(Number(a[7])); if (n >= 1) p.delay = Math.min(999, n); }   // an on-delay timer
     return p;
   });

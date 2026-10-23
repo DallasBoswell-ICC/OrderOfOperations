@@ -37,8 +37,11 @@ function renderProps() {
   if (p && p.t === 'con') {
     const cs = document.getElementById('c-of'), coils = [...coilLetters()];
     cs.innerHTML = '';
-    for (const c of new Set([...coils, p.L])) cs.add(new Option(`${c} Coil` + (coils.includes(c) ? '' : ' (not on the panel)'), c, false, c === p.L));
+    for (const c of new Set([...coils, p.L])) cs.add(new Option(`${c} ${parts.some(q => isTimer(q) && q.L === c) ? 'Timer' : 'Coil'}` + (coils.includes(c) ? '' : ' (not on the panel)'), c, false, c === p.L));
     document.querySelectorAll('[data-cnc]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.cnc === +p.nc)));
+    // a timer's contact: timed or instantaneous
+    document.getElementById('c-inst-group').hidden = !parts.some(q => isTimer(q) && q.L === p.L);
+    document.querySelectorAll('[data-cinst]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.cinst === +!!p.inst)));
   }
   if (p && p.t === 'btn') {
     const ls = document.getElementById('p-letter'), others = new Set(parts.filter(q => q.t === 'btn' && q !== p).map(q => q.L)), coils = coilLetters();
@@ -94,6 +97,7 @@ document.getElementById('l-btn').addEventListener('change', e => {
   say(p.L ? `The ${p.L} button lights up with this light.` : ''); draw();
 });
 document.getElementById('c-of').addEventListener('change', e => { const p = selPart(); if (!p) return; snapshot(); p.L = e.target.value; draw(); });
+document.querySelectorAll('[data-cinst]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); p.inst = x.dataset.cinst === '1'; if (!p.inst) delete p.inst; draw(); }));
 document.querySelectorAll('[data-cnc]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); p.nc = x.dataset.cnc === '1'; draw(); }));
 document.getElementById('preset').addEventListener('change', e => {
   const k = e.target.value; if (!k) return;

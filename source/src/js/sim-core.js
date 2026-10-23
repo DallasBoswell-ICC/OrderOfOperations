@@ -92,6 +92,10 @@ function retimeTimers() {
 const isTimer = p => p.t === 'coil' && p.delay > 0;
 // the contacts worked by letter L are actuated: its coil is in (and, for a timer, has timed out)
 const coilOnL = L => parts.some(q => q.t === 'coil' && q.L === L && coilOn[q.id] && (!isTimer(q) || (TIMER[q.id] && TIMER[q.id].out)));
+/* A timer's contacts are timed (they change once it times out) or instantaneous (c.inst: they change as soon as it
+   is energized, like an ordinary relay's). Is contact c's coil holding it changed over right now? */
+const isTimed = c => c.t === 'con' && !c.inst && parts.some(q => isTimer(q) && q.L === c.L);
+const conActuated = c => parts.some(q => q.t === 'coil' && q.L === c.L && coilOn[q.id] && (!isTimer(q) || c.inst || (TIMER[q.id] && TIMER[q.id].out)));
 // the time a timer shows: what it is set to while off, the whole seconds left (rounded up) while it times, 0 once out
 const timerLeft = p => { const s = TIMER[p.id]; if (!coilOn[p.id] || !s) return p.delay; if (s.out) return 0; return Math.max(0, Math.ceil(p.delay - timerCounted(s) - 1e-9)); };
 const anyTiming = () => parts.some(p => isTimer(p) && coilOn[p.id] && TIMER[p.id] && !TIMER[p.id].out);

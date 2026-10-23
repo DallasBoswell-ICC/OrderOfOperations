@@ -7,7 +7,7 @@
         circuit saves the same whatever size the window is; it widens again to fill the screen it is opened on.
      parts: [type, x, y, letter, normallyClosed, maintained, colour, delay]
             (type "btn", "coil", "con" or "lamp"; a pilot light's letter is the button it is built into, or "";
-            delay only on an on-delay timer, which is a coil: its seconds)
+            the eighth field: an on-delay timer's seconds (a timer is a coil), or 1 on a timer's instantaneous contact)
      wires: [x1, y1, x2, y2]                                            (straight runs, on the grid)            */
 const APP_ID = 'order-of-operations-circuit-builder', AUTOSAVE_KEY = 'oo-circuit-builder:current';
 let circuitName = '';
@@ -16,7 +16,7 @@ function circuitData() {
   const w = W_USER ? W : contentRight(), x = v => v === W ? w : v;   // (a length set by moving the bars is kept)
   return {
     app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}),
-    parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) a.push(p.delay); return a; }),
+    parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) a.push(p.delay); if (p.t === 'con' && p.inst) a.push(1); return a; }),
     wires: wires.map(q => [x(q.x1), q.y1, x(q.x2), q.y2]),
   };
 }
@@ -31,7 +31,7 @@ function readCircuit(d) {
     const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : 'btn', L = String(a[3] || (t === 'lamp' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' ? '' : 'A');
     const p = P(t, num(a[1]), num(a[2]), { L, color: hex(a[6]) || (t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : BTN_COL[L] || '#FF0032') });
     if (t === 'btn') { p.nc = !!a[4]; p.maint = a[5] !== 0; }
-    if (t === 'con') { p.nc = !!a[4]; delete p.color; }
+    if (t === 'con') { p.nc = !!a[4]; delete p.color; if (a[7] === 1) p.inst = true; }   // (a timer's instantaneous contact)
     if (t === 'coil' && a[7] !== undefined) { const n = Math.round(Number(a[7])); if (n >= 1) p.delay = Math.min(999, n); }   // an on-delay timer
     return p;
   });

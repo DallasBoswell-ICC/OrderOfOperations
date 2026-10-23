@@ -285,7 +285,10 @@ function wouldCutOff(x, f0) {
   const settling = c => !coilOn[c.id] || simT < (c._chg ?? -1e9) + CT + SWING + 1e-6;
   const others = parts.filter(c => c.t === 'coil' && c !== x && settling(c) && FED_AT[c.id] !== undefined && FED_AT[c.id] < FED_AT[x.id] - 1e-9 && fedBy(f0, c));
   if (!others.length) return false;
-  const alt = e => e.kind === 'w' || (isSw(e.part) && (e.part.t === 'con' && e.part.L === x.L ? !e.part.nc : closed(e.part)));
+  // (a timer's timed contacts stay as they are as it picks up; only its instantaneous ones change)
+  const flips = c => c.t === 'con' && c.L === x.L && (!isTimer(x) || c.inst);
+  if (isTimer(x) && !parts.some(flips)) return false;
+  const alt = e => e.kind === 'w' || (isSw(e.part) && (flips(e.part) ? !e.part.nc : closed(e.part)));
   const f1 = components(NET, alt);
   return others.some(c => !fedBy(f1, c));
 }
@@ -303,17 +306,18 @@ function updateCoils(t) {
     // path back to L1 is unbroken right now (never from the end of a stream that has been cut off), and not ahead of
     // a coil that was first and that it would cut off
     let want = !shortNow && !!r && !r.ret && f(d.to) === c2;
-    if (want && !coilOn[p.id] && (f(d.from) !== f(NET.L1) || (p.t === 'coil' && !isTimer(p) && wouldCutOff(p, f)))) want = false;
+    if (want && !coilOn[p.id] && (f(d.from) !== f(NET.L1) || (p.t === 'coil' && wouldCutOff(p, f)))) want = false;
     let atOnce = false; const wasOn = !!coilOn[p.id];
     if (want !== wasOn) {
       coilOn[p.id] = want; p._chg = t;
       const moveAll = at => { for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(at + CT, () => moveContact(c, evT)); };
       if (isTimer(p)) {
-        // a timer starts timing as it is energized; its contacts change when it times out. Losing power resets it
-        // at once (and puts its contacts back, if it had timed out)
+        // a timer starts timing as it is energized: its instantaneous contacts change at once, its timed ones when it
+        // times out. Losing power resets it at once, and puts its contacts back (each contact works out for itself
+        // whether it has anything to do)
         const was = TIMER[p.id], st = TIMER[p.id] = { real: timersReal, counted: 0, base: 0, t0: t, out: false, onOut: moveAll };
         if (want) armTimer(p, st);
-        else if (was && was.out) moveAll(t);
+        moveAll(t);
       } else if (p.t === 'coil') for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(t + CT, () => moveContact(c, evT));   // its contacts follow
       // current already at the coil, and its way back to L2 opening or closing: the coil drops out or picks up there
       // and then, so the change starts at its far end at once (rather than travelling through it like new current)
@@ -335,7 +339,7 @@ function press(L, v) {
 // a relay contact's bar starts to move: it stops passing current as soon as it lifts, and passes current again
 // only once it has landed
 function moveContact(c, t) {
-  const want = coilOnL(c.L) !== !!c.nc, s = CON[c.id];
+  const want = conActuated(c) !== !!c.nc, s = CON[c.id];
   if (!s || s.closing === want) return;
   CON[c.id] = { t0: t, closing: want, shut: s.shut };
   if (t + SWING > busyUntil) busyUntil = t + SWING;
