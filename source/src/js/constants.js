@@ -20,7 +20,7 @@ const PALETTE = [['Red', '#FF0032'], ['Orange', '#FF9600'], ['Yellow', '#FFDC00'
 const BTN_COL = { A: '#FF0032', B: '#0070C0', C: '#00B050', D: '#FF9600', E: '#00D2BE', F: '#7030A0', G: '#EC008C', H: '#FFDC00' };
 const COIL_COL = { X: '#FFDC00', Y: '#EC008C', Z: '#7030A0', W: '#00D2BE' };
 const ALL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-const CON_H = 53.986176;             // a relay contact's box is as wide as a button's and a little shorter
+const CON_H = BOX;                   // a relay contact's box is square, the size of a button's (room for a timed contact's arrow)
 const CT = 0.2, SWING = 0.4;         // relay contacts start to move this long after their coil changes, and take this long to swing
 const OPEN_LIFT = 15, BLADE_GREY = '#a6a6a6';   // how far an open contact's bar lifts off its posts
 // loads: things current passes through to L2 (a relay coil, or a pilot light). They are the same size and are

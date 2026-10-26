@@ -115,10 +115,11 @@ function drawPart(p, g, x, y, chan) {
     // up on an on-delay timer's contacts (delayed after it is energized), down on an off-delay timer's (after it loses power)
     const tm = isTimed(p) && parts.find(q => isTimer(q) && q.L === p.L);
     if (tm) {
-      const s = tm.tof ? 1 : -1, y0 = y + s * bh / 2, y1 = y0 + s * 4.2, tip = y0 + s * 9.5, w = 4.2;
+      // (as thick as the bar's stem allows, and about as wide as the bar is tall at its head)
+      const s = tm.tof ? 1 : -1, y0 = y + s * (bh / 2 - .5), y1 = y0 + s * 6.5, tip = y0 + s * 14, w = 6.8;
       v.arrow = el('g', { fill: p.nc ? col : BLADE_GREY, stroke: p.nc ? col : BLADE_GREY }, v.blade);
-      el('line', { x1: x, y1: y0, x2: x, y2: y1 + s * 1, 'stroke-width': 2.2 }, v.arrow);
-      el('path', { d: `M ${x - w} ${y1} L ${x + w} ${y1} L ${x} ${tip} Z`, 'stroke-width': .8, 'stroke-linejoin': 'round' }, v.arrow);
+      el('line', { x1: x, y1: y0, x2: x, y2: y1 + s * 1.5, 'stroke-width': 4.2 }, v.arrow);
+      el('path', { d: `M ${x - w} ${y1} L ${x + w} ${y1} L ${x} ${tip} Z`, 'stroke-width': 1.4, 'stroke-linejoin': 'round' }, v.arrow);
     }
     if (isTimed(p)) {   // a timed contact: the timer's square hourglass badge, small, on its top right corner
       const bx = x + B / 2 - 2, by = y - H / 2 + 2, h = 9.5, gH = 5.4, gB = gH / 1.41;
