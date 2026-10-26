@@ -58,25 +58,29 @@ const colourOf = r => r.rd < RAMP ? mixOk(r.from, setCol(r.set), r.rd / RAMP) : 
 const closed = p => p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.nc ? !down[p.L] : !!down[p.L];
 // relay contacts: { closing: moving toward closed, t0: when it started moving, shut: passing current }
 let CON = {};
-/* On-delay timers. A timer is a relay coil with a delay (p.delay, whole seconds): it is energized as a coil is, but
-   its contacts only change once it has been energized for the whole delay (it has timed out); when it loses power it
-   resets at once and its contacts go back.
+/* Timers. A timer is a relay coil with a delay (p.delay, whole seconds), on-delay or off-delay (p.tof).
+   On-delay: energized, it times; once it has been energized for the whole delay its timed contacts change. Losing
+   power resets it at once and they go back.
+   Off-delay: energized, its timed contacts change at once. Losing power, it times, and they go back only once the whole
+   delay has run out; energized again before then, it stops timing and they stay changed.
+   Either way its instantaneous contacts (c.inst) follow it at once, like an ordinary relay's.
    A timer counts either at the simulation's speed (sped up and slowed down with everything else), or in real time
    (timersReal): it counts the computer's own clock, so 10 s on it is 10 s on the wall whatever the speed, even if a
-   slow computer cannot keep the simulation up to that speed. TIMER[id]: { out: timed out, onOut: what happens when it
-   times out, and either real: true with counted (real seconds so far), or base, t0 (seconds counted by sim time t0) }.
-   Switching between the two carries a running timer on from what it has counted. */
+   slow computer cannot keep the simulation up to that speed. TIMER[id]: { act: its timed contacts are changed over,
+   timing: it is counting, out: it has finished counting, onOut: what happens then, and either real: true with counted
+   (real seconds so far), or base, t0 (seconds counted by sim time t0) }. Switching between the two carries a running
+   timer on from what it has counted. */
 let TIMER = {}, timersReal = false;
 const timerCounted = st => st.real ? st.counted : st.base + (simT - st.t0);
-// schedule a timer counting simulation time to time out (dropping one scheduled before)
+// schedule a timer counting simulation time to finish (dropping one scheduled before)
 function armTimer(p, st) {
   queue = queue.filter(e => e.tid !== p.id);
-  if (st.real) return;
+  if (st.real || !st.timing) return;
   queue.push({ t: st.t0 + Math.max(0, p.delay - st.base), s: seq++, idle: true, tid: p.id,
-    fn: () => { if (TIMER[p.id] === st && coilOn[p.id] && !st.out) timeOut(st, evT); } });
+    fn: () => { if (TIMER[p.id] === st && st.timing) timeOut(st, evT); } });
 }
-function timeOut(st, at) { st.out = true; needPaint = true; st.onOut(at); }
-const running = p => { const st = TIMER[p.id]; return isTimer(p) && st && !st.out && coilOn[p.id] ? st : null; };
+function timeOut(st, at) { st.timing = false; st.out = true; needPaint = true; st.onOut(at); }
+const running = p => { const st = TIMER[p.id]; return isTimer(p) && st && st.timing ? st : null; };
 // timers counting real time: called every frame with the real seconds since the last one
 function tickRealTimers(dt) {
   for (const p of parts) { const st = running(p); if (!st || !st.real) continue;
@@ -90,13 +94,15 @@ function retimeTimers() {
     armTimer(p, st); }
 }
 const isTimer = p => p.t === 'coil' && p.delay > 0;
-// the contacts worked by letter L are actuated: its coil is in (and, for a timer, has timed out)
-const coilOnL = L => parts.some(q => q.t === 'coil' && q.L === L && coilOn[q.id] && (!isTimer(q) || (TIMER[q.id] && TIMER[q.id].out)));
-/* A timer's contacts are timed (they change once it times out) or instantaneous (c.inst: they change as soon as it
-   is energized, like an ordinary relay's). Is contact c's coil holding it changed over right now? */
+// the contacts worked by letter L are changed over (a timer's timed ones)
+const coilOnL = L => parts.some(q => q.t === 'coil' && q.L === L && (isTimer(q) ? !!(TIMER[q.id] && TIMER[q.id].act) : !!coilOn[q.id]));
+// a timer's contacts are timed, or instantaneous (c.inst); is contact c's coil holding it changed over right now?
 const isTimed = c => c.t === 'con' && !c.inst && parts.some(q => isTimer(q) && q.L === c.L);
-const conActuated = c => parts.some(q => q.t === 'coil' && q.L === c.L && coilOn[q.id] && (!isTimer(q) || c.inst || (TIMER[q.id] && TIMER[q.id].out)));
-// the time a timer shows: what it is set to while off, the whole seconds left (rounded up) while it times, 0 once out
-const timerLeft = p => { const s = TIMER[p.id]; if (!coilOn[p.id] || !s) return p.delay; if (s.out) return 0; return Math.max(0, Math.ceil(p.delay - timerCounted(s) - 1e-9)); };
-const anyTiming = () => parts.some(p => isTimer(p) && coilOn[p.id] && TIMER[p.id] && !TIMER[p.id].out);
+const conActuated = c => parts.some(q => q.t === 'coil' && q.L === c.L && (!isTimer(q) || c.inst ? !!coilOn[q.id] : !!(TIMER[q.id] && TIMER[q.id].act)));
+// a timer's readout is lit while it is energized or counting
+const timerLit = p => !!coilOn[p.id] || !!running(p);
+// the time a timer shows: the whole seconds left (rounded up) while it counts; 0 once an on-delay timer has timed out
+// (while it stays energized); otherwise what it is set to
+const timerLeft = p => { const s = TIMER[p.id]; if (s && s.timing) return Math.max(0, Math.ceil(p.delay - timerCounted(s) - 1e-9)); if (s && !p.tof && s.act && coilOn[p.id]) return 0; return p.delay; };
+const anyTiming = () => parts.some(p => !!running(p));
 const coilColour = L => (parts.find(q => q.t === 'coil' && q.L === L) || {}).color || '#9a9a9a';

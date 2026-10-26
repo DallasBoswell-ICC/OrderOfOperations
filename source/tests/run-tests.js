@@ -1003,6 +1003,50 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Off-delay timer: timed contacts change at once; after power is lost they hold for the delay, then go back; power back mid-way cancels it', async page => {
+    const out = [];
+    await page.evaluate(() => { W = W_MIN; parts = [P('btn', 140, 160, { L: 'A', maint: true, color: '#00B050' }), P('coil', 700, 160, { L: 'T', color: '#FFDC00', delay: 3 }),
+        P('con', 300, 300, { L: 'T' }), P('lamp', 700, 300, { L: '', color: '#FF0032' }), P('con', 300, 440, { L: 'T', inst: true }), P('lamp', 700, 440, { L: '', color: '#0070C0' }),
+        P('con', 300, 580, { L: 'T', nc: true }), P('lamp', 700, 580, { L: '', color: '#FF9600' })];
+      wires = [Wr(0, 160, 100, 160), Wr(180, 160, 640, 160), Wr(760, 160, W, 160)];
+      for (const y of [300, 440, 580]) wires.push(Wr(0, y, 260, y), Wr(340, y, 640, y), Wr(760, y, W, y));
+      normalize(); fit(true); draw(); });
+    // make it off-delay in its settings
+    await page.mouse.click(...await scr(page, 700, 160)); await page.waitForTimeout(50);
+    if (await page.isHidden('#o-type-group')) out.push('no on-delay / off-delay setting');
+    await page.click('[data-ttype="off"]'); await page.waitForTimeout(40);
+    const cap = await page.evaluate(() => captionOf(parts.find(p => p.t === 'coil')));
+    if (cap !== 'T Off-Delay Timer') out.push('caption: ' + cap);
+    const saved = await page.evaluate(() => JSON.stringify(circuitData()));
+    await page.click('#tab-run');
+    const r = await page.evaluate(new Function(STEP + `const res = [], T = parts.find(p => p.t === 'coil'), [l1, l2, l3] = parts.filter(p => p.t === 'lamp');
+      const on = () => [l1, l2, l3].map(l => +!!coilOn[l.id]).join(''), read = () => (paint(), view.parts.get(T.id).win.textContent);
+      step(3); if (on() !== '001') res.push('before: lights ' + on() + ', expected 001 (timed NO, instant NO, timed NC)');
+      if (read() !== '3 s') res.push('readout while off: ' + read());
+      press('A', true); let k = 0; while (!coilOn[T.id] && k++ < 600) step(1 / 60);
+      step(2); if (on() !== '110') res.push('energized: lights ' + on() + ', expected 110 (everything changed at once)');
+      if (read() !== '3 s') res.push('readout while energized: ' + read());
+      // power off: the instant one goes back at once; the timed ones hold for 3 s, counting down
+      press('A', false); k = 0; while (coilOn[T.id] && k++ < 600) step(1 / 60);
+      step(1.5); if (on() !== '100') res.push('1.5 s after losing power: lights ' + on() + ', expected 100');
+      if (read() !== '2 s') res.push('readout 1.5 s into the off-delay: ' + read());
+      step(3); if (on() !== '001') res.push('after the delay: lights ' + on() + ', expected 001');
+      if (read() !== '3 s') res.push('readout after the delay: ' + read());
+      // power back before the delay runs out: it stops timing, the timed contacts never go back
+      press('A', true); k = 0; while (!coilOn[T.id] && k++ < 600) step(1 / 60); step(2);
+      press('A', false); k = 0; while (coilOn[T.id] && k++ < 600) step(1 / 60); step(1.5);
+      press('A', true); step(6);
+      if (on() !== '110') res.push('power back mid-way, 6 s later: lights ' + on() + ', expected 110 (the timed contacts never went back)');
+      return res;`));
+    out.push(...r);
+    await page.click('#tab-edit');
+    const code = await page.evaluate(async () => encodeCircuit());
+    await page.selectOption('#preset', 'blank');
+    await page.evaluate(async c => useCircuit(await decodeCircuit(c), ''), code);
+    if ((await page.evaluate(() => JSON.stringify(circuitData()))) !== saved) out.push('the off-delay timer changed after saving and opening');
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

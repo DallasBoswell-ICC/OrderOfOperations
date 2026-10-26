@@ -74,7 +74,7 @@ function paint() {
       v.fil.setAttribute('stroke', lit > .5 ? 'rgba(255,255,255,.85)' : 'rgba(30,30,30,.55)');
     } else {
       const on = !!coilOn[p.id], f = p._chg == null ? 1 : clamp01((simT - p._chg) / .5);
-      k = (on ? 1 : 0) + ':' + f.toFixed(3) + (v.timer ? ':' + timerLeft(p) : '');
+      k = (on ? 1 : 0) + ':' + f.toFixed(3) + (v.timer ? ':' + timerLeft(p) + timerLit(p) : '');
       if (k === v.k) continue; v.k = k;
       v.fill.setAttribute('fill', on ? mixRgb(GREY, p.color, f) : mixRgb(p.color, GREY, f));
       v.text.style.fill = (on ? f : 1 - f) > .5 ? DARK_TEXT : LIGHT_TEXT;
@@ -117,6 +117,6 @@ function bindButton(g, p) {
 function paintTimer(p, v, lit) {
   v.badge.setAttribute('fill', mixRgb(GREY, p.color, lit));
   v.glass.setAttribute('stroke', lit > .5 ? '#1c1c1c' : '#d8d8d8'); v.sand.setAttribute('fill', lit > .5 ? '#1c1c1c' : '#d8d8d8');
-  setReadout(v, p, timerLeft(p), coilOn[p.id]);
+  setReadout(v, p, timerLeft(p), timerLit(p));
 }
-function paintTimers() { for (const p of parts) if (isTimer(p)) { const v = view.parts.get(p.id); if (v && v.timer) setReadout(v, p, timerLeft(p), coilOn[p.id]); } }
+function paintTimers() { for (const p of parts) if (isTimer(p)) { const v = view.parts.get(p.id); if (v && v.timer) setReadout(v, p, timerLeft(p), timerLit(p)); } }

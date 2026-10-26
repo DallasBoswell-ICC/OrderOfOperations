@@ -285,8 +285,8 @@ function wouldCutOff(x, f0) {
   const settling = c => !coilOn[c.id] || simT < (c._chg ?? -1e9) + CT + SWING + 1e-6;
   const others = parts.filter(c => c.t === 'coil' && c !== x && settling(c) && FED_AT[c.id] !== undefined && FED_AT[c.id] < FED_AT[x.id] - 1e-9 && fedBy(f0, c));
   if (!others.length) return false;
-  // (a timer's timed contacts stay as they are as it picks up; only its instantaneous ones change)
-  const flips = c => c.t === 'con' && c.L === x.L && (!isTimer(x) || c.inst);
+  // (an on-delay timer's timed contacts stay as they are as it picks up; only its instantaneous ones change)
+  const flips = c => c.t === 'con' && c.L === x.L && (!isTimer(x) || c.inst || x.tof);   // (an off-delay timer's timed contacts change at once too)
   if (isTimer(x) && !parts.some(flips)) return false;
   const alt = e => e.kind === 'w' || (isSw(e.part) && (flips(e.part) ? !e.part.nc : closed(e.part)));
   const f1 = components(NET, alt);
@@ -312,11 +312,15 @@ function updateCoils(t) {
       coilOn[p.id] = want; p._chg = t;
       const moveAll = at => { for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(at + CT, () => moveContact(c, evT)); };
       if (isTimer(p)) {
-        // a timer starts timing as it is energized: its instantaneous contacts change at once, its timed ones when it
-        // times out. Losing power resets it at once, and puts its contacts back (each contact works out for itself
-        // whether it has anything to do)
-        const was = TIMER[p.id], st = TIMER[p.id] = { real: timersReal, counted: 0, base: 0, t0: t, out: false, onOut: moveAll };
-        if (want) armTimer(p, st);
+        // its instantaneous contacts follow it at once; its timed ones as its type says (see sim-core). Every contact of
+        // its letter is looked at whenever anything changes, and works out for itself whether it has anything to do
+        const was = TIMER[p.id] || { act: false }, fresh = (timing, act) => ({ real: timersReal, counted: 0, base: 0, t0: t, out: false, timing, act });
+        let st;
+        if (!p.tof) st = want ? fresh(true, false) : fresh(false, false);   // on-delay: times while energized; resets when not
+        else if (want) st = fresh(false, true);                              // off-delay: changes over at once
+        else st = fresh(was.act, was.act);                                   // and times once power is lost
+        st.onOut = at => { st.act = !p.tof; moveAll(at); };
+        TIMER[p.id] = st; armTimer(p, st);
         moveAll(t);
       } else if (p.t === 'coil') for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(t + CT, () => moveContact(c, evT));   // its contacts follow
       // current already at the coil, and its way back to L2 opening or closing: the coil drops out or picks up there

@@ -57,6 +57,8 @@ function renderProps() {
     for (const c of ALL) if (c === p.L || !used.has(c)) os.add(new Option(c, c, false, c === p.L));
     swatches(document.getElementById('o-colour'), p.color, hex => { snapshot(); p.color = hex; draw(); });
     document.getElementById('o-delay-group').hidden = !isTimer(p);
+    document.getElementById('o-type-group').hidden = !isTimer(p);
+    document.querySelectorAll('[data-ttype]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.ttype === 'off') === !!p.tof)));
     if (isTimer(p) && document.activeElement !== document.getElementById('o-delay')) document.getElementById('o-delay').value = p.delay;
   }
 }
@@ -77,6 +79,8 @@ document.getElementById('p-main').addEventListener('click', () => {
 });
 document.querySelectorAll('[data-nc]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); p.nc = x.dataset.nc === '1'; draw(); }));
 document.querySelectorAll('[data-maint]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); blocksOf(p.L).forEach(k => k.maint = x.dataset.maint === '1'); draw(); }));
+// a timer's type: on-delay or off-delay
+document.querySelectorAll('[data-ttype]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p || !isTimer(p)) return; snapshot(); if (x.dataset.ttype === 'off') p.tof = true; else delete p.tof; draw(); }));
 // a timer's delay: whole seconds, 1 to 999
 document.getElementById('o-delay').addEventListener('change', e => {
   const p = selPart(); if (!p || !isTimer(p)) return;
