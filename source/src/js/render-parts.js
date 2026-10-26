@@ -116,7 +116,7 @@ function drawPart(p, g, x, y, chan) {
     const tm = isTimed(p) && parts.find(q => isTimer(q) && q.L === p.L);
     if (tm) {
       // (as thick as the bar's stem allows, and about as wide as the bar is tall at its head)
-      const s = tm.tof ? 1 : -1, y0 = y + s * (bh / 2 - .5), y1 = y0 + s * 6.5, tip = y0 + s * 14, w = 6.8;
+      const s = tm.tof ? 1 : -1, y0 = y + s * (bh / 2 - .5), y1 = y0 + s * 5.5, tip = y0 + s * 11.8, w = 6.4;   // (clear of the box's edge when the bar is lifted)
       v.arrow = el('g', { fill: p.nc ? col : BLADE_GREY, stroke: p.nc ? col : BLADE_GREY }, v.blade);
       el('line', { x1: x, y1: y0, x2: x, y2: y1 + s * 1.5, 'stroke-width': 4.2 }, v.arrow);
       el('path', { d: `M ${x - w} ${y1} L ${x + w} ${y1} L ${x} ${tip} Z`, 'stroke-width': 1.4, 'stroke-linejoin': 'round' }, v.arrow);
