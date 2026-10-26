@@ -92,6 +92,8 @@ function groupDrag(e, p0) {
   });
 }
 svg.addEventListener('pointerdown', e => {
+  // (pressing on the panel finishes typing in a box above it, such as a label: Delete and Ctrl+Z then work on the circuit)
+  const ae = document.activeElement; if (ae && /INPUT|SELECT|TEXTAREA/.test(ae.tagName)) ae.blur();
   if (e.button === 1) return panDrag(e);
   if (!editing || e.button !== 0) return;
   const p = pt(e);

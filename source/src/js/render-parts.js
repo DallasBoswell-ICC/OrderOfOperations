@@ -35,6 +35,18 @@ const captionOf = p => p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 
    them presses them all. A light built into the button shows on the main one only, as the lamp is in the operator. */
 const SEC_PRESSED = '#2a2a2a', SEC_PRESSED_RIM = '#8c8c8c';
 const mainBtn = L => parts.find(q => q.t === 'btn' && q.L === L);
+/* What is written on a button's or a coil's cap: its label if it has one ("Start"), otherwise its letter. The letter
+   stays what it is known by (its contacts, the same button drawn twice, a light built into it); the caption under it
+   still gives the letter. A label too wide for the cap is written smaller to fit. */
+const nameOf = p => p.label || p.L;
+function capText(t, s, maxW, size, y) {
+  t.textContent = s;
+  if (s.length < 2) return;
+  let w = 0; try { w = t.getComputedTextLength(); } catch (_) {}
+  if (!(w > maxW)) return;
+  const f = Math.max(6, size * maxW * .96 / w);   // (a little under, as text does not shrink quite in proportion)
+  t.setAttribute('font-size', f.toFixed(1)); t.setAttribute('y', (y - (size - f) * .36).toFixed(1));   // (kept centred as it shrinks)
+}
 const lampsOf = L => parts.filter(q => q.t === 'lamp' && q.L && q.L === L);
 const lampColour = p => p.L ? (parts.find(q => q.t === 'btn' && q.L === p.L) || p).color || '#00B050' : p.color || '#00B050';
 // how lit a light is right now, 0 to 1 (it comes on and goes off over a moment, as a filament does)
@@ -75,7 +87,7 @@ function drawPart(p, g, x, y, chan) {
       v.fill = el('rect', { x: x - BTN_IN / 2, y: y - BTN_IN / 2, width: BTN_IN, height: BTN_IN, rx: BTN_IN * .1667, fill: v.sec ? v.secFill : p.color, stroke: v.sec ? p.color : '#1d2733', 'stroke-width': v.sec ? 1.8 : 1.2, filter: 'url(#fShadow)' }, v.press);
       el('rect', { x: x - BTN_IN / 2, y: y - BTN_IN / 2, width: BTN_IN, height: BTN_IN, rx: BTN_IN * .1667, fill: 'url(#gGloss)' }, v.press);
     }
-    v.text = el('text', { x, y: y + 6.6, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: DARK_TEXT, style: v.sec ? `fill:${p.color}` : '' }, v.press); v.text.textContent = p.L;
+    v.text = el('text', { x, y: y + 6.6, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: DARK_TEXT, style: v.sec ? `fill:${p.color}` : '' }, v.press); capText(v.text, nameOf(p), p.nc ? 35 : 37, 19, y + 6.6);
     // the same button drawn more than once (one operator with several contact blocks: pressing one presses them
     // all): a chain-link badge on each one's top left corner
     if (parts.filter(q => q.t === 'btn' && q.L === p.L).length > 1) {
@@ -144,7 +156,7 @@ function drawPart(p, g, x, y, chan) {
     el('circle', { cx: x, cy: y, r: COIL / 2, fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
     v.fill = el('circle', { cx: x, cy: y, r: COIL_IN / 2, fill: GREY, stroke: '#1d2733', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, g);
     el('circle', { cx: x, cy: y, r: COIL_IN / 2, fill: 'url(#gDome)' }, g);
-    if (!isTimer(p)) { v.text = el('text', { x, y: y + 7.5, 'text-anchor': 'middle', class: 'devtext', 'font-size': 21, fill: LIGHT_TEXT }, g); v.text.textContent = p.L; }
+    if (!isTimer(p)) { v.text = el('text', { x, y: y + 7.5, 'text-anchor': 'middle', class: 'devtext', 'font-size': 21, fill: LIGHT_TEXT }, g); capText(v.text, nameOf(p), 52, 21, y + 7.5); }
     else drawTimer(p, g, x, y, v);
   }
   el('text', { x, y: y + capH + 14 + (p.t === 'btn' && p.nc ? 4 : 0), 'text-anchor': 'middle', class: 'cap' }, g).textContent = captionOf(p);
@@ -166,7 +178,7 @@ function hPath(lo, hi, y, hops) {
    as it times; it lights up while the timer is energized, as the lamp badge does. */
 function drawTimer(p, g, x, y, v) {
   v.timer = true;
-  v.text = el('text', { x, y: y + 1, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: LIGHT_TEXT }, g); v.text.textContent = p.L;
+  v.text = el('text', { x, y: y + 1, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: LIGHT_TEXT }, g); capText(v.text, nameOf(p), 44, 19, y + 1);
   v.win = el('g', {}, g); v.winY = y + 6.5; v.x = x;
   setReadout(v, p, p.delay, false);
   const R = COIL / 2, bx = x + R * .72, by = y - R * .72, h = 13, gH = 7.6, gB = gH / 1.41;

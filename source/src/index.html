@@ -107,6 +107,7 @@
       <div class="tgroup"><span class="label">Selected</span><span class="selname" id="selname">Nothing</span></div>
       <div class="props" id="props-btn" hidden>
         <div class="tgroup"><span class="label">Letter</span><select id="p-letter" aria-label="Button letter"></select></div>
+        <div class="tgroup"><span class="label">Label</span><input type="text" id="p-label" class="labelbox" maxlength="8" autocomplete="off" aria-label="Button label" data-tip="What is written on the button instead of its letter, such as Start or Stop (8 characters at most). Leave it empty to show the letter."></div>
         <div class="tgroup"><span class="label">Contact</span>
           <div class="seg" role="group" aria-label="Normally open or closed"><button type="button" data-nc="0" data-tip="Normally open: passes current only while pressed">NO</button><button type="button" data-nc="1" data-tip="Normally closed: passes current until pressed">NC</button></div></div>
         <div class="tgroup"><span class="label">Action</span>
@@ -128,6 +129,7 @@
       </div>
       <div class="props" id="props-coil" hidden>
         <div class="tgroup"><span class="label">Letter</span><select id="o-letter" aria-label="Coil letter"></select></div>
+        <div class="tgroup"><span class="label">Label</span><input type="text" id="o-label" class="labelbox" maxlength="8" autocomplete="off" aria-label="Coil label" data-tip="What is written on the coil instead of its letter, such as Motor or Run (8 characters at most). Leave it empty to show the letter."></div>
         <div class="tgroup" id="o-type-group" hidden><span class="label">Timer</span>
           <div class="seg" role="group" aria-label="On-delay or off-delay"><button type="button" data-ttype="on" data-tip="On-delay: its timed contacts change once it has been energized for its set time">On-delay</button><button type="button" data-ttype="off" data-tip="Off-delay: its timed contacts change as soon as it is energized, and go back once its set time has run out after it loses power">Off-delay</button></div></div>
         <div class="tgroup" id="o-delay-group" hidden><span class="label">Delay</span><input type="number" id="o-delay" min="1" max="999" step="1" inputmode="numeric" aria-label="Timer delay in seconds" data-tip="How long the timer must be energized before its contacts change (whole seconds, 1 to 999)"><span class="unit">s</span></div>

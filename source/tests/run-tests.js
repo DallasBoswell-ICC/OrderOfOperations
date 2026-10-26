@@ -1091,6 +1091,29 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Labels: a button or coil can show a name instead of its letter; shared by a button drawn twice; long ones shrink to fit; saved', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'stress');   // E is drawn twice
+    const at = async (L, t) => { const p = await page.evaluate(([L, t]) => { const q = parts.find(q => q.L === L && q.t === t); return [q.x, q.y]; }, [L, t]); await page.mouse.click(...await scr(page, ...p)); await page.waitForTimeout(50); };
+    await at('E', 'btn'); await page.click('#p-label'); await page.keyboard.type('Jog');
+    await at('M', 'coil'); await page.click('#o-label'); await page.keyboard.type('Motor');
+    await at('S', 'btn'); await page.click('#p-label'); await page.keyboard.type('EMERGENCY');   // 9 letters: kept to 8, and shrunk to fit
+    await page.keyboard.press('Backspace');   // (in the box: takes a letter off, never deletes the part)
+    const r = await page.evaluate(() => ({ e: parts.filter(p => p.L === 'E' && p.t === 'btn').map(p => [p.label, view.parts.get(p.id).text.textContent]),
+      m: (q => [q.label, view.parts.get(q.id).text.textContent, captionOf(q)])(parts.find(p => p.L === 'M' && p.t === 'coil')),
+      s: (q => [q.label, view.parts.get(q.id).text.getComputedTextLength(), parts.length])(parts.find(p => p.L === 'S' && p.t === 'btn')) }));
+    if (JSON.stringify(r.e) !== '[["Jog","Jog"],["Jog","Jog"]]') out.push('the E button drawn twice: ' + JSON.stringify(r.e));
+    if (r.m[0] !== 'Motor' || r.m[1] !== 'Motor' || r.m[2] !== 'M Coil') out.push('the M coil: ' + JSON.stringify(r.m) + ' (the caption keeps the letter)');
+    if (r.s[0] !== 'EMERGEN' || r.s[1] > 35.5) out.push('a long label: ' + JSON.stringify(r.s) + ' (expected EMERGEN after a Backspace, no wider than the cap)');
+    const saved = await page.evaluate(() => JSON.stringify(circuitData()));
+    // Ctrl+Z (outside the box) takes the last label back in one go
+    await page.mouse.click(...await scr(page, 440, 30)); await page.waitForTimeout(40); await page.keyboard.press('Control+z');
+    if (await page.evaluate(() => parts.find(p => p.L === 'S' && p.t === 'btn').label)) out.push('Undo did not take the S label back in one go');
+    await page.evaluate(async c => useCircuit(await decodeCircuit(c), ''), await page.evaluate(async s => { const d = JSON.parse(s); return 'OO0.' + btoa(JSON.stringify(d)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }, saved));
+    if ((await page.evaluate(() => JSON.stringify(circuitData()))) !== saved) out.push('labels changed after saving and opening');
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

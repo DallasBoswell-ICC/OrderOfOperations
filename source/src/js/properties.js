@@ -50,17 +50,35 @@ function renderProps() {
     document.querySelectorAll('[data-nc]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.nc === +p.nc)));
     document.querySelectorAll('[data-maint]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.maint === +p.maint)));
     swatches(document.getElementById('p-colour'), p.color, hex => { snapshot(); blocksOf(p.L).forEach(k => k.color = hex); draw(); });
+    showLabel(document.getElementById('p-label'), p);
   }
   if (p && p.t === 'coil') {
     const os = document.getElementById('o-letter'), used = new Set([...btnLetters(), ...coilLetters()]);
     os.innerHTML = '';
     for (const c of ALL) if (c === p.L || !used.has(c)) os.add(new Option(c, c, false, c === p.L));
     swatches(document.getElementById('o-colour'), p.color, hex => { snapshot(); p.color = hex; draw(); });
+    showLabel(document.getElementById('o-label'), p);
     document.getElementById('o-delay-group').hidden = !isTimer(p);
     document.getElementById('o-type-group').hidden = !isTimer(p);
     document.querySelectorAll('[data-ttype]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.ttype === 'off') === !!p.tof)));
     if (isTimer(p) && document.activeElement !== document.getElementById('o-delay')) document.getElementById('o-delay').value = p.delay;
   }
+}
+// a label written on a button (all the drawings of it) or a coil instead of its letter
+// (the box shows the selected part's label; while it is being typed in, it is left alone unless another part is selected)
+function showLabel(box, p) {
+  if (box.dataset.pid === String(p.id) && document.activeElement === box) return;
+  box.dataset.pid = p.id; box.dataset.snapped = ''; box.value = p.label || ''; box.placeholder = p.L;
+}
+for (const id of ['p-label', 'o-label']) {
+  const box = document.getElementById(id);
+  box.addEventListener('input', () => {
+    const p = selPart(); if (!p || box.dataset.pid !== String(p.id)) return;
+    if (!box.dataset.snapped) { snapshot(); box.dataset.snapped = '1'; }   // (one undo for the whole label)
+    const v = box.value.replace(/\s+/g, ' ').slice(0, 8), set = q => { if (v.trim()) q.label = v.trim(); else delete q.label; };
+    if (p.t === 'btn') blocksOf(p.L).forEach(set); else set(p);
+    draw();
+  });
 }
 document.getElementById('p-letter').addEventListener('change', e => {
   const p = selPart(); if (!p) return; snapshot();
@@ -68,7 +86,7 @@ document.getElementById('p-letter').addEventListener('change', e => {
   p.L = e.target.value;
   // a light built into this button goes with it (unless the old letter is still on another button)
   if (!blocksOf(old).length) parts.forEach(q => { if (q.t === 'lamp' && q.L === old) q.L = p.L; });
-  if (mate) { p.color = mate.color; p.maint = mate.maint; say(`This is now the same button as the other ${p.L}: pressing either presses both.`); }
+  if (mate) { p.color = mate.color; p.maint = mate.maint; if (mate.label) p.label = mate.label; else delete p.label; say(`This is now the same button as the other ${p.L}: pressing either presses both.`); }
   else { p.color = BTN_COL[p.L] || p.color; say(''); }
   draw();
 });

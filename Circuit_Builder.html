@@ -141,6 +141,10 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 
 /* a locked simulator: nothing for building or saving */
 body.locked .top-right, body.locked #toolbar, body.locked #editpanel { display: none !important; }
+
+/* a part's label */
+.labelbox { width: 7.2em; font: inherit; font-size: .9rem; color: var(--ink); background: #1f2022; border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
+.labelbox:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
 </style>
 </head>
 <body>
@@ -236,6 +240,7 @@ body.locked .top-right, body.locked #toolbar, body.locked #editpanel { display: 
       <div class="tgroup"><span class="label">Selected</span><span class="selname" id="selname">Nothing</span></div>
       <div class="props" id="props-btn" hidden>
         <div class="tgroup"><span class="label">Letter</span><select id="p-letter" aria-label="Button letter"></select></div>
+        <div class="tgroup"><span class="label">Label</span><input type="text" id="p-label" class="labelbox" maxlength="8" autocomplete="off" aria-label="Button label" data-tip="What is written on the button instead of its letter, such as Start or Stop (8 characters at most). Leave it empty to show the letter."></div>
         <div class="tgroup"><span class="label">Contact</span>
           <div class="seg" role="group" aria-label="Normally open or closed"><button type="button" data-nc="0" data-tip="Normally open: passes current only while pressed">NO</button><button type="button" data-nc="1" data-tip="Normally closed: passes current until pressed">NC</button></div></div>
         <div class="tgroup"><span class="label">Action</span>
@@ -257,6 +262,7 @@ body.locked .top-right, body.locked #toolbar, body.locked #editpanel { display: 
       </div>
       <div class="props" id="props-coil" hidden>
         <div class="tgroup"><span class="label">Letter</span><select id="o-letter" aria-label="Coil letter"></select></div>
+        <div class="tgroup"><span class="label">Label</span><input type="text" id="o-label" class="labelbox" maxlength="8" autocomplete="off" aria-label="Coil label" data-tip="What is written on the coil instead of its letter, such as Motor or Run (8 characters at most). Leave it empty to show the letter."></div>
         <div class="tgroup" id="o-type-group" hidden><span class="label">Timer</span>
           <div class="seg" role="group" aria-label="On-delay or off-delay"><button type="button" data-ttype="on" data-tip="On-delay: its timed contacts change once it has been energized for its set time">On-delay</button><button type="button" data-ttype="off" data-tip="Off-delay: its timed contacts change as soon as it is energized, and go back once its set time has run out after it loses power">Off-delay</button></div></div>
         <div class="tgroup" id="o-delay-group" hidden><span class="label">Delay</span><input type="number" id="o-delay" min="1" max="999" step="1" inputmode="numeric" aria-label="Timer delay in seconds" data-tip="How long the timer must be energized before its contacts change (whole seconds, 1 to 999)"><span class="unit">s</span></div>
@@ -1256,6 +1262,18 @@ const captionOf = p => p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 
    them presses them all. A light built into the button shows on the main one only, as the lamp is in the operator. */
 const SEC_PRESSED = '#2a2a2a', SEC_PRESSED_RIM = '#8c8c8c';
 const mainBtn = L => parts.find(q => q.t === 'btn' && q.L === L);
+/* What is written on a button's or a coil's cap: its label if it has one ("Start"), otherwise its letter. The letter
+   stays what it is known by (its contacts, the same button drawn twice, a light built into it); the caption under it
+   still gives the letter. A label too wide for the cap is written smaller to fit. */
+const nameOf = p => p.label || p.L;
+function capText(t, s, maxW, size, y) {
+  t.textContent = s;
+  if (s.length < 2) return;
+  let w = 0; try { w = t.getComputedTextLength(); } catch (_) {}
+  if (!(w > maxW)) return;
+  const f = Math.max(6, size * maxW * .96 / w);   // (a little under, as text does not shrink quite in proportion)
+  t.setAttribute('font-size', f.toFixed(1)); t.setAttribute('y', (y - (size - f) * .36).toFixed(1));   // (kept centred as it shrinks)
+}
 const lampsOf = L => parts.filter(q => q.t === 'lamp' && q.L && q.L === L);
 const lampColour = p => p.L ? (parts.find(q => q.t === 'btn' && q.L === p.L) || p).color || '#00B050' : p.color || '#00B050';
 // how lit a light is right now, 0 to 1 (it comes on and goes off over a moment, as a filament does)
@@ -1296,7 +1314,7 @@ function drawPart(p, g, x, y, chan) {
       v.fill = el('rect', { x: x - BTN_IN / 2, y: y - BTN_IN / 2, width: BTN_IN, height: BTN_IN, rx: BTN_IN * .1667, fill: v.sec ? v.secFill : p.color, stroke: v.sec ? p.color : '#1d2733', 'stroke-width': v.sec ? 1.8 : 1.2, filter: 'url(#fShadow)' }, v.press);
       el('rect', { x: x - BTN_IN / 2, y: y - BTN_IN / 2, width: BTN_IN, height: BTN_IN, rx: BTN_IN * .1667, fill: 'url(#gGloss)' }, v.press);
     }
-    v.text = el('text', { x, y: y + 6.6, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: DARK_TEXT, style: v.sec ? `fill:${p.color}` : '' }, v.press); v.text.textContent = p.L;
+    v.text = el('text', { x, y: y + 6.6, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: DARK_TEXT, style: v.sec ? `fill:${p.color}` : '' }, v.press); capText(v.text, nameOf(p), p.nc ? 35 : 37, 19, y + 6.6);
     // the same button drawn more than once (one operator with several contact blocks: pressing one presses them
     // all): a chain-link badge on each one's top left corner
     if (parts.filter(q => q.t === 'btn' && q.L === p.L).length > 1) {
@@ -1365,7 +1383,7 @@ function drawPart(p, g, x, y, chan) {
     el('circle', { cx: x, cy: y, r: COIL / 2, fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
     v.fill = el('circle', { cx: x, cy: y, r: COIL_IN / 2, fill: GREY, stroke: '#1d2733', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, g);
     el('circle', { cx: x, cy: y, r: COIL_IN / 2, fill: 'url(#gDome)' }, g);
-    if (!isTimer(p)) { v.text = el('text', { x, y: y + 7.5, 'text-anchor': 'middle', class: 'devtext', 'font-size': 21, fill: LIGHT_TEXT }, g); v.text.textContent = p.L; }
+    if (!isTimer(p)) { v.text = el('text', { x, y: y + 7.5, 'text-anchor': 'middle', class: 'devtext', 'font-size': 21, fill: LIGHT_TEXT }, g); capText(v.text, nameOf(p), 52, 21, y + 7.5); }
     else drawTimer(p, g, x, y, v);
   }
   el('text', { x, y: y + capH + 14 + (p.t === 'btn' && p.nc ? 4 : 0), 'text-anchor': 'middle', class: 'cap' }, g).textContent = captionOf(p);
@@ -1387,7 +1405,7 @@ function hPath(lo, hi, y, hops) {
    as it times; it lights up while the timer is energized, as the lamp badge does. */
 function drawTimer(p, g, x, y, v) {
   v.timer = true;
-  v.text = el('text', { x, y: y + 1, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: LIGHT_TEXT }, g); v.text.textContent = p.L;
+  v.text = el('text', { x, y: y + 1, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: LIGHT_TEXT }, g); capText(v.text, nameOf(p), 44, 19, y + 1);
   v.win = el('g', {}, g); v.winY = y + 6.5; v.x = x;
   setReadout(v, p, p.delay, false);
   const R = COIL / 2, bx = x + R * .72, by = y - R * .72, h = 13, gH = 7.6, gB = gH / 1.41;
@@ -1947,6 +1965,8 @@ function groupDrag(e, p0) {
   });
 }
 svg.addEventListener('pointerdown', e => {
+  // (pressing on the panel finishes typing in a box above it, such as a label: Delete and Ctrl+Z then work on the circuit)
+  const ae = document.activeElement; if (ae && /INPUT|SELECT|TEXTAREA/.test(ae.tagName)) ae.blur();
   if (e.button === 1) return panDrag(e);
   if (!editing || e.button !== 0) return;
   const p = pt(e);
@@ -2299,17 +2319,35 @@ function renderProps() {
     document.querySelectorAll('[data-nc]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.nc === +p.nc)));
     document.querySelectorAll('[data-maint]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.maint === +p.maint)));
     swatches(document.getElementById('p-colour'), p.color, hex => { snapshot(); blocksOf(p.L).forEach(k => k.color = hex); draw(); });
+    showLabel(document.getElementById('p-label'), p);
   }
   if (p && p.t === 'coil') {
     const os = document.getElementById('o-letter'), used = new Set([...btnLetters(), ...coilLetters()]);
     os.innerHTML = '';
     for (const c of ALL) if (c === p.L || !used.has(c)) os.add(new Option(c, c, false, c === p.L));
     swatches(document.getElementById('o-colour'), p.color, hex => { snapshot(); p.color = hex; draw(); });
+    showLabel(document.getElementById('o-label'), p);
     document.getElementById('o-delay-group').hidden = !isTimer(p);
     document.getElementById('o-type-group').hidden = !isTimer(p);
     document.querySelectorAll('[data-ttype]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.ttype === 'off') === !!p.tof)));
     if (isTimer(p) && document.activeElement !== document.getElementById('o-delay')) document.getElementById('o-delay').value = p.delay;
   }
+}
+// a label written on a button (all the drawings of it) or a coil instead of its letter
+// (the box shows the selected part's label; while it is being typed in, it is left alone unless another part is selected)
+function showLabel(box, p) {
+  if (box.dataset.pid === String(p.id) && document.activeElement === box) return;
+  box.dataset.pid = p.id; box.dataset.snapped = ''; box.value = p.label || ''; box.placeholder = p.L;
+}
+for (const id of ['p-label', 'o-label']) {
+  const box = document.getElementById(id);
+  box.addEventListener('input', () => {
+    const p = selPart(); if (!p || box.dataset.pid !== String(p.id)) return;
+    if (!box.dataset.snapped) { snapshot(); box.dataset.snapped = '1'; }   // (one undo for the whole label)
+    const v = box.value.replace(/\s+/g, ' ').slice(0, 8), set = q => { if (v.trim()) q.label = v.trim(); else delete q.label; };
+    if (p.t === 'btn') blocksOf(p.L).forEach(set); else set(p);
+    draw();
+  });
 }
 document.getElementById('p-letter').addEventListener('change', e => {
   const p = selPart(); if (!p) return; snapshot();
@@ -2317,7 +2355,7 @@ document.getElementById('p-letter').addEventListener('change', e => {
   p.L = e.target.value;
   // a light built into this button goes with it (unless the old letter is still on another button)
   if (!blocksOf(old).length) parts.forEach(q => { if (q.t === 'lamp' && q.L === old) q.L = p.L; });
-  if (mate) { p.color = mate.color; p.maint = mate.maint; say(`This is now the same button as the other ${p.L}: pressing either presses both.`); }
+  if (mate) { p.color = mate.color; p.maint = mate.maint; if (mate.label) p.label = mate.label; else delete p.label; say(`This is now the same button as the other ${p.L}: pressing either presses both.`); }
   else { p.color = BTN_COL[p.L] || p.color; say(''); }
   draw();
 });
@@ -2370,7 +2408,7 @@ document.getElementById('preset').addEventListener('change', e => {
      parts: [type, x, y, letter, normallyClosed, maintained, colour, delay]
             (type "btn", "coil", "con" or "lamp"; a pilot light's letter is the button it is built into, or "";
             the eighth field: a timer's seconds (a timer is a coil), or 1 on a timer's instantaneous contact; the ninth:
-            1 on an off-delay timer)
+            1 on an off-delay timer; the tenth: a button's or coil's label, written on it instead of its letter)
      wires: [x1, y1, x2, y2]                                            (straight runs, on the grid)            */
 const APP_ID = 'order-of-operations-circuit-builder', AUTOSAVE_KEY = 'oo-circuit-builder:current';
 let circuitName = '';
@@ -2379,7 +2417,7 @@ function circuitData() {
   const w = W_USER ? W : contentRight(), x = v => v === W ? w : v;   // (a length set by moving the bars is kept)
   return {
     app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}),
-    parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); return a; }),
+    parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); } return a; }),
     wires: wires.map(q => [x(q.x1), q.y1, x(q.x2), q.y2]),
   };
 }
@@ -2396,6 +2434,7 @@ function readCircuit(d) {
     if (t === 'btn') { p.nc = !!a[4]; p.maint = a[5] !== 0; }
     if (t === 'con') { p.nc = !!a[4]; delete p.color; if (a[7] === 1) p.inst = true; }   // (a timer's instantaneous contact)
     if (t === 'coil' && a[7] !== undefined) { const n = Math.round(Number(a[7])); if (n >= 1) { p.delay = Math.min(999, n); if (a[8] === 1) p.tof = true; } }   // a timer (a[8] = 1: off-delay)
+    if ((t === 'btn' || t === 'coil') && typeof a[9] === 'string' && a[9].trim()) p.label = a[9].replace(/\s+/g, ' ').trim().slice(0, 8);   // (a label written on it)
     return p;
   });
   const w = Math.max(d.fw ? BAR_MIN : W_MIN, Math.min(20000, d.w === undefined ? W_MIN : num(d.w)));
