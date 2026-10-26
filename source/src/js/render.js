@@ -63,6 +63,8 @@ function draw() {
     const k = fd.t + fd.y; if (seen.has(k)) continue; seen.add(k);
     const sx = fd.t === 'L1' ? BAR / 2 : W - BAR / 2;
     terminal(sx, fd.y);
+    // (selected: outlined, kept inside the panel's edge)
+    if (editing && selHasT(fd.t === 'L1' ? 0 : W, fd.y)) el('rect', { x: fd.t === 'L1' ? 1.5 : W - BAR - 18.5, y: fd.y - 19, width: BAR + 17, height: 38, rx: 7, fill: 'rgba(255,192,0,.16)', stroke: '#ffc000', 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'pointer-events': 'none' });
     el('text', fd.t === 'L1' ? { x: BAR + 8, y: fd.y - 22, class: 'rail' } : { x: W - BAR - 8, y: fd.y + 38, class: 'rail', 'text-anchor': 'end' }).textContent = fd.t;
   }
   const issues = editing ? wiringIssues(net) : new Map();

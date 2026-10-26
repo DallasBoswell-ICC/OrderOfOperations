@@ -11,11 +11,11 @@ const selPart = () => sel && sel.parts.size === 1 && !sel.wires.size ? parts.fin
 const blocksOf = L => parts.filter(p => p.t === 'btn' && p.L === L);
 function renderProps() {
   const p = selPart();
-  const nP = sel ? sel.parts.size : 0, nW = sel ? sel.wires.size : 0;
+  const nP = sel ? sel.parts.size : 0, nW = sel ? sel.wires.size : 0, nT = sel && sel.terms ? sel.terms.size : 0;
   document.getElementById('selname').textContent = !sel ? 'Nothing'
     : p ? captionOf(p) + (p.t === 'btn' && blocksOf(p.L).length > 1 ? (mainBtn(p.L) === p ? ` · the main one of ${blocksOf(p.L).length}` : ` · an extra contact block`) + ' (pressing one presses all)' : '')
-    : nP + nW === 1 ? 'A wire'
-    : [nP ? `${nP} part${nP > 1 ? 's' : ''}` : '', nW ? `${nW} wire${nW > 1 ? 's' : ''}` : ''].filter(Boolean).join(' and ') + ' (drag any of them to move them together, Delete to remove)';
+    : nP + nW + nT === 1 ? (nW ? 'A wire' : 'A terminal on ' + [...sel.terms][0].split(':')[0])
+    : [nP ? `${nP} part${nP > 1 ? 's' : ''}` : '', nW ? `${nW} wire${nW > 1 ? 's' : ''}` : '', nT ? `${nT} terminal${nT > 1 ? 's' : ''}` : ''].filter(Boolean).join(', ').replace(/, ([^,]*)$/, ' and $1') + ' (drag any of them to move them together' + (nT ? '; terminals slide along their bar' : '') + ', Delete to remove)';
   document.getElementById('del').disabled = !sel;
   if (typeof updateClipButtons === 'function') updateClipButtons();
   document.getElementById('p-main').hidden = !(p && p.t === 'btn' && mainBtn(p.L) !== p);

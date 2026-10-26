@@ -73,20 +73,22 @@ function barDrag(e, which) {
 }
 let lastBarClick = { bar: null, t: 0 };
 function groupDrag(e, p0) {
-  const pIds = new Set(sel.parts), wIds = new Set(sel.wires);
+  const pIds = new Set(sel.parts), wIds = new Set(sel.wires), tIds = new Set(sel.terms || []);
   const P0 = parts.filter(q => pIds.has(q.id)).map(q => ({ id: q.id, x: q.x, y: q.y, t: q.t })), st0 = stateOf();
+  const T0 = [...tIds].map(k => +k.split(':')[1]);
   liveDrag(e, r => {
     let dx = snap(r.x - p0.x), dy = snap(r.y - p0.y);
     // keep every part on the panel
     for (let pass = 0; pass < 2; pass++) for (const q of P0) { const [cx, cy] = clampPart(q.x + dx, q.y + dy, q.t); dx = cx - q.x; dy = cy - q.y; }
+    for (const y of T0) if (y + dy < 40) dy = 40 - y;   // (terminals stay on the panel too)
     const moving = parts.filter(q => pIds.has(q.id));
     if (P0.some(q => parts.some(o => !pIds.has(o.id) && Math.abs(o.x - (q.x + dx)) < (LOADT(q.t) ? 60 : 40) + TERM(o) && Math.abs(o.y - (q.y + dy)) < 80))) { say('There is already a part there.'); return []; }
     say('');
-    const m = movedGroup(pIds, wIds, dx, dy); wires = m.wires;
+    const m = movedGroup(pIds, wIds, dx, dy, tIds); wires = m.wires;
     for (const q of moving) { const o = P0.find(z => z.id === q.id); q.x = o.x + dx; q.y = o.y + dy; }
     normalize();
     if (parts.some(q => pIds.has(q.id) && wireInTheWay(q))) { restore(st0); say('There is a wire in the way.'); return []; }
-    sel = { parts: pIds, wires: new Set(wires.filter(w => wIds.has(w.id)).map(w => w.id)) }; return m.hits;
+    sel = { parts: pIds, wires: new Set(wires.filter(w => wIds.has(w.id)).map(w => w.id)), terms: new Set([...tIds].map(k => k.split(':')[0] + ':' + (+k.split(':')[1] + dy))) }; return m.hits;
   });
 }
 svg.addEventListener('pointerdown', e => {
@@ -106,6 +108,17 @@ svg.addEventListener('pointerdown', e => {
   if (tool === 'wire') return startWire([clampX(p.x), clampY(p.y)]);
   if (tool !== 'select') { placePart(tool, p.x, p.y); setTool('select'); return; }
   const he = hitEnd(p), q = hitPart(p), w = hitWire(p);
+  // a terminal on a bar (where a wire ends on it)
+  const tb = p.x < BAR + 6 ? 0 : p.x > W - BAR - 6 ? W : null;
+  const ht = tb === null ? null : [...barTerms().values()].find(([x, y]) => x === tb && Math.abs(p.y - y) < 14);
+  if (e.shiftKey && ht) {   // shift-click a terminal: add it to the selection, or take it out
+    if (!sel) sel = { parts: new Set(), wires: new Set() };
+    if (!sel.terms) sel.terms = new Set();
+    const k = termKey(...ht); sel.terms.has(k) ? sel.terms.delete(k) : sel.terms.add(k);
+    if (!selCount()) sel = null;
+    return draw();
+  }
+  if (ht && selHasT(...ht) && selCount() > 1) return groupDrag(e, { x: p.x, y: p.y });   // a selected terminal grabbed: move the group
   // shift-click adds a part or wire to the selection, or takes it out
   if (e.shiftKey && (q || w)) {
     if (!sel) sel = { parts: new Set(), wires: new Set() };
@@ -189,10 +202,13 @@ function boxSelect(e, p0) {
     view.overlay.innerHTML = '';
     if (!moved) { sel = keep; say(''); return draw(); }
     const r = pt(ev), x1 = Math.min(p0.x, r.x), x2 = Math.max(p0.x, r.x), y1 = Math.min(p0.y, r.y), y2 = Math.max(p0.y, r.y);
-    const inside = (x, y) => x >= x1 && x <= x2 && y >= y1 && y <= y2;
+    // (a box that reaches a bar takes in the terminals on it, and the wires ending there)
+    // (it counts as reaching a bar from just beside it, as pressing on the bar itself starts a wire; no part sits that close)
+    const inside = (x, y) => y >= y1 && y <= y2 && (x === 0 ? x1 <= BAR + 14 : x === W ? x2 >= W - BAR - 14 : x >= x1 && x <= x2);
     const s2 = keep || { parts: new Set(), wires: new Set() };
     for (const q of parts) if (inside(q.x, q.y)) s2.parts.add(q.id);
     for (const w of wires) if (inside(w.x1, w.y1) && inside(w.x2, w.y2)) s2.wires.add(w.id);
+    for (const [k, [x, y]] of barTerms()) if (inside(x, y)) (s2.terms || (s2.terms = new Set())).add(k);
     sel = s2.parts.size + s2.wires.size ? s2 : null; say(''); draw();
   };
   document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);

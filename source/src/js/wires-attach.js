@@ -57,20 +57,24 @@ function splitAtJoints(ws, wireIds) {
   }
   return out;
 }
-function movedGroup(partIds, wireIds0, dx, dy) {
+function movedGroup(partIds, wireIds0, dx, dy, termIds) {
   const saved = wires, wireIds = new Set(wireIds0);
   wires = splitAtJoints(wires, wireIds);
-  try { return movedGroup1(partIds, wireIds, dx, dy); } finally { wires = saved; }
+  try { return movedGroup1(partIds, wireIds, dx, dy, termIds || new Set()); } finally { wires = saved; }
 }
-function movedGroup1(partIds, wireIds, dx, dy) {
+function movedGroup1(partIds, wireIds, dx, dy, termIds) {
   const P = parts.filter(p => partIds.has(p.id)), PS = new Set(P);
+  // a selected terminal on a bar moves with the group, but only up or down: it slides along its bar
+  const onSelBar = (x, y) => (x === 0 || x === W) && termIds.has(termKey(x, y));
+  const to = (x, y) => onSelBar(x, y) ? [x, y + dy] : [x + dx, y + dy];
   // a selected wire fastened to a part that is staying put (or to a bar) stays fastened: it is redrawn, not carried along
-  const fixedPt = (x, y) => x === 0 || x === W || parts.some(q => !partIds.has(q.id) && terms(q).some(([a, b]) => a === x && b === y));
+  const fixedPt = (x, y) => !onSelBar(x, y) && (x === 0 || x === W || parts.some(q => !partIds.has(q.id) && terms(q).some(([a, b]) => a === x && b === y)));
   const WS = wires.filter(w => wireIds.has(w.id) && !fixedPt(w.x1, w.y1) && !fixedPt(w.x2, w.y2));
   const pts = new Map();
   for (const p of P) for (const [x, y] of terms(p)) pts.set(key(x, y), [x + dx, y + dy]);
-  for (const w of WS) for (const [x, y] of [[w.x1, w.y1], [w.x2, w.y2]]) pts.set(key(x, y), [x + dx, y + dy]);
-  const used = new Set(WS), add = WS.map(w => Object.assign([w.x1 + dx, w.y1 + dy, w.x2 + dx, w.y2 + dy], { id: w.id }));
+  for (const w of WS) for (const [x, y] of [[w.x1, w.y1], [w.x2, w.y2]]) pts.set(key(x, y), to(x, y));
+  for (const k of termIds) { const [s, y] = k.split(':'), x = s === 'L1' ? 0 : W; if (wires.some(w => isEnd(w, x, +y))) pts.set(key(x, +y), [x, +y + dy]); }
+  const used = new Set(WS), add = WS.map(w => Object.assign([...to(w.x1, w.y1), ...to(w.x2, w.y2)], { id: w.id }));
   for (const [k, NM] of pts) {
     const [x, y] = k.split(',').map(Number);
     for (const w of wires) {
@@ -83,7 +87,7 @@ function movedGroup1(partIds, wireIds, dx, dy) {
     }
     // an end sitting right on the end of a part that stays put (or on a bar), joined with no wire between: a wire is
     // drawn to keep them joined
-    if ((dx || dy) && (x === 0 || x === W || parts.some(q => !partIds.has(q.id) && terms(q).some(([a, b]) => a === x && b === y))))
+    if ((dx || dy) && !onSelBar(x, y) && (x === 0 || x === W || parts.some(q => !partIds.has(q.id) && terms(q).some(([a, b]) => a === x && b === y))))
       add.push(...route([x, y], 'h', NM, null));
   }
   const hits = [];

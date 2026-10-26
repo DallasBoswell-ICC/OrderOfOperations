@@ -972,6 +972,37 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Selecting terminals on L1 and L2: a box reaching the bars takes them in; moved with the group they slide along the bars', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'seal');   // one rung at y = 200, with a seal-in branch below it
+    const W0 = await page.evaluate(() => W);
+    // a box from just beside L1, above the rung, to just beside L2, below the seal-in branch
+    await mouseDrag(page, [34, 140], [W0 - 34, 340]);
+    const s = await page.evaluate(() => ({ p: sel ? sel.parts.size : 0, w: sel ? sel.wires.size : 0, t: sel && sel.terms ? [...sel.terms].sort() : [], drawn: svg.querySelectorAll('rect[stroke-dasharray="7 5"][rx="7"]').length }));
+    if (s.p !== 4 || s.t.join() !== 'L1:200,L2:200') out.push('box selection: ' + JSON.stringify(s));
+    if (s.drawn !== 2) out.push('selected terminals not outlined: ' + s.drawn);
+    // drag the whole rung down 100: the terminals go with it, along the bars
+    const coil = await page.evaluate(() => { const p = parts.find(q => q.t === 'coil'); return [p.x, p.y]; });
+    await mouseDrag(page, coil, [coil[0], coil[1] + 100]);
+    const r = await page.evaluate(() => ({ terms: [...barTerms().keys()].sort(), sel: sel && sel.terms ? [...sel.terms].sort() : [], iss: [...wiringIssues(network()).entries()],
+      ends: wires.filter(w => w.x1 === 0 || w.x2 === 0 || w.x1 === W || w.x2 === W).map(w => [w.x1, w.y1, w.x2, w.y2]) }));
+    if (r.terms.join() !== 'L1:300,L2:300') out.push('terminals after moving down: ' + r.terms.join() + ' (expected L1:300, L2:300 and nothing left behind at 200)');
+    if (r.sel.join() !== 'L1:300,L2:300') out.push('the moved terminals are no longer selected: ' + r.sel.join());
+    if (r.iss.length) out.push('wiring issues after the move: ' + JSON.stringify(r.iss));
+    // sideways: the terminals stay on their bars (the wires to them stretch)
+    await mouseDrag(page, [coil[0], coil[1] + 100], [coil[0] - 40, coil[1] + 100]);
+    const r2 = await page.evaluate(() => ({ terms: [...barTerms().keys()].sort(), iss: [...wiringIssues(network()).entries()] }));
+    if (r2.terms.join() !== 'L1:300,L2:300' || r2.iss.length) out.push('after moving sideways: ' + JSON.stringify(r2));
+    // shift-click a terminal takes it out of the selection; it then stays put while the rest moves
+    await page.keyboard.down('Shift'); await page.mouse.click(...await scr(page, 6, 300)); await page.keyboard.up('Shift');
+    if (await page.evaluate(() => sel.terms.has('L1:300'))) out.push('shift-click did not take the L1 terminal out of the selection');
+    const c2 = await page.evaluate(() => { const p = parts.find(q => q.t === 'coil'); return [p.x, p.y]; });
+    await mouseDrag(page, c2, [c2[0], c2[1] + 60]);
+    const r3 = await page.evaluate(() => ({ terms: [...barTerms().keys()].sort(), iss: [...wiringIssues(network()).entries()] }));
+    if (r3.terms.join() !== 'L1:300,L2:360' || r3.iss.length) out.push('with only L2 selected: ' + JSON.stringify(r3) + ' (expected L1 left at 300, L2 moved to 360)');
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');
