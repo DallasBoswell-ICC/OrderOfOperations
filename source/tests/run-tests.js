@@ -1052,6 +1052,45 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Save as simulator: a page of its own that opens straight into Run mode, cannot be changed, runs, leaves the Builder alone; opens back into the Builder', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'seal');
+    await page.evaluate(() => { circuitName = 'Start Stop demo'; });
+    const before = await page.evaluate(() => JSON.stringify(circuitData()));
+    const html = await page.evaluate(() => simulatorHTML());
+    await page.waitForTimeout(700);   // (the Builder's own autosave settles first)
+    const kept = await page.evaluate(() => localStorage.getItem(AUTOSAVE_KEY));
+    const f = require('path').join(require('os').tmpdir(), 'oo-sim-test.html'); require('fs').writeFileSync(f, html);
+    const sim = await page.context().newPage(); const errs = []; sim.on('pageerror', e => errs.push(e.message));
+    await sim.goto('file://' + f); await sim.waitForTimeout(300);
+    const st = await sim.evaluate(() => ({ title: document.title, h1: document.querySelector('h1').textContent, editing, locked: document.body.classList.contains('locked'),
+      shown: ['#toolbar', '#editpanel', '#save-btn', '#preset', '#tab-edit'].filter(q => { const e = document.querySelector(q); return e && e.offsetParent !== null; }),
+      runbar: document.getElementById('runbar').offsetParent !== null, data: JSON.stringify(circuitData()) }));
+    if (errs.length) out.push('errors in the simulator: ' + errs.join('; '));
+    if (!st.locked || st.editing) out.push('the simulator is not locked in Run mode');
+    if (st.shown.length) out.push('the simulator still shows: ' + st.shown.join(', '));
+    if (!st.runbar) out.push('no speed controls in the simulator');
+    if (st.title !== 'Start Stop demo' || !/Start Stop demo/.test(st.h1)) out.push('title: ' + st.title + ' / ' + st.h1);
+    if (st.data !== before) out.push('the simulator\'s circuit is not the one saved');
+    // it runs: START seals X in (pressing the button on screen)
+    const a = await sim.evaluate(() => { const p = parts.find(q => q.t === 'btn' && !q.nc); const m = svg.getScreenCTM(); return [m.a * p.x + m.e, m.d * p.y + m.f]; });
+    await sim.mouse.click(...a); await sim.waitForTimeout(3500);
+    if (!(await sim.evaluate(() => coilOnL('X')))) out.push('clicking START in the simulator did not seal X in');
+    // nothing for changing it: Delete, Ctrl+Z and Ctrl+S do nothing, dragging a part does not move it
+    const coil = await sim.evaluate(() => { const p = parts.find(q => q.t === 'coil'); const m = svg.getScreenCTM(); return [m.a * p.x + m.e, m.d * p.y + m.f]; });
+    await sim.mouse.move(...coil); await sim.mouse.down(); await sim.mouse.move(coil[0] + 80, coil[1] + 80, { steps: 5 }); await sim.mouse.up();
+    await sim.keyboard.press('Delete'); await sim.keyboard.press('Control+z'); await sim.keyboard.press('Control+s');
+    if ((await sim.evaluate(() => JSON.stringify(circuitData()))) !== before) out.push('the simulator\'s circuit could be changed');
+    if (await sim.evaluate(() => document.getElementById('save-dlg').open)) out.push('Ctrl+S opened the Save box in the simulator');
+    await sim.close();
+    if ((await page.evaluate(() => localStorage.getItem(AUTOSAVE_KEY))) !== kept) out.push('the simulator changed the Builder\'s saved circuit');
+    // the simulator file opens back into the Builder, to be changed
+    await page.selectOption('#preset', 'blank');
+    await page.evaluate(async html => openFile(new File([html], 'Start Stop demo (simulator).html', { type: 'text/html' }), null), html);
+    if ((await page.evaluate(() => JSON.stringify(circuitData()))) !== before) out.push('opening the simulator file in the Builder did not bring the circuit back');
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

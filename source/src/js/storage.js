@@ -118,8 +118,17 @@ async function saveToFile(asNew) {
 }
 async function openFile(file, handle) {
   if (!file) return;
-  if (file.size > 2e6) throw new Error('That file is too big to be a circuit.');
-  let d; try { d = JSON.parse(await file.text()); } catch (_) { throw new Error('That file is not a saved circuit.'); }
+  if (file.size > 8e6) throw new Error('That file is too big to be a circuit.');
+  const text = await file.text();
+  // a locked simulator: the circuit built into it (opened here, it can be changed and saved again)
+  const sim = /<script id="oo-locked" type="application\/json">([\s\S]*?)<\/script>/.exec(text);
+  if (sim) {
+    let d; try { d = JSON.parse(sim[1]); } catch (_) { throw new Error('That simulator file is damaged.'); }
+    const c = readCircuit(d.circuit);
+    useCircuit(c, `Opened the circuit from the simulator ${c.name || file.name}. Save it to keep your changes, and Save as simulator again to hand it out.`);
+    forgetFile(); return;
+  }
+  let d; try { d = JSON.parse(text); } catch (_) { throw new Error(/^\s*</.test(text) ? 'That page is not a simulator saved from the Circuit Builder.' : 'That file is not a saved circuit.'); }
   const c = readCircuit(d);
   if (!c.name) c.name = file.name.replace(/\.json$/i, '');
   useCircuit(c, `Opened ${c.name || 'the circuit'}.`);
@@ -137,6 +146,7 @@ async function pickAndOpen() {
 // ---- kept in this browser between visits
 let autosaveTimer = 0;
 function scheduleAutosave() {
+  if (LOCKED) return;   // (a locked simulator never keeps anything, nor touches the Builder's own saved circuit)
   showFileLabel();
   clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(() => { try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(circuitData())); } catch (_) {} }, 400);
@@ -211,12 +221,13 @@ document.getElementById('open-code-btn').addEventListener('click', async () => {
   catch (err) { document.getElementById('open-msg').textContent = err.message; }
 });
 document.addEventListener('keydown', e => {
+  if (LOCKED) return;
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); if (!saveDlg.open && !openDlg.open) quickSave(); }
 });
 // drop a saved file straight onto the panel (in Chrome and Edge, Save then writes back into that file)
 {
   const stage = document.getElementById('stage');
-  stage.addEventListener('dragover', e => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); stage.classList.add('dropping'); } });
+  stage.addEventListener('dragover', e => { if (!LOCKED && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); stage.classList.add('dropping'); } });
   stage.addEventListener('dragleave', () => stage.classList.remove('dropping'));
   stage.addEventListener('drop', async e => {
     stage.classList.remove('dropping');
@@ -227,3 +238,37 @@ document.addEventListener('keydown', e => {
     try { await openFile(f, handle); } catch (err) { say(err.message); toast(err.message); }
   });
 }
+
+/* ---- a locked simulator: this same page, with the circuit built in, that opens straight into Run mode with nothing
+   for changing the circuit (no Build mode, toolbar, Start from, Save or Open). Students can press the buttons, change
+   the speed and reset it. It is one self-contained .html file, like the Builder itself. */
+const escHtml = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function simulatorHTML() {
+  const name = circuitName || 'Circuit';
+  const data = JSON.stringify({ circuit: circuitData() }).replace(/</g, '\\u003c');
+  let html = PAGE_HTML;
+  const at = html.indexOf('<script>');   // (the page's script: the first one, as the code after it mentions the tag too)
+  if (!html || at < 0) throw new Error('This page cannot make a simulator from here.');
+  html = html.slice(0, at) + `<script id="oo-locked" type="application/json">${data}<\/script>\n` + html.slice(at);   // (written <\/script> so it never ends this page's own script)
+  return html.replace(/<title>[\s\S]*?<\/title>/, `<title>${escHtml(name)}</title>`);
+}
+async function saveSimulator() {
+  const name = (circuitName || 'Circuit').replace(/[\\/:*?"<>|]+/g, '').trim().slice(0, 60) + ' (simulator).html';
+  let html; try { html = simulatorHTML(); } catch (e) { return e.message; }
+  const downloads = window.claude && window.claude.use ? await window.claude.use('downloads').catch(() => null) : null;
+  if (downloads) {
+    try { await downloads.save({ filename: name, data: html }); return 'Saved ' + name + '.'; }
+    catch (e) { return e && e.code === 'declined' ? 'Not saved.' : 'Saving a file is not available here.'; }
+  }
+  if (canUseFiles()) {
+    try {
+      const h = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: 'Simulator', accept: { 'text/html': ['.html'] } }] });
+      const w = await h.createWritable(); await w.write(html); await w.close(); return 'Saved the simulator as ' + h.name + '.';
+    } catch (e) { if (e && e.name === 'AbortError') return 'Not saved.'; if (!(e && (e.name === 'SecurityError' || e.name === 'NotAllowedError'))) return 'Could not save: ' + (e && e.message || e); }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([html], { type: 'text/html' })); a.download = name;
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  return 'Saved ' + name + ' to your downloads.';
+}
+document.getElementById('save-sim').addEventListener('click', async () => { const m = await saveSimulator(); document.getElementById('copy-msg').textContent = m; if (/^Saved/.test(m)) { saveDlg.close(); toast(m); } });

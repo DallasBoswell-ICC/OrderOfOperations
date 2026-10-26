@@ -2,6 +2,10 @@
    Circuit Builder: buttons, coils and wires on a panel. Power enters at the left edge (L1) and
    leaves at the right edge (L2), as in the Order of Operations simulators.
    ===================================================================== */
+/* The page exactly as it was loaded, before anything on it changed: saved again, with a circuit built in, as a
+   locked simulator (see storage.js). And, in a locked simulator, the circuit built into it (LOCKED). */
+const PAGE_HTML = (() => { try { return '<!doctype html>\n' + document.documentElement.outerHTML; } catch (_) { return ''; } })();
+const LOCKED = (() => { try { const s = document.getElementById('oo-locked'); return s ? JSON.parse(s.textContent) : null; } catch (_) { return null; } })();
 const W_MIN = 880;                   // narrowest the sheet gets (L1 is its left edge, x = 0; L2 its right edge, x = W: see geometry.js)
 const G = 20, SUB = 5;               // grid spacing; wires are traced in 5-unit steps for smooth flow
 const V = 500;                       // how fast the current front travels at 1× (units per second), as in the other Order of Operations simulators

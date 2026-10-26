@@ -75,6 +75,15 @@ function fit(widen) {
 // a new window size refits the sheet while building (while running, the circuit just scales)
 window.addEventListener('resize', () => { if (fit(editing && !dragging())) { if (editing) fitView(); draw(); } });
 
-if (!restoreAutosave()) loadPreset('andor');   // carry on with the circuit from last time, if there is one
-fit(true); draw();
+if (LOCKED) {
+  // a locked simulator: its own circuit, straight into Run mode, with its name as the title
+  try { const c = readCircuit(LOCKED.circuit); parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; circuitName = c.name; normalize(); }
+  catch (_) { loadPreset('blank'); }
+  document.body.classList.add('locked');
+  document.querySelector('h1 span').textContent = circuitName || 'Circuit';
+  fit(true); fitView(); setMode(true);
+} else {
+  if (!restoreAutosave()) loadPreset('andor');   // carry on with the circuit from last time, if there is one
+  fit(true); draw();
+}
 requestAnimationFrame(frame);

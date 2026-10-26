@@ -50,6 +50,9 @@ def build() -> Path:
     if missing:
         raise SystemExit(f"These scripts are not listed in MODULES in build.py: {', '.join(missing)}")
     js = "\n".join(f"/* ---- js/{name} ---- */\n" + (SRC / "js" / name).read_text(encoding="utf-8") for name in MODULES)
+    # the scripts sit inside the page's <script> tag: the text "</script" anywhere in them would end it early
+    if "</script" in js.lower():
+        raise SystemExit("A script contains </script, which would end the page's <script> early: write it <\\/script")
     # the O³ icon, built into the page as a data URL
     from urllib.parse import quote
     icon = "data:image/svg+xml," + quote(" ".join((SRC / "icons" / "icon.svg").read_text(encoding="utf-8").split()), safe=" =:/'(),")

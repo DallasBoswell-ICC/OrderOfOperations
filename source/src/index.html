@@ -180,6 +180,9 @@
     <label class="field"><span class="label">Name</span><input id="save-name" type="text" maxlength="60" placeholder="My circuit" autocomplete="off"></label>
     <div class="dlg-row"><button type="button" class="primary" id="save-same" hidden>Save</button><button type="button" class="primary" id="save-file">Save as a file</button><span class="hint" id="save-file-hint">A small .json file you can hand out, collect or open again later.</span></div>
     <div class="dlg-sep"></div>
+    <span class="label">Or save it as a simulator</span>
+    <div class="dlg-row"><button type="button" id="save-sim">Save as simulator</button><span class="hint">A page of its own that opens straight into Run mode: students can press the buttons, change the speed and reset it, but cannot change the circuit. One file, nothing to install. (To change it later, open the simulator file here.)</span></div>
+    <div class="dlg-sep"></div>
     <span class="label">Or share it as a code</span>
     <textarea id="save-code" readonly rows="3" aria-label="Circuit code"></textarea>
     <div class="dlg-row"><button type="button" id="copy-code">Copy code</button><span class="hint" id="copy-msg">Paste it into an email, a document or your class page. Anyone can open it with Open → Paste a code.</span></div>
@@ -189,8 +192,8 @@
 <dialog id="open-dlg" aria-labelledby="open-title">
   <form method="dialog" class="dlg">
     <h2 id="open-title">Open a circuit</h2>
-    <div class="dlg-row"><button type="button" class="primary" id="open-file">Choose a file…</button><span class="hint">A circuit saved with Save (you can also drop the file onto the panel).</span></div>
-    <input id="open-input" type="file" accept=".json,application/json" hidden>
+    <div class="dlg-row"><button type="button" class="primary" id="open-file">Choose a file…</button><span class="hint">A circuit saved with Save, or a simulator made with Save as simulator (you can also drop the file onto the panel).</span></div>
+    <input id="open-input" type="file" accept=".json,application/json,.html,text/html" hidden>
     <div class="dlg-sep"></div>
     <span class="label">Or paste a circuit code</span>
     <textarea id="open-code" rows="3" aria-label="Circuit code to open" placeholder="Paste the code here"></textarea>
