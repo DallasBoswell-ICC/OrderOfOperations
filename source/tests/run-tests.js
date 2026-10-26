@@ -952,6 +952,9 @@ const DEF_CIRCUIT = `
     const caps = await page.evaluate(() => parts.filter(p => p.t === 'con').map(captionOf));
     if (caps.join() !== 'T Instant Contact (NO),T Timed Contact (NO),T Instant Contact (NC)') out.push('captions: ' + caps.join(' / '));
     const badges = await page.evaluate(() => parts.filter(p => p.t === 'con').map(p => !!svg.querySelector(`[data-part="${p.id}"] path[fill="none"]`)));
+    // the NEMA arrow on timed contacts only: up on an on-delay timer's (the tip above the bar)
+    const arrows = await page.evaluate(() => parts.filter(p => p.t === 'con').map(p => { const v = view.parts.get(p.id); if (!v.arrow) return '-'; const b = v.arrow.getBBox(); return b.y + b.height / 2 < p.y ? 'up' : 'down'; }));
+    if (arrows.join() !== '-,up,-') out.push('arrows on contacts: ' + arrows.join());
     if (badges.join() !== 'false,true,false') out.push('hourglass badges on contacts: ' + badges.join());
     const saved = await page.evaluate(() => JSON.stringify(circuitData()));
     await page.click('#tab-run');
@@ -1017,6 +1020,8 @@ const DEF_CIRCUIT = `
     await page.click('[data-ttype="off"]'); await page.waitForTimeout(40);
     const cap = await page.evaluate(() => captionOf(parts.find(p => p.t === 'coil')));
     if (cap !== 'T Off-Delay Timer') out.push('caption: ' + cap);
+    const arrows = await page.evaluate(() => parts.filter(p => p.t === 'con').map(p => { const v = view.parts.get(p.id); if (!v.arrow) return '-'; const b = v.arrow.getBBox(); return b.y + b.height / 2 < p.y ? 'up' : 'down'; }));
+    if (arrows.join() !== 'down,-,down') out.push('arrows on an off-delay timer\'s contacts: ' + arrows.join() + ' (expected down on the timed ones)');
     const saved = await page.evaluate(() => JSON.stringify(circuitData()));
     await page.click('#tab-run');
     const r = await page.evaluate(new Function(STEP + `const res = [], T = parts.find(p => p.t === 'coil'), [l1, l2, l3] = parts.filter(p => p.t === 'lamp');

@@ -64,6 +64,7 @@ function paint() {
       if (k === v.k) continue; v.k = k;
       v.blade.setAttribute('transform', `translate(0 ${-lift})`);
       v.bladeShape.setAttribute('fill', s.shut ? v.col : BLADE_GREY);
+      if (v.arrow) { v.arrow.setAttribute('fill', s.shut ? v.col : BLADE_GREY); v.arrow.setAttribute('stroke', s.shut ? v.col : BLADE_GREY); }
       v.posts.setAttribute('fill', s.shut ? v.col : GREY);
     } else if (p.t === 'lamp') {
       const lit = litOf(p); k = lit.toFixed(3);
