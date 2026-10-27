@@ -1160,6 +1160,18 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Sliding a run that goes to L1 or L2 leaves no wire along the bar (no stray screw terminals); old circuits with one are cleaned up', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'io');
+    await mouseDrag(page, [60, 200], [60, 260]);
+    const r = await page.evaluate(() => ({ along: wires.filter(w => w.x1 === w.x2 && (w.x1 === 0 || w.x1 === W)).length, feeds: network().feeds.map(f => f.t + f.y).sort().join() }));
+    if (r.along) out.push(r.along + ' wire(s) left lying along a bar');
+    if (r.feeds !== 'L1260,L2200') out.push('screw terminals: ' + r.feeds + ', expected L1260,L2200');
+    await page.evaluate(() => { wires.push(Wr(0, 400, 0, 480)); normalize(); draw(); });
+    if (await page.evaluate(() => wires.some(w => w.x1 === 0 && w.x2 === 0))) out.push('a wire along L1 from an older circuit was kept');
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

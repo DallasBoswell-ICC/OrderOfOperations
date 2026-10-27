@@ -1971,7 +1971,9 @@ function normalize() {
   // each stretch remembers the wires it came from, so a wire keeps its id (and stays selected) when pieces join up
   const Hs = new Map(), Vs = new Map();
   const add = (m, k, a, b, id) => { if (a === b) return; if (!m.has(k)) m.set(k, []); m.get(k).push([Math.min(a, b), Math.max(a, b), [id]]); };
-  for (const w of wires) { if (w.y1 === w.y2) add(Hs, w.y1, w.x1, w.x2, w.id); else if (w.x1 === w.x2) add(Vs, w.x1, w.y1, w.y2, w.id); }
+  // (a wire lying along L1 or L2 does nothing, as the bar joins everything on it, and it would hide behind the bar
+  // where it cannot be picked, leaving stray screw terminals: such pieces are dropped, as when a run to a bar slides)
+  for (const w of wires) { if (w.y1 === w.y2) add(Hs, w.y1, w.x1, w.x2, w.id); else if (w.x1 === w.x2 && w.x1 !== 0 && w.x1 !== W) add(Vs, w.x1, w.y1, w.y2, w.id); }
   const merge = list => { list.sort((a, b) => a[0] - b[0]); const out = []; for (const iv of list) { const l = out[out.length - 1]; if (l && iv[0] <= l[1]) { l[1] = Math.max(l[1], iv[1]); l[2] = l[2].concat(iv[2]); } else out.push([iv[0], iv[1], [...iv[2]]]); } return out; };
   const out = [], used = new Set(), keep = (x1, y1, x2, y2, ids) => {
     const id = [...ids].sort((u, v) => u - v).find(i => !used.has(i));   // the oldest wire's id
