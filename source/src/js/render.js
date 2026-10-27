@@ -68,6 +68,7 @@ function draw() {
     el('text', fd.t === 'L1' ? { x: BAR + 8, y: fd.y - 22, class: 'rail' } : { x: W - BAR - 8, y: fd.y + 38, class: 'rail', 'text-anchor': 'end' }).textContent = fd.t;
   }
   const issues = editing ? wiringIssues(net) : new Map();
+  selLinks();
   view.parts = new Map();
   for (const p of parts) {
     const g = el('g', { 'data-part': p.id, style: editing ? 'cursor:grab' : '' });
@@ -76,8 +77,8 @@ function draw() {
     if (editing) {
       for (const [tx, ty] of terms(p)) el('circle', { cx: tx, cy: ty, r: 6.5, fill: '#404040', stroke: '#c8c8c8', 'stroke-width': 1.6, style: 'cursor:crosshair' }, g);
       // the other drawings of a selected button (the same button): a fainter outline, so they show as one
-      if (!selHasP(p.id) && p.t === 'btn' && sel && sel.parts.size === 1 && parts.some(q => q !== p && q.t === 'btn' && q.L === p.L && selHasP(q.id)))
-        el('rect', { x: p.x - TERM(p) - 12, y: p.y - BOX / 2 - 12, width: 2 * TERM(p) + 24, height: BOX + 44, rx: 12, fill: 'none', stroke: '#ffc000', 'stroke-opacity': .5, 'stroke-width': 1.6, 'stroke-dasharray': '3 5', 'pointer-events': 'none' }, g);
+      if (!selHasP(p.id) && isOp(p) && sel && sel.parts.size === 1 && parts.some(q => q !== p && q.t === p.t && q.L === p.L && selHasP(q.id)))
+        el('rect', { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 12, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44, rx: 12, fill: 'none', stroke: '#ffc000', 'stroke-opacity': .5, 'stroke-width': 1.6, 'stroke-dasharray': '3 5', 'pointer-events': 'none' }, g);
       if (selHasP(p.id)) el('rect', { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 12, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44, rx: 12, fill: 'rgba(255,192,0,.07)', stroke: '#ffc000', 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'pointer-events': 'none' }, g);
       if (issues.has(p.id)) {
         const t = el('text', { x: p.x, y: p.y - BODYH(p.t) / 2 - 10, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: '#ff8a7a', 'pointer-events': 'none', stroke: '#404040', 'stroke-width': 4, 'paint-order': 'stroke' }, g);
@@ -110,5 +111,25 @@ function drawPreview() {
     const { p, x, y, bad } = preview.part;
     drawPart(p, el('g', { opacity: bad ? .35 : .75 }, view.overlay), x, y);
     if (preview.splice) el('rect', { x: x - TERM(p) - 6, y: y - 16, width: 2 * TERM(p) + 12, height: 32, rx: 8, fill: 'none', stroke: '#ffc000', 'stroke-width': 2.4, 'stroke-dasharray': '6 5' }, view.overlay);
+  }
+}
+
+/* The drawings of one selector switch are its contact blocks, all on the one switch: a dashed line in the switch's
+   colour joins each to the next one down (as the dashed linkage on a print), under the parts and over the wires.
+   It runs from below one's caption to the top of the next, with a step across halfway when they are not in line,
+   or round underneath when they are side by side. */
+function selLinks() {
+  const by = {};
+  for (const p of parts) if (p.t === 'sel') (by[p.L] = by[p.L] || []).push(p);
+  const g = el('g', { 'pointer-events': 'none' }), H = SEL_BOX / 2;
+  for (const L in by) {
+    const ds = by[L].sort((a, b) => a.y - b.y || a.x - b.x); if (ds.length < 2) continue;
+    for (let i = 1; i < ds.length; i++) {
+      const a = ds[i - 1], b = ds[i], y0 = a.y + H + 26, y1 = b.y - H - 4;
+      let d;
+      if (y1 - y0 >= 16) { const m = Math.round((y0 + y1) / 2); d = a.x === b.x ? `M${a.x} ${y0}V${y1}` : `M${a.x} ${y0}V${m}H${b.x}V${y1}`; }
+      else { const lo = Math.max(a.y, b.y) + H + 40; d = `M${a.x} ${a.y + H + 26}V${lo}H${b.x}V${b.y + H + 26}`; }
+      el('path', { d, fill: 'none', stroke: a.color, 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'stroke-linejoin': 'round', opacity: .85 }, g);
+    }
   }
 }

@@ -240,7 +240,7 @@ body.locked .top-right, body.locked #toolbar, body.locked #editpanel { display: 
 
   <div id="editpanel" class="inspector" aria-label="Settings of the selected part">
     <div class="props">
-      <div class="tgroup"><span class="label">Selected</span><span class="selname" id="selname">Nothing</span></div>
+      <div class="tgroup" hidden><span class="label">Selected</span><span class="selname" id="selname">Nothing</span></div>
       <div class="props" id="props-btn" hidden>
         <div class="tgroup"><span class="label">Letter</span><select id="p-letter" aria-label="Button letter"></select></div>
         <div class="tgroup"><span class="label">Label</span><input type="text" id="p-label" class="labelbox" maxlength="8" autocomplete="off" aria-label="Button label" data-tip="What is written on the button instead of its letter, such as Start or Stop (8 characters at most). Leave it empty to show the letter."></div>
@@ -1475,20 +1475,28 @@ function setReadout(v, p, n, on) {
 }
 
 /* A selector switch (design A): a square well, a round knob with a bar handle across it that turns to point at the
-   position it is in, and the positions' numbers (or names) round the top: in the switch's colour where this drawing
-   is closed, grey where it is open, the one it is turned to underlined. The first drawing of a switch has a coloured
-   handle; the others (its other contact blocks) a dark handle with a coloured rim. */
+   position it is in, and the positions' numbers (or names) round the top: the one it is turned to in the switch's
+   colour (the others grey), and a line under each position this drawing is closed in. The first drawing of a switch
+   has the knob and a coloured handle; the others (its other contact blocks) only a hollow outline of the handle. */
 const SEL_KNOB = 12, SEL_R = 33;   // the knob sits a little below the middle; the numbers round it at this radius
 function drawSelector(p, g, x, y, v) {
   const S = SEL_BOX, kx = x, ky = y + SEL_KNOB;
   v.sec = mainSel(p.L) !== p && parts.includes(p);
-  el('rect', { x: x - S / 2, y: y - S / 2, width: S, height: S, rx: S * .1667, fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
+  el('rect', { x: x - S / 2, y: y - S / 2, width: S, height: S, rx: S * .1667, fill: v.sec ? '#1c1c1c' : 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
   v.marks = el('g', {}, g); v.kx = kx; v.ky = ky;
-  el('circle', { cx: kx, cy: ky, r: 15, fill: 'url(#gKnob)', stroke: '#1d2733', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, g);
-  v.handle = el('g', {}, g);
-  el('rect', { x: kx - 5, y: ky - 16, width: 10, height: 32, rx: 5, fill: v.sec ? mixOk(p.color, '#262626', .72) : p.color, stroke: v.sec ? p.color : '#1d2733', 'stroke-width': v.sec ? 1.6 : 1.1 }, v.handle);
-  el('rect', { x: kx - 5, y: ky - 16, width: 10, height: 32, rx: 5, fill: 'url(#gGloss)' }, v.handle);
-  el('line', { x1: kx, y1: ky - 12.5, x2: kx, y2: ky - 6, stroke: '#fff', 'stroke-width': 2, 'stroke-linecap': 'round', opacity: .85 }, v.handle);
+  if (v.sec) {
+    // another contact block of the switch: no knob of its own, just a hollow outline of the handle, showing where the switch is turned
+    el('circle', { cx: kx, cy: ky, r: 15, fill: 'none', stroke: '#4a4a4a', 'stroke-width': 1.4, 'stroke-dasharray': '3 3' }, g);
+    v.handle = el('g', {}, g);
+    el('rect', { x: kx - 5, y: ky - 16, width: 10, height: 32, rx: 5, fill: '#1c1c1c', stroke: p.color, 'stroke-width': 1.8 }, v.handle);
+    el('line', { x1: kx, y1: ky - 12.5, x2: kx, y2: ky - 6, stroke: p.color, 'stroke-width': 2, 'stroke-linecap': 'round' }, v.handle);
+  } else {
+    el('circle', { cx: kx, cy: ky, r: 15, fill: 'url(#gKnob)', stroke: '#1d2733', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, g);
+    v.handle = el('g', {}, g);
+    el('rect', { x: kx - 5, y: ky - 16, width: 10, height: 32, rx: 5, fill: p.color, stroke: '#1d2733', 'stroke-width': 1.1 }, v.handle);
+    el('rect', { x: kx - 5, y: ky - 16, width: 10, height: 32, rx: 5, fill: 'url(#gGloss)' }, v.handle);
+    el('line', { x1: kx, y1: ky - 12.5, x2: kx, y2: ky - 6, stroke: '#fff', 'stroke-width': 2, 'stroke-linecap': 'round', opacity: .85 }, v.handle);
+  }
   setSelector(v, p, editing ? (p.pos || 0) : selPos(p.L), null);
 }
 // the handle's angle (deg) and the numbers, for position pos (or partway between, while it turns)
@@ -1502,9 +1510,9 @@ function setSelector(v, p, pos, ang) {
     const t = d * Math.PI / 180, named = p.names && p.names[i], fs = named ? 7 : 11, w = named ? named.length * fs * .66 : fs * .62;
     let mx = v.kx + SEL_R * Math.sin(t); const my = v.ky - SEL_R * Math.cos(t), on = (p.closedIn || []).includes(i);
     const lim = SEL_BOX / 2 - 5 - w / 2; mx = Math.max(v.kx - lim, Math.min(v.kx + lim, mx));   // (names kept clear of the border)
-    const txt = el('text', { x: mx, y: my + fs * .36, 'text-anchor': 'middle', 'font-weight': 800, 'font-size': fs, fill: on ? p.color : '#626262' }, v.marks);
-    txt.textContent = named || String(i + 1);
-    if (i === pos) { const hw = named ? w / 2 : 3.6, uy = my + fs * .36 + 3; el('line', { x1: mx - hw, y1: uy, x2: mx + hw, y2: uy, stroke: '#dcdcdc', 'stroke-width': 1.3, 'stroke-linecap': 'round' }, v.marks); }
+    const txt = el('text', { x: mx, y: my + fs * .36, 'text-anchor': 'middle', 'font-weight': 800, 'font-size': fs, fill: i === pos ? p.color : '#6a6a6a' }, v.marks);
+    txt.textContent = named || String(i + 1); if (on) txt.dataset.closed = '1';
+    if (on) { const hw = named ? w / 2 : 3.6, uy = my + fs * .36 + 3; el('line', { x1: mx - hw, y1: uy, x2: mx + hw, y2: uy, stroke: '#dcdcdc', 'stroke-width': 1.5, 'stroke-linecap': 'round' }, v.marks); }
   });
 }
 
@@ -1601,6 +1609,7 @@ function draw() {
     el('text', fd.t === 'L1' ? { x: BAR + 8, y: fd.y - 22, class: 'rail' } : { x: W - BAR - 8, y: fd.y + 38, class: 'rail', 'text-anchor': 'end' }).textContent = fd.t;
   }
   const issues = editing ? wiringIssues(net) : new Map();
+  selLinks();
   view.parts = new Map();
   for (const p of parts) {
     const g = el('g', { 'data-part': p.id, style: editing ? 'cursor:grab' : '' });
@@ -1609,8 +1618,8 @@ function draw() {
     if (editing) {
       for (const [tx, ty] of terms(p)) el('circle', { cx: tx, cy: ty, r: 6.5, fill: '#404040', stroke: '#c8c8c8', 'stroke-width': 1.6, style: 'cursor:crosshair' }, g);
       // the other drawings of a selected button (the same button): a fainter outline, so they show as one
-      if (!selHasP(p.id) && p.t === 'btn' && sel && sel.parts.size === 1 && parts.some(q => q !== p && q.t === 'btn' && q.L === p.L && selHasP(q.id)))
-        el('rect', { x: p.x - TERM(p) - 12, y: p.y - BOX / 2 - 12, width: 2 * TERM(p) + 24, height: BOX + 44, rx: 12, fill: 'none', stroke: '#ffc000', 'stroke-opacity': .5, 'stroke-width': 1.6, 'stroke-dasharray': '3 5', 'pointer-events': 'none' }, g);
+      if (!selHasP(p.id) && isOp(p) && sel && sel.parts.size === 1 && parts.some(q => q !== p && q.t === p.t && q.L === p.L && selHasP(q.id)))
+        el('rect', { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 12, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44, rx: 12, fill: 'none', stroke: '#ffc000', 'stroke-opacity': .5, 'stroke-width': 1.6, 'stroke-dasharray': '3 5', 'pointer-events': 'none' }, g);
       if (selHasP(p.id)) el('rect', { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 12, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44, rx: 12, fill: 'rgba(255,192,0,.07)', stroke: '#ffc000', 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'pointer-events': 'none' }, g);
       if (issues.has(p.id)) {
         const t = el('text', { x: p.x, y: p.y - BODYH(p.t) / 2 - 10, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: '#ff8a7a', 'pointer-events': 'none', stroke: '#404040', 'stroke-width': 4, 'paint-order': 'stroke' }, g);
@@ -1643,6 +1652,26 @@ function drawPreview() {
     const { p, x, y, bad } = preview.part;
     drawPart(p, el('g', { opacity: bad ? .35 : .75 }, view.overlay), x, y);
     if (preview.splice) el('rect', { x: x - TERM(p) - 6, y: y - 16, width: 2 * TERM(p) + 12, height: 32, rx: 8, fill: 'none', stroke: '#ffc000', 'stroke-width': 2.4, 'stroke-dasharray': '6 5' }, view.overlay);
+  }
+}
+
+/* The drawings of one selector switch are its contact blocks, all on the one switch: a dashed line in the switch's
+   colour joins each to the next one down (as the dashed linkage on a print), under the parts and over the wires.
+   It runs from below one's caption to the top of the next, with a step across halfway when they are not in line,
+   or round underneath when they are side by side. */
+function selLinks() {
+  const by = {};
+  for (const p of parts) if (p.t === 'sel') (by[p.L] = by[p.L] || []).push(p);
+  const g = el('g', { 'pointer-events': 'none' }), H = SEL_BOX / 2;
+  for (const L in by) {
+    const ds = by[L].sort((a, b) => a.y - b.y || a.x - b.x); if (ds.length < 2) continue;
+    for (let i = 1; i < ds.length; i++) {
+      const a = ds[i - 1], b = ds[i], y0 = a.y + H + 26, y1 = b.y - H - 4;
+      let d;
+      if (y1 - y0 >= 16) { const m = Math.round((y0 + y1) / 2); d = a.x === b.x ? `M${a.x} ${y0}V${y1}` : `M${a.x} ${y0}V${m}H${b.x}V${y1}`; }
+      else { const lo = Math.max(a.y, b.y) + H + 40; d = `M${a.x} ${a.y + H + 26}V${lo}H${b.x}V${b.y + H + 26}`; }
+      el('path', { d, fill: 'none', stroke: a.color, 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'stroke-linejoin': 'round', opacity: .85 }, g);
+    }
   }
 }
 

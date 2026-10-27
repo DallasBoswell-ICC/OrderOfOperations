@@ -1128,8 +1128,10 @@ const DEF_CIRCUIT = `
     await page.click('#s-names'); await page.keyboard.type('hand off auto'); await page.waitForTimeout(30);
     const nm = await page.evaluate(() => parts.filter(p => p.t === 'sel').map(p => (p.names || []).join('/')));
     if (nm.join() !== 'HAND/OFF/AUTO,HAND/OFF/AUTO,HAND/OFF/AUTO') out.push('names are not shared by every drawing: ' + nm.join());
-    const marks = await page.evaluate(() => parts.filter(p => p.t === 'sel').map(p => [...view.parts.get(p.id).marks.querySelectorAll('text')].map(t => t.getAttribute('fill') === p.color ? 1 : 0).join('')));
-    if (marks.join() !== '100,001,011') out.push('coloured position names (closed in): ' + marks.join() + ', expected 100,001,011');
+    const marks = await page.evaluate(() => parts.filter(p => p.t === 'sel').map(p => [...view.parts.get(p.id).marks.querySelectorAll('text')].map(t => (t.dataset.closed ? 'u' : '-') + (t.getAttribute('fill') === p.color ? 'c' : '-')).join(' ')));
+    if (marks.join() !== 'u- -c --,-- -c u-,-- uc u-') out.push('position names (underlined: closed in; coloured: turned to): ' + marks.join() + ', expected u- -c --,-- -c u-,-- uc u-');
+    const links = await page.evaluate(() => [...document.querySelectorAll('path[stroke-dasharray="7 5"]')].filter(e => e.getAttribute('stroke') === '#0070C0').length);
+    if (links !== 2) out.push('dashed lines joining the three drawings of the switch: ' + links + ', expected 2');
     // the names and numbers stay inside the body, clear of the knob and handle
     const clear = await page.evaluate(() => { const bad = []; for (const p of parts.filter(p => p.t === 'sel')) { const v = view.parts.get(p.id);
       for (const t of v.marks.querySelectorAll('text')) { const b = t.getBBox(); if (b.x < p.x - SEL_BOX / 2 + 2 || b.x + b.width > p.x + SEL_BOX / 2 - 2 || b.y < p.y - SEL_BOX / 2 + 2) bad.push(t.textContent + ' outside');

@@ -210,20 +210,28 @@ function setReadout(v, p, n, on) {
 }
 
 /* A selector switch (design A): a square well, a round knob with a bar handle across it that turns to point at the
-   position it is in, and the positions' numbers (or names) round the top: in the switch's colour where this drawing
-   is closed, grey where it is open, the one it is turned to underlined. The first drawing of a switch has a coloured
-   handle; the others (its other contact blocks) a dark handle with a coloured rim. */
+   position it is in, and the positions' numbers (or names) round the top: the one it is turned to in the switch's
+   colour (the others grey), and a line under each position this drawing is closed in. The first drawing of a switch
+   has the knob and a coloured handle; the others (its other contact blocks) only a hollow outline of the handle. */
 const SEL_KNOB = 12, SEL_R = 33;   // the knob sits a little below the middle; the numbers round it at this radius
 function drawSelector(p, g, x, y, v) {
   const S = SEL_BOX, kx = x, ky = y + SEL_KNOB;
   v.sec = mainSel(p.L) !== p && parts.includes(p);
-  el('rect', { x: x - S / 2, y: y - S / 2, width: S, height: S, rx: S * .1667, fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
+  el('rect', { x: x - S / 2, y: y - S / 2, width: S, height: S, rx: S * .1667, fill: v.sec ? '#1c1c1c' : 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
   v.marks = el('g', {}, g); v.kx = kx; v.ky = ky;
-  el('circle', { cx: kx, cy: ky, r: 15, fill: 'url(#gKnob)', stroke: '#1d2733', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, g);
-  v.handle = el('g', {}, g);
-  el('rect', { x: kx - 5, y: ky - 16, width: 10, height: 32, rx: 5, fill: v.sec ? mixOk(p.color, '#262626', .72) : p.color, stroke: v.sec ? p.color : '#1d2733', 'stroke-width': v.sec ? 1.6 : 1.1 }, v.handle);
-  el('rect', { x: kx - 5, y: ky - 16, width: 10, height: 32, rx: 5, fill: 'url(#gGloss)' }, v.handle);
-  el('line', { x1: kx, y1: ky - 12.5, x2: kx, y2: ky - 6, stroke: '#fff', 'stroke-width': 2, 'stroke-linecap': 'round', opacity: .85 }, v.handle);
+  if (v.sec) {
+    // another contact block of the switch: no knob of its own, just a hollow outline of the handle, showing where the switch is turned
+    el('circle', { cx: kx, cy: ky, r: 15, fill: 'none', stroke: '#4a4a4a', 'stroke-width': 1.4, 'stroke-dasharray': '3 3' }, g);
+    v.handle = el('g', {}, g);
+    el('rect', { x: kx - 5, y: ky - 16, width: 10, height: 32, rx: 5, fill: '#1c1c1c', stroke: p.color, 'stroke-width': 1.8 }, v.handle);
+    el('line', { x1: kx, y1: ky - 12.5, x2: kx, y2: ky - 6, stroke: p.color, 'stroke-width': 2, 'stroke-linecap': 'round' }, v.handle);
+  } else {
+    el('circle', { cx: kx, cy: ky, r: 15, fill: 'url(#gKnob)', stroke: '#1d2733', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, g);
+    v.handle = el('g', {}, g);
+    el('rect', { x: kx - 5, y: ky - 16, width: 10, height: 32, rx: 5, fill: p.color, stroke: '#1d2733', 'stroke-width': 1.1 }, v.handle);
+    el('rect', { x: kx - 5, y: ky - 16, width: 10, height: 32, rx: 5, fill: 'url(#gGloss)' }, v.handle);
+    el('line', { x1: kx, y1: ky - 12.5, x2: kx, y2: ky - 6, stroke: '#fff', 'stroke-width': 2, 'stroke-linecap': 'round', opacity: .85 }, v.handle);
+  }
   setSelector(v, p, editing ? (p.pos || 0) : selPos(p.L), null);
 }
 // the handle's angle (deg) and the numbers, for position pos (or partway between, while it turns)
@@ -237,8 +245,8 @@ function setSelector(v, p, pos, ang) {
     const t = d * Math.PI / 180, named = p.names && p.names[i], fs = named ? 7 : 11, w = named ? named.length * fs * .66 : fs * .62;
     let mx = v.kx + SEL_R * Math.sin(t); const my = v.ky - SEL_R * Math.cos(t), on = (p.closedIn || []).includes(i);
     const lim = SEL_BOX / 2 - 5 - w / 2; mx = Math.max(v.kx - lim, Math.min(v.kx + lim, mx));   // (names kept clear of the border)
-    const txt = el('text', { x: mx, y: my + fs * .36, 'text-anchor': 'middle', 'font-weight': 800, 'font-size': fs, fill: on ? p.color : '#626262' }, v.marks);
-    txt.textContent = named || String(i + 1);
-    if (i === pos) { const hw = named ? w / 2 : 3.6, uy = my + fs * .36 + 3; el('line', { x1: mx - hw, y1: uy, x2: mx + hw, y2: uy, stroke: '#dcdcdc', 'stroke-width': 1.3, 'stroke-linecap': 'round' }, v.marks); }
+    const txt = el('text', { x: mx, y: my + fs * .36, 'text-anchor': 'middle', 'font-weight': 800, 'font-size': fs, fill: i === pos ? p.color : '#6a6a6a' }, v.marks);
+    txt.textContent = named || String(i + 1); if (on) txt.dataset.closed = '1';
+    if (on) { const hw = named ? w / 2 : 3.6, uy = my + fs * .36 + 3; el('line', { x1: mx - hw, y1: uy, x2: mx + hw, y2: uy, stroke: '#dcdcdc', 'stroke-width': 1.5, 'stroke-linecap': 'round' }, v.marks); }
   });
 }
