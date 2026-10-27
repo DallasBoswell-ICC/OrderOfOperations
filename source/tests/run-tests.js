@@ -1198,6 +1198,24 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Parallel branches wired into the middle of a run join it (the last branch does not hop over it)', async page => {
+    const out = [];
+    // A, then B / C / D in parallel, into X: the branches' uprights are drawn last, top one then bottom one
+    await page.evaluate(() => { W = W_MIN; parts = [P('btn', 120, 300, { L: 'A', maint: true, color: '#FF0032' }), P('btn', 360, 140, { L: 'B', maint: true, color: '#0070C0' }),
+        P('btn', 360, 300, { L: 'C', maint: true, color: '#00B050' }), P('btn', 360, 460, { L: 'D', maint: true, color: '#FF9600' }), P('coil', 700, 300, { L: 'X', color: '#FFDC00' })];
+      wires = [Wr(0, 300, 80, 300), Wr(160, 300, 320, 300), Wr(400, 300, 640, 300), Wr(760, 300, W, 300), Wr(240, 140, 320, 140), Wr(400, 140, 480, 140), Wr(240, 460, 320, 460), Wr(400, 460, 480, 460)];
+      normalize(); draw();
+      for (const s of [[240, 140, 240, 300], [480, 140, 480, 300], [240, 300, 240, 460], [480, 300, 480, 460]]) addWire([s]);
+      fit(true); draw(); });
+    const r = await page.evaluate(() => ({ hops: network().hops.length, issues: [...wiringIssues(network()).values()] }));
+    if (r.hops) out.push(r.hops + ' wire(s) hop over the run instead of joining it');
+    if (r.issues.length) out.push('wiring problems: ' + r.issues.join('; '));
+    await page.click('#tab-run');
+    const x = await page.evaluate(new Function(STEP + `press('A', true); press('D', true); step(4); return !!coilOn[parts.find(p => p.t === 'coil').id];`));
+    if (!x) out.push('A and D pressed: X did not pick up (the D branch is not connected)');
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');
