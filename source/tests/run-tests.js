@@ -1172,6 +1172,32 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Dashed link lines between drawings of one button or switch can be dragged out of the way, saved, put back with a double-click, undone', async page => {
+    const out = [];
+    await page.evaluate(() => { W = W_MIN; parts = [P('sel', 200, 160, { L: 'S', n: 3, pos: 1, closedIn: [0], color: '#0070C0' }), P('lamp', 700, 160, { L: '', color: '#FF0032' }),
+        P('sel', 420, 400, { L: 'S', n: 3, pos: 1, closedIn: [2], color: '#0070C0' }), P('lamp', 700, 400, { L: '', color: '#00B050' })];
+      wires = [Wr(0, 160, 140, 160), Wr(260, 160, 640, 160), Wr(760, 160, W, 160), Wr(0, 400, 360, 400), Wr(480, 400, 640, 400), Wr(760, 400, W, 400)];
+      normalize(); fit(true); draw(); });
+    const line = () => page.evaluate(() => document.querySelector('.link-hit').getAttribute('d'));
+    const d0 = await line();
+    // grab the line where it crosses over, and pull it down 40 and left 100
+    const m = d0.match(/V(\d+)H420/); const cy = +m[1];
+    await mouseDrag(page, [300, cy], [200, cy + 40]);
+    const lk = await page.evaluate(() => parts[2].lk);
+    if (JSON.stringify(lk) !== '[-100,40]') out.push('after dragging, the line is moved by ' + JSON.stringify(lk) + ', expected [-100,40]');
+    if (await page.evaluate(() => sel && sel.parts.size)) out.push('dragging the line selected a part');
+    const saved = await page.evaluate(() => JSON.stringify(circuitData()));
+    await page.evaluate(async c => useCircuit(await decodeCircuit(c), ''), 'OO0.' + Buffer.from(saved).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''));
+    if (JSON.stringify(await page.evaluate(() => parts[2].lk)) !== '[-100,40]') out.push('the moved line was not kept when saved and opened');
+    const d1 = await line();
+    const pts = await scr(page, 200, cy + 40); await page.mouse.dblclick(...pts); await page.waitForTimeout(60);
+    if (await page.evaluate(() => parts[2].lk)) out.push('a double-click did not put the line back');
+    if (await line() !== d0) out.push('put back, the line is not where it was: ' + await line());
+    await page.keyboard.press('Control+z'); await page.waitForTimeout(40);
+    if (await line() !== d1) out.push('undo did not bring the moved line back');
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

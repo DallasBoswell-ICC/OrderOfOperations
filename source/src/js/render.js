@@ -117,20 +117,48 @@ function drawPreview() {
 /* The drawings of one pushbutton or selector switch are its contact blocks, all on the one operator: a dashed line in
    its colour joins each to the next one down (as the dashed linkage on a print), under the parts and over the wires.
    It runs from the bottom of one to the top of the next (above its name, on the main one), with a step across
-   halfway when they are not in line, or round underneath when they are side by side. */
+   halfway when they are not in line, or round underneath when they are side by side.
+   In Build mode a line can be dragged out of the way of names and wires: across moves its upright run sideways,
+   up or down moves where it crosses over (kept on the lower drawing as p.lk = [dx, dy], from where it would be).
+   A double-click puts it back. */
 function selLinks() {
   const by = {};
   for (const p of parts) if (isOp(p)) (by[p.t + p.L] = by[p.t + p.L] || []).push(p);
-  const g = el('g', { 'pointer-events': 'none' });
+  const g = el('g', {});
   for (const k in by) {
     const ds = by[k].sort((a, b) => a.y - b.y || a.x - b.x); if (ds.length < 2) continue;
     const m0 = ds[0].t === 'sel' ? mainSel(ds[0].L) : mainBtn(ds[0].L), bot = p => p.y + BODYH(p.t) / 2 + (p.nc ? 7 : 4), top = p => p === m0 ? p.y - capTop(p) - 16 : p.y - BODYH(p.t) / 2 - (p.nc ? 7 : 4);
     for (let i = 1; i < ds.length; i++) {
-      const a = ds[i - 1], b = ds[i], y0 = bot(a), y1 = top(b);
+      const a = ds[i - 1], b = ds[i], y0 = bot(a), y1 = top(b), [dx, dy] = b.lk || [0, 0];
       let d;
-      if (y1 - y0 >= 16) { const m = Math.round((y0 + y1) / 2); d = a.x === b.x ? `M${a.x} ${y0}V${y1}` : `M${a.x} ${y0}V${m}H${b.x}V${y1}`; }
-      else { const lo = Math.max(bot(a), bot(b)) + 16; d = `M${a.x} ${y0}V${lo}H${b.x}V${bot(b)}`; }
-      el('path', { d, fill: 'none', stroke: a.color, 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'stroke-linejoin': 'round', opacity: .85 }, g);
+      if (y1 - y0 >= 16) {
+        const c = Math.max(y0 + 6, Math.min(y1 - 6, Math.round((y0 + y1) / 2) + dy)), X = Math.max(BAR + 10, Math.min(W - BAR - 10, a.x + dx));
+        d = X === a.x ? (a.x === b.x ? `M${a.x} ${y0}V${y1}` : `M${a.x} ${y0}V${c}H${b.x}V${y1}`) : `M${a.x} ${y0}V${y0 + 8}H${X}V${c}H${b.x}V${y1}`;
+      } else { const lo = Math.max(y0 + 8, Math.max(bot(a), bot(b)) + 16 + dy); d = `M${a.x} ${y0}V${lo}H${b.x}V${bot(b)}`; }
+      el('path', { d, fill: 'none', stroke: a.color, 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'stroke-linejoin': 'round', opacity: .85, 'pointer-events': 'none' }, g);
+      if (editing) {
+        const h = el('path', { d, fill: 'none', stroke: 'transparent', 'stroke-width': 14, 'stroke-linejoin': 'round', class: 'link-hit' }, g);
+        el('title', {}, h).textContent = 'Drag to move this dashed line out of the way (double-click to put it back)';
+        h.addEventListener('pointerdown', e => dragLink(e, b));
+        h.addEventListener('dblclick', e => { e.stopPropagation(); if (!b.lk) return; snapshot(); delete b.lk; draw(); });
+      }
     }
   }
+}
+// dragging a dashed link line (see selLinks)
+function dragLink(e, b) {
+  if (e.button !== 0) return;
+  e.stopPropagation(); e.preventDefault();
+  const ae = document.activeElement; if (ae && /INPUT|SELECT|TEXTAREA/.test(ae.tagName)) ae.blur();
+  const s = pt(e), [ox, oy] = b.lk || [0, 0]; let moved = false;
+  document.body.classList.add('dragging');
+  const mv = ev => {
+    const q = pt(ev), nx = Math.round((ox + q.x - s.x) / 10) * 10, ny = Math.round((oy + q.y - s.y) / 10) * 10, [cx, cy] = b.lk || [0, 0];
+    if (nx === cx && ny === cy) return;
+    if (!moved) { snapshot(); moved = true; }
+    if (nx || ny) b.lk = [nx, ny]; else delete b.lk;
+    draw();
+  };
+  const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); document.body.classList.remove('dragging'); };
+  document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
 }
