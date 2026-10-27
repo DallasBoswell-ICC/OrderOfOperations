@@ -25,5 +25,5 @@ function placePart(kind, x, y) {
   if (wireInTheWay({ t: kindOf(kind), x, y })) { say('There is a wire in the way.'); return; }
   snapshot();
   const p = newPart(kind, x, y);
-  parts.push(p); normalize(); sel = selOne('p', p.id); say(''); draw();
+  parts.push(p); normalize(); sel = selOne('p', p.id); ribbonTab = 'home'; say(''); draw();
 }

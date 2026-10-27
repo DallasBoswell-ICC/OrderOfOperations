@@ -48,7 +48,8 @@ function pasteClip() {
   if (!cam.fit) cam.y = Math.min(...ys) + dy - 80;   // bring it into view
   draw();
 }
-function updateClipButtons() { const b = document.getElementById('paste'); if (b) b.disabled = !clip; const c = document.getElementById('copy'); if (c) c.disabled = !selCount(); }
+function updateClipButtons() { const b = document.getElementById('paste'); if (b) b.disabled = !clip; const c = document.getElementById('copy'); if (c) c.disabled = !selCount(); const x = document.getElementById('cut'); if (x) x.disabled = !selCount(); }
+document.getElementById('cut').addEventListener('click', cutSel);
 document.getElementById('copy').addEventListener('click', copySel);
 document.getElementById('paste').addEventListener('click', pasteClip);
 document.addEventListener('keydown', e => {

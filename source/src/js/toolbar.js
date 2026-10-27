@@ -31,7 +31,6 @@ function setTool(t) {
   tool = t; closeMenus();
   document.querySelectorAll('.tool[data-tool], .tool[data-part]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.tool || b.dataset.part) === t)));
   svg.style.cursor = t === 'select' ? '' : 'crosshair';
-  document.querySelectorAll('.pgroup').forEach(g => g.querySelector('.group').classList.toggle('has-tool', !!g.querySelector(`.tool[data-part="${t}"]`)));
   say(t !== 'select' && t !== 'wire' ? 'Click the panel to place it (or drag the tool onto the panel). Press Esc to cancel.' : '');
 }
 document.querySelectorAll('.tool[data-tool]').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
@@ -44,21 +43,47 @@ function del() {
 }
 document.getElementById('del').addEventListener('click', del);
 document.getElementById('undo').addEventListener('click', undo);
+document.getElementById('redo').addEventListener('click', redo);
+document.getElementById('p-del').addEventListener('click', del);
 document.getElementById('clear').addEventListener('click', () => { snapshot(); parts = []; wires = []; W_USER = null; sel = null; circuitName = ''; forgetFile(); draw(); });
 document.addEventListener('keydown', e => {
   if (!editing || /SELECT|INPUT/.test(document.activeElement.tagName)) return;
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); del(); }
+  else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || e.shiftKey && e.key.toLowerCase() === 'z')) { e.preventDefault(); redo(); }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
   else if (e.key === 'Escape') { setTool('select'); sel = null; draw(); }
 });
 
-// part groups: each opens a menu of its parts; picking one (or dragging it out) closes the menu
-function closeMenus(except) {
-  document.querySelectorAll('.pgroup').forEach(g => { if (g === except) return; g.querySelector('.pmenu').hidden = true; g.querySelector('.group').setAttribute('aria-expanded', 'false'); });
+/* ---------------- the ribbon ----------------
+   Home while building (and the gold tab of the selected part), Simulation while running. Folded away, only the tabs
+   show: pressing one opens the ribbon over the panel until you press somewhere else. */
+function closeMenus() { document.body.classList.remove('ribbon-peek'); }
+function showRibbon() {
+  const run = !editing, part = !run && !!selPart(), tab = run ? 'run' : part && ribbonTab === 'part' ? 'part' : 'home';
+  const set = (id, shown, on) => { const b = document.getElementById(id); b.hidden = !shown; b.setAttribute('aria-pressed', String(on)); };
+  set('rt-home', !run, tab === 'home'); set('rt-part', part, tab === 'part'); set('rt-run', run, tab === 'run');
+  document.getElementById('toolbar').hidden = tab !== 'home';
+  document.getElementById('editpanel').hidden = tab !== 'part';
+  document.getElementById('runbar').hidden = tab !== 'run';
 }
-document.querySelectorAll('.pgroup').forEach(g => {
-  const b = g.querySelector('.group'), m = g.querySelector('.pmenu');
-  b.addEventListener('click', () => { const open = m.hidden; closeMenus(g); m.hidden = !open; b.setAttribute('aria-expanded', String(open)); if (open) { const f = m.querySelector('.tool'); f && f.focus({ preventScroll: true }); } });
-});
-document.addEventListener('pointerdown', e => { if (!e.target.closest('.pgroup')) closeMenus(); }, true);
+for (const [id, t] of [['rt-home', 'home'], ['rt-part', 'part'], ['rt-run', 'run']])
+  document.getElementById(id).addEventListener('click', () => {
+    if (t !== 'run') ribbonTab = t;
+    if (document.body.classList.contains('ribbon-min')) document.body.classList.add('ribbon-peek');
+    showRibbon();
+  });
+const RIBBON_KEY = 'oo-circuit-builder:ribbon-min';
+function foldRibbon(min) {
+  document.body.classList.toggle('ribbon-min', min); document.body.classList.remove('ribbon-peek');
+  const b = document.getElementById('ribbon-toggle');
+  b.setAttribute('aria-expanded', String(!min)); b.setAttribute('aria-label', min ? 'Pin the ribbon open' : 'Collapse the ribbon');
+  b.dataset.tip = min ? 'Keep the ribbon open' : 'Fold the ribbon away for more room (the tabs stay)';
+  b.classList.toggle('down', min);
+  try { localStorage.setItem(RIBBON_KEY, min ? '1' : ''); } catch (_) {}
+  if (fit(editing)) { if (editing) fitView(); }
+  draw();
+}
+document.getElementById('ribbon-toggle').addEventListener('click', () => foldRibbon(!document.body.classList.contains('ribbon-min')));
+try { if (localStorage.getItem(RIBBON_KEY) === '1') { document.body.classList.add('ribbon-min'); const b = document.getElementById('ribbon-toggle'); b.setAttribute('aria-expanded', 'false'); b.classList.add('down'); b.dataset.tip = 'Keep the ribbon open'; b.setAttribute('aria-label', 'Pin the ribbon open'); } } catch (_) {}
+document.addEventListener('pointerdown', e => { if (!e.target.closest('#ribbon')) closeMenus(); }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus(); });

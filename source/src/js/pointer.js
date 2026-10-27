@@ -15,7 +15,7 @@ function liveDrag(e, apply, onClick) {
   const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
     preview = null; dragNow = false;
     if (!moved) { restore(start); onClick && onClick(); draw(); return; }
-    if (stateOf() !== start) { history.push(start); if (history.length > 100) history.shift(); }
+    if (stateOf() !== start) remember(start);
     for (const x of [...parts, ...wires]) nextId = Math.max(nextId, (x.id || 0) + 1);
     normalize(); say(''); draw(); };
   document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
@@ -62,11 +62,11 @@ function barDrag(e, which) {
     dx = snap(dx); nw = snap(nw);
     // a double-click on the handle (two clicks without moving) lets the circuit fit the screen again
     if (!moved) { const now = performance.now(), dbl = lastBarClick.bar === which && now - lastBarClick.t < 450; lastBarClick = { bar: which, t: now };
-      if (dbl && W_USER) { history.push(start); W_USER = null; fitView(); fit(true); draw(); }
+      if (dbl && W_USER) { remember(start); W_USER = null; fitView(); fit(true); draw(); }
       return; }
     if (which === 'L1' && dx) { shiftL1(dx); W_USER = W; }
     if (which === 'L2' && nw !== W) { setWidth(nw); W_USER = W; }
-    if (stateOf() !== start) { history.push(start); if (history.length > 100) history.shift(); }
+    if (stateOf() !== start) remember(start);
     fitView(); fit(true); draw();
   };
   document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
@@ -153,7 +153,7 @@ svg.addEventListener('pointerdown', e => {
   if (p.x > W - BAR - 6) return startWire([W, clampY(p.y)]);
   // a part: drag it, and its wires follow
   if (q) {
-    sel = selOne('p', q.id); say(''); draw();
+    sel = selOne('p', q.id); ribbonTab = 'part'; say(''); draw();   // (a part picked on the panel opens its tab on the ribbon)
     const id = q.id, ox = q.x, oy = q.y, sx = p.x, sy = p.y, st0 = stateOf();
     return liveDrag(e, r => {
       const qq = parts.find(z => z.id === id);

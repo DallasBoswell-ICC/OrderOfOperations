@@ -65,8 +65,8 @@ async function mouseDrag(page, a, b, opts = {}) {
   await page.waitForTimeout(40);
 }
 async function toolbarDrop(page, kind, x, y) {
-  // parts sit in their kind's menu: open it first
-  if (!(await page.locator(`[data-part="${kind}"]`).isVisible())) await page.locator(`.pgroup:has([data-part="${kind}"]) .group`).click();
+  // parts sit on the ribbon's Home tab: open it first (a part's own tab may be showing)
+  if (!(await page.locator(`[data-part="${kind}"]`).isVisible())) await page.click('#rt-home');
   const bx = await page.locator(`[data-part="${kind}"]`).boundingBox(), B = await scr(page, x, y);
   await page.mouse.move(bx.x + 10, bx.y + 10); await page.mouse.down();
   await page.mouse.move(bx.x + 40, bx.y + 60, { steps: 3 }); await page.mouse.move(...B, { steps: 6 }); await page.mouse.up();
@@ -271,6 +271,7 @@ const DEF_CIRCUIT = `
 
   // the circuit from the "flows separating" video: G (NC) feeds F and five rungs A to E, all onto one bus to X
   const FAN_CIRCUIT = `const Bt = (L, x, y, nc, col) => P('btn', x, y, { L, nc: !!nc, maint: true, color: col });
+    W_USER = W = 1280;   // (as wide as it was drawn: the timing checked below depends on how long the wire back to L2 is)
     parts = [Bt('G', 80, 600, 1, '#EC008C'), Bt('F', 220, 600, 0, '#7030A0'), Bt('A', 720, 100, 0, '#FF0032'), Bt('B', 620, 200, 0, '#0070C0'),
              Bt('C', 520, 300, 0, '#00B050'), Bt('D', 420, 400, 0, '#FF9600'), Bt('E', 320, 500, 0, '#00D2BE'), C('X', 700, 700)];
     wires = [Wr(0, 600, 40, 600), Wr(120, 600, 180, 600), Wr(140, 100, 140, 600), Wr(260, 600, 800, 600), Wr(540, 600, 540, 700), Wr(540, 700, 640, 700), Wr(760, 700, W, 700)];
@@ -1213,6 +1214,45 @@ const DEF_CIRCUIT = `
     await page.click('#tab-run');
     const x = await page.evaluate(new Function(STEP + `press('A', true); press('D', true); step(4); return !!coilOn[parts.find(p => p.t === 'coil').id];`));
     if (!x) out.push('A and D pressed: X did not pick up (the D branch is not connected)');
+    return out;
+  });
+
+  await check('The ribbon: a placed part leaves Home open, a part picked on the panel opens its gold tab; Simulation while running; undo and redo; folding it away gives the panel more room and is remembered', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'io');
+    const tabs = () => page.evaluate(() => ['rt-home', 'rt-part', 'rt-run'].map(id => { const b = document.getElementById(id); return b.hidden ? '-' : b.getAttribute('aria-pressed') === 'true' ? 'ON' : 'off'; }).join(' '));
+    if (await tabs() !== 'ON - -') out.push('at the start: ' + await tabs());
+    await toolbarDrop(page, 'coil', 500, 400);
+    if (await tabs() !== 'ON off -') out.push('a part just placed: tabs ' + await tabs() + ', expected Home open and the part\'s tab beside it');
+    if (await page.evaluate(() => document.getElementById('rt-part').textContent) !== 'Y Coil') out.push('the part tab is named ' + await page.evaluate(() => document.getElementById('rt-part').textContent));
+    await page.mouse.click(...await scr(page, 220, 200)); await page.waitForTimeout(60);
+    if (await tabs() !== 'off ON -' || await page.isHidden('#props-btn')) out.push('a part picked on the panel: tabs ' + await tabs());
+    await page.mouse.click(...await scr(page, 450, 560)); await page.waitForTimeout(60);
+    if (await tabs() !== 'ON - -') out.push('nothing selected: tabs ' + await tabs());
+    // undo takes the new coil away, redo puts it back (also Ctrl+Y)
+    const n = () => page.evaluate(() => parts.length);
+    const n0 = await n(); await page.click('#undo'); const n1 = await n(); await page.click('#redo'); const n2 = await n();
+    await page.keyboard.press('Control+z'); const n3 = await n(); await page.keyboard.press('Control+y'); const n4 = await n();
+    if ([n0, n1, n2, n3, n4].join() !== [n0, n0 - 1, n0, n0 - 1, n0].join()) out.push('undo / redo: parts ' + [n0, n1, n2, n3, n4].join(' → '));
+    if (!(await page.evaluate(() => document.getElementById('redo').disabled))) out.push('Redo is not greyed out with nothing to redo');
+    await page.click('#tab-run'); await page.waitForTimeout(60);
+    if (await tabs() !== '- - ON' || await page.isHidden('#speed-slider')) out.push('running: tabs ' + await tabs());
+    await page.click('#tab-edit'); await page.waitForTimeout(60);
+    // fold it away: the panel gets taller; pressing a tab opens it over the panel; it stays folded after a reload
+    const h0 = await page.evaluate(() => document.getElementById('stage').clientHeight);
+    await page.click('#ribbon-toggle'); await page.waitForTimeout(100);
+    const h1 = await page.evaluate(() => document.getElementById('stage').clientHeight);
+    if (!(h1 > h0 + 60)) out.push('folding the ribbon away did not give the panel more room: ' + h0 + ' → ' + h1);
+    if (await page.isVisible('[data-part="coil"]')) out.push('folded, the ribbon still shows');
+    await page.click('#rt-home'); await page.waitForTimeout(60);
+    if (!(await page.isVisible('[data-part="coil"]'))) out.push('folded, pressing Home did not open the ribbon');
+    if (await page.evaluate(() => document.getElementById('stage').clientHeight) !== h1) out.push('opening the folded ribbon moved the panel');
+    await page.mouse.click(...await scr(page, 450, 560)); await page.waitForTimeout(60);
+    if (await page.isVisible('[data-part="coil"]')) out.push('pressing the panel did not fold the ribbon away again');
+    await page.reload(); await page.waitForTimeout(300);
+    if (await page.isVisible('[data-part="coil"]')) out.push('the ribbon did not stay folded after a reload');
+    await page.click('#ribbon-toggle'); await page.waitForTimeout(60);
+    if (!(await page.isVisible('[data-part="coil"]'))) out.push('the ribbon did not open again');
     return out;
   });
 

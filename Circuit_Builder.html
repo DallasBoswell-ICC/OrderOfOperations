@@ -140,7 +140,7 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 #timer-group [data-tip]::after { left: auto; right: 0; }
 
 /* a locked simulator: nothing for building or saving */
-body.locked .top-right, body.locked #toolbar, body.locked #editpanel { display: none !important; }
+body.locked .top-right, body.locked .modeseg, body.locked #toolbar, body.locked #editpanel, body.locked #rt-home, body.locked #rt-part { display: none !important; }
 
 /* a part's label */
 .labelbox { width: 7.2em; font: inherit; font-size: .9rem; color: var(--ink); background: #1f2022; border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
@@ -149,16 +149,84 @@ body.locked .top-right, body.locked #toolbar, body.locked #editpanel { display: 
 
 .link-hit { cursor: move; pointer-events: stroke; }
 .link-hit:hover { stroke: rgba(255,192,0,.22); }
+
+/* ---------------- an application window: title bar, quick access toolbar and ribbon, as in Office ---------------- */
+.wrap { gap: 8px; }
+.titlebar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.logo { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: var(--gold); color: #1c1d1f; font-weight: 800; font-size: 15px; line-height: 1; flex: none; }
+.logo sup { font-size: 9px; margin-left: 1px; }
+.titlebar h1 { font-size: 1.15rem; white-space: nowrap; }
+.qat { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: auto; }
+.qat .filebtn { padding: 5px 10px; }
+.qsel { font: inherit; font-size: .86rem; color: var(--ink); background: var(--chip); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; max-width: 15em; cursor: pointer; }
+.qsep { width: 1px; height: 22px; background: var(--line); margin: 0 2px; }
+.qbtn { display: inline-grid; place-items: center; width: 32px; height: 30px; color: var(--ink); background: var(--chip); border: 1px solid var(--line); border-radius: 8px; cursor: pointer; padding: 0; }
+.qbtn:hover:not(:disabled) { background: var(--chip-on); }
+.qbtn:disabled { opacity: .35; cursor: default; }
+.qbtn[data-tip]::after { left: auto; right: 0; }
+.modeseg button { padding: 6px 16px; font-weight: 600; }
+
+.ribbon { position: relative; background: var(--chip); border: 1px solid var(--line); border-radius: 10px; }
+.rtabs { display: flex; align-items: flex-end; gap: 2px; padding: 4px 6px 0; background: #232427; border-bottom: 1px solid var(--line); border-radius: 10px 10px 0 0; min-width: 0; }
+.rtab { font: inherit; font-size: .86rem; color: var(--muted); background: none; border: 0; border-radius: 7px 7px 0 0; padding: 6px 14px 7px; cursor: pointer; white-space: nowrap; }
+.rtab:hover { color: var(--ink); background: rgba(255,255,255,.04); }
+.rtab[aria-pressed="true"] { color: #fff; font-weight: 600; background: var(--chip); box-shadow: inset 0 -3px 0 var(--gold); }
+.rtab.ctx { color: var(--gold); box-shadow: inset 0 2px 0 var(--gold); margin-left: 6px; }
+.rtab.ctx[aria-pressed="true"] { color: var(--gold); box-shadow: inset 0 2px 0 var(--gold), inset 0 -3px 0 var(--gold); }
+.rtabs .msg { flex: 1; align-self: center; text-align: right; padding: 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.rcollapse { align-self: center; display: inline-grid; place-items: center; width: 28px; height: 26px; margin-bottom: 3px; color: var(--muted); background: none; border: 1px solid transparent; border-radius: 6px; cursor: pointer; padding: 0; flex: none; }
+.rcollapse:hover { background: var(--chip-on); color: var(--ink); }
+.rcollapse.down svg { transform: rotate(180deg); }
+.rcollapse[data-tip]::after { left: auto; right: 0; }
+.rbody { display: flex; height: 98px; padding: 5px 4px 0; min-width: 0; }
+body.ribbon-min .rbody { display: none; }
+body.ribbon-min .rtabs { border-bottom: 0; border-radius: 10px; }
+body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1px; right: -1px; top: 100%; z-index: 30; background: var(--chip); border: 1px solid var(--line); border-radius: 0 0 10px 10px; box-shadow: 0 16px 34px rgba(0,0,0,.55); }
+.rpanel { display: flex; align-items: stretch; flex: 1; min-width: 0; height: 100%; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+.rgrp, .rpanel .tgroup, .rpanel .row { display: flex; flex-direction: column; flex: none; padding: 0 9px; border-right: 1px solid #3e3f44; height: 100%; }
+.rgrp .gbody { display: flex; gap: 2px; align-items: flex-start; flex: 1; }
+.gname, .rpanel .label { font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--faint); text-align: center; padding: 2px 0 6px; white-space: nowrap; }
+/* settings and run controls: the controls along the top of each group, its name along the bottom */
+.rpanel .tgroup, .rpanel .row { flex-flow: row wrap; align-content: space-between; align-items: center; gap: 0 8px; padding-top: 6px; }
+.rpanel .tgroup > .label, .rpanel .row > .label { order: 2; flex-basis: 100%; }
+.rpanel .props { display: flex; flex-wrap: nowrap; align-items: stretch; height: 100%; gap: 0; }
+.rpanel .props[hidden] { display: none; }
+.rpanel .swatches { display: grid; grid-template-columns: repeat(5, 20px); gap: 4px; max-width: none; }
+.rpanel .sw { width: 20px; height: 20px; }
+.rpanel .seg button { padding: 4px 10px; }
+.rpanel select { padding: 4px 8px; width: auto; max-width: 13em; }
+/* ribbon buttons: big (icon over its name) and small (in stacks of three) */
+.tool.big { flex-direction: column; justify-content: flex-start; gap: 3px; min-width: 58px; padding: 5px 6px 4px; background: transparent; border-color: transparent; font-size: .76rem; line-height: 1.12; text-align: center; height: auto; }
+.tool.big svg { width: 32px; height: 28px; }
+.tool.big:hover:not(:disabled) { background: #3a3b40; }
+.tool.big[aria-pressed="true"] { background: #4d462e; border-color: var(--gold); }
+.stack { display: flex; flex-direction: column; gap: 1px; }
+.tool.small { gap: 7px; padding: 3px 9px 3px 6px; background: transparent; border-color: transparent; font-size: .8rem; white-space: nowrap; }
+.tool.small svg { width: 17px; height: 17px; }
+.tool.small:hover:not(:disabled) { background: #3a3b40; }
+.tool.reset { border: 1.4px dashed #9a9a9a; border-radius: 10px; font-weight: 600; color: #f2f2f2; }
+.tool.reset svg { width: 26px; height: 26px; }
+#runbar [data-tip]::after { top: calc(100% + 8px); bottom: auto; }
+#runbar .row { gap: 0 10px; }
+@media (max-width: 700px) { .titlebar h1 { font-size: 1rem; white-space: normal; } .qat { margin-left: 0; } .rtabs .msg { display: none; } }
+.tool.small { min-height: 0; }
+.logo { font-size: 14px; letter-spacing: -.02em; }
+.tool.small { padding: 2px 9px 2px 6px; line-height: 1.25; }
+.rpanel #p-letter, .rpanel #o-letter, .rpanel #s-letter { width: 5.2em; }
+.rpanel #c-of, .rpanel #l-btn { width: 10em; }
+@media (max-width: 700px) { .rcollapse { margin-left: auto; } }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
+  <header class="titlebar">
+    <span class="logo" aria-hidden="true">O³</span>
     <h1>Order of Operations: <span>Circuit Builder</span></h1>
-    <div class="top-right">
-      <label class="row"><span class="label">Start from</span>
-        <select id="preset">
-          <option value="">Choose a circuit…</option>
+    <span class="file-label" id="file-label" hidden></span>
+    <!-- the quick access toolbar, as in Office: where the circuit comes from and goes to, and undo / redo (in Build and Run) -->
+    <div class="qat top-right" role="toolbar" aria-label="Quick access">
+      <select id="preset" class="qsel" aria-label="Start from a ready-made circuit" data-tip="Start from a ready-made circuit">
+          <option value="">Start from…</option>
           <option value="blank">Blank</option>
           <option value="seal">Start / Stop with a seal-in</option>
           <option value="abc">ABC sequence start</option>
@@ -170,79 +238,72 @@ body.locked .top-right, body.locked #toolbar, body.locked #editpanel { display: 
           <option value="andor">AND + OR</option>
           <option value="three">Three rungs into X</option>
         </select>
-      </label>
-      <div class="row">
-        <span class="file-label" id="file-label" hidden></span>
-        <span class="splitbtn">
+      <button type="button" class="filebtn" id="open-btn" data-tip="Open a saved circuit file, or paste a circuit code">
+          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M3 5h5l2 2h7v9H3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Open</button>
+      <span class="splitbtn">
           <button type="button" class="filebtn" id="save-btn" data-tip="Save this circuit as a file, or copy a short code you can paste anywhere (Ctrl+S)">
             <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M4 3h9l3 3v11H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 3v4h6V3M7 17v-5h6v5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>Save</button><button type="button" class="filebtn more" id="save-more" aria-label="More ways to save" data-tip="Save as a new file, rename, or copy a code">
             <svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </span>
-        <button type="button" class="filebtn" id="open-btn" data-tip="Open a saved circuit file, or paste a circuit code">
-          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M3 5h5l2 2h7v9H3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Open</button>
-      </div>
-      <div class="seg" role="tablist" aria-label="Mode">
-        <button type="button" role="tab" id="tab-edit" aria-selected="true">Build</button>
-        <button type="button" role="tab" id="tab-run" aria-selected="false">Run</button>
-      </div>
+      <span class="qsep" aria-hidden="true"></span>
+      <button type="button" class="qbtn" id="undo" aria-label="Undo" data-tip="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+      <button type="button" class="qbtn" id="redo" aria-label="Redo" data-tip="Redo (Ctrl+Y)" disabled><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
+    </div>
+    <div class="seg modeseg" role="tablist" aria-label="Mode">
+      <button type="button" role="tab" id="tab-edit" aria-selected="true">Build</button>
+      <button type="button" role="tab" id="tab-run" aria-selected="false">Run</button>
     </div>
   </header>
 
-  <div class="toolbar" id="toolbar" role="toolbar" aria-label="Parts and tools">
-    <div class="tgrp">
-      <button type="button" class="tool plain" data-tool="select" aria-pressed="true" data-tip="Select: click a part or wire to change it. Drag a part to move it (its wires follow), a wire's middle to slide it, or a wire end to pull it off and move it. Drag across empty space to select several things. Drag from a free part end or a bar to draw a wire.">
-        <svg viewBox="0 0 30 26"><path d="M9 3l13 10-6 1 3 7-3 1-3-7-4 4z" fill="#cfcfcf"/></svg>Select</button>
-      <button type="button" class="tool plain" data-tool="wire" aria-pressed="false" data-tip="Wire: press anywhere and drag. The wire bends once, at a right angle.">
-        <svg viewBox="0 0 30 26"><path d="M3 20h12V6h12" stroke="#cfcfcf" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Wire</button>
+  <!-- the ribbon: Home (everything for building, always there), a gold tab for the selected part's settings, and
+       Simulation while running. The arrow at its right folds it away to the tabs alone (a tab then opens it over the
+       panel for a moment). -->
+  <div class="ribbon" id="ribbon">
+    <div class="rtabs">
+      <button type="button" class="rtab" id="rt-home" aria-pressed="true">Home</button>
+      <button type="button" class="rtab ctx" id="rt-part" aria-pressed="false" hidden>Part</button>
+      <button type="button" class="rtab" id="rt-run" aria-pressed="false" hidden>Simulation</button>
+      <p class="msg" id="msg" role="status"></p>
+      <button type="button" class="rcollapse" id="ribbon-toggle" aria-expanded="true" aria-label="Collapse the ribbon" data-tip="Fold the ribbon away for more room (the tabs stay)"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3.5 10l4.5-4.5 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
-    <!-- parts, by kind: each kind opens a menu of its parts (drag one onto the panel, or click it and then the panel).
-         A new kind of component is one more group here. -->
-    <div class="tgrp" id="part-groups">
-      <div class="pgroup">
-        <button type="button" class="tool group" data-group="pb" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FF0032" stroke-width="1.6"/><rect x="8.5" y="6.5" width="13" height="13" rx="2.4" fill="#FF0032"/></svg>Switches<svg class="caret" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <div class="pmenu" role="menu" aria-label="Switches" hidden>
-          <button type="button" class="tool" data-part="btn-no" data-tip="Pushbutton, normally open. Drag it onto the panel, or onto a wire to put it in that wire.">
-        <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FF0032" stroke-width="1.6"/><rect x="8.5" y="6.5" width="13" height="13" rx="2.4" fill="#FF0032"/></svg>Button NO</button>
-          <button type="button" class="tool" data-part="btn-nc" data-tip="Pushbutton, normally closed">
-        <svg viewBox="0 0 30 26"><path d="M15 1 L26 7.3 L26 18.7 L15 25 L4 18.7 L4 7.3 Z" fill="#222" stroke="#FF9600" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 6 L21.5 9.7 L21.5 16.3 L15 20 L8.5 16.3 L8.5 9.7 Z" fill="#FF9600"/></svg>Button NC</button>
-          <button type="button" class="tool" data-part="sel" data-tip="Selector switch: 2 to 4 positions, turned left or right. Put the same letter in several rungs for its contact blocks, each closed in the positions you choose.">
-        <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#0070C0" stroke-width="1.6"/><circle cx="15" cy="15" r="6.5" fill="#444"/><rect x="12.6" y="7.5" width="4.8" height="15" rx="2.4" fill="#0070C0" transform="rotate(45 15 15)"/></svg>Selector</button>
+    <div class="rbody">
+    <div class="rpanel" id="toolbar" role="toolbar" aria-label="Parts and tools">
+      <div class="rgrp"><div class="gbody">
+        <div class="stack">
+          <button type="button" class="tool small" id="paste" disabled data-tip="Paste a copy below the circuit, with letters of its own (Ctrl+V)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6"/></svg><span>Paste</span></button>
+          <button type="button" class="tool small" id="copy" disabled data-tip="Copy the selected parts and wires (Ctrl+C)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><span>Copy</span></button>
+          <button type="button" class="tool small" id="cut" disabled data-tip="Cut the selected parts and wires (Ctrl+X)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/><path d="M8 16L18 4M16 16L6 4"/></svg><span>Cut</span></button>
         </div>
-      </div>
-      <div class="pgroup">
-        <button type="button" class="tool group" data-group="relay" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 30 26"><circle cx="15" cy="13" r="11.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="15" cy="13" r="7.5" fill="#555"/></svg>Relays<svg class="caret" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <div class="pmenu" role="menu" aria-label="Relays" hidden>
-          <button type="button" class="tool" data-part="coil" data-tip="Relay coil">
-        <svg viewBox="0 0 30 26"><circle cx="15" cy="13" r="11.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="15" cy="13" r="7.5" fill="#555"/></svg>Coil</button>
-          <button type="button" class="tool" data-part="timer" data-tip="On-delay timer: a relay coil whose contacts change only once it has been energized for its set time. Losing power resets it at once. Set the time in its settings.">
-        <svg viewBox="0 0 30 26"><circle cx="13" cy="14" r="10.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="13" cy="14" r="6.8" fill="#555"/><rect x="18" y="1" width="11" height="11" rx="2" fill="#222" stroke="#FFDC00" stroke-width="1.2"/><path d="M21 3.5h5l-2.5 3 2.5 3h-5l2.5-3z" fill="#d8d8d8"/></svg>Timer (on-delay)</button>
-          <button type="button" class="tool" data-part="timer-off" data-tip="Off-delay timer: its timed contacts change as soon as it is energized, and go back only once its set time has run out after it loses power. Energized again before then, it stops timing. Set the time in its settings.">
-        <svg viewBox="0 0 30 26"><circle cx="13" cy="14" r="10.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="13" cy="14" r="6.8" fill="#555"/><rect x="18" y="1" width="11" height="11" rx="2" fill="#222" stroke="#FFDC00" stroke-width="1.2"/><path d="M21 3.5h5l-2.5 3 2.5 3h-5l2.5-3z" fill="#d8d8d8"/></svg>Timer (off-delay)</button>
-          <button type="button" class="tool" data-part="con-no" data-tip="Relay contact, normally open: closes when its coil picks up. Choose which coil works it in its settings.">
-        <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="7" width="14" height="2.6" rx="1.3" fill="#a6a6a6"/><circle cx="10" cy="14" r="2.4" fill="#555"/><circle cx="20" cy="14" r="2.4" fill="#555"/></svg>Contact NO</button>
-          <button type="button" class="tool" data-part="con-nc" data-tip="Relay contact, normally closed: opens when its coil picks up. Choose which coil works it in its settings.">
-        <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="12.7" width="14" height="2.6" rx="1.3" fill="#FFDC00"/><circle cx="10" cy="14" r="2.4" fill="#FFDC00"/><circle cx="20" cy="14" r="2.4" fill="#FFDC00"/></svg>Contact NC</button>
+        <div class="stack">
+          <button type="button" class="tool small danger" id="del" data-tip="Delete the selected part or wire (Delete key)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg><span>Delete</span></button>
+          <button type="button" class="tool small" id="clear" data-tip="Start with an empty panel"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg><span>Clear panel</span></button>
         </div>
-      </div>
-      <div class="pgroup">
-        <button type="button" class="tool group" data-group="lights" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 30 26"><g stroke="#00B050" stroke-width="1.6" stroke-linecap="round"><path d="M15 1v2.5M15 22.5V25M3 13h2.5M24.5 13H27M6.5 4.5l1.8 1.8M21.7 19.7l1.8 1.8M23.5 4.5l-1.8 1.8M8.3 19.7l-1.8 1.8"/></g><circle cx="15" cy="13" r="8" fill="#222" stroke="#00B050" stroke-width="1.6"/><circle cx="15" cy="13" r="5.2" fill="#00B050"/><path d="M12.8 10.8l4.4 4.4M17.2 10.8l-4.4 4.4" stroke="#fff" stroke-opacity=".85" stroke-width="1.3" stroke-linecap="round"/></svg>Lights<svg class="caret" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <div class="pmenu" role="menu" aria-label="Lights" hidden>
-          <button type="button" class="tool" data-part="lamp" data-tip="Pilot light: lights while current flows through it, wired from L1 to L2 like a coil. In its settings it can be built into a pushbutton, so the button lights up with it.">
-        <svg viewBox="0 0 30 26"><g stroke="#00B050" stroke-width="1.6" stroke-linecap="round"><path d="M15 1v2.5M15 22.5V25M3 13h2.5M24.5 13H27M6.5 4.5l1.8 1.8M21.7 19.7l1.8 1.8M23.5 4.5l-1.8 1.8M8.3 19.7l-1.8 1.8"/></g><circle cx="15" cy="13" r="8" fill="#222" stroke="#00B050" stroke-width="1.6"/><circle cx="15" cy="13" r="5.2" fill="#00B050"/><path d="M12.8 10.8l4.4 4.4M17.2 10.8l-4.4 4.4" stroke="#fff" stroke-opacity=".85" stroke-width="1.3" stroke-linecap="round"/></svg>Pilot Light</button>
-        </div>
-      </div>
+      </div><div class="gname">Edit</div></div>
+      <div class="rgrp"><div class="gbody">
+        <button type="button" class="tool big" data-tool="select" aria-pressed="true" data-tip="Select: click a part or wire to change it. Drag a part to move it (its wires follow), a wire's middle to slide it, or a wire end to pull it off and move it. Drag across empty space to select several things. Drag from a free part end or a bar to draw a wire.">
+        <svg viewBox="0 0 30 26"><path d="M9 3l13 10-6 1 3 7-3 1-3-7-4 4z" fill="#cfcfcf"/></svg><span>Select</span></button>
+        <button type="button" class="tool big" data-tool="wire" aria-pressed="false" data-tip="Wire: press anywhere and drag. The wire bends once, at a right angle.">
+        <svg viewBox="0 0 30 26"><path d="M3 20h12V6h12" stroke="#cfcfcf" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Wire</span></button>
+      </div><div class="gname">Tools</div></div>
+      <!-- parts, by kind: drag one onto the panel (or onto a wire to put it in that wire), or click it and then the panel.
+           A new kind of component is one more button here. -->
+      <div class="rgrp" id="part-groups-pb"><div class="gbody"><button type="button" class="tool big" data-part="btn-no" data-tip="Pushbutton, normally open. Drag it onto the panel, or onto a wire to put it in that wire.">
+        <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FF0032" stroke-width="1.6"/><rect x="8.5" y="6.5" width="13" height="13" rx="2.4" fill="#FF0032"/></svg><span>Button<br>NO</span></button><button type="button" class="tool big" data-part="btn-nc" data-tip="Pushbutton, normally closed">
+        <svg viewBox="0 0 30 26"><path d="M15 1 L26 7.3 L26 18.7 L15 25 L4 18.7 L4 7.3 Z" fill="#222" stroke="#FF9600" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 6 L21.5 9.7 L21.5 16.3 L15 20 L8.5 16.3 L8.5 9.7 Z" fill="#FF9600"/></svg><span>Button<br>NC</span></button></div><div class="gname">Pushbuttons</div></div>
+      <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="sel" data-tip="Selector switch: 2 to 4 positions, turned left or right. Put the same letter in several rungs for its contact blocks, each closed in the positions you choose.">
+        <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#0070C0" stroke-width="1.6"/><circle cx="15" cy="15" r="6.5" fill="#444"/><rect x="12.6" y="7.5" width="4.8" height="15" rx="2.4" fill="#0070C0" transform="rotate(45 15 15)"/></svg><span>Selector<br>switch</span></button></div><div class="gname">Selectors</div></div>
+      <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="coil" data-tip="Relay coil">
+        <svg viewBox="0 0 30 26"><circle cx="15" cy="13" r="11.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="15" cy="13" r="7.5" fill="#555"/></svg><span>Coil</span></button><button type="button" class="tool big" data-part="timer" data-tip="On-delay timer: a relay coil whose contacts change only once it has been energized for its set time. Losing power resets it at once. Set the time in its settings.">
+        <svg viewBox="0 0 30 26"><circle cx="13" cy="14" r="10.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="13" cy="14" r="6.8" fill="#555"/><rect x="18" y="1" width="11" height="11" rx="2" fill="#222" stroke="#FFDC00" stroke-width="1.2"/><path d="M21 3.5h5l-2.5 3 2.5 3h-5l2.5-3z" fill="#d8d8d8"/></svg><span>On-delay<br>timer</span></button><button type="button" class="tool big" data-part="timer-off" data-tip="Off-delay timer: its timed contacts change as soon as it is energized, and go back only once its set time has run out after it loses power. Energized again before then, it stops timing. Set the time in its settings.">
+        <svg viewBox="0 0 30 26"><circle cx="13" cy="14" r="10.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="13" cy="14" r="6.8" fill="#555"/><rect x="18" y="1" width="11" height="11" rx="2" fill="#222" stroke="#FFDC00" stroke-width="1.2"/><path d="M21 3.5h5l-2.5 3 2.5 3h-5l2.5-3z" fill="#d8d8d8"/></svg><span>Off-delay<br>timer</span></button></div><div class="gname">Relays</div></div>
+      <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="con-no" data-tip="Relay contact, normally open: closes when its coil picks up. Choose which coil works it in its settings.">
+        <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="7" width="14" height="2.6" rx="1.3" fill="#a6a6a6"/><circle cx="10" cy="14" r="2.4" fill="#555"/><circle cx="20" cy="14" r="2.4" fill="#555"/></svg><span>Contact<br>NO</span></button><button type="button" class="tool big" data-part="con-nc" data-tip="Relay contact, normally closed: opens when its coil picks up. Choose which coil works it in its settings.">
+        <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="12.7" width="14" height="2.6" rx="1.3" fill="#FFDC00"/><circle cx="10" cy="14" r="2.4" fill="#FFDC00"/><circle cx="20" cy="14" r="2.4" fill="#FFDC00"/></svg><span>Contact<br>NC</span></button></div><div class="gname">Contacts</div></div>
+      <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="lamp" data-tip="Pilot light: lights while current flows through it, wired from L1 to L2 like a coil. In its settings it can be built into a pushbutton, so the button lights up with it.">
+        <svg viewBox="0 0 30 26"><g stroke="#00B050" stroke-width="1.6" stroke-linecap="round"><path d="M15 1v2.5M15 22.5V25M3 13h2.5M24.5 13H27M6.5 4.5l1.8 1.8M21.7 19.7l1.8 1.8M23.5 4.5l-1.8 1.8M8.3 19.7l-1.8 1.8"/></g><circle cx="15" cy="13" r="8" fill="#222" stroke="#00B050" stroke-width="1.6"/><circle cx="15" cy="13" r="5.2" fill="#00B050"/><path d="M12.8 10.8l4.4 4.4M17.2 10.8l-4.4 4.4" stroke="#fff" stroke-opacity=".85" stroke-width="1.3" stroke-linecap="round"/></svg><span>Pilot<br>light</span></button></div><div class="gname">Lights</div></div>
     </div>
-    <div class="tgrp">
-      <button type="button" class="tool plain" id="copy" disabled data-tip="Copy the selected parts and wires (Ctrl+C; Ctrl+X cuts)">Copy</button>
-      <button type="button" class="tool plain" id="paste" disabled data-tip="Paste a copy below the circuit, with letters of its own (Ctrl+V)">Paste</button>
-      <button type="button" class="tool plain danger" id="del" data-tip="Delete the selected part or wire (Delete key)">Delete</button>
-      <button type="button" class="tool plain" id="undo" data-tip="Undo (Ctrl+Z)">Undo</button>
-      <button type="button" class="tool plain" id="clear" data-tip="Start with an empty panel">Clear</button>
-    </div>
-  </div>
-
-  <div id="editpanel" class="inspector" aria-label="Settings of the selected part">
-    <div class="props">
+    <div class="rpanel" id="editpanel" aria-label="Settings of the selected part" hidden>
+      <div class="props">
       <div class="tgroup" hidden><span class="label">Selected</span><span class="selname" id="selname">Nothing</span></div>
       <div class="props" id="props-btn" hidden>
         <div class="tgroup"><span class="label">Letter</span><select id="p-letter" aria-label="Button letter"></select></div>
@@ -284,12 +345,11 @@ body.locked .top-right, body.locked #toolbar, body.locked #editpanel { display: 
         <div class="tgroup" id="o-delay-group" hidden><span class="label">Delay</span><input type="number" id="o-delay" min="1" max="999" step="1" inputmode="numeric" aria-label="Timer delay in seconds" data-tip="How long the timer must be energized before its contacts change (whole seconds, 1 to 999)"><span class="unit">s</span></div>
         <div class="tgroup"><span class="label">Colour</span><div class="swatches" id="o-colour" role="radiogroup" aria-label="Coil colour"></div></div>
       </div>
+      <div class="tgroup"><span class="label">Part</span><button type="button" class="tool small danger" id="p-del" data-tip="Delete this part (Delete key)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg><span>Delete</span></button></div>
+      </div>
     </div>
-    <p class="msg" id="msg" role="status"></p>
-  </div>
-
-  <div class="runbar" id="runbar" hidden>
-    <div class="row"><span class="label">Speed</span>
+    <div class="rpanel" id="runbar" hidden>
+    <div class="row" id="speed-group"><span class="label">Speed</span>
       <div class="seg" role="group" aria-label="Speed">
         <button type="button" data-speed="0.25" data-tip="Quarter speed: follow the current step by step">¼×</button><button type="button" data-speed="0.5" data-tip="Half speed">½×</button><button type="button" data-speed="1" aria-pressed="true" data-tip="Normal speed">1×</button><button type="button" data-speed="2" data-tip="Double speed">2×</button>
       </div>
@@ -308,8 +368,10 @@ body.locked .top-right, body.locked #toolbar, body.locked #editpanel { display: 
         <button type="button" data-mode="hold" data-tip="A momentary button stays down only while you hold it">Press and hold</button>
       </div>
     </div>
-    <button type="button" class="reset" id="reset-btn" data-tip="Turn everything off and start over">
-      <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M15.5 10a5.5 5.5 0 1 1-1.6-3.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14.4 2.8l.1 3.9-3.9.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Reset</button>
+      <div class="tgroup"><span class="label">Simulation</span><button type="button" class="tool big reset" id="reset-btn" data-tip="Turn everything off and start over">
+      <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M15.5 10a5.5 5.5 0 1 1-1.6-3.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14.4 2.8l.1 3.9-3.9.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reset</span></button></div>
+    </div>
+    </div>
   </div>
 
   <div class="fault" id="fault" role="alert" hidden></div>
@@ -1525,6 +1587,8 @@ function setSelector(v, p, pos, ang) {
 
 /* ---- js/editor-state.js ---- */
 let editing = true, tool = 'select', sel = null, view = {}, preview = null;
+// the ribbon's open tab while building: 'home', or 'part' (the selected part's settings)
+let ribbonTab = 'home';
 // the selection: any number of parts and wires
 const selOne = (k, id) => ({ parts: new Set(k === 'p' ? [id] : []), wires: new Set(k === 'w' ? [id] : []) });
 const selHasP = id => !!sel && sel.parts.has(id), selHasW = id => !!sel && sel.wires.has(id);
@@ -1535,10 +1599,13 @@ const selCount = () => sel ? sel.parts.size + sel.wires.size + (sel.terms ? sel.
 const termKey = (x, y) => (x === 0 ? 'L1:' : 'L2:') + y;
 const selHasT = (x, y) => !!sel && !!sel.terms && (x === 0 || x === W) && sel.terms.has(termKey(x, y));
 const barTerms = () => { const m = new Map(); for (const w of wires) for (const [x, y] of [[w.x1, w.y1], [w.x2, w.y2]]) if (x === 0 || x === W) m.set(termKey(x, y), [x, y]); return m; };
-const history = [];
-function snapshot() { history.push(stateOf()); if (history.length > 100) history.shift(); }
-function undo() {
-  const h = history.pop(); if (!h) return;
+// undo and redo: each change remembers how things were before it (a new change forgets what could be redone)
+const history = [], future = [];
+function remember(s) { history.push(s); if (history.length > 100) history.shift(); future.length = 0; }
+function snapshot() { remember(stateOf()); }
+function undo() { const h = history.pop(); if (!h) return; future.push(stateOf()); backTo(h); }
+function redo() { const h = future.pop(); if (!h) return; history.push(stateOf()); backTo(h); }
+function backTo(h) {
   restore(h); if (cam.fit) fit(true);
   for (const x of [...parts, ...wires]) nextId = Math.max(nextId, x.id + 1);
   sel = null; say(''); draw();
@@ -1879,7 +1946,7 @@ function placePart(kind, x, y) {
   if (wireInTheWay({ t: kindOf(kind), x, y })) { say('There is a wire in the way.'); return; }
   snapshot();
   const p = newPart(kind, x, y);
-  parts.push(p); normalize(); sel = selOne('p', p.id); say(''); draw();
+  parts.push(p); normalize(); sel = selOne('p', p.id); ribbonTab = 'home'; say(''); draw();
 }
 
 /* ---- js/wires-attach.js ---- */
@@ -2055,7 +2122,7 @@ function liveDrag(e, apply, onClick) {
   const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
     preview = null; dragNow = false;
     if (!moved) { restore(start); onClick && onClick(); draw(); return; }
-    if (stateOf() !== start) { history.push(start); if (history.length > 100) history.shift(); }
+    if (stateOf() !== start) remember(start);
     for (const x of [...parts, ...wires]) nextId = Math.max(nextId, (x.id || 0) + 1);
     normalize(); say(''); draw(); };
   document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
@@ -2102,11 +2169,11 @@ function barDrag(e, which) {
     dx = snap(dx); nw = snap(nw);
     // a double-click on the handle (two clicks without moving) lets the circuit fit the screen again
     if (!moved) { const now = performance.now(), dbl = lastBarClick.bar === which && now - lastBarClick.t < 450; lastBarClick = { bar: which, t: now };
-      if (dbl && W_USER) { history.push(start); W_USER = null; fitView(); fit(true); draw(); }
+      if (dbl && W_USER) { remember(start); W_USER = null; fitView(); fit(true); draw(); }
       return; }
     if (which === 'L1' && dx) { shiftL1(dx); W_USER = W; }
     if (which === 'L2' && nw !== W) { setWidth(nw); W_USER = W; }
-    if (stateOf() !== start) { history.push(start); if (history.length > 100) history.shift(); }
+    if (stateOf() !== start) remember(start);
     fitView(); fit(true); draw();
   };
   document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
@@ -2193,7 +2260,7 @@ svg.addEventListener('pointerdown', e => {
   if (p.x > W - BAR - 6) return startWire([W, clampY(p.y)]);
   // a part: drag it, and its wires follow
   if (q) {
-    sel = selOne('p', q.id); say(''); draw();
+    sel = selOne('p', q.id); ribbonTab = 'part'; say(''); draw();   // (a part picked on the panel opens its tab on the ribbon)
     const id = q.id, ox = q.x, oy = q.y, sx = p.x, sy = p.y, st0 = stateOf();
     return liveDrag(e, r => {
       const qq = parts.find(z => z.id === id);
@@ -2341,7 +2408,6 @@ function setTool(t) {
   tool = t; closeMenus();
   document.querySelectorAll('.tool[data-tool], .tool[data-part]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.tool || b.dataset.part) === t)));
   svg.style.cursor = t === 'select' ? '' : 'crosshair';
-  document.querySelectorAll('.pgroup').forEach(g => g.querySelector('.group').classList.toggle('has-tool', !!g.querySelector(`.tool[data-part="${t}"]`)));
   say(t !== 'select' && t !== 'wire' ? 'Click the panel to place it (or drag the tool onto the panel). Press Esc to cancel.' : '');
 }
 document.querySelectorAll('.tool[data-tool]').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
@@ -2354,23 +2420,49 @@ function del() {
 }
 document.getElementById('del').addEventListener('click', del);
 document.getElementById('undo').addEventListener('click', undo);
+document.getElementById('redo').addEventListener('click', redo);
+document.getElementById('p-del').addEventListener('click', del);
 document.getElementById('clear').addEventListener('click', () => { snapshot(); parts = []; wires = []; W_USER = null; sel = null; circuitName = ''; forgetFile(); draw(); });
 document.addEventListener('keydown', e => {
   if (!editing || /SELECT|INPUT/.test(document.activeElement.tagName)) return;
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); del(); }
+  else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || e.shiftKey && e.key.toLowerCase() === 'z')) { e.preventDefault(); redo(); }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
   else if (e.key === 'Escape') { setTool('select'); sel = null; draw(); }
 });
 
-// part groups: each opens a menu of its parts; picking one (or dragging it out) closes the menu
-function closeMenus(except) {
-  document.querySelectorAll('.pgroup').forEach(g => { if (g === except) return; g.querySelector('.pmenu').hidden = true; g.querySelector('.group').setAttribute('aria-expanded', 'false'); });
+/* ---------------- the ribbon ----------------
+   Home while building (and the gold tab of the selected part), Simulation while running. Folded away, only the tabs
+   show: pressing one opens the ribbon over the panel until you press somewhere else. */
+function closeMenus() { document.body.classList.remove('ribbon-peek'); }
+function showRibbon() {
+  const run = !editing, part = !run && !!selPart(), tab = run ? 'run' : part && ribbonTab === 'part' ? 'part' : 'home';
+  const set = (id, shown, on) => { const b = document.getElementById(id); b.hidden = !shown; b.setAttribute('aria-pressed', String(on)); };
+  set('rt-home', !run, tab === 'home'); set('rt-part', part, tab === 'part'); set('rt-run', run, tab === 'run');
+  document.getElementById('toolbar').hidden = tab !== 'home';
+  document.getElementById('editpanel').hidden = tab !== 'part';
+  document.getElementById('runbar').hidden = tab !== 'run';
 }
-document.querySelectorAll('.pgroup').forEach(g => {
-  const b = g.querySelector('.group'), m = g.querySelector('.pmenu');
-  b.addEventListener('click', () => { const open = m.hidden; closeMenus(g); m.hidden = !open; b.setAttribute('aria-expanded', String(open)); if (open) { const f = m.querySelector('.tool'); f && f.focus({ preventScroll: true }); } });
-});
-document.addEventListener('pointerdown', e => { if (!e.target.closest('.pgroup')) closeMenus(); }, true);
+for (const [id, t] of [['rt-home', 'home'], ['rt-part', 'part'], ['rt-run', 'run']])
+  document.getElementById(id).addEventListener('click', () => {
+    if (t !== 'run') ribbonTab = t;
+    if (document.body.classList.contains('ribbon-min')) document.body.classList.add('ribbon-peek');
+    showRibbon();
+  });
+const RIBBON_KEY = 'oo-circuit-builder:ribbon-min';
+function foldRibbon(min) {
+  document.body.classList.toggle('ribbon-min', min); document.body.classList.remove('ribbon-peek');
+  const b = document.getElementById('ribbon-toggle');
+  b.setAttribute('aria-expanded', String(!min)); b.setAttribute('aria-label', min ? 'Pin the ribbon open' : 'Collapse the ribbon');
+  b.dataset.tip = min ? 'Keep the ribbon open' : 'Fold the ribbon away for more room (the tabs stay)';
+  b.classList.toggle('down', min);
+  try { localStorage.setItem(RIBBON_KEY, min ? '1' : ''); } catch (_) {}
+  if (fit(editing)) { if (editing) fitView(); }
+  draw();
+}
+document.getElementById('ribbon-toggle').addEventListener('click', () => foldRibbon(!document.body.classList.contains('ribbon-min')));
+try { if (localStorage.getItem(RIBBON_KEY) === '1') { document.body.classList.add('ribbon-min'); const b = document.getElementById('ribbon-toggle'); b.setAttribute('aria-expanded', 'false'); b.classList.add('down'); b.dataset.tip = 'Keep the ribbon open'; b.setAttribute('aria-label', 'Pin the ribbon open'); } } catch (_) {}
+document.addEventListener('pointerdown', e => { if (!e.target.closest('#ribbon')) closeMenus(); }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus(); });
 
 /* ---- js/clipboard.js ---- */
@@ -2424,7 +2516,8 @@ function pasteClip() {
   if (!cam.fit) cam.y = Math.min(...ys) + dy - 80;   // bring it into view
   draw();
 }
-function updateClipButtons() { const b = document.getElementById('paste'); if (b) b.disabled = !clip; const c = document.getElementById('copy'); if (c) c.disabled = !selCount(); }
+function updateClipButtons() { const b = document.getElementById('paste'); if (b) b.disabled = !clip; const c = document.getElementById('copy'); if (c) c.disabled = !selCount(); const x = document.getElementById('cut'); if (x) x.disabled = !selCount(); }
+document.getElementById('cut').addEventListener('click', cutSel);
 document.getElementById('copy').addEventListener('click', copySel);
 document.getElementById('paste').addEventListener('click', pasteClip);
 document.addEventListener('keydown', e => {
@@ -2459,6 +2552,12 @@ function renderProps() {
   document.getElementById('p-main').hidden = !(p && p.t === 'btn' && mainBtn(p.L) !== p);
   document.getElementById('s-main').hidden = !(p && p.t === 'sel' && mainSel(p.L) !== p);
   document.getElementById('undo').disabled = !history.length;
+  document.getElementById('redo').disabled = !future.length;
+  // the gold tab for one selected part, named after it (a part picked on the panel opens it; one just placed from
+  // the ribbon leaves Home open, to place more)
+  if (!p && ribbonTab === 'part') ribbonTab = 'home';
+  document.getElementById('rt-part').textContent = p ? captionOf(p) : 'Part';
+  showRibbon();
   document.getElementById('props-btn').hidden = !(p && p.t === 'btn');
   document.getElementById('props-coil').hidden = !(p && p.t === 'coil');
   document.getElementById('props-lamp').hidden = !(p && p.t === 'lamp');
@@ -2927,8 +3026,7 @@ function setMode(run) {
   editing = !run;
   document.getElementById('tab-edit').setAttribute('aria-selected', String(!run));
   document.getElementById('tab-run').setAttribute('aria-selected', String(run));
-  document.getElementById('toolbar').hidden = run; document.getElementById('editpanel').hidden = run;
-  document.getElementById('runbar').hidden = !run;
+  closeMenus(); showRibbon();
   document.getElementById('fault').hidden = true;
   sel = null; preview = null; setTool('select');
   if (cam.fit) { fit(true); fitView(); }
@@ -2980,7 +3078,7 @@ function fit(widen) {
   const top = st.getBoundingClientRect().top + window.scrollY;
   // the panel's height is worked out again only when the window or the mode changes (not when selecting something
   // shows or hides its settings below the panel, which would rescale the view under the pointer)
-  const k = `${window.innerWidth}x${window.innerHeight}:${editing}`;
+  const k = `${window.innerWidth}x${window.innerHeight}:${editing}:${Math.round(top)}`;
   let h = parseFloat(st.style.height);
   if (widen || k !== fitKey || !h) {
     const below = 16;

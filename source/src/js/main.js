@@ -4,8 +4,7 @@ function setMode(run) {
   editing = !run;
   document.getElementById('tab-edit').setAttribute('aria-selected', String(!run));
   document.getElementById('tab-run').setAttribute('aria-selected', String(run));
-  document.getElementById('toolbar').hidden = run; document.getElementById('editpanel').hidden = run;
-  document.getElementById('runbar').hidden = !run;
+  closeMenus(); showRibbon();
   document.getElementById('fault').hidden = true;
   sel = null; preview = null; setTool('select');
   if (cam.fit) { fit(true); fitView(); }
@@ -57,7 +56,7 @@ function fit(widen) {
   const top = st.getBoundingClientRect().top + window.scrollY;
   // the panel's height is worked out again only when the window or the mode changes (not when selecting something
   // shows or hides its settings below the panel, which would rescale the view under the pointer)
-  const k = `${window.innerWidth}x${window.innerHeight}:${editing}`;
+  const k = `${window.innerWidth}x${window.innerHeight}:${editing}:${Math.round(top)}`;
   let h = parseFloat(st.style.height);
   if (widen || k !== fitKey || !h) {
     const below = 16;
