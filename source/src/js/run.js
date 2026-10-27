@@ -129,10 +129,10 @@ function paintTimer(p, v, lit) {
 }
 function paintTimers() { for (const p of parts) if (isTimer(p)) { const v = view.parts.get(p.id); if (v && v.timer) setReadout(v, p, timerLeft(p), timerLit(p)); } }
 
-// a selector switch while running: press on its left half to turn it one position left, its right half to turn it
-// right (or the arrow keys when it has the focus)
+// a selector switch while running: press a position's name to turn it straight there; anywhere else on its left half
+// turns it one position left, its right half one right (or the arrow keys when it has the focus)
 function bindSelector(g, p) {
   g.setAttribute('class', 'dev'); g.setAttribute('tabindex', '0'); g.setAttribute('role', 'slider'); g.setAttribute('aria-label', captionOf(p) + ': turn left or right');
-  g.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); const q = pt(e); turn(p.L, selPos(p.L) + (q.x < p.x ? -1 : 1)); });
+  g.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); const at = e.target.closest && e.target.closest('[data-pos]'); if (at) return turn(p.L, +at.dataset.pos); const q = pt(e); turn(p.L, selPos(p.L) + (q.x < p.x ? -1 : 1)); });
   g.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); turn(p.L, selPos(p.L) + (e.key === 'ArrowLeft' ? -1 : 1)); } });
 }

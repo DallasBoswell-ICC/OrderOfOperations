@@ -1151,6 +1151,9 @@ const DEF_CIRCUIT = `
     if (await on() !== '100') out.push('turning past the end changed it: ' + await on());
     await page.mouse.click(...await scr(page, 215, 490)); await page.mouse.click(...await scr(page, 215, 490)); await settle();
     if (await on() !== '011') out.push('turned to AUTO: lights ' + await on() + ', expected 011');
+    // pressing a position's name turns it straight there (from AUTO to HAND, past OFF)
+    await page.mouse.click(...await scr(page, 177, 149)); await settle();
+    if (await on() !== '100') out.push('pressing HAND while in AUTO: lights ' + await on() + ', expected 100');
     await page.click('#tab-edit'); await page.waitForTimeout(40);
     await page.evaluate(async c => useCircuit(await decodeCircuit(c), ''), await page.evaluate(async s => 'OO0.' + btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''), saved));
     if ((await page.evaluate(() => JSON.stringify(circuitData()))) !== saved) out.push('the selector changed after saving and opening');

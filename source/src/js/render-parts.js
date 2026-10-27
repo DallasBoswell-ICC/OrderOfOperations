@@ -62,9 +62,11 @@ function lampRays(x, y, R, g) {
   return rays;
 }
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
+// how far above a part's middle its name is written (clear of the badges on its top corners)
+const capTop = p => (p.t === 'con' ? CON_H / 2 + 1 : p.t === 'lamp' ? BODYH(p.t) / 2 + 10 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 // a part, in the same style as the Order of Operations simulators
 function drawPart(p, g, x, y, chan) {
-  const v = {}, T = TERM(p), half = BODYH(p.t) / 2, capH = p.t === 'con' ? CON_H / 2 + 1 : p.t === 'lamp' ? half + 10 : half;
+  const v = {}, T = TERM(p), half = BODYH(p.t) / 2;
   el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
   // the short leads between the part's ends and its body: each drawn in two pieces, so the current can flow along
   // them (the new colour, and what was there before it)
@@ -73,7 +75,7 @@ function drawPart(p, g, x, y, chan) {
   if (p.t === 'btn') {
     v.sec = mainBtn(p.L) !== p && parts.includes(p);
     v.lit = !v.sec && lampsOf(p.L).length > 0;
-    v.secFill = v.sec ? mixOk(p.color, '#262626', .72) : null;
+    v.secFill = v.sec ? '#1c1c1c' : null;   // (another contact block: a black cap with a coloured outline, like a selector's other drawings)
     // a button with a light built in: a glow behind it when the light is on
     if (v.lit) v.halo = el('rect', { x: x - BOX / 2 - 4, y: y - BOX / 2 - 4, width: BOX + 8, height: BOX + 8, rx: BOX * .22, fill: p.color, opacity: 0, filter: 'url(#fGlow)' }, g);
     if (p.nc) {
@@ -162,7 +164,8 @@ function drawPart(p, g, x, y, chan) {
     if (!isTimer(p)) { v.text = el('text', { x, y: y + 7.5, 'text-anchor': 'middle', class: 'devtext', 'font-size': 21, fill: LIGHT_TEXT }, g); capText(v.text, nameOf(p), 52, 21, y + 7.5); }
     else drawTimer(p, g, x, y, v);
   }
-  el('text', { x, y: y + capH + 14 + (p.t === 'btn' && p.nc ? 4 : 0), 'text-anchor': 'middle', class: 'cap' }, g).textContent = captionOf(p);
+  // its name, above it (the other contact blocks of a pushbutton or selector switch go without: the dashed line joins them to it)
+  if (!v.sec) el('text', { x, y: y - capTop(p), 'text-anchor': 'middle', class: 'cap' }, g).textContent = captionOf(p);
   return v;
 }
 // a horizontal run from lo to hi at height y, hopping over every crossing in hops
@@ -247,6 +250,7 @@ function setSelector(v, p, pos, ang) {
     const lim = SEL_BOX / 2 - 5 - w / 2; mx = Math.max(v.kx - lim, Math.min(v.kx + lim, mx));   // (names kept clear of the border)
     const txt = el('text', { x: mx, y: my + fs * .36, 'text-anchor': 'middle', 'font-weight': 800, 'font-size': fs, fill: i === pos ? p.color : '#6a6a6a' }, v.marks);
     txt.textContent = named || String(i + 1); if (on) txt.dataset.closed = '1';
+    el('rect', { x: mx - w / 2 - 4, y: my - fs * .5 - 3, width: w + 8, height: fs + 6, fill: 'transparent', 'data-pos': i, style: editing ? '' : 'cursor:pointer' }, v.marks);   // (pressing a position's name turns the switch straight to it)
     if (on) { const hw = named ? w / 2 : 3.6, uy = my + fs * .36 + 3; el('line', { x1: mx - hw, y1: uy, x2: mx + hw, y2: uy, stroke: '#dcdcdc', 'stroke-width': 1.5, 'stroke-linecap': 'round' }, v.marks); }
   });
 }
