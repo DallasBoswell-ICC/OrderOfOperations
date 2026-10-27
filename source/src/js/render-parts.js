@@ -22,10 +22,11 @@ const DEFS = `
   <linearGradient id="gBar" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8a7a4a"/><stop offset=".45" stop-color="#d9c27a"/><stop offset="1" stop-color="#7a6a3c"/></linearGradient>
   <filter id="fGlow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="7"/></filter>
   <linearGradient id="gTerm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d4d4d4"/><stop offset=".5" stop-color="#a3a3a3"/><stop offset="1" stop-color="#6e6e6e"/></linearGradient>
+  <radialGradient id="gKnob" cx=".4" cy=".35" r=".75"><stop offset="0" stop-color="#5a5a5a"/><stop offset="1" stop-color="#262626"/></radialGradient>
   <radialGradient id="gStud" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#e8e8e8"/><stop offset=".6" stop-color="#9a9a9a"/><stop offset="1" stop-color="#5a5a5a"/></radialGradient>`;
 const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
-const captionOf = p => p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -63,7 +64,7 @@ function lampRays(x, y, R, g) {
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // a part, in the same style as the Order of Operations simulators
 function drawPart(p, g, x, y, chan) {
-  const v = {}, T = TERM(p), half = LOADT(p.t) ? COIL / 2 : BOX / 2, capH = p.t === 'con' ? CON_H / 2 + 1 : p.t === 'lamp' ? half + 10 : half;
+  const v = {}, T = TERM(p), half = BODYH(p.t) / 2, capH = p.t === 'con' ? CON_H / 2 + 1 : p.t === 'lamp' ? half + 10 : half;
   el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
   // the short leads between the part's ends and its body: each drawn in two pieces, so the current can flow along
   // them (the new colour, and what was there before it)
@@ -143,6 +144,8 @@ function drawPart(p, g, x, y, chan) {
       el('path', { d: P([[bx - gB * .62, by - gH * .55], [bx + gB * .62, by - gH * .55], [bx + gB * .22, by - gH * .1], [bx - gB * .22, by - gH * .1]]), fill: '#d8d8d8' }, g);
       el('path', { d: P([[bx - gB * .8, by + gH * .86], [bx + gB * .8, by + gH * .86], [bx + gB * .35, by + gH * .45], [bx - gB * .35, by + gH * .45]]), fill: '#d8d8d8' }, g);
     }
+  } else if (p.t === 'sel') {
+    drawSelector(p, g, x, y, v);
   } else if (p.t === 'lamp') {
     // a pilot light: a lens with a filament, that glows and sends out rays when lit
     const col = lampColour(p); v.col = col;
@@ -204,4 +207,38 @@ function setReadout(v, p, n, on) {
   el('rect', { x: x0 + .5, y: y0 + .5, width: w - 1, height: h - 1, rx: 3, fill: 'none', stroke: 'rgba(0,0,0,.9)', 'stroke-width': 1 }, v.win);
   const t = el('text', { x: v.x, y: y0 + 9.6, 'text-anchor': 'middle', 'font-weight': 700, 'font-size': 9.5, fill: on ? p.color : mixOk(p.color, '#262626', .55), style: 'font-variant-numeric:tabular-nums' }, v.win); t.textContent = txt;
   el('path', { d: `M ${x0 + 3} ${y0 + 2.2} H ${x0 + w - 3}`, stroke: 'rgba(255,255,255,.22)', 'stroke-width': 1, 'stroke-linecap': 'round' }, v.win);
+}
+
+/* A selector switch (design A): a square well, a round knob with a bar handle across it that turns to point at the
+   position it is in, and the positions' numbers (or names) round the top: in the switch's colour where this drawing
+   is closed, grey where it is open, the one it is turned to underlined. The first drawing of a switch has a coloured
+   handle; the others (its other contact blocks) a dark handle with a coloured rim. */
+const SEL_KNOB = 12, SEL_R = 33;   // the knob sits a little below the middle; the numbers round it at this radius
+function drawSelector(p, g, x, y, v) {
+  const S = SEL_BOX, kx = x, ky = y + SEL_KNOB;
+  v.sec = mainSel(p.L) !== p && parts.includes(p);
+  el('rect', { x: x - S / 2, y: y - S / 2, width: S, height: S, rx: S * .1667, fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
+  v.marks = el('g', {}, g); v.kx = kx; v.ky = ky;
+  el('circle', { cx: kx, cy: ky, r: 15, fill: 'url(#gKnob)', stroke: '#1d2733', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, g);
+  v.handle = el('g', {}, g);
+  el('rect', { x: kx - 5, y: ky - 16, width: 10, height: 32, rx: 5, fill: v.sec ? mixOk(p.color, '#262626', .72) : p.color, stroke: v.sec ? p.color : '#1d2733', 'stroke-width': v.sec ? 1.6 : 1.1 }, v.handle);
+  el('rect', { x: kx - 5, y: ky - 16, width: 10, height: 32, rx: 5, fill: 'url(#gGloss)' }, v.handle);
+  el('line', { x1: kx, y1: ky - 12.5, x2: kx, y2: ky - 6, stroke: '#fff', 'stroke-width': 2, 'stroke-linecap': 'round', opacity: .85 }, v.handle);
+  setSelector(v, p, editing ? (p.pos || 0) : selPos(p.L), null);
+}
+// the handle's angle (deg) and the numbers, for position pos (or partway between, while it turns)
+function setSelector(v, p, pos, ang) {
+  const A = SEL_ANG[selN(p)], a = ang === null ? A[pos] : ang;
+  v.handle.setAttribute('transform', `rotate(${a.toFixed(2)} ${v.kx} ${v.ky})`);
+  const key = pos + '|' + (p.closedIn || []).join() + '|' + (p.names || []).join();
+  if (v.marksKey === key) return; v.marksKey = key;
+  v.marks.innerHTML = '';
+  A.forEach((d, i) => {
+    const t = d * Math.PI / 180, named = p.names && p.names[i], fs = named ? 7 : 11, w = named ? named.length * fs * .66 : fs * .62;
+    let mx = v.kx + SEL_R * Math.sin(t); const my = v.ky - SEL_R * Math.cos(t), on = (p.closedIn || []).includes(i);
+    const lim = SEL_BOX / 2 - 5 - w / 2; mx = Math.max(v.kx - lim, Math.min(v.kx + lim, mx));   // (names kept clear of the border)
+    const txt = el('text', { x: mx, y: my + fs * .36, 'text-anchor': 'middle', 'font-weight': 800, 'font-size': fs, fill: on ? p.color : '#626262' }, v.marks);
+    txt.textContent = named || String(i + 1);
+    if (i === pos) { const hw = named ? w / 2 : 3.6, uy = my + fs * .36 + 3; el('line', { x1: mx - hw, y1: uy, x2: mx + hw, y2: uy, stroke: '#dcdcdc', 'stroke-width': 1.3, 'stroke-linecap': 'round' }, v.marks); }
+  });
 }

@@ -17,7 +17,9 @@ function circuitData() {
   const w = W_USER ? W : contentRight(), x = v => v === W ? w : v;   // (a length set by moving the bars is kept)
   return {
     app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}),
-    parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); } return a; }),
+    parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
+      if (p.t === 'sel') { while (a.length < 7) a.push(null); a.length = 7; a.push(selN(p), (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, (p.names || []).join('/'), p.pos || 0); }   // a selector switch: positions, closed-in mask, (no label), names, start
+      return a; }),
     wires: wires.map(q => [x(q.x1), q.y1, x(q.x2), q.y2]),
   };
 }
@@ -29,9 +31,16 @@ function readCircuit(d) {
   const num = v => { const n = Number(v); if (!Number.isFinite(n)) throw new Error('The circuit is damaged (a position is not a number).'); return snap(n); };
   const hex = c => /^[0-9a-f]{6}$/i.test(c || '') ? '#' + c.toUpperCase() : null;
   const ps = d.parts.slice(0, 200).map(a => {
-    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : 'btn', L = String(a[3] || (t === 'lamp' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' ? '' : 'A');
-    const p = P(t, num(a[1]), num(a[2]), { L, color: hex(a[6]) || (t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : BTN_COL[L] || '#FF0032') });
+    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sel' ? 'sel' : 'btn', L = String(a[3] || (t === 'lamp' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' ? '' : 'A');
+    const p = P(t, num(a[1]), num(a[2]), { L, color: hex(a[6]) || (t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : BTN_COL[L] || '#FF0032') });
     if (t === 'btn') { p.nc = !!a[4]; p.maint = a[5] !== 0; }
+    if (t === 'sel') {
+      p.n = Math.max(2, Math.min(4, Math.round(Number(a[7])) || 3)); const m = Math.round(Number(a[8])) || 0;
+      p.closedIn = [...Array(p.n).keys()].filter(i => m >> i & 1);
+      const nm = typeof a[10] === 'string' ? a[10].split('/').map(s => s.trim().toUpperCase().slice(0, 5)).slice(0, p.n) : [];
+      if (nm.some(Boolean)) p.names = nm;
+      p.pos = Math.max(0, Math.min(p.n - 1, Math.round(Number(a[11])) || 0));
+    }
     if (t === 'con') { p.nc = !!a[4]; delete p.color; if (a[7] === 1) p.inst = true; }   // (a timer's instantaneous contact)
     if (t === 'coil' && a[7] !== undefined) { const n = Math.round(Number(a[7])); if (n >= 1) { p.delay = Math.min(999, n); if (a[8] === 1) p.tof = true; } }   // a timer (a[8] = 1: off-delay)
     if ((t === 'btn' || t === 'coil') && typeof a[9] === 'string' && a[9].trim()) p.label = a[9].replace(/\s+/g, ' ').trim().slice(0, 8);   // (a label written on it)

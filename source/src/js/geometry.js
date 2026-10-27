@@ -48,8 +48,8 @@ function canvasH() {
   return Math.max(400, VIS_H1, snap(m + 120));
 }
 function overlaps(p, x, y, t) {
-  const hw = LOADT(t) ? 60 : 40;
+  const hw = WIDE(t) ? 60 : 40;
   return parts.some(q => q !== p && Math.abs(q.x - x) < hw + TERM(q) && Math.abs(q.y - y) < 80);
 }
-const clampPart = (x, y, t) => { const h = LOADT(t) ? 60 : 40; return [Math.min(W - h - 40, Math.max(h + 40, snap(x))), Math.max(60, snap(y))]; };   // (clear of the bars)
+const clampPart = (x, y, t) => { const h = WIDE(t) ? 60 : 40; return [Math.min(W - h - 40, Math.max(h + 40, snap(x))), Math.max(60, snap(y))]; };   // (clear of the bars)
 const clampX = x => Math.min(W, Math.max(0, snap(x))), clampY = y => Math.max(40, snap(y));

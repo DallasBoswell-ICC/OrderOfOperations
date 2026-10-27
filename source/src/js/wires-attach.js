@@ -101,7 +101,7 @@ function restore(st) { const o = JSON.parse(st); parts = o.parts; wires = o.wire
 // a wire running across a part's body (other than the run it sits in, along its own line): a part can't go there, as
 // the wire would be hidden under it and cut
 function wireInTheWay(p) {
-  const h = (LOADT(p.t) ? COIL : BOX) / 2, L = p.x - TERM(p), R = p.x + TERM(p);
+  const h = BODYH(p.t) / 2, L = p.x - TERM(p), R = p.x + TERM(p);
   return wires.some(w => w.x1 === w.x2
     ? w.x1 > L && w.x1 < R && Math.max(w.y1, w.y2) > p.y - h && Math.min(w.y1, w.y2) < p.y + h
     : w.y1 !== p.y && Math.abs(w.y1 - p.y) < h && Math.max(w.x1, w.x2) > L && Math.min(w.x1, w.x2) < R);

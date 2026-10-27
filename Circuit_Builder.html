@@ -145,6 +145,7 @@ body.locked .top-right, body.locked #toolbar, body.locked #editpanel { display: 
 /* a part's label */
 .labelbox { width: 7.2em; font: inherit; font-size: .9rem; color: var(--ink); background: #1f2022; border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
 .labelbox:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+.namesbox { width: 11em; }
 </style>
 </head>
 <body>
@@ -195,12 +196,14 @@ body.locked .top-right, body.locked #toolbar, body.locked #editpanel { display: 
          A new kind of component is one more group here. -->
     <div class="tgrp" id="part-groups">
       <div class="pgroup">
-        <button type="button" class="tool group" data-group="pb" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FF0032" stroke-width="1.6"/><rect x="8.5" y="6.5" width="13" height="13" rx="2.4" fill="#FF0032"/></svg>Pushbuttons<svg class="caret" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <div class="pmenu" role="menu" aria-label="Pushbuttons" hidden>
+        <button type="button" class="tool group" data-group="pb" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FF0032" stroke-width="1.6"/><rect x="8.5" y="6.5" width="13" height="13" rx="2.4" fill="#FF0032"/></svg>Switches<svg class="caret" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="pmenu" role="menu" aria-label="Switches" hidden>
           <button type="button" class="tool" data-part="btn-no" data-tip="Pushbutton, normally open. Drag it onto the panel, or onto a wire to put it in that wire.">
         <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FF0032" stroke-width="1.6"/><rect x="8.5" y="6.5" width="13" height="13" rx="2.4" fill="#FF0032"/></svg>Button NO</button>
           <button type="button" class="tool" data-part="btn-nc" data-tip="Pushbutton, normally closed">
         <svg viewBox="0 0 30 26"><path d="M15 1 L26 7.3 L26 18.7 L15 25 L4 18.7 L4 7.3 Z" fill="#222" stroke="#FF9600" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 6 L21.5 9.7 L21.5 16.3 L15 20 L8.5 16.3 L8.5 9.7 Z" fill="#FF9600"/></svg>Button NC</button>
+          <button type="button" class="tool" data-part="sel" data-tip="Selector switch: 2 to 4 positions, turned left or right. Put the same letter in several rungs for its contact blocks, each closed in the positions you choose.">
+        <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#0070C0" stroke-width="1.6"/><circle cx="15" cy="15" r="6.5" fill="#444"/><rect x="12.6" y="7.5" width="4.8" height="15" rx="2.4" fill="#0070C0" transform="rotate(45 15 15)"/></svg>Selector</button>
         </div>
       </div>
       <div class="pgroup">
@@ -247,6 +250,16 @@ body.locked .top-right, body.locked #toolbar, body.locked #editpanel { display: 
           <div class="seg" role="group" aria-label="Button action"><button type="button" data-maint="1" data-tip="Stays in when pressed; press again to release">Maintained</button><button type="button" data-maint="0" data-tip="Springs back when released">Momentary</button></div></div>
         <div class="tgroup"><span class="label">Colour</span><div class="swatches" id="p-colour" role="radiogroup" aria-label="Button colour"></div></div>
         <button type="button" class="tool plain" id="p-main" hidden data-tip="This drawing becomes the pushbutton itself, drawn as normal; the others with its letter are drawn as its extra contact blocks">Make main</button>
+      </div>
+      <div class="props" id="props-sel" hidden>
+        <div class="tgroup"><span class="label">Letter</span><select id="s-letter" aria-label="Selector switch letter"></select></div>
+        <div class="tgroup"><span class="label">Positions</span>
+          <div class="seg" role="group" aria-label="Number of positions"><button type="button" data-sn="2">2</button><button type="button" data-sn="3">3</button><button type="button" data-sn="4">4</button></div></div>
+        <div class="tgroup"><span class="label">Names</span><input type="text" id="s-names" class="labelbox namesbox" maxlength="27" autocomplete="off" aria-label="Position names" placeholder="1 / 2 / 3" data-tip="Names for the positions, such as HAND / OFF / AUTO (5 characters each at most). Leave it empty to number them."></div>
+        <div class="tgroup"><span class="label">Closed in</span><div class="seg" id="s-closed" role="group" aria-label="Positions this drawing is closed in"></div></div>
+        <div class="tgroup"><span class="label">Starts at</span><div class="seg" id="s-start" role="group" aria-label="Position the switch starts in"></div></div>
+        <div class="tgroup"><span class="label">Colour</span><div class="swatches" id="s-colour" role="radiogroup" aria-label="Selector switch colour"></div></div>
+        <button type="button" class="tool plain" id="s-main" hidden data-tip="This drawing becomes the switch itself, with the coloured handle; the others with its letter are drawn as its extra contact blocks">Make main</button>
       </div>
       <div class="props" id="props-con" hidden>
         <div class="tgroup"><span class="label">Worked by</span><select id="c-of" aria-label="The relay coil that works this contact"></select></div>
@@ -370,8 +383,13 @@ const OPEN_LIFT = 15, BLADE_GREY = '#a6a6a6';   // how far an open contact's bar
 // loads: things current passes through to L2 (a relay coil, or a pilot light). They are the same size and are
 // passed through the same way; only a coil works contacts
 const LOADT = t => t === 'coil' || t === 'lamp';
-const TERM = p => LOADT(p.t) ? 60 : 40;
-const isSw = p => p.t === 'btn' || p.t === 'con';   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre
+// a selector switch: a square body a little larger than a pushbutton's (room for its position numbers round the top)
+const SEL_BOX = 80;
+const WIDE = t => LOADT(t) || t === 'sel';                                // parts whose ends sit 60 either side of their centre
+const BODYH = t => LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
+const TERM = p => WIDE(p.t) ? 60 : 40;
+const isOp = p => p.t === 'btn' || p.t === 'sel';   // operators: pushbuttons and selector switches (they tint the current with their colour)
+const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel';   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre
 
 /* ---- js/model.js ---- */
 /* ---------------- the drawing ---------------- */
@@ -536,10 +554,10 @@ function canvasH() {
   return Math.max(400, VIS_H1, snap(m + 120));
 }
 function overlaps(p, x, y, t) {
-  const hw = LOADT(t) ? 60 : 40;
+  const hw = WIDE(t) ? 60 : 40;
   return parts.some(q => q !== p && Math.abs(q.x - x) < hw + TERM(q) && Math.abs(q.y - y) < 80);
 }
-const clampPart = (x, y, t) => { const h = LOADT(t) ? 60 : 40; return [Math.min(W - h - 40, Math.max(h + 40, snap(x))), Math.max(60, snap(y))]; };   // (clear of the bars)
+const clampPart = (x, y, t) => { const h = WIDE(t) ? 60 : 40; return [Math.min(W - h - 40, Math.max(h + 40, snap(x))), Math.max(60, snap(y))]; };   // (clear of the bars)
 const clampX = x => Math.min(W, Math.max(0, snap(x))), clampY = y => Math.max(40, snap(y));
 
 /* ---- js/network.js ---- */
@@ -660,7 +678,7 @@ let NET = null, simT = 0, speed = 1, mode = 'click', queue = [], seq = 0, evT = 
 let tl = [], coilOn = {}, down = {}, autoRel = {}, shortNow = false;
 // paint again even though the circuit has settled (something was pressed, or the panel was drawn afresh)
 let needPaint = true;
-const btnColour = L => (parts.find(p => p.t === 'btn' && p.L === L) || {}).color || '#888888';
+const btnColour = L => (parts.find(p => isOp(p) && p.L === L) || {}).color || '#888888';
 function schedule(t, fn) { queue.push({ t, s: seq++, fn }); if (t > busyUntil) busyUntil = t; }
 // an event that is only waited for (a timer timing out): nothing moves until it comes, so it does not keep the panel
 // being painted, or a clicked button held down, in the meantime
@@ -707,7 +725,18 @@ function setAt(n, t, c, lane) {
 const setCol = set => set.size === 0 ? OFF_WHITE : set.size === 1 ? flowOf(btnColour([...set][0])) : blend([...set].map(L => flowOf(btnColour(L))));
 const colourOf = r => r.rd < RAMP ? mixOk(r.from, setCol(r.set), r.rd / RAMP) : setCol(r.set);
 // a pushbutton passes current while pressed (NO) or until pressed (NC); a relay contact once its bar has landed on its posts
-const closed = p => p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.nc ? !down[p.L] : !!down[p.L];
+const closed = p => p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.t === 'sel' ? selClosed(p) : p.nc ? !down[p.L] : !!down[p.L];
+/* Selector switches. One switch can be drawn in several rungs (the same letter, as a pushbutton with several contact
+   blocks): turning any drawing turns them all. Each drawing is closed in the positions it is set to (p.closedIn).
+   The switch has 2 to 4 positions (selN), can name them (p.names, such as HAND / OFF / AUTO), and starts in p.pos.
+   SELPOS[L]: the position it is turned to while running; SELTURN[L]: its knob turning, { from, to, t0 }. */
+let SELPOS = {}, SELTURN = {};
+const SEL_TURN = 0.25;   // seconds the knob takes to turn one way or the other
+const mainSel = L => parts.find(q => q.t === 'sel' && q.L === L);
+const selN = p => Math.max(2, Math.min(4, p.n || 3));
+const selPos = L => { if (SELPOS[L] !== undefined) return SELPOS[L]; const m = mainSel(L); return m ? Math.min(selN(m) - 1, m.pos || 0) : 0; };
+const selClosed = p => (p.closedIn || []).includes(editing ? (p.pos || 0) : selPos(p.L));
+const SEL_ANG = { 2: [-45, 45], 3: [-45, 0, 45], 4: [-60, -20, 20, 60] };
 // relay contacts: { closing: moving toward closed, t0: when it started moving, shut: passing current }
 let CON = {};
 /* Timers. A timer is a relay coil with a delay (p.delay, whole seconds), on-delay or off-delay (p.tof).
@@ -883,7 +912,7 @@ function addLane(e, from) {
 }
 function startRun() {
   NET = network();
-  simT = 0; queue = []; seq = 0; busyUntil = 0; autoRel = {}; down = {}; coilOn = {}; TIMER = {};
+  simT = 0; queue = []; seq = 0; busyUntil = 0; autoRel = {}; down = {}; coilOn = {}; TIMER = {}; SELPOS = {}; SELTURN = {};
   FED_AT = {}; COMP = null; needPaint = true;
   CON = {}; for (const p of parts) if (p.t === 'con') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };   // every coil starts off
   tl = NET.nodes.map(() => [[-1e9, null]]);
@@ -1009,7 +1038,7 @@ function findReach() {
     let label = '', s = 0;   // (s: how long the current takes to get there, in seconds)
     for (const d of path) {
       s += d.e.kind === 'seg' ? d.delay : d.e.len / V;
-      if (d.e.kind === 'part' && d.e.part.t !== 'con') { if (d.e.part.t === 'btn') label = d.e.part.L; else if (LOADT(d.e.part.t)) label = 'ret'; continue; }
+      if (d.e.kind === 'part' && d.e.part.t !== 'con') { if (isOp(d.e.part)) label = d.e.part.L; else if (LOADT(d.e.part.t)) label = 'ret'; continue; }
       const m = REACH.get(d) || {}; m[label] = Math.max(m[label] || 0, s); REACH.set(d, m);
     }
   }
@@ -1021,7 +1050,7 @@ function allowNow() {
     let label = '';
     for (const d of path) {
       if (d.e.kind === 'part') {
-        if (isSw(d.e.part)) { if (!closed(d.e.part)) break; if (d.e.part.t === 'btn') label = d.e.part.L; else { if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label); } }   // a contact passes on the colour it is given
+        if (isSw(d.e.part)) { if (!closed(d.e.part)) break; if (isOp(d.e.part)) label = d.e.part.L; else { if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label); } }   // a contact passes on the colour it is given
         else if (coilOn[d.e.part.id]) label = 'ret';   // past a coil that is in: the return side, back to L2
         // (a coil that cannot pick up, because something past it is open, carries no current: the wire past it is as
         // live as the wire before it, so the colour waiting at the coil carries on up to whatever is open)
@@ -1051,7 +1080,7 @@ const active = d => d.e.kind === 'seg' ? ALLOW.has(d) : isSw(d.e.part) ? closed(
 function through(d, r) {
   if (!r) return null;
   if (d.e.kind === 'seg') return along(r, d.e.len);
-  if (d.e.part.t === 'btn') return { set: new Set([d.e.part.L]), from: colourOf(r), rd: 0 };
+  if (isOp(d.e.part)) return { set: new Set([d.e.part.L]), from: colourOf(r), rd: 0 };
   if (d.e.part.t === 'con') return along(r, d.e.len);   // a relay contact passes the current on as it is
   // through a coil that is in: the return side, fading to egg. Through a coil that cannot pick up: the colour
   // waiting at it, on up to whatever is open past it
@@ -1070,7 +1099,7 @@ function send(d, r, t, atOnce) {
   if (d.e.kind !== 'seg') {
     // the part's leads: the current flows in from the end it enters at, and out along the far lead just in time to
     // reach the far end when it arrives there
-    const p = d.e.part, outS = d.from === p._a ? 'B' : 'A', Ls = TERM(p) - (LOADT(p.t) ? COIL : BOX) / 2;
+    const p = d.e.part, outS = d.from === p._a ? 'B' : 'A', Ls = TERM(p) - BODYH(p.t) / 2;
     const tOut = t + (atOnce ? 0 : d.delay);
     leadEvent(p, outS, tOut - Ls / V, out, 'body');
     schedule(tOut, () => { d.arrived = out; reeval(d.to, evT); });
@@ -1179,6 +1208,15 @@ function updateCoils(t) {
 }
 function checkShort() { const f = components(NET, conducts); shortNow = f(NET.L1) === f(NET.L2); }
 const allowKey = A => A ? [...A].sort().join() : '';
+// turn selector switch L to position pos (every drawing of it turns together; its knob turns over a moment)
+function turn(L, pos) {
+  const m = mainSel(L); if (!m) return;
+  const from = selPos(L); pos = Math.max(0, Math.min(selN(m) - 1, pos));
+  if (pos === from) return;
+  SELTURN[L] = { from, to: pos, t0: simT }; SELPOS[L] = pos;
+  needPaint = true; if (simT + SEL_TURN > busyUntil) busyUntil = simT + SEL_TURN;
+  switched(parts.filter(p => p.t === 'sel' && p.L === L), simT);
+}
 function press(L, v) {
   if (!!down[L] === v) return;
   down[L] = v; needPaint = true;
@@ -1249,10 +1287,11 @@ const DEFS = `
   <linearGradient id="gBar" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8a7a4a"/><stop offset=".45" stop-color="#d9c27a"/><stop offset="1" stop-color="#7a6a3c"/></linearGradient>
   <filter id="fGlow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="7"/></filter>
   <linearGradient id="gTerm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d4d4d4"/><stop offset=".5" stop-color="#a3a3a3"/><stop offset="1" stop-color="#6e6e6e"/></linearGradient>
+  <radialGradient id="gKnob" cx=".4" cy=".35" r=".75"><stop offset="0" stop-color="#5a5a5a"/><stop offset="1" stop-color="#262626"/></radialGradient>
   <radialGradient id="gStud" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#e8e8e8"/><stop offset=".6" stop-color="#9a9a9a"/><stop offset="1" stop-color="#5a5a5a"/></radialGradient>`;
 const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
-const captionOf = p => p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -1290,7 +1329,7 @@ function lampRays(x, y, R, g) {
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // a part, in the same style as the Order of Operations simulators
 function drawPart(p, g, x, y, chan) {
-  const v = {}, T = TERM(p), half = LOADT(p.t) ? COIL / 2 : BOX / 2, capH = p.t === 'con' ? CON_H / 2 + 1 : p.t === 'lamp' ? half + 10 : half;
+  const v = {}, T = TERM(p), half = BODYH(p.t) / 2, capH = p.t === 'con' ? CON_H / 2 + 1 : p.t === 'lamp' ? half + 10 : half;
   el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
   // the short leads between the part's ends and its body: each drawn in two pieces, so the current can flow along
   // them (the new colour, and what was there before it)
@@ -1370,6 +1409,8 @@ function drawPart(p, g, x, y, chan) {
       el('path', { d: P([[bx - gB * .62, by - gH * .55], [bx + gB * .62, by - gH * .55], [bx + gB * .22, by - gH * .1], [bx - gB * .22, by - gH * .1]]), fill: '#d8d8d8' }, g);
       el('path', { d: P([[bx - gB * .8, by + gH * .86], [bx + gB * .8, by + gH * .86], [bx + gB * .35, by + gH * .45], [bx - gB * .35, by + gH * .45]]), fill: '#d8d8d8' }, g);
     }
+  } else if (p.t === 'sel') {
+    drawSelector(p, g, x, y, v);
   } else if (p.t === 'lamp') {
     // a pilot light: a lens with a filament, that glows and sends out rays when lit
     const col = lampColour(p); v.col = col;
@@ -1431,6 +1472,40 @@ function setReadout(v, p, n, on) {
   el('rect', { x: x0 + .5, y: y0 + .5, width: w - 1, height: h - 1, rx: 3, fill: 'none', stroke: 'rgba(0,0,0,.9)', 'stroke-width': 1 }, v.win);
   const t = el('text', { x: v.x, y: y0 + 9.6, 'text-anchor': 'middle', 'font-weight': 700, 'font-size': 9.5, fill: on ? p.color : mixOk(p.color, '#262626', .55), style: 'font-variant-numeric:tabular-nums' }, v.win); t.textContent = txt;
   el('path', { d: `M ${x0 + 3} ${y0 + 2.2} H ${x0 + w - 3}`, stroke: 'rgba(255,255,255,.22)', 'stroke-width': 1, 'stroke-linecap': 'round' }, v.win);
+}
+
+/* A selector switch (design A): a square well, a round knob with a bar handle across it that turns to point at the
+   position it is in, and the positions' numbers (or names) round the top: in the switch's colour where this drawing
+   is closed, grey where it is open, the one it is turned to underlined. The first drawing of a switch has a coloured
+   handle; the others (its other contact blocks) a dark handle with a coloured rim. */
+const SEL_KNOB = 12, SEL_R = 33;   // the knob sits a little below the middle; the numbers round it at this radius
+function drawSelector(p, g, x, y, v) {
+  const S = SEL_BOX, kx = x, ky = y + SEL_KNOB;
+  v.sec = mainSel(p.L) !== p && parts.includes(p);
+  el('rect', { x: x - S / 2, y: y - S / 2, width: S, height: S, rx: S * .1667, fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
+  v.marks = el('g', {}, g); v.kx = kx; v.ky = ky;
+  el('circle', { cx: kx, cy: ky, r: 15, fill: 'url(#gKnob)', stroke: '#1d2733', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, g);
+  v.handle = el('g', {}, g);
+  el('rect', { x: kx - 5, y: ky - 16, width: 10, height: 32, rx: 5, fill: v.sec ? mixOk(p.color, '#262626', .72) : p.color, stroke: v.sec ? p.color : '#1d2733', 'stroke-width': v.sec ? 1.6 : 1.1 }, v.handle);
+  el('rect', { x: kx - 5, y: ky - 16, width: 10, height: 32, rx: 5, fill: 'url(#gGloss)' }, v.handle);
+  el('line', { x1: kx, y1: ky - 12.5, x2: kx, y2: ky - 6, stroke: '#fff', 'stroke-width': 2, 'stroke-linecap': 'round', opacity: .85 }, v.handle);
+  setSelector(v, p, editing ? (p.pos || 0) : selPos(p.L), null);
+}
+// the handle's angle (deg) and the numbers, for position pos (or partway between, while it turns)
+function setSelector(v, p, pos, ang) {
+  const A = SEL_ANG[selN(p)], a = ang === null ? A[pos] : ang;
+  v.handle.setAttribute('transform', `rotate(${a.toFixed(2)} ${v.kx} ${v.ky})`);
+  const key = pos + '|' + (p.closedIn || []).join() + '|' + (p.names || []).join();
+  if (v.marksKey === key) return; v.marksKey = key;
+  v.marks.innerHTML = '';
+  A.forEach((d, i) => {
+    const t = d * Math.PI / 180, named = p.names && p.names[i], fs = named ? 7 : 11, w = named ? named.length * fs * .66 : fs * .62;
+    let mx = v.kx + SEL_R * Math.sin(t); const my = v.ky - SEL_R * Math.cos(t), on = (p.closedIn || []).includes(i);
+    const lim = SEL_BOX / 2 - 5 - w / 2; mx = Math.max(v.kx - lim, Math.min(v.kx + lim, mx));   // (names kept clear of the border)
+    const txt = el('text', { x: mx, y: my + fs * .36, 'text-anchor': 'middle', 'font-weight': 800, 'font-size': fs, fill: on ? p.color : '#626262' }, v.marks);
+    txt.textContent = named || String(i + 1);
+    if (i === pos) { const hw = named ? w / 2 : 3.6, uy = my + fs * .36 + 3; el('line', { x1: mx - hw, y1: uy, x2: mx + hw, y2: uy, stroke: '#dcdcdc', 'stroke-width': 1.3, 'stroke-linecap': 'round' }, v.marks); }
+  });
 }
 
 /* ---- js/editor-state.js ---- */
@@ -1536,12 +1611,13 @@ function draw() {
       // the other drawings of a selected button (the same button): a fainter outline, so they show as one
       if (!selHasP(p.id) && p.t === 'btn' && sel && sel.parts.size === 1 && parts.some(q => q !== p && q.t === 'btn' && q.L === p.L && selHasP(q.id)))
         el('rect', { x: p.x - TERM(p) - 12, y: p.y - BOX / 2 - 12, width: 2 * TERM(p) + 24, height: BOX + 44, rx: 12, fill: 'none', stroke: '#ffc000', 'stroke-opacity': .5, 'stroke-width': 1.6, 'stroke-dasharray': '3 5', 'pointer-events': 'none' }, g);
-      if (selHasP(p.id)) el('rect', { x: p.x - TERM(p) - 12, y: p.y - (LOADT(p.t) ? COIL : BOX) / 2 - 12, width: 2 * TERM(p) + 24, height: (LOADT(p.t) ? COIL : BOX) + 44, rx: 12, fill: 'rgba(255,192,0,.07)', stroke: '#ffc000', 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'pointer-events': 'none' }, g);
+      if (selHasP(p.id)) el('rect', { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 12, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44, rx: 12, fill: 'rgba(255,192,0,.07)', stroke: '#ffc000', 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'pointer-events': 'none' }, g);
       if (issues.has(p.id)) {
-        const t = el('text', { x: p.x, y: p.y - (LOADT(p.t) ? COIL : BOX) / 2 - 10, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: '#ff8a7a', 'pointer-events': 'none', stroke: '#404040', 'stroke-width': 4, 'paint-order': 'stroke' }, g);
+        const t = el('text', { x: p.x, y: p.y - BODYH(p.t) / 2 - 10, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: '#ff8a7a', 'pointer-events': 'none', stroke: '#404040', 'stroke-width': 4, 'paint-order': 'stroke' }, g);
         t.textContent = '⚠ ' + issues.get(p.id);
       }
     } else if (p.t === 'btn') bindButton(g, p);
+    else if (p.t === 'sel') bindSelector(g, p);
   }
   if (editing) {
     const f = document.getElementById('fault');
@@ -1639,6 +1715,13 @@ function paint() {
       v.bladeShape.setAttribute('fill', s.shut ? v.col : BLADE_GREY);
       if (v.arrow) { v.arrow.setAttribute('fill', s.shut ? v.col : BLADE_GREY); v.arrow.setAttribute('stroke', s.shut ? v.col : BLADE_GREY); }
       v.posts.setAttribute('fill', s.shut ? v.col : GREY);
+    } else if (p.t === 'sel') {
+      const T = SELTURN[p.L], pos = selPos(p.L), A = SEL_ANG[selN(p)];
+      let ang = A[pos];
+      if (T) { const f = clamp01((simT - T.t0) / SEL_TURN), e = f * f * (3 - 2 * f); ang = A[T.from] + (A[T.to] - A[T.from]) * e; }
+      k = pos + ':' + ang.toFixed(2);
+      if (k === v.k) continue; v.k = k;
+      setSelector(v, p, pos, ang);
     } else if (p.t === 'lamp') {
       const lit = litOf(p); k = lit.toFixed(3);
       if (k === v.k) continue; v.k = k;
@@ -1695,24 +1778,36 @@ function paintTimer(p, v, lit) {
 }
 function paintTimers() { for (const p of parts) if (isTimer(p)) { const v = view.parts.get(p.id); if (v && v.timer) setReadout(v, p, timerLeft(p), timerLit(p)); } }
 
+// a selector switch while running: press on its left half to turn it one position left, its right half to turn it
+// right (or the arrow keys when it has the focus)
+function bindSelector(g, p) {
+  g.setAttribute('class', 'dev'); g.setAttribute('tabindex', '0'); g.setAttribute('role', 'slider'); g.setAttribute('aria-label', captionOf(p) + ': turn left or right');
+  g.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); const q = pt(e); turn(p.L, selPos(p.L) + (q.x < p.x ? -1 : 1)); });
+  g.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); turn(p.L, selPos(p.L) + (e.key === 'ArrowLeft' ? -1 : 1)); } });
+}
+
 /* ---- js/parts-edit.js ---- */
 /* =====================================================================
    building
    ===================================================================== */
 const pt = e => { const q = svg.createSVGPoint(); q.x = e.clientX; q.y = e.clientY; const m = svg.getScreenCTM(); return m ? q.matrixTransform(m.inverse()) : { x: -1e9, y: -1e9 }; };
 const btnLetters = () => new Set(parts.filter(p => p.t === 'btn').map(p => p.L));
+const selLetters = () => new Set(parts.filter(p => p.t === 'sel').map(p => p.L));
+const opLetters = () => new Set([...btnLetters(), ...selLetters()]);   // letters taken by pushbuttons and selector switches
 const coilLetters = () => new Set(parts.filter(p => p.t === 'coil').map(p => p.L));
 function newPart(kind, x, y) {
-  if (kind === 'coil') { const u = new Set([...coilLetters(), ...btnLetters()]); const L = [...'XYZW' + ALL].find(c => !u.has(c)); return P('coil', x, y, { L, color: COIL_COL[L] || '#FFDC00' }); }
-  if (kind.startsWith('timer')) { const u = new Set([...coilLetters(), ...btnLetters()]); const L = [...'TUVRS' + ALL].find(c => !u.has(c)); const p = P('coil', x, y, { L, color: COIL_COL[L] || '#FFDC00', delay: 5 }); if (kind === 'timer-off') p.tof = true; return p; }   // a timer (on- or off-delay), set to 5 s
+  if (kind === 'coil') { const u = new Set([...coilLetters(), ...opLetters()]); const L = [...'XYZW' + ALL].find(c => !u.has(c)); return P('coil', x, y, { L, color: COIL_COL[L] || '#FFDC00' }); }
+  if (kind.startsWith('timer')) { const u = new Set([...coilLetters(), ...opLetters()]); const L = [...'TUVRS' + ALL].find(c => !u.has(c)); const p = P('coil', x, y, { L, color: COIL_COL[L] || '#FFDC00', delay: 5 }); if (kind === 'timer-off') p.tof = true; return p; }   // a timer (on- or off-delay), set to 5 s
   if (kind === 'lamp') return P('lamp', x, y, { L: '', color: '#00B050' });   // a light of its own (build it into a button in its settings)
   if (kind.startsWith('con')) { const cs = [...coilLetters()]; return P('con', x, y, { L: cs[0] || 'X', nc: kind === 'con-nc' }); }   // worked by the first coil (change it in its settings)
-  const u = new Set([...coilLetters(), ...btnLetters()]); const L = [...'ABCDEFGH' + ALL].find(c => !u.has(c));
+  const u = new Set([...coilLetters(), ...opLetters()]);
+  if (kind === 'sel') { const L = [...'SJKMN' + ALL].find(c => !u.has(c)); return P('sel', x, y, { L, n: 3, closedIn: [0], pos: 1, color: '#0070C0' }); }   // a 3-position selector switch, turned to the middle; this drawing is closed in position 1
+  const L = [...'ABCDEFGH' + ALL].find(c => !u.has(c));
   return P('btn', x, y, { L, nc: kind === 'btn-nc', maint: true, color: BTN_COL[L] || '#FF0032' });
 }
-const kindOf = k => k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k.startsWith('con') ? 'con' : 'btn';
+const kindOf = k => k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k.startsWith('con') ? 'con' : k === 'sel' ? 'sel' : 'btn';
 // a horizontal wire running right through where a part's ends will be: the part goes into it
-function spliceTarget(x, y, t) { const h = LOADT(t) ? 60 : 40; return wires.find(w => w.y1 === y && w.y2 === y && Math.min(w.x1, w.x2) <= x - h && Math.max(w.x1, w.x2) >= x + h); }
+function spliceTarget(x, y, t) { const h = WIDE(t) ? 60 : 40; return wires.find(w => w.y1 === y && w.y2 === y && Math.min(w.x1, w.x2) <= x - h && Math.max(w.x1, w.x2) >= x + h); }
 function placePart(kind, x, y) {
   [x, y] = clampPart(x, y, kindOf(kind));
   if (overlaps(null, x, y, kindOf(kind))) { say('There is already a part there.'); return; }
@@ -1826,7 +1921,7 @@ function restore(st) { const o = JSON.parse(st); parts = o.parts; wires = o.wire
 // a wire running across a part's body (other than the run it sits in, along its own line): a part can't go there, as
 // the wire would be hidden under it and cut
 function wireInTheWay(p) {
-  const h = (LOADT(p.t) ? COIL : BOX) / 2, L = p.x - TERM(p), R = p.x + TERM(p);
+  const h = BODYH(p.t) / 2, L = p.x - TERM(p), R = p.x + TERM(p);
   return wires.some(w => w.x1 === w.x2
     ? w.x1 > L && w.x1 < R && Math.max(w.y1, w.y2) > p.y - h && Math.min(w.y1, w.y2) < p.y + h
     : w.y1 !== p.y && Math.abs(w.y1 - p.y) < h && Math.max(w.x1, w.x2) > L && Math.min(w.x1, w.x2) < R);
@@ -1868,7 +1963,7 @@ function addWire(segs) {
   normalize(); sel = null; say(''); draw();
 }
 function hitWire(p) { return wires.find(w => p.x >= Math.min(w.x1, w.x2) - 10 && p.x <= Math.max(w.x1, w.x2) + 10 && p.y >= Math.min(w.y1, w.y2) - 10 && p.y <= Math.max(w.y1, w.y2) + 10); }
-function hitPart(p) { return parts.find(q => Math.abs(p.x - q.x) < TERM(q) - 8 && Math.abs(p.y - q.y) < (LOADT(q.t) ? COIL : BOX) / 2 + 6); }
+function hitPart(p) { return parts.find(q => Math.abs(p.x - q.x) < TERM(q) - 8 && Math.abs(p.y - q.y) < BODYH(q.t) / 2 + 6); }
 
 /* ---- js/pointer.js ---- */
 // the wire end under the pointer (if several wires end there, the newest one)
@@ -1955,7 +2050,7 @@ function groupDrag(e, p0) {
     for (let pass = 0; pass < 2; pass++) for (const q of P0) { const [cx, cy] = clampPart(q.x + dx, q.y + dy, q.t); dx = cx - q.x; dy = cy - q.y; }
     for (const y of T0) if (y + dy < 40) dy = 40 - y;   // (terminals stay on the panel too)
     const moving = parts.filter(q => pIds.has(q.id));
-    if (P0.some(q => parts.some(o => !pIds.has(o.id) && Math.abs(o.x - (q.x + dx)) < (LOADT(q.t) ? 60 : 40) + TERM(o) && Math.abs(o.y - (q.y + dy)) < 80))) { say('There is already a part there.'); return []; }
+    if (P0.some(q => parts.some(o => !pIds.has(o.id) && Math.abs(o.x - (q.x + dx)) < (WIDE(q.t) ? 60 : 40) + TERM(o) && Math.abs(o.y - (q.y + dy)) < 80))) { say('There is already a part there.'); return []; }
     say('');
     const m = movedGroup(pIds, wIds, dx, dy, tIds); wires = m.wires;
     for (const q of moving) { const o = P0.find(z => z.id === q.id); q.x = o.x + dx; q.y = o.y + dy; }
@@ -2148,7 +2243,7 @@ document.querySelectorAll('.tool[data-part]').forEach(b => {
     if (e.button !== 0 || !editing) return;
     e.preventDefault();
     const sx = e.clientX, sy = e.clientY; let moved = false, ghost = null;
-    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('timer') ? { t: 'coil', L: '?', color: '#FFDC00', delay: 5, tof: kind === 'timer-off' } : kind === 'lamp' ? { t: 'lamp', L: '', color: '#00B050' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind === 'con-nc' } : { t: 'btn', L: '?', nc: kind === 'btn-nc', color: '#9a9a9a' };
+    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('timer') ? { t: 'coil', L: '?', color: '#FFDC00', delay: 5, tof: kind === 'timer-off' } : kind === 'lamp' ? { t: 'lamp', L: '', color: '#00B050' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind === 'con-nc' } : kind === 'sel' ? { t: 'sel', L: '?', n: 3, closedIn: [0], pos: 1, color: '#0070C0' } : { t: 'btn', L: '?', nc: kind === 'btn-nc', color: '#9a9a9a' };
     const mv = ev => {
       if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 5) { moved = true; closeMenus(); ghost = document.createElement('div'); ghost.className = 'ghost'; ghost.innerHTML = b.innerHTML; document.body.append(ghost); document.body.classList.add('dragging'); }
       if (!moved) return;
@@ -2156,7 +2251,7 @@ document.querySelectorAll('.tool[data-part]').forEach(b => {
       const r = pt(ev), box = svg.getBoundingClientRect();
       if (ev.clientY >= box.top && ev.clientY <= box.bottom && ev.clientX >= box.left && ev.clientX <= box.right) {
         const [x, y] = clampPart(r.x, r.y, sample.t);
-        const T = LOADT(sample.t) ? 60 : 40, hits = [[x - T, y], [x + T, y]].filter(([a, c]) => connects(pointInfo(a, c)));
+        const T = WIDE(sample.t) ? 60 : 40, hits = [[x - T, y], [x + T, y]].filter(([a, c]) => connects(pointInfo(a, c)));
         preview = { part: { p: sample, x, y, bad: overlaps(null, x, y, sample.t) }, splice: !!spliceTarget(x, y, sample.t), hits }; drawPreview();
       } else { preview = null; view.overlay.innerHTML = ''; }
     };
@@ -2227,9 +2322,10 @@ function pasteClip() {
   if (!clip || !(clip.parts.length + clip.wires.length)) { say('Copy something first.'); return; }
   snapshot();
   // new letters: each button letter and coil letter in the copy gets an unused one (the same for every drawing of it)
-  const used = new Set([...btnLetters(), ...coilLetters()]), map = {};
+  const used = new Set([...opLetters(), ...coilLetters()]), map = {};
   const fresh = pref => { const L = [...pref + ALL].find(c => !used.has(c)); used.add(L); return L; };
   for (const p of clip.parts) if (p.t === 'btn' && !map['b' + p.L]) map['b' + p.L] = fresh('ABCDEFGH');
+  for (const p of clip.parts) if (p.t === 'sel' && !map['s' + p.L]) map['s' + p.L] = fresh('SJKMN');
   for (const p of clip.parts) if (p.t === 'coil' && !map['c' + p.L]) map['c' + p.L] = fresh('XYZW');
   // below everything on the panel, lined up with where it came from
   const ys = [...clip.parts.map(p => p.y), ...clip.wires.flatMap(w => [w.y1, w.y2])];
@@ -2240,6 +2336,7 @@ function pasteClip() {
     const q = { ...p, id: nextId++, y: p.y + dy };
     if (p.t === 'btn') q.L = map['b' + p.L];
     if (p.t === 'coil') q.L = map['c' + p.L];
+    if (p.t === 'sel') { q.L = map['s' + p.L]; q.closedIn = [...(p.closedIn || [])]; if (p.names) q.names = [...p.names]; }
     if (p.t === 'con' && map['c' + p.L]) q.L = map['c' + p.L];
     if (p.t === 'lamp' && p.L && map['b' + p.L]) q.L = map['b' + p.L];
     return q;
@@ -2282,12 +2379,13 @@ function renderProps() {
   const p = selPart();
   const nP = sel ? sel.parts.size : 0, nW = sel ? sel.wires.size : 0, nT = sel && sel.terms ? sel.terms.size : 0;
   document.getElementById('selname').textContent = !sel ? 'Nothing'
-    : p ? captionOf(p) + (p.t === 'btn' && blocksOf(p.L).length > 1 ? (mainBtn(p.L) === p ? ` · the main one of ${blocksOf(p.L).length}` : ` · an extra contact block`) + ' (pressing one presses all)' : '')
+    : p ? captionOf(p) + (p.t === 'sel' && selsOf(p.L).length > 1 ? (mainSel(p.L) === p ? ` · the main one of ${selsOf(p.L).length}` : ` · an extra contact block`) + ' (turning one turns all)' : '') + (p.t === 'btn' && blocksOf(p.L).length > 1 ? (mainBtn(p.L) === p ? ` · the main one of ${blocksOf(p.L).length}` : ` · an extra contact block`) + ' (pressing one presses all)' : '')
     : nP + nW + nT === 1 ? (nW ? 'A wire' : 'A terminal on ' + [...sel.terms][0].split(':')[0])
     : [nP ? `${nP} part${nP > 1 ? 's' : ''}` : '', nW ? `${nW} wire${nW > 1 ? 's' : ''}` : '', nT ? `${nT} terminal${nT > 1 ? 's' : ''}` : ''].filter(Boolean).join(', ').replace(/, ([^,]*)$/, ' and $1') + ' (drag any of them to move them together' + (nT ? '; terminals slide along their bar' : '') + ', Delete to remove)';
   document.getElementById('del').disabled = !sel;
   if (typeof updateClipButtons === 'function') updateClipButtons();
   document.getElementById('p-main').hidden = !(p && p.t === 'btn' && mainBtn(p.L) !== p);
+  document.getElementById('s-main').hidden = !(p && p.t === 'sel' && mainSel(p.L) !== p);
   document.getElementById('undo').disabled = !history.length;
   document.getElementById('props-btn').hidden = !(p && p.t === 'btn');
   document.getElementById('props-coil').hidden = !(p && p.t === 'coil');
@@ -2302,6 +2400,8 @@ function renderProps() {
     document.getElementById('l-colour-note').hidden = !p.L;
     if (!p.L) swatches(document.getElementById('l-colour'), p.color, hex => { snapshot(); p.color = hex; draw(); });
   }
+  document.getElementById('props-sel').hidden = !(p && p.t === 'sel');
+  if (p && p.t === 'sel') renderSelProps(p);
   document.getElementById('props-con').hidden = !(p && p.t === 'con');
   if (p && p.t === 'con') {
     const cs = document.getElementById('c-of'), coils = [...coilLetters()];
@@ -2313,7 +2413,7 @@ function renderProps() {
     document.querySelectorAll('[data-cinst]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.cinst === +!!p.inst)));
   }
   if (p && p.t === 'btn') {
-    const ls = document.getElementById('p-letter'), others = new Set(parts.filter(q => q.t === 'btn' && q !== p).map(q => q.L)), coils = coilLetters();
+    const ls = document.getElementById('p-letter'), others = new Set(parts.filter(q => q.t === 'btn' && q !== p).map(q => q.L)), coils = new Set([...coilLetters(), ...selLetters()]);
     ls.innerHTML = '';
     for (const c of ALL) if (!coils.has(c)) ls.add(new Option(others.has(c) && c !== p.L ? `${c} (same button as the other ${c})` : c, c, false, c === p.L));
     document.querySelectorAll('[data-nc]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.nc === +p.nc)));
@@ -2322,7 +2422,7 @@ function renderProps() {
     showLabel(document.getElementById('p-label'), p);
   }
   if (p && p.t === 'coil') {
-    const os = document.getElementById('o-letter'), used = new Set([...btnLetters(), ...coilLetters()]);
+    const os = document.getElementById('o-letter'), used = new Set([...opLetters(), ...coilLetters()]);
     os.innerHTML = '';
     for (const c of ALL) if (c === p.L || !used.has(c)) os.add(new Option(c, c, false, c === p.L));
     swatches(document.getElementById('o-colour'), p.color, hex => { snapshot(); p.color = hex; draw(); });
@@ -2397,6 +2497,69 @@ document.getElementById('preset').addEventListener('change', e => {
   if (editing) draw(); else { NET = network(); draw(); startRun(); afterRunStart(); }
 });
 
+/* ---- a selector switch's settings. The switch itself (its positions, their names, where it starts, its colour) is
+   shared by every drawing with its letter; what each drawing has of its own is the positions it is closed in. */
+const selsOf = L => parts.filter(p => p.t === 'sel' && p.L === L);
+const SEL_NAME_MAX = 5;
+function renderSelProps(p) {
+  const ls = document.getElementById('s-letter'), mine = selsOf(p.L).length, others = new Set(parts.filter(q => q.t === 'sel' && q !== p).map(q => q.L)), taken = new Set([...coilLetters(), ...btnLetters()]);
+  ls.innerHTML = '';
+  for (const c of ALL) if (!taken.has(c)) ls.add(new Option(others.has(c) && c !== p.L ? `${c} (same switch as the other ${c})` : c, c, false, c === p.L));
+  const n = selN(p);
+  document.querySelectorAll('[data-sn]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.sn === n)));
+  const names = p.names || [], tag = i => names[i] || String(i + 1);
+  const ci = document.getElementById('s-closed'), st = document.getElementById('s-start');
+  ci.innerHTML = ''; st.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const a = document.createElement('button'); a.type = 'button'; a.textContent = tag(i); a.dataset.sci = i;
+    a.setAttribute('aria-pressed', String((p.closedIn || []).includes(i))); a.dataset.tip = `Closed in position ${i + 1}` + (names[i] ? ` (${names[i]})` : '') + ': press to switch it on or off'; ci.append(a);
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = tag(i); b.dataset.spos = i;
+    b.setAttribute('aria-pressed', String((p.pos || 0) === i)); b.dataset.tip = 'The switch starts in this position'; st.append(b);
+  }
+  const nb = document.getElementById('s-names');
+  if (document.activeElement !== nb || nb.dataset.pid !== String(p.id)) { nb.dataset.pid = p.id; nb.dataset.snapped = ''; nb.value = names.slice(0, n).join(' / '); }
+  swatches(document.getElementById('s-colour'), p.color, hex => { snapshot(); selsOf(p.L).forEach(k => k.color = hex); draw(); });
+}
+const selShared = (p, f) => { snapshot(); selsOf(p.L).forEach(f); draw(); };
+document.querySelectorAll('[data-sn]').forEach(x => x.addEventListener('click', () => {
+  const p = selPart(); if (!p || p.t !== 'sel') return; const n = +x.dataset.sn;
+  selShared(p, k => { k.n = n; k.pos = Math.min(n - 1, k.pos || 0); k.closedIn = (k.closedIn || []).filter(i => i < n); if (k.names) { k.names = k.names.slice(0, n); if (!k.names.some(Boolean)) delete k.names; } });
+}));
+document.getElementById('s-closed').addEventListener('click', e => {
+  const b = e.target.closest('[data-sci]'), p = selPart(); if (!b || !p || p.t !== 'sel') return;
+  const i = +b.dataset.sci; snapshot();
+  const c = new Set(p.closedIn || []); if (c.has(i)) c.delete(i); else c.add(i);
+  p.closedIn = [...c].sort((a, b) => a - b); draw();
+});
+document.getElementById('s-start').addEventListener('click', e => {
+  const b = e.target.closest('[data-spos]'), p = selPart(); if (!b || !p || p.t !== 'sel') return;
+  selShared(p, k => k.pos = +b.dataset.spos);
+});
+// names for the positions, such as HAND / OFF / AUTO (5 characters each at most; empty for numbers)
+document.getElementById('s-names').addEventListener('input', e => {
+  const box = e.target, p = selPart(); if (!p || p.t !== 'sel' || box.dataset.pid !== String(p.id)) return;
+  if (!box.dataset.snapped) { snapshot(); box.dataset.snapped = '1'; }
+  const v = box.value.split(/[\/,]+|\s+/).map(s => s.trim().toUpperCase().slice(0, SEL_NAME_MAX)).filter(Boolean).slice(0, selN(p));
+  selsOf(p.L).forEach(k => { if (v.length) k.names = v; else delete k.names; });
+  draw();
+});
+document.getElementById('s-letter').addEventListener('change', e => {
+  const p = selPart(); if (!p) return; snapshot();
+  const mate = selsOf(e.target.value).find(q => q !== p);
+  p.L = e.target.value;
+  if (mate) {   // it joins that switch: takes its positions and colour, and is closed in a position none of its other drawings use
+    p.n = selN(mate); p.pos = mate.pos || 0; p.color = mate.color; if (mate.names) p.names = [...mate.names]; else delete p.names;
+    const used = new Set(selsOf(p.L).filter(q => q !== p).flatMap(q => q.closedIn || []));
+    const free = [...Array(p.n).keys()].find(i => !used.has(i)); p.closedIn = [free === undefined ? 0 : free];
+    say(`This is now another contact block of the ${p.L} switch: turning either turns both.`);
+  } else say('');
+  draw();
+});
+document.getElementById('s-main').addEventListener('click', () => {
+  const p = selPart(); if (!p) return; snapshot();
+  const m = mainSel(p.L); parts = parts.filter(q => q !== p); parts.splice(parts.indexOf(m), 0, p); draw();
+});
+
 /* ---- js/storage.js ---- */
 /* ---------------- saving and opening circuits ----------------
    A circuit is saved as a small JSON file, or as a short text code (the same JSON, compressed) that can be pasted
@@ -2417,7 +2580,9 @@ function circuitData() {
   const w = W_USER ? W : contentRight(), x = v => v === W ? w : v;   // (a length set by moving the bars is kept)
   return {
     app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}),
-    parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); } return a; }),
+    parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
+      if (p.t === 'sel') { while (a.length < 7) a.push(null); a.length = 7; a.push(selN(p), (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, (p.names || []).join('/'), p.pos || 0); }   // a selector switch: positions, closed-in mask, (no label), names, start
+      return a; }),
     wires: wires.map(q => [x(q.x1), q.y1, x(q.x2), q.y2]),
   };
 }
@@ -2429,9 +2594,16 @@ function readCircuit(d) {
   const num = v => { const n = Number(v); if (!Number.isFinite(n)) throw new Error('The circuit is damaged (a position is not a number).'); return snap(n); };
   const hex = c => /^[0-9a-f]{6}$/i.test(c || '') ? '#' + c.toUpperCase() : null;
   const ps = d.parts.slice(0, 200).map(a => {
-    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : 'btn', L = String(a[3] || (t === 'lamp' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' ? '' : 'A');
-    const p = P(t, num(a[1]), num(a[2]), { L, color: hex(a[6]) || (t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : BTN_COL[L] || '#FF0032') });
+    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sel' ? 'sel' : 'btn', L = String(a[3] || (t === 'lamp' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' ? '' : 'A');
+    const p = P(t, num(a[1]), num(a[2]), { L, color: hex(a[6]) || (t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : BTN_COL[L] || '#FF0032') });
     if (t === 'btn') { p.nc = !!a[4]; p.maint = a[5] !== 0; }
+    if (t === 'sel') {
+      p.n = Math.max(2, Math.min(4, Math.round(Number(a[7])) || 3)); const m = Math.round(Number(a[8])) || 0;
+      p.closedIn = [...Array(p.n).keys()].filter(i => m >> i & 1);
+      const nm = typeof a[10] === 'string' ? a[10].split('/').map(s => s.trim().toUpperCase().slice(0, 5)).slice(0, p.n) : [];
+      if (nm.some(Boolean)) p.names = nm;
+      p.pos = Math.max(0, Math.min(p.n - 1, Math.round(Number(a[11])) || 0));
+    }
     if (t === 'con') { p.nc = !!a[4]; delete p.color; if (a[7] === 1) p.inst = true; }   // (a timer's instantaneous contact)
     if (t === 'coil' && a[7] !== undefined) { const n = Math.round(Number(a[7])); if (n >= 1) { p.delay = Math.min(999, n); if (a[8] === 1) p.tof = true; } }   // a timer (a[8] = 1: off-delay)
     if ((t === 'btn' || t === 'coil') && typeof a[9] === 'string' && a[9].trim()) p.label = a[9].replace(/\s+/g, ' ').trim().slice(0, 8);   // (a label written on it)

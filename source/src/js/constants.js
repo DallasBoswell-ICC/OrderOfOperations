@@ -30,5 +30,10 @@ const OPEN_LIFT = 15, BLADE_GREY = '#a6a6a6';   // how far an open contact's bar
 // loads: things current passes through to L2 (a relay coil, or a pilot light). They are the same size and are
 // passed through the same way; only a coil works contacts
 const LOADT = t => t === 'coil' || t === 'lamp';
-const TERM = p => LOADT(p.t) ? 60 : 40;
-const isSw = p => p.t === 'btn' || p.t === 'con';   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre
+// a selector switch: a square body a little larger than a pushbutton's (room for its position numbers round the top)
+const SEL_BOX = 80;
+const WIDE = t => LOADT(t) || t === 'sel';                                // parts whose ends sit 60 either side of their centre
+const BODYH = t => LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
+const TERM = p => WIDE(p.t) ? 60 : 40;
+const isOp = p => p.t === 'btn' || p.t === 'sel';   // operators: pushbuttons and selector switches (they tint the current with their colour)
+const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel';   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre

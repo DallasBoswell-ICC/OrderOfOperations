@@ -18,9 +18,10 @@ function pasteClip() {
   if (!clip || !(clip.parts.length + clip.wires.length)) { say('Copy something first.'); return; }
   snapshot();
   // new letters: each button letter and coil letter in the copy gets an unused one (the same for every drawing of it)
-  const used = new Set([...btnLetters(), ...coilLetters()]), map = {};
+  const used = new Set([...opLetters(), ...coilLetters()]), map = {};
   const fresh = pref => { const L = [...pref + ALL].find(c => !used.has(c)); used.add(L); return L; };
   for (const p of clip.parts) if (p.t === 'btn' && !map['b' + p.L]) map['b' + p.L] = fresh('ABCDEFGH');
+  for (const p of clip.parts) if (p.t === 'sel' && !map['s' + p.L]) map['s' + p.L] = fresh('SJKMN');
   for (const p of clip.parts) if (p.t === 'coil' && !map['c' + p.L]) map['c' + p.L] = fresh('XYZW');
   // below everything on the panel, lined up with where it came from
   const ys = [...clip.parts.map(p => p.y), ...clip.wires.flatMap(w => [w.y1, w.y2])];
@@ -31,6 +32,7 @@ function pasteClip() {
     const q = { ...p, id: nextId++, y: p.y + dy };
     if (p.t === 'btn') q.L = map['b' + p.L];
     if (p.t === 'coil') q.L = map['c' + p.L];
+    if (p.t === 'sel') { q.L = map['s' + p.L]; q.closedIn = [...(p.closedIn || [])]; if (p.names) q.names = [...p.names]; }
     if (p.t === 'con' && map['c' + p.L]) q.L = map['c' + p.L];
     if (p.t === 'lamp' && p.L && map['b' + p.L]) q.L = map['b' + p.L];
     return q;

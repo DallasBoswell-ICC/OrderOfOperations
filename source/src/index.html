@@ -62,12 +62,14 @@
          A new kind of component is one more group here. -->
     <div class="tgrp" id="part-groups">
       <div class="pgroup">
-        <button type="button" class="tool group" data-group="pb" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FF0032" stroke-width="1.6"/><rect x="8.5" y="6.5" width="13" height="13" rx="2.4" fill="#FF0032"/></svg>Pushbuttons<svg class="caret" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <div class="pmenu" role="menu" aria-label="Pushbuttons" hidden>
+        <button type="button" class="tool group" data-group="pb" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FF0032" stroke-width="1.6"/><rect x="8.5" y="6.5" width="13" height="13" rx="2.4" fill="#FF0032"/></svg>Switches<svg class="caret" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="pmenu" role="menu" aria-label="Switches" hidden>
           <button type="button" class="tool" data-part="btn-no" data-tip="Pushbutton, normally open. Drag it onto the panel, or onto a wire to put it in that wire.">
         <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FF0032" stroke-width="1.6"/><rect x="8.5" y="6.5" width="13" height="13" rx="2.4" fill="#FF0032"/></svg>Button NO</button>
           <button type="button" class="tool" data-part="btn-nc" data-tip="Pushbutton, normally closed">
         <svg viewBox="0 0 30 26"><path d="M15 1 L26 7.3 L26 18.7 L15 25 L4 18.7 L4 7.3 Z" fill="#222" stroke="#FF9600" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 6 L21.5 9.7 L21.5 16.3 L15 20 L8.5 16.3 L8.5 9.7 Z" fill="#FF9600"/></svg>Button NC</button>
+          <button type="button" class="tool" data-part="sel" data-tip="Selector switch: 2 to 4 positions, turned left or right. Put the same letter in several rungs for its contact blocks, each closed in the positions you choose.">
+        <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#0070C0" stroke-width="1.6"/><circle cx="15" cy="15" r="6.5" fill="#444"/><rect x="12.6" y="7.5" width="4.8" height="15" rx="2.4" fill="#0070C0" transform="rotate(45 15 15)"/></svg>Selector</button>
         </div>
       </div>
       <div class="pgroup">
@@ -114,6 +116,16 @@
           <div class="seg" role="group" aria-label="Button action"><button type="button" data-maint="1" data-tip="Stays in when pressed; press again to release">Maintained</button><button type="button" data-maint="0" data-tip="Springs back when released">Momentary</button></div></div>
         <div class="tgroup"><span class="label">Colour</span><div class="swatches" id="p-colour" role="radiogroup" aria-label="Button colour"></div></div>
         <button type="button" class="tool plain" id="p-main" hidden data-tip="This drawing becomes the pushbutton itself, drawn as normal; the others with its letter are drawn as its extra contact blocks">Make main</button>
+      </div>
+      <div class="props" id="props-sel" hidden>
+        <div class="tgroup"><span class="label">Letter</span><select id="s-letter" aria-label="Selector switch letter"></select></div>
+        <div class="tgroup"><span class="label">Positions</span>
+          <div class="seg" role="group" aria-label="Number of positions"><button type="button" data-sn="2">2</button><button type="button" data-sn="3">3</button><button type="button" data-sn="4">4</button></div></div>
+        <div class="tgroup"><span class="label">Names</span><input type="text" id="s-names" class="labelbox namesbox" maxlength="27" autocomplete="off" aria-label="Position names" placeholder="1 / 2 / 3" data-tip="Names for the positions, such as HAND / OFF / AUTO (5 characters each at most). Leave it empty to number them."></div>
+        <div class="tgroup"><span class="label">Closed in</span><div class="seg" id="s-closed" role="group" aria-label="Positions this drawing is closed in"></div></div>
+        <div class="tgroup"><span class="label">Starts at</span><div class="seg" id="s-start" role="group" aria-label="Position the switch starts in"></div></div>
+        <div class="tgroup"><span class="label">Colour</span><div class="swatches" id="s-colour" role="radiogroup" aria-label="Selector switch colour"></div></div>
+        <button type="button" class="tool plain" id="s-main" hidden data-tip="This drawing becomes the switch itself, with the coloured handle; the others with its letter are drawn as its extra contact blocks">Make main</button>
       </div>
       <div class="props" id="props-con" hidden>
         <div class="tgroup"><span class="label">Worked by</span><select id="c-of" aria-label="The relay coil that works this contact"></select></div>

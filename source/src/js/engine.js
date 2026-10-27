@@ -39,7 +39,7 @@ function addLane(e, from) {
 }
 function startRun() {
   NET = network();
-  simT = 0; queue = []; seq = 0; busyUntil = 0; autoRel = {}; down = {}; coilOn = {}; TIMER = {};
+  simT = 0; queue = []; seq = 0; busyUntil = 0; autoRel = {}; down = {}; coilOn = {}; TIMER = {}; SELPOS = {}; SELTURN = {};
   FED_AT = {}; COMP = null; needPaint = true;
   CON = {}; for (const p of parts) if (p.t === 'con') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };   // every coil starts off
   tl = NET.nodes.map(() => [[-1e9, null]]);
@@ -165,7 +165,7 @@ function findReach() {
     let label = '', s = 0;   // (s: how long the current takes to get there, in seconds)
     for (const d of path) {
       s += d.e.kind === 'seg' ? d.delay : d.e.len / V;
-      if (d.e.kind === 'part' && d.e.part.t !== 'con') { if (d.e.part.t === 'btn') label = d.e.part.L; else if (LOADT(d.e.part.t)) label = 'ret'; continue; }
+      if (d.e.kind === 'part' && d.e.part.t !== 'con') { if (isOp(d.e.part)) label = d.e.part.L; else if (LOADT(d.e.part.t)) label = 'ret'; continue; }
       const m = REACH.get(d) || {}; m[label] = Math.max(m[label] || 0, s); REACH.set(d, m);
     }
   }
@@ -177,7 +177,7 @@ function allowNow() {
     let label = '';
     for (const d of path) {
       if (d.e.kind === 'part') {
-        if (isSw(d.e.part)) { if (!closed(d.e.part)) break; if (d.e.part.t === 'btn') label = d.e.part.L; else { if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label); } }   // a contact passes on the colour it is given
+        if (isSw(d.e.part)) { if (!closed(d.e.part)) break; if (isOp(d.e.part)) label = d.e.part.L; else { if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label); } }   // a contact passes on the colour it is given
         else if (coilOn[d.e.part.id]) label = 'ret';   // past a coil that is in: the return side, back to L2
         // (a coil that cannot pick up, because something past it is open, carries no current: the wire past it is as
         // live as the wire before it, so the colour waiting at the coil carries on up to whatever is open)
@@ -207,7 +207,7 @@ const active = d => d.e.kind === 'seg' ? ALLOW.has(d) : isSw(d.e.part) ? closed(
 function through(d, r) {
   if (!r) return null;
   if (d.e.kind === 'seg') return along(r, d.e.len);
-  if (d.e.part.t === 'btn') return { set: new Set([d.e.part.L]), from: colourOf(r), rd: 0 };
+  if (isOp(d.e.part)) return { set: new Set([d.e.part.L]), from: colourOf(r), rd: 0 };
   if (d.e.part.t === 'con') return along(r, d.e.len);   // a relay contact passes the current on as it is
   // through a coil that is in: the return side, fading to egg. Through a coil that cannot pick up: the colour
   // waiting at it, on up to whatever is open past it
@@ -226,7 +226,7 @@ function send(d, r, t, atOnce) {
   if (d.e.kind !== 'seg') {
     // the part's leads: the current flows in from the end it enters at, and out along the far lead just in time to
     // reach the far end when it arrives there
-    const p = d.e.part, outS = d.from === p._a ? 'B' : 'A', Ls = TERM(p) - (LOADT(p.t) ? COIL : BOX) / 2;
+    const p = d.e.part, outS = d.from === p._a ? 'B' : 'A', Ls = TERM(p) - BODYH(p.t) / 2;
     const tOut = t + (atOnce ? 0 : d.delay);
     leadEvent(p, outS, tOut - Ls / V, out, 'body');
     schedule(tOut, () => { d.arrived = out; reeval(d.to, evT); });
@@ -335,6 +335,15 @@ function updateCoils(t) {
 }
 function checkShort() { const f = components(NET, conducts); shortNow = f(NET.L1) === f(NET.L2); }
 const allowKey = A => A ? [...A].sort().join() : '';
+// turn selector switch L to position pos (every drawing of it turns together; its knob turns over a moment)
+function turn(L, pos) {
+  const m = mainSel(L); if (!m) return;
+  const from = selPos(L); pos = Math.max(0, Math.min(selN(m) - 1, pos));
+  if (pos === from) return;
+  SELTURN[L] = { from, to: pos, t0: simT }; SELPOS[L] = pos;
+  needPaint = true; if (simT + SEL_TURN > busyUntil) busyUntil = simT + SEL_TURN;
+  switched(parts.filter(p => p.t === 'sel' && p.L === L), simT);
+}
 function press(L, v) {
   if (!!down[L] === v) return;
   down[L] = v; needPaint = true;

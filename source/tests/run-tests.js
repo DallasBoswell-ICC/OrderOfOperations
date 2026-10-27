@@ -1114,6 +1114,47 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Selector switch: drawn in several rungs, each closed in its own positions; clicking turns it (all drawings together); settings; saved', async page => {
+    const out = [];
+    await page.evaluate(() => { W = W_MIN; parts = [P('sel', 200, 160, { L: 'S', n: 3, pos: 1, closedIn: [0], color: '#0070C0' }), P('lamp', 700, 160, { L: '', color: '#FF0032' }),
+        P('sel', 200, 320, { L: 'S', n: 3, pos: 1, closedIn: [2], color: '#0070C0' }), P('lamp', 700, 320, { L: '', color: '#00B050' }),
+        P('sel', 200, 480, { L: 'S', n: 3, pos: 1, closedIn: [1, 2], color: '#0070C0' }), P('lamp', 700, 480, { L: '', color: '#FF9600' })];
+      wires = []; for (const y of [160, 320, 480]) wires.push(Wr(0, y, 140, y), Wr(260, y, 640, y), Wr(760, y, W, y));
+      normalize(); fit(true); draw(); });
+    if ((await issuesNow(page)).length) out.push('the selector circuit is not connected: ' + JSON.stringify(await issuesNow(page)));
+    // its settings: names for the positions, and which positions the selected drawing is closed in
+    await page.mouse.click(...await scr(page, 200, 160)); await page.waitForTimeout(50);
+    if (await page.isHidden('#props-sel')) out.push('no settings for a selector switch');
+    await page.click('#s-names'); await page.keyboard.type('hand off auto'); await page.waitForTimeout(30);
+    const nm = await page.evaluate(() => parts.filter(p => p.t === 'sel').map(p => (p.names || []).join('/')));
+    if (nm.join() !== 'HAND/OFF/AUTO,HAND/OFF/AUTO,HAND/OFF/AUTO') out.push('names are not shared by every drawing: ' + nm.join());
+    const marks = await page.evaluate(() => parts.filter(p => p.t === 'sel').map(p => [...view.parts.get(p.id).marks.querySelectorAll('text')].map(t => t.getAttribute('fill') === p.color ? 1 : 0).join('')));
+    if (marks.join() !== '100,001,011') out.push('coloured position names (closed in): ' + marks.join() + ', expected 100,001,011');
+    // the names and numbers stay inside the body, clear of the knob and handle
+    const clear = await page.evaluate(() => { const bad = []; for (const p of parts.filter(p => p.t === 'sel')) { const v = view.parts.get(p.id);
+      for (const t of v.marks.querySelectorAll('text')) { const b = t.getBBox(); if (b.x < p.x - SEL_BOX / 2 + 2 || b.x + b.width > p.x + SEL_BOX / 2 - 2 || b.y < p.y - SEL_BOX / 2 + 2) bad.push(t.textContent + ' outside');
+        const cx = Math.max(b.x, Math.min(v.kx, b.x + b.width)), cy = Math.max(b.y, Math.min(v.ky, b.y + b.height)); if (Math.hypot(cx - v.kx, cy - v.ky) < 17) bad.push(t.textContent + ' on the knob'); } } return bad; });
+    if (clear.length) out.push('position names touching: ' + clear.join(', '));
+    const saved = await page.evaluate(() => JSON.stringify(circuitData()));
+    await page.click('#tab-run');
+    const on = () => page.evaluate(() => parts.filter(p => p.t === 'lamp').map(l => +!!coilOn[l.id]).join(''));
+    const settle = () => page.evaluate(new Function(STEP + 'step(2);'));
+    await settle(); if (await on() !== '001') out.push('in OFF: lights ' + await on() + ', expected 001');
+    // press the left half of the middle drawing: the whole switch turns left, to HAND
+    await page.mouse.click(...await scr(page, 185, 330)); await settle();
+    if (await on() !== '100') out.push('turned to HAND: lights ' + await on() + ', expected 100');
+    const ang = await page.evaluate(() => (paint(), parts).filter(p => p.t === 'sel').map(p => view.parts.get(p.id).handle.getAttribute('transform').match(/rotate\(([-\d.]+)/)[1]).join());
+    if (ang !== '-45.00,-45.00,-45.00') out.push('handles after turning to HAND: ' + ang);
+    await page.mouse.click(...await scr(page, 185, 170)); await settle();   // (already all the way left)
+    if (await on() !== '100') out.push('turning past the end changed it: ' + await on());
+    await page.mouse.click(...await scr(page, 215, 490)); await page.mouse.click(...await scr(page, 215, 490)); await settle();
+    if (await on() !== '011') out.push('turned to AUTO: lights ' + await on() + ', expected 011');
+    await page.click('#tab-edit'); await page.waitForTimeout(40);
+    await page.evaluate(async c => useCircuit(await decodeCircuit(c), ''), await page.evaluate(async s => 'OO0.' + btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''), saved));
+    if ((await page.evaluate(() => JSON.stringify(circuitData()))) !== saved) out.push('the selector changed after saving and opening');
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

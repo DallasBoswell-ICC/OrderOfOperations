@@ -8,7 +8,7 @@ let NET = null, simT = 0, speed = 1, mode = 'click', queue = [], seq = 0, evT = 
 let tl = [], coilOn = {}, down = {}, autoRel = {}, shortNow = false;
 // paint again even though the circuit has settled (something was pressed, or the panel was drawn afresh)
 let needPaint = true;
-const btnColour = L => (parts.find(p => p.t === 'btn' && p.L === L) || {}).color || '#888888';
+const btnColour = L => (parts.find(p => isOp(p) && p.L === L) || {}).color || '#888888';
 function schedule(t, fn) { queue.push({ t, s: seq++, fn }); if (t > busyUntil) busyUntil = t; }
 // an event that is only waited for (a timer timing out): nothing moves until it comes, so it does not keep the panel
 // being painted, or a clicked button held down, in the meantime
@@ -55,7 +55,18 @@ function setAt(n, t, c, lane) {
 const setCol = set => set.size === 0 ? OFF_WHITE : set.size === 1 ? flowOf(btnColour([...set][0])) : blend([...set].map(L => flowOf(btnColour(L))));
 const colourOf = r => r.rd < RAMP ? mixOk(r.from, setCol(r.set), r.rd / RAMP) : setCol(r.set);
 // a pushbutton passes current while pressed (NO) or until pressed (NC); a relay contact once its bar has landed on its posts
-const closed = p => p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.nc ? !down[p.L] : !!down[p.L];
+const closed = p => p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.t === 'sel' ? selClosed(p) : p.nc ? !down[p.L] : !!down[p.L];
+/* Selector switches. One switch can be drawn in several rungs (the same letter, as a pushbutton with several contact
+   blocks): turning any drawing turns them all. Each drawing is closed in the positions it is set to (p.closedIn).
+   The switch has 2 to 4 positions (selN), can name them (p.names, such as HAND / OFF / AUTO), and starts in p.pos.
+   SELPOS[L]: the position it is turned to while running; SELTURN[L]: its knob turning, { from, to, t0 }. */
+let SELPOS = {}, SELTURN = {};
+const SEL_TURN = 0.25;   // seconds the knob takes to turn one way or the other
+const mainSel = L => parts.find(q => q.t === 'sel' && q.L === L);
+const selN = p => Math.max(2, Math.min(4, p.n || 3));
+const selPos = L => { if (SELPOS[L] !== undefined) return SELPOS[L]; const m = mainSel(L); return m ? Math.min(selN(m) - 1, m.pos || 0) : 0; };
+const selClosed = p => (p.closedIn || []).includes(editing ? (p.pos || 0) : selPos(p.L));
+const SEL_ANG = { 2: [-45, 45], 3: [-45, 0, 45], 4: [-60, -20, 20, 60] };
 // relay contacts: { closing: moving toward closed, t0: when it started moving, shut: passing current }
 let CON = {};
 /* Timers. A timer is a relay coil with a delay (p.delay, whole seconds), on-delay or off-delay (p.tof).
