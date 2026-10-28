@@ -46,7 +46,7 @@ function startRun() {
   for (const p of parts) { delete p._chg; delete p._lead; }
   // which way each button and coil is passed through (as if every button were passing current)
   findButtonDirections();
-  const h = solveV(true).V, dist = new Map(), q = [];
+  const h = solveV(true).V, dist = new Map(), q = []; VOLT = h;
   for (const [id, v] of NET.feedV) if (v === 1) { dist.set(id, 0); q.push([0, id]); }
   while (q.length) { q.sort((a, b) => a[0] - b[0]); const [d, u] = q.shift(); if (d > dist.get(u)) continue;
     for (const e of NET.jadj.get(u) || []) { const w = e.a === u ? e.b : e.a, nd = d + e.len; if (!dist.has(w) || nd < dist.get(w)) { dist.set(w, nd); q.push([nd, w]); } } }
@@ -64,7 +64,7 @@ function startRun() {
   for (const e of NET.jedges) if (e.kind === 'seg') for (const n of e.chain.slice(1, -1)) ltl.set(n, [[[-1e9, null]], [[-1e9, null]]]);
   INLEAD = new Map();
   for (const d of DIRS) if (d.e.kind === 'part') { const p = d.e.part; if (!INLEAD.has(d.from)) INLEAD.set(d.from, []); INLEAD.get(d.from).push([p, d.from === p._a ? 'A' : 'B']); }
-  findPaths(); findReach();
+  findPaths(); findNoway(); findReach();
   checkShort();
   ALLOW = allowNow();
   for (const [id, v] of NET.feedV) if (v === 1) setRec(id, shortNow ? null : EGG(), 0);
@@ -154,6 +154,59 @@ function findPaths() {
   };
   for (const [id, v] of NET.feedV) if (v === 1) { seen.add(id); dfs(id, false); seen.delete(id); }
 }
+/* Where runs of wire form loops, a colour could otherwise come back round a loop and feed the very wire it came
+   from: when it stopped, pieces of wire would stay lit, feeding one another, after the end of the current had passed.
+   So within any loop a colour could go round (worked out once per run, over every path), a run of wire carries the
+   colour only the way real current goes along it: from higher voltage to lower, with the circuit solved as if every
+   button were passing current (see solve.js; every wire a small resistance, so current runs down each branch of a
+   loop from the junction it leaves to the one it joins). Runs outside such loops are left as they are, so on a wire
+   between two branches each branch's colour still runs its own way along it, and the two mix.
+   NOWAY: lane -> the colours it may not carry. VOLT: junction -> voltage. */
+let NOWAY = new Map(), VOLT = new Map();
+function findNoway() {
+  NOWAY = new Map();
+  // every colour each lane can carry along some path (with the coils in or out)
+  const lanes = new Map(), add = (d, k) => { if (!lanes.has(k)) lanes.set(k, new Set()); lanes.get(k).add(d); };
+  for (const coilsIn of [false, true]) for (const path of PATHS) {
+    let label = '';
+    for (const d of path) {
+      if (d.e.kind === 'part') { if (isOp(d.e.part)) label = d.e.part.L; else if (d.e.part.t === 'con') add(d, label); else if (LOADT(d.e.part.t) && coilsIn) label = 'ret'; continue; }
+      add(d, label);
+    }
+  }
+  for (const [k, ls] of lanes) {
+    // the loops this colour could go round: strongly connected groups of junctions (Tarjan's method, without recursion)
+    const out = new Map(); for (const d of ls) { if (!out.has(d.from)) out.set(d.from, []); out.get(d.from).push(d.to); }
+    const idx = new Map(), low = new Map(), comp = new Map(), on = new Set(), stack = []; let n = 0, c = 0;
+    for (const v0 of out.keys()) {
+      if (idx.has(v0)) continue;
+      const work = [[v0, 0]]; idx.set(v0, n); low.set(v0, n); n++; stack.push(v0); on.add(v0);
+      while (work.length) {
+        const top = work[work.length - 1], [v, i] = top, ws = out.get(v) || [];
+        if (i < ws.length) {
+          top[1]++; const w = ws[i];
+          if (!idx.has(w)) { idx.set(w, n); low.set(w, n); n++; stack.push(w); on.add(w); work.push([w, 0]); }
+          else if (on.has(w)) low.set(v, Math.min(low.get(v), idx.get(w)));
+        } else {
+          work.pop(); if (work.length) { const u = work[work.length - 1][0]; low.set(u, Math.min(low.get(u), low.get(v))); }
+          if (low.get(v) === idx.get(v)) { let w; do { w = stack.pop(); on.delete(w); comp.set(w, c); } while (w !== v); c++; }
+        }
+      }
+    }
+    for (const d of ls) {
+      if (d.e.kind !== 'seg' || comp.get(d.from) !== comp.get(d.to)) continue;
+      const a = VOLT.get(d.from), b = VOLT.get(d.to);
+      if (a === undefined || b === undefined) continue;
+      const tol = 1e-12 * Math.max(1, Math.abs(a));
+      if (a > b + tol) continue;   // downhill: the way current goes
+      // level (no current along it, as across a balanced bridge): both ways only if the colour cannot go either way
+      // along it (it would feed itself back and forth): then one way only
+      if (Math.abs(a - b) <= tol && (d.from < d.to || ![...ls].some(x => x.e === d.e && x !== d))) continue;
+      if (!NOWAY.has(d)) NOWAY.set(d, new Set()); NOWAY.get(d).add(k);
+    }
+  }
+}
+const onward = (d, k) => !(NOWAY.get(d) && NOWAY.get(d).has(k));
 // which colours each lane may carry right now: along every path, from L1 up to the first button not passing current,
 // each lane carries the colour of the last button before it ('' for plain egg, 'ret' after a coil)
 // how long the current takes from L1 to the far end of each lane along any path carrying each colour: the end of a
@@ -166,6 +219,7 @@ function findReach() {
     for (const d of path) {
       s += d.e.kind === 'seg' ? d.delay : d.e.len / V;
       if (d.e.kind === 'part' && d.e.part.t !== 'con') { if (isOp(d.e.part)) label = d.e.part.L; else if (LOADT(d.e.part.t)) label = 'ret'; continue; }
+      if (!onward(d, label)) break;   // (the colour cannot go this way: this path carries none of it on from here)
       const m = REACH.get(d) || {}; m[label] = Math.max(m[label] || 0, s); REACH.set(d, m);
     }
   }
@@ -183,6 +237,7 @@ function allowNow() {
         // live as the wire before it, so the colour waiting at the coil carries on up to whatever is open)
         continue;
       }
+      if (!onward(d, label)) break;
       if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label);
     }
   }

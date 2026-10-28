@@ -1256,6 +1256,40 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Loops of wire (parallel loops nested and crossing the run): all lit while fed; let go, every wire goes dark as the end of the current passes it, nothing left lit behind it', async page => {
+    await loadCircuit(page, `W_USER = W = 1000;
+      parts = [P('btn', 120, 300, { L: 'A', maint: true, color: '#EC008C' }), P('lamp', 900, 300, { L: '', color: '#7030A0' })];
+      wires = [Wr(0,300,80,300), Wr(160,300,840,300), Wr(960,300,W,300),
+        Wr(200,100,800,100), Wr(200,100,200,300), Wr(200,300,200,500), Wr(800,100,800,300), Wr(800,300,800,500), Wr(200,500,800,500),
+        Wr(240,140,680,140), Wr(240,140,240,300), Wr(680,140,680,300), Wr(320,180,620,180), Wr(320,180,320,300), Wr(620,180,620,300),
+        Wr(280,460,740,460), Wr(280,300,280,460), Wr(740,300,740,460), Wr(380,420,580,420), Wr(380,300,380,420), Wr(580,300,580,420)];`);
+    if ((await issuesNow(page)).length) return ['circuit not wired: ' + JSON.stringify(await issuesNow(page))];
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + `
+      const out = [];
+      step(2); press('A', true); step(10);
+      const unlit = NET.nodes.map((n, k) => [n, k]).filter(([n, k]) => n.k !== 'L1' && n.k !== 'L2' && colAt(k, simT) === null);
+      if (unlit.length) out.push(unlit.length + ' points stay dark while A is pressed, such as (' + unlit[0][0].x + ', ' + unlit[0][0].y + ')');
+      // the latest the end of the current can be passing each point: along every path the colour can take
+      const A = parts.find(p => p.L === 'A'), t0 = simT, latest = new Map();
+      for (const path of PATHS) { let d = 0, on = false;
+        for (const ln of path) { if (ln.e.part === A) on = true; if (!on) continue; if (ln.e.part !== A && !onward(ln, 'A')) break;
+          const ns = ln.e.kind === 'seg' ? ln.chain : [ln.to];
+          ns.forEach((n, k) => { const dd = ln.e.kind === 'seg' ? d + ln.tk[k] : d + ln.delay; if (dd > (latest.get(n) || 0)) latest.set(n, dd); });
+          d += ln.delay; } }
+      press('A', false);
+      const darkAt = new Map(), relit = new Set();
+      for (let i = 0; i < 600; i++) { step(1 / 60); NET.nodes.forEach((_, k) => { const c = colAt(k, simT); if (!darkAt.has(k) && c === null) darkAt.set(k, simT - t0); else if (darkAt.has(k) && c !== null) relit.add(k); }); }
+      let late = 0, early = 0, ex = '';
+      for (const [n, dd] of latest) { const da = darkAt.get(n);
+        if (da === undefined || da > dd + 0.15) { late++; ex = ex || '(' + NET.nodes[n].x + ', ' + NET.nodes[n].y + ') still lit ' + (da === undefined ? 'at the end' : (da - dd).toFixed(2) + ' s after the end of the current passed'); }
+        else if (da < dd - 0.12) early++; }
+      if (late) out.push(late + ' points stay lit after the end of the current has passed them, such as ' + ex);
+      if (early) out.push(early + ' points go dark before the end of the current reaches them');
+      if (relit.size) out.push(relit.size + ' points light up again after going dark');
+      return out;`));
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');
