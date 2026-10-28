@@ -1290,6 +1290,21 @@ const DEF_CIRCUIT = `
       return out;`));
   });
 
+  await check('Pop-up descriptions show in full, inside the window, for ribbon buttons and run controls', async page => {
+    const out = [];
+    const tip = async sel => { await page.hover(sel); await page.waitForTimeout(500);
+      return page.evaluate(s => { const t = document.querySelector('.tipbox'), el = document.querySelector(s); if (t.hidden) return 'not shown';
+        const r = t.getBoundingClientRect();
+        if (t.textContent !== el.dataset.tip) return 'wrong text';
+        if (r.left < 0 || r.top < 0 || r.right > innerWidth || r.bottom > innerHeight) return 'outside the window';
+        // (it floats on its own above everything, so nothing it sits in can cut it off)
+        return t.parentElement === document.body && getComputedStyle(t).position === 'fixed' && r.height > 20 ? 'ok' : 'inside something that can cut it off'; }, sel); };
+    for (const sel of ['[data-part="timer-off"]', '[data-part="lamp"]', '#ribbon-toggle', '#redo', '#save-btn']) { const r = await tip(sel); if (r !== 'ok') out.push(sel + ': ' + r); }
+    await page.click('#tab-run'); await page.waitForTimeout(100);
+    for (const sel of ['#speed-slider', '#reset-btn']) { const r = await tip(sel); if (r !== 'ok') out.push(sel + ': ' + r); }
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

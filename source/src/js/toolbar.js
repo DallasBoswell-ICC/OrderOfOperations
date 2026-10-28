@@ -87,3 +87,29 @@ document.getElementById('ribbon-toggle').addEventListener('click', () => foldRib
 try { if (localStorage.getItem(RIBBON_KEY) === '1') { document.body.classList.add('ribbon-min'); const b = document.getElementById('ribbon-toggle'); b.setAttribute('aria-expanded', 'false'); b.classList.add('down'); b.dataset.tip = 'Keep the ribbon open'; b.setAttribute('aria-label', 'Pin the ribbon open'); } } catch (_) {}
 document.addEventListener('pointerdown', e => { if (!e.target.closest('#ribbon')) closeMenus(); }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus(); });
+/* ---------------- pop-up descriptions ----------------
+   Anything with a data-tip shows it in one floating box while the pointer rests on it (or it has the keyboard focus):
+   below it, or above it when there is no room below, always inside the window, above the ribbon and the panel. */
+const tipBox = document.createElement('div'); tipBox.className = 'tipbox'; tipBox.setAttribute('role', 'tooltip'); tipBox.hidden = true; document.body.append(tipBox);
+let tipFor = null, tipTimer = 0;
+function showTip(el) {
+  tipFor = el; tipBox.textContent = el.dataset.tip; tipBox.hidden = false;
+  const r = el.getBoundingClientRect(), b = tipBox.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = window.innerHeight, gap = 8;
+  let x = Math.min(Math.max(8, r.left), vw - b.width - 8), y = r.bottom + gap;
+  if (y + b.height > vh - 8) y = Math.max(8, r.top - gap - b.height);
+  tipBox.style.left = x + 'px'; tipBox.style.top = y + 'px';
+}
+function hideTip() { clearTimeout(tipTimer); tipFor = null; tipBox.hidden = true; }
+document.addEventListener('pointerover', e => {
+  const el = e.target.closest && e.target.closest('[data-tip]');
+  if (el === tipFor) return;
+  hideTip();
+  if (!el || e.pointerType === 'touch' || document.body.classList.contains('dragging') || !el.dataset.tip) return;
+  tipFor = el; tipTimer = setTimeout(() => { if (el.isConnected && tipFor === el) showTip(el); }, 350);
+});
+document.addEventListener('pointerout', e => { if (tipFor || tipTimer) { const to = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('[data-tip]'); if (to !== tipFor) hideTip(); } });
+document.addEventListener('pointerdown', hideTip, true);
+document.addEventListener('focusin', e => { const el = e.target.closest && e.target.closest('[data-tip]'); if (el && el.matches(':focus-visible')) showTip(el); else hideTip(); });
+document.addEventListener('focusout', hideTip);
+window.addEventListener('scroll', hideTip, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTip(); });
