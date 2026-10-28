@@ -5,6 +5,7 @@ function setMode(run) {
   document.getElementById('tab-edit').setAttribute('aria-selected', String(!run));
   document.getElementById('tab-run').setAttribute('aria-selected', String(run));
   closeMenus(); showRibbon(); if (!run) buildStation();
+  showViewMode(); if (run && viewMode === 'split') splitStart();
   document.getElementById('fault').hidden = true;
   sel = null; preview = null; setTool('select');
   if (cam.fit) { fit(true); fitView(); }
@@ -56,7 +57,7 @@ function fit(widen) {
   const top = st.getBoundingClientRect().top + window.scrollY;
   // the panel's height is worked out again only when the window or the mode changes (not when selecting something
   // shows or hides its settings below the panel, which would rescale the view under the pointer)
-  const k = `${window.innerWidth}x${window.innerHeight}:${editing}:${Math.round(top)}`;
+  const k = `${window.innerWidth}x${window.innerHeight}:${editing}:${Math.round(top)}:${viewMode}`;
   let h = parseFloat(st.style.height);
   if (widen || k !== fitKey || !h) {
     const below = 16;
@@ -64,9 +65,10 @@ function fit(widen) {
     if (st.style.height !== h + 'px') st.style.height = h + 'px';
     fitKey = k;
   }
-  const w = st.clientWidth || 1;
-  const widened = !!widen && setWidth(fitWidth(w, h));
-  const vis = W * h / w;
+  // (the main view: the whole panel, or in split view its first pane)
+  const w = svg.clientWidth || st.clientWidth || 1, hh = svg.clientHeight || h;
+  const widened = !!widen && (editing || viewMode === 'normal') && setWidth(fitWidth(w, hh));
+  const vis = sheetW() * hh / w;
   if (widened) { VIS_H1 = vis; return true; }
   if (Math.abs(vis - VIS_H1) < 0.5) return false;
   VIS_H1 = vis; return true;

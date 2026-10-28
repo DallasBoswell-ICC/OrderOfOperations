@@ -2,7 +2,9 @@
    drawing
    ===================================================================== */
 const NS = 'http://www.w3.org/2000/svg', svg = document.getElementById('svg');
-function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); (parent || svg).appendChild(e); return e; }
+// (everything on the panel goes into one group, WORLD, so it can also be shown in a second view: see views.js)
+let WORLD = null;
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); (parent || WORLD || svg).appendChild(e); return e; }
 function hexPath(cx, cy, R, r) {
   const Q = []; for (let k = 0; k < 6; k++) { const a = Math.PI / 2 + k * Math.PI / 3; Q.push([cx + R * Math.cos(a), cy + R * Math.sin(a)]); }
   let d = '';

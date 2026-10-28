@@ -216,3 +216,20 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
 .st-dev .dev:focus-visible > :first-child { stroke: var(--gold); stroke-width: 3; }
 .st-plate { min-width: 64px; max-width: 96px; text-align: center; padding: 2px 6px; background: #111; color: #fff; font-size: .66rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; border-radius: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-tag { font-size: .6rem; color: #4a4d50; white-space: nowrap; }
+
+/* the stage's panes: one, or two in split view (side by side, or one above the other on a tall panel) */
+.stage { display: flex; }
+.pane { position: relative; flex: 1 1 0; min-width: 0; min-height: 0; height: 100%; }
+.stage.split { gap: 6px; background: #1c1d1f; }
+.stage.split .pane { background: #2b2c2f; border-radius: 10px; overflow: hidden; }
+.stage.split-v { flex-direction: column; }
+.stage.split-v .pane { height: auto; }
+/* full screen: the circuit fills the screen; the title bar goes and the ribbon folds to its tabs */
+body.fs .titlebar { display: none; }
+body.fs .rbody { display: none; }
+body.fs.ribbon-peek .rbody { display: flex; position: absolute; left: -1px; right: -1px; top: 100%; z-index: 30; background: var(--chip); border: 1px solid var(--line); border-radius: 0 0 10px 10px; box-shadow: 0 16px 34px rgba(0,0,0,.55); }
+body.fs .rtabs { border-bottom: 0; border-radius: 10px; }
+body.fs #ribbon-toggle { display: none; }
+body.fs .wrap { padding-top: 8px; }
+#fs-toggle[aria-pressed="true"] { color: var(--gold); }
+#view-group .tool.small { padding-top: 1px; padding-bottom: 1px; }

@@ -61,6 +61,7 @@
       <button type="button" class="rtab ctx" id="rt-part" aria-pressed="false" hidden>Part</button>
       <button type="button" class="rtab" id="rt-run" aria-pressed="false" hidden>Simulation</button>
       <p class="msg" id="msg" role="status"></p>
+      <button type="button" class="rcollapse" id="fs-toggle" aria-pressed="false" aria-label="Full screen" data-tip="Full screen: the circuit fills the screen (Esc to leave)"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <button type="button" class="rcollapse" id="ribbon-toggle" aria-expanded="true" aria-label="Collapse the ribbon" data-tip="Fold the ribbon away for more room (the tabs stay)"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3.5 10l4.5-4.5 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
     <div class="rbody">
@@ -165,6 +166,12 @@
         <button type="button" data-mode="hold" data-tip="A momentary button stays down only while you hold it">Press and hold</button>
       </div>
     </div>
+      <div class="tgroup" id="view-group"><span class="label">View</span>
+        <div class="stack">
+          <button type="button" class="tool small" data-view="normal" aria-pressed="true" data-tip="The circuit as it is built: zoom and scroll to look around"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="5" y="2" width="10" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 6h4M8 10h4M8 14h4" stroke="currentColor" stroke-width="1.3"/></svg><span>Normal</span></button>
+          <button type="button" class="tool small" data-view="columns" aria-pressed="false" data-tip="Columns: the rungs laid out side by side in columns, like the pages of a print, so a long circuit fits the screen"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="3" width="7" height="14" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="11" y="3" width="7" height="14" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4 7h3M4 11h3M13 7h3M13 11h3" stroke="currentColor" stroke-width="1.2"/></svg><span>Columns</span></button>
+          <button type="button" class="tool small" data-view="split" aria-pressed="false" data-tip="Split: two views of the circuit, each zoomed and scrolled on its own (one on the top rungs, one on the bottom ones)"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="3" width="16" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 3v14" stroke="currentColor" stroke-width="1.5"/><path d="M5 7v6M15 9l-2 2 2 2" stroke="currentColor" stroke-width="1.2" fill="none"/></svg><span>Split</span></button>
+        </div></div>
       <div class="tgroup" id="st-group"><span class="label">Operator station</span><button type="button" class="tool big" id="st-toggle" aria-pressed="false" data-tip="Show or hide the operator station: every pushbutton and selector switch of the circuit in one panel you can drag anywhere, so you can work them while watching any part of the ladder"><svg viewBox="0 0 30 26" aria-hidden="true"><rect x="2" y="2" width="26" height="22" rx="3" fill="#c4c7ca" stroke="#8f9396" stroke-width="1.2"/><rect x="5" y="6" width="8" height="8" rx="2" fill="#FF0032" stroke="#9a9a9a" stroke-width="1.2"/><rect x="17" y="6" width="8" height="8" rx="2" fill="#00B050" stroke="#9a9a9a" stroke-width="1.2"/><rect x="5" y="17" width="8" height="3" rx=".6" fill="#111"/><rect x="17" y="17" width="8" height="3" rx=".6" fill="#111"/></svg><span>Station</span></button></div>
       <div class="tgroup"><span class="label">Simulation</span><button type="button" class="tool big reset" id="reset-btn" data-tip="Turn everything off and start over">
       <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M15.5 10a5.5 5.5 0 1 1-1.6-3.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14.4 2.8l.1 3.9-3.9.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reset</span></button></div>
@@ -173,13 +180,25 @@
   </div>
 
   <div class="fault" id="fault" role="alert" hidden></div>
-  <div class="stage" id="stage"><svg id="svg" role="img" aria-label="Circuit diagram"></svg>
-    <div class="zoombar" role="group" aria-label="Zoom">
-      <button type="button" id="zoom-out" aria-label="Zoom out" data-tip="Zoom out (Ctrl + scroll wheel)">−</button>
-      <span id="zoom-pct">100%</span>
-      <button type="button" id="zoom-in" aria-label="Zoom in" data-tip="Zoom in (Ctrl + scroll wheel). Then scroll to move up and down, Shift + scroll to move left and right, or drag with the scroll wheel held down.">+</button>
-      <button type="button" id="zoom-fit" data-tip="Show the whole circuit">Fit</button>
+  <div class="stage" id="stage">
+    <div class="pane" id="pane1"><svg id="svg" role="img" aria-label="Circuit diagram"></svg>
+      <div class="zoombar" role="group" aria-label="Zoom">
+        <button type="button" id="zoom-out" aria-label="Zoom out" data-tip="Zoom out (Ctrl + scroll wheel)">−</button>
+        <span id="zoom-pct">100%</span>
+        <button type="button" id="zoom-in" aria-label="Zoom in" data-tip="Zoom in (Ctrl + scroll wheel). Then scroll to move up and down, Shift + scroll to move left and right, or drag with the scroll wheel held down.">+</button>
+        <button type="button" id="zoom-fit" data-tip="Show the whole circuit">Fit</button>
+      </div>
     </div>
+    <!-- split view's second pane: its own view of the same circuit -->
+    <div class="pane" id="pane2" hidden><svg id="svg2" role="img" aria-label="Circuit diagram, second view"></svg>
+      <div class="zoombar" role="group" aria-label="Zoom, second view">
+        <button type="button" id="zoom-out2" aria-label="Zoom out" data-tip="Zoom out (Ctrl + scroll wheel)">−</button>
+        <span id="zoom-pct2">100%</span>
+        <button type="button" id="zoom-in2" aria-label="Zoom in" data-tip="Zoom in (Ctrl + scroll wheel). Scroll to move up and down.">+</button>
+        <button type="button" id="zoom-fit2" data-tip="Show the whole circuit">Fit</button>
+      </div>
+    </div>
+  </div>
   </div>
 
 </div>

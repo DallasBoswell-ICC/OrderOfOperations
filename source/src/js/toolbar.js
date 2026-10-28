@@ -69,7 +69,7 @@ function showRibbon() {
 for (const [id, t] of [['rt-home', 'home'], ['rt-part', 'part'], ['rt-run', 'run']])
   document.getElementById(id).addEventListener('click', () => {
     if (t !== 'run') ribbonTab = t;
-    if (document.body.classList.contains('ribbon-min')) document.body.classList.add('ribbon-peek');
+    if (document.body.classList.contains('ribbon-min') || document.body.classList.contains('fs')) document.body.classList.add('ribbon-peek');
     showRibbon();
   });
 const RIBBON_KEY = 'oo-circuit-builder:ribbon-min';

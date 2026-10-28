@@ -1350,6 +1350,63 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Columns view: a long circuit in side-by-side columns, broken only between rungs, all in view; it runs and its buttons work in any column', async page => {
+    const out = [], json = require('fs').readFileSync(require('path').join(__dirname, 'traffic-man-auto.json'), 'utf8');
+    await page.evaluate(j => useCircuit(readCircuit(JSON.parse(j)), ''), json);
+    await page.click('#tab-run'); await page.click('[data-view="columns"]'); await page.waitForTimeout(150);
+    const r = await page.evaluate(() => {
+      const L = LAYOUT; if (!L) return { none: true };
+      const bands = L.bands, cross = [];
+      for (const w of wires) if (w.x1 === w.x2) for (const b of bands.slice(1)) if (Math.min(w.y1, w.y2) < b.y0 && Math.max(w.y1, w.y2) > b.y0) cross.push('wire at x ' + w.x1);
+      for (const p of parts) for (const b of bands.slice(1)) if (p.y - BODYH(p.t) / 2 < b.y0 && p.y + BODYH(p.t) / 2 > b.y0) cross.push(captionOf(p));
+      const vb = svg.getAttribute('viewBox').split(' ').map(Number);
+      return { k: bands.length, cross, all: vb[2] >= L.w - 1 && vb[3] >= L.h - 1 };
+    });
+    if (r.none) return ['no columns'];
+    if (r.k < 2) out.push('a long circuit stayed in one column');
+    if (r.cross.length) out.push('a column breaks through ' + r.cross.join(', '));
+    if (!r.all) out.push('the columns do not all fit in view');
+    // press ON (B) in the circuit: X (MCR) picks up; the E START button, in a later column, can be pressed with the mouse
+    await page.evaluate(new Function(STEP + `step(3); press('B', true); step(5);`));   // (ON is held: its off-delay timer T-MCR times out with it held)
+    if (!(await page.evaluate(() => !!coilOn[parts.find(p => p.t === 'coil' && p.L === 'X').id]))) out.push('pressing ON did not pick up MCR');
+    const e = await page.evaluate(() => { const p = parts.filter(q => q.t === 'btn' && q.L === 'E')[0]; const r = view.parts.get(p.id).fill.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
+    await page.mouse.click(...e); await page.waitForTimeout(30);
+    if (!(await page.evaluate(() => !!down.E || simT > 0 && Object.keys(autoRel).includes('E')))) out.push('clicking START in its column did not press it');
+    await page.click('[data-view="normal"]'); await page.waitForTimeout(100);
+    if (await page.evaluate(() => !!LAYOUT)) out.push('Normal did not go back to one column');
+    return out;
+  });
+
+  await check('Split view: two panes, each scrolled and zoomed on its own, both showing the current; buttons work in either; full screen hides the title bar and folds the ribbon, Esc leaves it', async page => {
+    const out = [], json = require('fs').readFileSync(require('path').join(__dirname, 'traffic-man-auto.json'), 'utf8');
+    await page.evaluate(j => useCircuit(readCircuit(JSON.parse(j)), ''), json);
+    await page.click('#tab-run'); await page.click('[data-view="split"]'); await page.waitForTimeout(150);
+    const r = await page.evaluate(() => ({ p2: !pane2.hidden, w1: document.getElementById('pane1').clientWidth, w2: pane2.clientWidth, y1: cam.y, y2: Number(svg2.getAttribute('viewBox').split(' ')[1]), views: VIEWS.length }));
+    if (!r.p2 || r.views !== 2) return ['no second pane'];
+    if (Math.abs(r.w1 - r.w2) > 2) out.push('the panes are not the same size: ' + r.w1 + ' and ' + r.w2);
+    if (!(r.y2 > r.y1 + 500)) out.push('the second pane does not start on the bottom of the circuit: ' + r.y1 + ', ' + r.y2);
+    // scrolling the second pane leaves the first where it was
+    const b2 = await page.locator('#svg2').boundingBox();
+    await page.mouse.move(b2.x + b2.width / 2, b2.y + b2.height / 2); await page.mouse.wheel(0, -400); await page.waitForTimeout(60);
+    const r2 = await page.evaluate(() => ({ y1: cam.y, y2: Number(svg2.getAttribute('viewBox').split(' ')[1]) }));
+    if (r2.y1 !== r.y1 || !(r2.y2 < r.y2)) out.push('scrolling the second pane: ' + JSON.stringify([r, r2]));
+    // the current shows in both panes: press ON with the mouse in the first pane; the wire after it lights in both
+    const on = await page.evaluate(() => { const p = mainBtn('B'); const r = view.parts.get(p.id).fill.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
+    await page.mouse.click(...on); await page.evaluate(new Function(STEP + 'step(3); paint();'));
+    const lit = await page.evaluate(() => [view, view2].map(V => V.runs.filter(it => it.g.childElementCount).length));
+    if (!(lit[0] > 0 && lit[0] === lit[1])) out.push('lit wires in the two panes: ' + lit.join(' and '));
+    // full screen
+    await page.click('#fs-toggle'); await page.waitForTimeout(150);
+    if (await page.isVisible('.titlebar') || await page.isVisible('#speed-slider')) out.push('full screen still shows the title bar or the open ribbon');
+    const h = await page.evaluate(() => document.getElementById('stage').clientHeight);
+    await page.keyboard.press('Escape'); await page.waitForTimeout(150);
+    if (!(await page.isVisible('.titlebar'))) out.push('Esc did not leave full screen');
+    if (!(h > await page.evaluate(() => document.getElementById('stage').clientHeight) + 60)) out.push('full screen did not give the panel more room');
+    await page.click('[data-view="normal"]'); await page.click('#tab-edit');
+    if (await page.isVisible('#pane2')) out.push('the second pane stays while building');
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

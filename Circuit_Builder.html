@@ -229,6 +229,23 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
 .st-dev .dev:focus-visible > :first-child { stroke: var(--gold); stroke-width: 3; }
 .st-plate { min-width: 64px; max-width: 96px; text-align: center; padding: 2px 6px; background: #111; color: #fff; font-size: .66rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; border-radius: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-tag { font-size: .6rem; color: #4a4d50; white-space: nowrap; }
+
+/* the stage's panes: one, or two in split view (side by side, or one above the other on a tall panel) */
+.stage { display: flex; }
+.pane { position: relative; flex: 1 1 0; min-width: 0; min-height: 0; height: 100%; }
+.stage.split { gap: 6px; background: #1c1d1f; }
+.stage.split .pane { background: #2b2c2f; border-radius: 10px; overflow: hidden; }
+.stage.split-v { flex-direction: column; }
+.stage.split-v .pane { height: auto; }
+/* full screen: the circuit fills the screen; the title bar goes and the ribbon folds to its tabs */
+body.fs .titlebar { display: none; }
+body.fs .rbody { display: none; }
+body.fs.ribbon-peek .rbody { display: flex; position: absolute; left: -1px; right: -1px; top: 100%; z-index: 30; background: var(--chip); border: 1px solid var(--line); border-radius: 0 0 10px 10px; box-shadow: 0 16px 34px rgba(0,0,0,.55); }
+body.fs .rtabs { border-bottom: 0; border-radius: 10px; }
+body.fs #ribbon-toggle { display: none; }
+body.fs .wrap { padding-top: 8px; }
+#fs-toggle[aria-pressed="true"] { color: var(--gold); }
+#view-group .tool.small { padding-top: 1px; padding-bottom: 1px; }
 </style>
 </head>
 <body>
@@ -278,6 +295,7 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
       <button type="button" class="rtab ctx" id="rt-part" aria-pressed="false" hidden>Part</button>
       <button type="button" class="rtab" id="rt-run" aria-pressed="false" hidden>Simulation</button>
       <p class="msg" id="msg" role="status"></p>
+      <button type="button" class="rcollapse" id="fs-toggle" aria-pressed="false" aria-label="Full screen" data-tip="Full screen: the circuit fills the screen (Esc to leave)"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <button type="button" class="rcollapse" id="ribbon-toggle" aria-expanded="true" aria-label="Collapse the ribbon" data-tip="Fold the ribbon away for more room (the tabs stay)"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3.5 10l4.5-4.5 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
     <div class="rbody">
@@ -382,6 +400,12 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
         <button type="button" data-mode="hold" data-tip="A momentary button stays down only while you hold it">Press and hold</button>
       </div>
     </div>
+      <div class="tgroup" id="view-group"><span class="label">View</span>
+        <div class="stack">
+          <button type="button" class="tool small" data-view="normal" aria-pressed="true" data-tip="The circuit as it is built: zoom and scroll to look around"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="5" y="2" width="10" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 6h4M8 10h4M8 14h4" stroke="currentColor" stroke-width="1.3"/></svg><span>Normal</span></button>
+          <button type="button" class="tool small" data-view="columns" aria-pressed="false" data-tip="Columns: the rungs laid out side by side in columns, like the pages of a print, so a long circuit fits the screen"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="3" width="7" height="14" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="11" y="3" width="7" height="14" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4 7h3M4 11h3M13 7h3M13 11h3" stroke="currentColor" stroke-width="1.2"/></svg><span>Columns</span></button>
+          <button type="button" class="tool small" data-view="split" aria-pressed="false" data-tip="Split: two views of the circuit, each zoomed and scrolled on its own (one on the top rungs, one on the bottom ones)"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="3" width="16" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 3v14" stroke="currentColor" stroke-width="1.5"/><path d="M5 7v6M15 9l-2 2 2 2" stroke="currentColor" stroke-width="1.2" fill="none"/></svg><span>Split</span></button>
+        </div></div>
       <div class="tgroup" id="st-group"><span class="label">Operator station</span><button type="button" class="tool big" id="st-toggle" aria-pressed="false" data-tip="Show or hide the operator station: every pushbutton and selector switch of the circuit in one panel you can drag anywhere, so you can work them while watching any part of the ladder"><svg viewBox="0 0 30 26" aria-hidden="true"><rect x="2" y="2" width="26" height="22" rx="3" fill="#c4c7ca" stroke="#8f9396" stroke-width="1.2"/><rect x="5" y="6" width="8" height="8" rx="2" fill="#FF0032" stroke="#9a9a9a" stroke-width="1.2"/><rect x="17" y="6" width="8" height="8" rx="2" fill="#00B050" stroke="#9a9a9a" stroke-width="1.2"/><rect x="5" y="17" width="8" height="3" rx=".6" fill="#111"/><rect x="17" y="17" width="8" height="3" rx=".6" fill="#111"/></svg><span>Station</span></button></div>
       <div class="tgroup"><span class="label">Simulation</span><button type="button" class="tool big reset" id="reset-btn" data-tip="Turn everything off and start over">
       <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M15.5 10a5.5 5.5 0 1 1-1.6-3.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14.4 2.8l.1 3.9-3.9.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reset</span></button></div>
@@ -390,13 +414,25 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
   </div>
 
   <div class="fault" id="fault" role="alert" hidden></div>
-  <div class="stage" id="stage"><svg id="svg" role="img" aria-label="Circuit diagram"></svg>
-    <div class="zoombar" role="group" aria-label="Zoom">
-      <button type="button" id="zoom-out" aria-label="Zoom out" data-tip="Zoom out (Ctrl + scroll wheel)">−</button>
-      <span id="zoom-pct">100%</span>
-      <button type="button" id="zoom-in" aria-label="Zoom in" data-tip="Zoom in (Ctrl + scroll wheel). Then scroll to move up and down, Shift + scroll to move left and right, or drag with the scroll wheel held down.">+</button>
-      <button type="button" id="zoom-fit" data-tip="Show the whole circuit">Fit</button>
+  <div class="stage" id="stage">
+    <div class="pane" id="pane1"><svg id="svg" role="img" aria-label="Circuit diagram"></svg>
+      <div class="zoombar" role="group" aria-label="Zoom">
+        <button type="button" id="zoom-out" aria-label="Zoom out" data-tip="Zoom out (Ctrl + scroll wheel)">−</button>
+        <span id="zoom-pct">100%</span>
+        <button type="button" id="zoom-in" aria-label="Zoom in" data-tip="Zoom in (Ctrl + scroll wheel). Then scroll to move up and down, Shift + scroll to move left and right, or drag with the scroll wheel held down.">+</button>
+        <button type="button" id="zoom-fit" data-tip="Show the whole circuit">Fit</button>
+      </div>
     </div>
+    <!-- split view's second pane: its own view of the same circuit -->
+    <div class="pane" id="pane2" hidden><svg id="svg2" role="img" aria-label="Circuit diagram, second view"></svg>
+      <div class="zoombar" role="group" aria-label="Zoom, second view">
+        <button type="button" id="zoom-out2" aria-label="Zoom out" data-tip="Zoom out (Ctrl + scroll wheel)">−</button>
+        <span id="zoom-pct2">100%</span>
+        <button type="button" id="zoom-in2" aria-label="Zoom in" data-tip="Zoom in (Ctrl + scroll wheel). Scroll to move up and down.">+</button>
+        <button type="button" id="zoom-fit2" data-tip="Show the whole circuit">Fit</button>
+      </div>
+    </div>
+  </div>
   </div>
 
 </div>
@@ -1413,7 +1449,9 @@ function refreshAllow(t) {
    drawing
    ===================================================================== */
 const NS = 'http://www.w3.org/2000/svg', svg = document.getElementById('svg');
-function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); (parent || svg).appendChild(e); return e; }
+// (everything on the panel goes into one group, WORLD, so it can also be shown in a second view: see views.js)
+let WORLD = null;
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); (parent || WORLD || svg).appendChild(e); return e; }
 function hexPath(cx, cy, R, r) {
   const Q = []; for (let k = 0; k < 6; k++) { const a = Math.PI / 2 + k * Math.PI / 3; Q.push([cx + R * Math.cos(a), cy + R * Math.sin(a)]); }
   let d = '';
@@ -1709,44 +1747,71 @@ function backTo(h) {
 function say(t) { document.getElementById('msg').textContent = t || ''; }
 
 /* ---- js/render.js ---- */
+/* Drawing the panel. The circuit is drawn into the main view, and in split view a second time into the second pane
+   (each drawing is painted as the current flows: see paint). In columns view (while running), the rungs are laid out
+   in side-by-side columns, each with its own stretch of L1 and L2: still one drawing, with each group of rungs (a
+   band) moved into its column, so nothing is drawn twice (see views.js). */
+let VIEWS = [view], view2 = {};
 function draw() {
   needPaint = true;
-  const H = canvasH();
+  LAYOUT = !editing && viewMode === 'columns' ? layoutColumns() : null;
   applyCam();
-  svg.innerHTML = '';
-  el('defs', {}).innerHTML = DEFS;
-  el('rect', { x: 0, y: 0, width: W, height: H, fill: '#404040' });   // the sheet the circuit is drawn on
-  if (editing) el('rect', { x: 0, y: 0, width: W, height: H, fill: 'url(#gridMajor)' });   // positioning grid while building
+  view.tag = 'a'; renderInto(svg, view, LAYOUT);
+  VIEWS = [view];
+  if (!editing && viewMode === 'split') { view2.tag = 'b'; renderInto(svg2, view2, null); VIEWS.push(view2); applyCam2(); }
+  else { svg2.innerHTML = ''; view2 = {}; }
+  WORLD = view.world;
+  renderProps();
+  if (fit()) { applyCam(); requestAnimationFrame(draw); }   // the panel changed size: draw again to fill it
+  scheduleAutosave();
+}
+// draw the whole panel into target (an svg), keeping what paint needs in V (L: the columns layout, if any)
+function renderInto(target, V, L) {
+  const H = canvasH(), T = V.tag;
+  target.innerHTML = ''; WORLD = null;
+  el('defs', {}, target).innerHTML = DEFS;
+  WORLD = V.world = el('g', { class: 'world' }, target);
+  // the bands of rungs (one, the whole circuit, unless in columns): each its own group, moved into its column
+  const bands = (L ? L.bands : [{ y0: 0, y1: H, dx: 0, dy: 0 }]).map((b, n) => ({ ...b, n, g: el('g', b.dx || b.dy ? { transform: `translate(${b.dx} ${b.dy})` } : {}) }));
+  const B = y => bands.find(b => y < b.y1) || bands[bands.length - 1];
+  for (const b of bands) {
+    el('rect', { x: 0, y: b.y0, width: W, height: b.y1 - b.y0, fill: '#404040' }, b.g);   // the sheet the circuit is drawn on
+    if (editing) el('rect', { x: 0, y: 0, width: W, height: H, fill: 'url(#gridMajor)' }, b.g);   // positioning grid while building
+  }
   const net = network(); if (editing) NET = net;
   // one dark channel under all the wiring, so wires that meet join into one seamless conduit; then vertical
   // cores, then horizontal ones (which hop over any vertical wire they cross without joining)
   // wires are trimmed at the edges of the sheet (their rounded ends would otherwise poke past the L1 and L2 bars)
-  el('clipPath', { id: 'sheetClip' }, svg.querySelector('defs')).appendChild(Object.assign(document.createElementNS(NS, 'rect'), {})).setAttribute('width', W);
-  svg.querySelector('#sheetClip rect').setAttribute('height', H);
-  const clip = { 'clip-path': 'url(#sheetClip)' };
-  const chan = el('g', clip), wlV = el('g', clip), backs = el('g', clip), wlH = el('g', clip), hits = el('g', {});
+  for (const b of bands) {
+    el('rect', { x: 0, y: b.y0, width: W, height: b.y1 - b.y0 }, el('clipPath', { id: `sheetClip${T}${b.n}` }, target.querySelector('defs')));
+    const clip = { 'clip-path': `url(#sheetClip${T}${b.n})` };
+    Object.assign(b, { chan: el('g', clip, b.g), wlV: el('g', clip, b.g), backs: el('g', clip, b.g), wlH: el('g', clip, b.g), hits: el('g', {}, b.g) });
+  }
   const shape = (x1, y1, x2, y2) => y1 === y2 && x1 !== x2 ? hPath(Math.min(x1, x2), Math.max(x1, x2), y1, net.hops) : `M${x1} ${y1}L${x2} ${y2}`;
-  const chanD = wires.map(w => shape(w.x1, w.y1, w.x2, w.y2)).join('');
-  if (chanD) el('path', { d: chanD, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', fill: 'none' }, chan);
-  for (const [x, y] of net.hops) el('path', { d: hPath(x - 10, x + 10, y, net.hops), stroke: '#262626', 'stroke-width': 18, fill: 'none' }, backs);
-  const layer = (x1, x2) => x1 === x2 ? wlV : wlH;
-  view.runs = []; view.shape = shape;
+  const wy = w => (w.y1 + w.y2) / 2;   // (which band a wire is in: none crosses from one band to the next)
+  for (const b of bands) {
+    const chanD = wires.filter(w => B(wy(w)) === b).map(w => shape(w.x1, w.y1, w.x2, w.y2)).join('');
+    if (chanD) el('path', { d: chanD, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', fill: 'none' }, b.chan);
+  }
+  for (const [x, y] of net.hops) el('path', { d: hPath(x - 10, x + 10, y, net.hops), stroke: '#262626', 'stroke-width': 18, fill: 'none' }, B(y).backs);
+  const layer = (x1, x2, y) => x1 === x2 ? B(y).wlV : B(y).wlH;
+  V.runs = []; V.shape = shape;
   if (editing) {
     for (const w of wires) {
       const isSel = selHasW(w.id);
-      el('path', { d: shape(w.x1, w.y1, w.x2, w.y2), fill: 'none', stroke: isSel ? '#ffc000' : '#5e5e5e', 'stroke-width': isSel ? 6 : 4, 'stroke-linecap': 'round' }, layer(w.x1, w.x2));
-      el('line', { x1: w.x1, y1: w.y1, x2: w.x2, y2: w.y2, stroke: 'transparent', 'stroke-width': 20 }, hits);
+      el('path', { d: shape(w.x1, w.y1, w.x2, w.y2), fill: 'none', stroke: isSel ? '#ffc000' : '#5e5e5e', 'stroke-width': isSel ? 6 : 4, 'stroke-linecap': 'round' }, layer(w.x1, w.x2, wy(w)));
+      el('line', { x1: w.x1, y1: w.y1, x2: w.x2, y2: w.y2, stroke: 'transparent', 'stroke-width': 20 }, B(wy(w)).hits);
     }
   } else {
     // each wire is repainted as a few smooth runs, one per colour
     const byWire = new Map();
     for (const s of NET.subs) { if (!byWire.has(s.wire.id)) byWire.set(s.wire.id, []); byWire.get(s.wire.id).push(s); }
-    for (const [, subs] of byWire) view.runs.push({ subs, n: view.runs.length, g: el('g', {}, layer(subs[0].x1, subs[0].x2)), last: '' });
+    for (const [, subs] of byWire) V.runs.push({ subs, n: V.runs.length, g: el('g', {}, layer(subs[0].x1, subs[0].x2, wy(subs[0].wire))), last: '' });
   }
   // the L1 bar down the left edge and the L2 bar down the right: wires connect by running into them
-  for (const [x, t] of [[0, 'L1'], [W - BAR, 'L2']]) {
-    const g = el('g', { style: editing ? 'cursor:crosshair' : '' });
-    el('rect', { x, y: 6, width: BAR, height: H - 12, rx: 3, fill: 'url(#gBar)', stroke: '#262626', 'stroke-width': 1.5 }, g);
+  for (const bd of bands) for (const [x, t] of [[0, 'L1'], [W - BAR, 'L2']]) {
+    const g = el('g', { style: editing ? 'cursor:crosshair' : '' }, bd.g), top = bd.y0 + 6, bot = bd.y1 - 6;
+    el('rect', { x, y: top, width: BAR, height: bot - top, rx: 3, fill: 'url(#gBar)', stroke: '#262626', 'stroke-width': 1.5 }, g);
     el('title', {}, g).textContent = editing ? `${t}: drag from here to draw a wire, or end a wire here` : t;
     if (editing) {
       // a handle at the top of each bar: drag it sideways to make the circuit longer or shorter
@@ -1759,7 +1824,8 @@ function draw() {
   }
   // a square screw terminal wherever a wire meets a bar, and the bar's name next to it. The screw has a combination
   // head: a slot right across it for a flat screwdriver, and a cross for a Phillips
-  const terminal = (x, y) => screw(x, y, el('g', {}));
+  for (const bd of bands) bd.top = el('g', {}, bd.g);
+  const terminal = (x, y) => screw(x, y, el('g', {}, B(y).top));
   // a terminal screw wherever a wire meets a bar, and the bar's name next to it, as in the simulators
   const seen = new Set();
   for (const fd of net.feeds) {
@@ -1767,16 +1833,17 @@ function draw() {
     const sx = fd.t === 'L1' ? BAR / 2 : W - BAR / 2;
     terminal(sx, fd.y);
     // (selected: outlined, kept inside the panel's edge)
-    if (editing && selHasT(fd.t === 'L1' ? 0 : W, fd.y)) el('rect', { x: fd.t === 'L1' ? 1.5 : W - BAR - 18.5, y: fd.y - 19, width: BAR + 17, height: 38, rx: 7, fill: 'rgba(255,192,0,.16)', stroke: '#ffc000', 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'pointer-events': 'none' });
-    el('text', fd.t === 'L1' ? { x: BAR + 8, y: fd.y - 22, class: 'rail' } : { x: W - BAR - 8, y: fd.y + 38, class: 'rail', 'text-anchor': 'end' }).textContent = fd.t;
+    if (editing && selHasT(fd.t === 'L1' ? 0 : W, fd.y)) el('rect', { x: fd.t === 'L1' ? 1.5 : W - BAR - 18.5, y: fd.y - 19, width: BAR + 17, height: 38, rx: 7, fill: 'rgba(255,192,0,.16)', stroke: '#ffc000', 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'pointer-events': 'none' }, B(fd.y).top);
+    el('text', fd.t === 'L1' ? { x: BAR + 8, y: fd.y - 22, class: 'rail' } : { x: W - BAR - 8, y: fd.y + 38, class: 'rail', 'text-anchor': 'end' }, B(fd.y).top).textContent = fd.t;
   }
   const issues = editing ? wiringIssues(net) : new Map();
-  selLinks();
-  view.parts = new Map();
+  for (const bd of bands) { bd.links = el('g', {}, bd.g); bd.parts = el('g', {}, bd.g); }
+  selLinks(B);
+  V.parts = new Map();
   for (const p of parts) {
-    const g = el('g', { 'data-part': p.id, style: editing ? 'cursor:grab' : '' });
-    const v = drawPart(p, g, p.x, p.y, chan);
-    view.parts.set(p.id, v);
+    const g = el('g', { 'data-part': p.id, style: editing ? 'cursor:grab' : '' }, B(p.y).parts);
+    const v = drawPart(p, g, p.x, p.y, B(p.y).chan);
+    V.parts.set(p.id, v);
     if (editing) {
       for (const [tx, ty] of terms(p)) el('circle', { cx: tx, cy: ty, r: 6.5, fill: '#404040', stroke: '#c8c8c8', 'stroke-width': 1.6, style: 'cursor:crosshair' }, g);
       // the other drawings of a selected button (the same button): a fainter outline, so they show as one
@@ -1790,16 +1857,12 @@ function draw() {
     } else if (p.t === 'btn') bindButton(g, p);
     else if (p.t === 'sel') bindSelector(g, p);
   }
-  if (editing) {
+  if (editing && V === view) {
     const f = document.getElementById('fault');
     f.hidden = !issues.has('short');
     f.textContent = 'Warning: with every button passing current, L1 connects straight to L2 with no coil in between. That is a short circuit.';
   }
-  view.overlay = el('g', { 'pointer-events': 'none' });
-  if (preview) drawPreview();
-  renderProps();
-  if (fit()) { applyCam(); requestAnimationFrame(draw); }   // the panel changed size: draw again to fill it
-  scheduleAutosave();
+  if (V === view) { V.overlay = el('g', { 'pointer-events': 'none' }); if (preview) drawPreview(); }
 }
 function drawPreview() {
   view.overlay.innerHTML = '';
@@ -1824,10 +1887,9 @@ function drawPreview() {
    In Build mode a line can be dragged out of the way of names and wires: across moves its upright run sideways,
    up or down moves where it crosses over (kept on the lower drawing as p.lk = [dx, dy], from where it would be).
    A double-click puts it back. */
-function selLinks() {
+function selLinks(B) {
   const by = {};
   for (const p of parts) if (isOp(p)) (by[p.t + p.L] = by[p.t + p.L] || []).push(p);
-  const g = el('g', {});
   for (const k in by) {
     const ds = by[k].sort((a, b) => a.y - b.y || a.x - b.x); if (ds.length < 2) continue;
     const m0 = ds[0].t === 'sel' ? mainSel(ds[0].L) : mainBtn(ds[0].L), bot = p => p.y + BODYH(p.t) / 2 + (p.nc ? 7 : 4), top = p => p === m0 ? p.y - capTop(p) - 16 : p.y - BODYH(p.t) / 2 - (p.nc ? 7 : 4);
@@ -1838,6 +1900,8 @@ function selLinks() {
         const c = Math.max(y0 + 6, Math.min(y1 - 6, Math.round((y0 + y1) / 2) + dy)), X = Math.max(BAR + 10, Math.min(W - BAR - 10, a.x + dx));
         d = X === a.x ? (a.x === b.x ? `M${a.x} ${y0}V${y1}` : `M${a.x} ${y0}V${c}H${b.x}V${y1}`) : `M${a.x} ${y0}V${y0 + 8}H${X}V${c}H${b.x}V${y1}`;
       } else { const lo = Math.max(y0 + 8, Math.max(bot(a), bot(b)) + 16 + dy); d = `M${a.x} ${y0}V${lo}H${b.x}V${bot(b)}`; }
+      if (B(a.y) !== B(b.y)) continue;   // (in columns, two drawings in different columns are not joined)
+      const g = B(a.y).links;
       el('path', { d, fill: 'none', stroke: a.color, 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'stroke-linejoin': 'round', opacity: .85, 'pointer-events': 'none' }, g);
       if (editing) {
         const h = el('path', { d, fill: 'none', stroke: 'transparent', 'stroke-width': 14, 'stroke-linejoin': 'round', class: 'link-hit' }, g);
@@ -1887,7 +1951,18 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 function paint() {
-  for (const it of view.runs) {
+  for (const V of VIEWS) paintView(V);
+  paintStation();
+  const fl = document.getElementById('fault');
+  if (fl.hidden !== !shortNow) {
+    fl.hidden = !shortNow;
+    fl.textContent = 'Short circuit! L1 is connected straight to L2 with no coil in between. In a real panel the fuse or breaker would open. Release the button or change the wiring to clear it.';
+  }
+}
+// one drawing of the circuit (the main view, or the second pane in split view): the wires and the parts
+function paintView(V) {
+  if (!V.runs) return;
+  for (const it of V.runs) {
     const cols = it.subs.map(s => lit(s.a, simT) && lit(s.b, simT) ? colAt(s.b, simT) : null), k = cols.join('|');
     if (k === it.last) continue; it.last = k;
     // each lit stretch of the wire is one smooth stroke, shaded along its length with a gradient
@@ -1895,16 +1970,16 @@ function paint() {
     for (let i = 0, k = 0; i < cols.length;) {
       if (!cols[i]) { i++; continue; }
       let j = i; while (j + 1 < cols.length && cols[j + 1]) j++;
-      const a = it.subs[i], b = it.subs[j], id = `rg${it.n}_${k++}`, n = j - i + 1;
+      const a = it.subs[i], b = it.subs[j], id = `rg${V.tag}${it.n}_${k++}`, n = j - i + 1;
       const gr = el('linearGradient', { id, gradientUnits: 'userSpaceOnUse', x1: a.x1, y1: a.y1, x2: b.x2, y2: b.y2 }, it.g);
       for (let m = i; m <= j; m++) if (m === i || m === j || cols[m] !== cols[m - 1] || cols[m] !== cols[m + 1]) el('stop', { offset: ((m - i + .5) / n).toFixed(4), 'stop-color': cols[m] }, gr);
-      el('path', { d: view.shape(a.x1, a.y1, b.x2, b.y2), fill: 'none', stroke: `url(#${id})`, 'stroke-width': 8.9, 'stroke-linecap': 'round' }, it.g);
+      el('path', { d: V.shape(a.x1, a.y1, b.x2, b.y2), fill: 'none', stroke: `url(#${id})`, 'stroke-width': 8.9, 'stroke-linecap': 'round' }, it.g);
       i = j + 1;
     }
   }
   // parts: each one is only touched when how it looks has changed (redrawing a part, with its shadow, is costly)
   for (const p of parts) {
-    const v = view.parts.get(p.id);
+    const v = V.parts.get(p.id); if (!v) continue;
     for (const S of ['A', 'B']) paintLead(v.lead[S], p._lead && p._lead[S]);
     let k;
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
@@ -1934,12 +2009,6 @@ function paint() {
       v.text.style.fill = (on ? f : 1 - f) > .5 ? DARK_TEXT : LIGHT_TEXT;
       if (v.timer) paintTimer(p, v, on ? f : 1 - f);
     }
-  }
-  paintStation();
-  const fl = document.getElementById('fault');
-  if (fl.hidden !== !shortNow) {
-    fl.hidden = !shortNow;
-    fl.textContent = 'Short circuit! L1 is connected straight to L2 with no coil in between. In a real panel the fuse or breaker would open. Release the button or change the wiring to clear it.';
   }
 }
 // a pushbutton's cap (on the circuit, or on the operator station: v is that drawing, centred at x, y)
@@ -2003,7 +2072,7 @@ function paintTimer(p, v, lit) {
   v.glass.setAttribute('stroke', lit > .5 ? '#1c1c1c' : '#d8d8d8'); v.sand.setAttribute('fill', lit > .5 ? '#1c1c1c' : '#d8d8d8');
   setReadout(v, p, timerLeft(p), timerLit(p));
 }
-function paintTimers() { for (const p of parts) if (isTimer(p)) { const v = view.parts.get(p.id); if (v && v.timer) setReadout(v, p, timerLeft(p), timerLit(p)); } }
+function paintTimers() { for (const V of VIEWS) if (V.parts) for (const p of parts) if (isTimer(p)) { const v = V.parts.get(p.id); if (v && v.timer) setReadout(v, p, timerLeft(p), timerLit(p)); } }
 
 // a selector switch while running: press a position's name to turn it straight there; anywhere else on its left half
 // turns it one position left, its right half one right (or the arrow keys when it has the focus)
@@ -2515,13 +2584,14 @@ function boxSelect(e, p0) {
 let cam = { x: 0, y: 0, z: 1, fit: true };
 const fitView = () => { cam = { x: 0, y: 0, z: 1, fit: true }; };
 const ZMAX = 4;
-const viewW = () => W / cam.z, viewH = () => VIS_H1 / cam.z;
-const zMin = () => Math.max(0.25, Math.min(1, VIS_H1 / canvasH()));
+// (the sheet: the circuit, or in columns view its columns side by side: sheetW, sheetH in views.js)
+const viewW = () => sheetW() / cam.z, viewH = () => VIS_H1 / cam.z;
+const zMin = () => Math.max(0.25, Math.min(1, VIS_H1 / sheetH()));
 function applyCam() {
   if (typeof dragging === 'function' && dragging()) return;   // the view holds still under a drag in progress
   if (cam.fit) cam.z = zMin();
-  const H = canvasH(), vw = viewW(), vh = viewH();
-  cam.x = vw >= W ? (W - vw) / 2 : Math.min(Math.max(0, cam.x), W - vw);
+  const H = sheetH(), SW = sheetW(), vw = viewW(), vh = viewH();
+  cam.x = vw >= SW ? (SW - vw) / 2 : Math.min(Math.max(0, cam.x), SW - vw);
   cam.y = vh >= H ? (H - vh) / 2 : Math.min(Math.max(0, cam.y), H - vh);
   svg.setAttribute('viewBox', `${cam.x} ${cam.y} ${vw} ${vh}`);
   const lab = document.getElementById('zoom-pct'); if (lab) lab.textContent = Math.round(cam.z * 100) + '%';
@@ -2536,7 +2606,7 @@ const zoomCentre = f => zoomAt(f, cam.x + viewW() / 2, cam.y + viewH() / 2);
 svg.addEventListener('wheel', e => {
   const k = e.deltaMode === 1 ? 30 : e.deltaMode === 2 ? 300 : 1, dy = e.deltaY * k, dx = e.deltaX * k;
   if (e.ctrlKey || e.metaKey) { e.preventDefault(); const p = pt(e); zoomAt(Math.exp(-dy * 0.0015), p.x, p.y); return; }
-  if (viewW() >= W - 1e-6 && viewH() >= canvasH() - 1e-6) return;   // everything is in view: let the page scroll as normal
+  if (viewW() >= sheetW() - 1e-6 && viewH() >= sheetH() - 1e-6) return;   // everything is in view: let the page scroll as normal
   e.preventDefault(); cam.fit = false;
   const s = viewW() / svg.getBoundingClientRect().width;
   if (e.shiftKey) cam.x += (dy || dx) * s; else { cam.y += dy * s; cam.x += dx * s; }
@@ -2554,6 +2624,138 @@ document.getElementById('zoom-in').addEventListener('click', () => zoomCentre(1.
 document.getElementById('zoom-out').addEventListener('click', () => zoomCentre(0.8));
 // Fit: the whole circuit, as large as the panel allows (full width, or smaller if the circuit is taller than the window)
 document.getElementById('zoom-fit').addEventListener('click', () => { fitView(); if (editing) fit(true); draw(); });
+
+/* ---- js/views.js ---- */
+/* =====================================================================
+   ways to see more of a long circuit while running (the View group on the Simulation tab), and full screen
+   - Normal: the circuit as built, zoomed and scrolled as you like.
+   - Columns: the rungs laid out in side-by-side columns, each with its own stretch of L1 and L2, like the pages of a
+     print side by side, as many as make the whole circuit as large as it can be. The columns break only between
+     rungs (where no wire, part or name crosses), and the drawing is still one drawing, each group of rungs moved
+     into its column (draw: LAYOUT), so it costs nothing to run.
+   - Split: two panes side by side (or one above the other on a tall screen), each its own view of the circuit, zoomed
+     and scrolled on its own: one on the top rungs, one on the bottom ones. The circuit is drawn into both, and both
+     are painted as the current flows.
+   Full screen: the circuit fills the screen, the title bar goes and the ribbon folds to its tabs (Esc to leave).
+   ===================================================================== */
+const VIEW_KEY = 'oo-circuit-builder:view';
+let viewMode = 'normal', LAYOUT = null;
+try { const m = localStorage.getItem(VIEW_KEY); if (m === 'columns' || m === 'split') viewMode = m; } catch (_) {}
+const svg2 = document.getElementById('svg2'), pane2 = document.getElementById('pane2');
+// the sheet the main view looks at: the circuit, or in columns the columns side by side
+const sheetW = () => LAYOUT ? LAYOUT.w : W, sheetH = () => LAYOUT ? LAYOUT.h : canvasH();
+const COL_GAP = 60;
+function layoutColumns() {
+  const H = canvasH(), pw = svg.clientWidth || 1, ph = svg.clientHeight || 1;
+  // where something is: wires (and the names of the bars beside their ends), parts and their names
+  const busy = [];
+  for (const w of wires) {
+    if (w.x1 === w.x2) busy.push([Math.min(w.y1, w.y2) - 14, Math.max(w.y1, w.y2) + 14]);
+    else { const bar1 = Math.min(w.x1, w.x2) === 0, bar2 = Math.max(w.x1, w.x2) === W; busy.push([w.y1 - (bar1 ? 46 : 16), w.y1 + (bar2 ? 46 : 16)]); }
+  }
+  for (const p of parts) busy.push([p.y - capTop(p) - 18, p.y + BODYH(p.t) / 2 + (p.t === 'lamp' ? 18 : 12)]);
+  busy.sort((a, b) => a[0] - b[0]);
+  // the gaps between them: where a column can break
+  const cuts = []; let reach = 0;
+  for (const [a, b] of busy) { if (a > reach + 4) cuts.push((reach + a) / 2); reach = Math.max(reach, b); }
+  let best = { k: 1, s: Math.min(pw / W, ph / H), bands: [{ y0: 0, y1: H, dx: 0, dy: 0 }] };
+  for (let k = 2; k <= 6; k++) {
+    const ys = [0]; let ok = true;
+    for (let i = 1; i < k; i++) {
+      const want = H * i / k, c = cuts.filter(y => y > ys[ys.length - 1] + 40).sort((a, b) => Math.abs(a - want) - Math.abs(b - want))[0];
+      if (c === undefined) { ok = false; break; } ys.push(c);
+    }
+    if (!ok) break;
+    ys.push(H);
+    const tall = Math.max(...ys.slice(1).map((y, i) => y - ys[i])), w = k * W + (k - 1) * COL_GAP, s = Math.min(pw / w, ph / tall);
+    if (s > best.s * 1.04) best = { k, s, bands: ys.slice(1).map((y1, i) => ({ y0: ys[i], y1, dx: i * (W + COL_GAP), dy: -ys[i] })) };
+  }
+  const h = Math.max(...best.bands.map(b => b.y1 - b.y0));
+  return { bands: best.bands, w: best.bands.length * W + (best.bands.length - 1) * COL_GAP, h };
+}
+
+// ---- the second pane (split view): its own camera, like the main one
+let cam2 = { x: 0, y: 0, z: 1 };
+const VIS2 = () => W * (svg2.clientHeight || 1) / (svg2.clientWidth || 1);
+const viewW2 = () => W / cam2.z, viewH2 = () => VIS2() / cam2.z;
+const zMin2 = () => Math.max(0.25, Math.min(1, VIS2() / canvasH()));
+function applyCam2() {
+  if (pane2.hidden) return;
+  const H = canvasH(); cam2.z = Math.min(ZMAX, Math.max(zMin2(), cam2.z));
+  const vw = viewW2(), vh = viewH2();
+  cam2.x = vw >= W ? (W - vw) / 2 : Math.min(Math.max(0, cam2.x), W - vw);
+  cam2.y = vh >= H ? (H - vh) / 2 : Math.min(Math.max(0, cam2.y), H - vh);
+  svg2.setAttribute('viewBox', `${cam2.x} ${cam2.y} ${vw} ${vh}`);
+  document.getElementById('zoom-pct2').textContent = Math.round(cam2.z * 100) + '%';
+}
+const pt2 = e => { const q = svg2.createSVGPoint(); q.x = e.clientX; q.y = e.clientY; const m = svg2.getScreenCTM(); return m ? q.matrixTransform(m.inverse()) : { x: 0, y: 0 }; };
+function zoom2(f, px, py) {
+  const z = Math.min(ZMAX, Math.max(zMin2(), cam2.z * f)); if (Math.abs(z - cam2.z) < 1e-6) return;
+  const fx = (px - cam2.x) / viewW2(), fy = (py - cam2.y) / viewH2();
+  cam2.z = z; cam2.x = px - fx * viewW2(); cam2.y = py - fy * viewH2(); applyCam2();
+}
+svg2.addEventListener('wheel', e => {
+  const k = e.deltaMode === 1 ? 30 : e.deltaMode === 2 ? 300 : 1, dy = e.deltaY * k, dx = e.deltaX * k;
+  e.preventDefault();
+  if (e.ctrlKey || e.metaKey) { const p = pt2(e); zoom2(Math.exp(-dy * 0.0015), p.x, p.y); return; }
+  const s = viewW2() / svg2.getBoundingClientRect().width;
+  if (e.shiftKey) cam2.x += (dy || dx) * s; else { cam2.y += dy * s; cam2.x += dx * s; }
+  applyCam2();
+}, { passive: false });
+svg2.addEventListener('pointerdown', e => {
+  if (e.button !== 1) return;
+  e.preventDefault();
+  const sx = e.clientX, sy = e.clientY, c0 = { ...cam2 }, s = viewW2() / svg2.getBoundingClientRect().width;
+  const mv = ev => { cam2.x = c0.x - (ev.clientX - sx) * s; cam2.y = c0.y - (ev.clientY - sy) * s; applyCam2(); };
+  const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); };
+  document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+});
+document.getElementById('zoom-in2').addEventListener('click', () => zoom2(1.25, cam2.x + viewW2() / 2, cam2.y + viewH2() / 2));
+document.getElementById('zoom-out2').addEventListener('click', () => zoom2(0.8, cam2.x + viewW2() / 2, cam2.y + viewH2() / 2));
+document.getElementById('zoom-fit2').addEventListener('click', () => { cam2 = { x: 0, y: 0, z: 0 }; applyCam2(); });
+
+// ---- choosing the view
+function setViewMode(m) {
+  const was = viewMode; viewMode = m;
+  try { localStorage.setItem(VIEW_KEY, m); } catch (_) {}
+  showViewMode();
+  if (!editing && m === 'split' && was !== 'split') splitStart();
+  else if (m !== was) fitView();
+  fit(); draw(); if (!editing) paint();
+}
+// what the stage shows: one pane, or two (side by side on a wide panel, one above the other on a tall one)
+function showViewMode() {
+  const split = !editing && viewMode === 'split', st = document.getElementById('stage');
+  pane2.hidden = !split; st.classList.toggle('split', split);
+  st.classList.toggle('split-v', split && st.clientWidth < st.clientHeight * 1.1);
+  document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === viewMode)));
+}
+// split view starts with both panes at full width: the first on the top of the circuit, the second on the bottom
+function splitStart() {
+  showViewMode(); fit();
+  cam = { x: 0, y: 0, z: 1, fit: false };
+  cam2 = { x: 0, y: 1e9, z: 1 };
+}
+document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setViewMode(b.dataset.view)));
+window.addEventListener('resize', () => { if (!editing && viewMode !== 'normal') { showViewMode(); fit(); draw(); } });
+
+// ---- full screen
+function setFullScreen(on) {
+  if (on === document.body.classList.contains('fs')) return;
+  document.body.classList.toggle('fs', on);
+  const b = document.getElementById('fs-toggle');
+  b.setAttribute('aria-pressed', String(on)); b.setAttribute('aria-label', on ? 'Leave full screen' : 'Full screen');
+  b.dataset.tip = on ? 'Leave full screen (Esc)' : 'Full screen: the circuit fills the screen (Esc to leave)';
+  try {
+    if (on && document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+    if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  } catch (_) {}
+  closeMenus();
+  requestAnimationFrame(() => { showViewMode(); if (fit(editing)) { if (editing) fitView(); } draw(); if (!editing) paint(); });
+}
+document.getElementById('fs-toggle').addEventListener('click', () => setFullScreen(!document.body.classList.contains('fs')));
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.body.classList.contains('fs')) setFullScreen(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('fs')) setFullScreen(false); });
 
 /* ---- js/toolbar.js ---- */
 // toolbar parts: drag onto the panel, or click the tool and then click the panel
@@ -2627,7 +2829,7 @@ function showRibbon() {
 for (const [id, t] of [['rt-home', 'home'], ['rt-part', 'part'], ['rt-run', 'run']])
   document.getElementById(id).addEventListener('click', () => {
     if (t !== 'run') ribbonTab = t;
-    if (document.body.classList.contains('ribbon-min')) document.body.classList.add('ribbon-peek');
+    if (document.body.classList.contains('ribbon-min') || document.body.classList.contains('fs')) document.body.classList.add('ribbon-peek');
     showRibbon();
   });
 const RIBBON_KEY = 'oo-circuit-builder:ribbon-min';
@@ -3234,6 +3436,7 @@ function setMode(run) {
   document.getElementById('tab-edit').setAttribute('aria-selected', String(!run));
   document.getElementById('tab-run').setAttribute('aria-selected', String(run));
   closeMenus(); showRibbon(); if (!run) buildStation();
+  showViewMode(); if (run && viewMode === 'split') splitStart();
   document.getElementById('fault').hidden = true;
   sel = null; preview = null; setTool('select');
   if (cam.fit) { fit(true); fitView(); }
@@ -3285,7 +3488,7 @@ function fit(widen) {
   const top = st.getBoundingClientRect().top + window.scrollY;
   // the panel's height is worked out again only when the window or the mode changes (not when selecting something
   // shows or hides its settings below the panel, which would rescale the view under the pointer)
-  const k = `${window.innerWidth}x${window.innerHeight}:${editing}:${Math.round(top)}`;
+  const k = `${window.innerWidth}x${window.innerHeight}:${editing}:${Math.round(top)}:${viewMode}`;
   let h = parseFloat(st.style.height);
   if (widen || k !== fitKey || !h) {
     const below = 16;
@@ -3293,9 +3496,10 @@ function fit(widen) {
     if (st.style.height !== h + 'px') st.style.height = h + 'px';
     fitKey = k;
   }
-  const w = st.clientWidth || 1;
-  const widened = !!widen && setWidth(fitWidth(w, h));
-  const vis = W * h / w;
+  // (the main view: the whole panel, or in split view its first pane)
+  const w = svg.clientWidth || st.clientWidth || 1, hh = svg.clientHeight || h;
+  const widened = !!widen && (editing || viewMode === 'normal') && setWidth(fitWidth(w, hh));
+  const vis = sheetW() * hh / w;
   if (widened) { VIS_H1 = vis; return true; }
   if (Math.abs(vis - VIS_H1) < 0.5) return false;
   VIS_H1 = vis; return true;

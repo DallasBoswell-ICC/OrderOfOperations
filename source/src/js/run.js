@@ -18,7 +18,18 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 function paint() {
-  for (const it of view.runs) {
+  for (const V of VIEWS) paintView(V);
+  paintStation();
+  const fl = document.getElementById('fault');
+  if (fl.hidden !== !shortNow) {
+    fl.hidden = !shortNow;
+    fl.textContent = 'Short circuit! L1 is connected straight to L2 with no coil in between. In a real panel the fuse or breaker would open. Release the button or change the wiring to clear it.';
+  }
+}
+// one drawing of the circuit (the main view, or the second pane in split view): the wires and the parts
+function paintView(V) {
+  if (!V.runs) return;
+  for (const it of V.runs) {
     const cols = it.subs.map(s => lit(s.a, simT) && lit(s.b, simT) ? colAt(s.b, simT) : null), k = cols.join('|');
     if (k === it.last) continue; it.last = k;
     // each lit stretch of the wire is one smooth stroke, shaded along its length with a gradient
@@ -26,16 +37,16 @@ function paint() {
     for (let i = 0, k = 0; i < cols.length;) {
       if (!cols[i]) { i++; continue; }
       let j = i; while (j + 1 < cols.length && cols[j + 1]) j++;
-      const a = it.subs[i], b = it.subs[j], id = `rg${it.n}_${k++}`, n = j - i + 1;
+      const a = it.subs[i], b = it.subs[j], id = `rg${V.tag}${it.n}_${k++}`, n = j - i + 1;
       const gr = el('linearGradient', { id, gradientUnits: 'userSpaceOnUse', x1: a.x1, y1: a.y1, x2: b.x2, y2: b.y2 }, it.g);
       for (let m = i; m <= j; m++) if (m === i || m === j || cols[m] !== cols[m - 1] || cols[m] !== cols[m + 1]) el('stop', { offset: ((m - i + .5) / n).toFixed(4), 'stop-color': cols[m] }, gr);
-      el('path', { d: view.shape(a.x1, a.y1, b.x2, b.y2), fill: 'none', stroke: `url(#${id})`, 'stroke-width': 8.9, 'stroke-linecap': 'round' }, it.g);
+      el('path', { d: V.shape(a.x1, a.y1, b.x2, b.y2), fill: 'none', stroke: `url(#${id})`, 'stroke-width': 8.9, 'stroke-linecap': 'round' }, it.g);
       i = j + 1;
     }
   }
   // parts: each one is only touched when how it looks has changed (redrawing a part, with its shadow, is costly)
   for (const p of parts) {
-    const v = view.parts.get(p.id);
+    const v = V.parts.get(p.id); if (!v) continue;
     for (const S of ['A', 'B']) paintLead(v.lead[S], p._lead && p._lead[S]);
     let k;
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
@@ -65,12 +76,6 @@ function paint() {
       v.text.style.fill = (on ? f : 1 - f) > .5 ? DARK_TEXT : LIGHT_TEXT;
       if (v.timer) paintTimer(p, v, on ? f : 1 - f);
     }
-  }
-  paintStation();
-  const fl = document.getElementById('fault');
-  if (fl.hidden !== !shortNow) {
-    fl.hidden = !shortNow;
-    fl.textContent = 'Short circuit! L1 is connected straight to L2 with no coil in between. In a real panel the fuse or breaker would open. Release the button or change the wiring to clear it.';
   }
 }
 // a pushbutton's cap (on the circuit, or on the operator station: v is that drawing, centred at x, y)
@@ -134,7 +139,7 @@ function paintTimer(p, v, lit) {
   v.glass.setAttribute('stroke', lit > .5 ? '#1c1c1c' : '#d8d8d8'); v.sand.setAttribute('fill', lit > .5 ? '#1c1c1c' : '#d8d8d8');
   setReadout(v, p, timerLeft(p), timerLit(p));
 }
-function paintTimers() { for (const p of parts) if (isTimer(p)) { const v = view.parts.get(p.id); if (v && v.timer) setReadout(v, p, timerLeft(p), timerLit(p)); } }
+function paintTimers() { for (const V of VIEWS) if (V.parts) for (const p of parts) if (isTimer(p)) { const v = V.parts.get(p.id); if (v && v.timer) setReadout(v, p, timerLeft(p), timerLit(p)); } }
 
 // a selector switch while running: press a position's name to turn it straight there; anywhere else on its left half
 // turns it one position left, its right half one right (or the arrow keys when it has the focus)

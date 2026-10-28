@@ -8,13 +8,14 @@
 let cam = { x: 0, y: 0, z: 1, fit: true };
 const fitView = () => { cam = { x: 0, y: 0, z: 1, fit: true }; };
 const ZMAX = 4;
-const viewW = () => W / cam.z, viewH = () => VIS_H1 / cam.z;
-const zMin = () => Math.max(0.25, Math.min(1, VIS_H1 / canvasH()));
+// (the sheet: the circuit, or in columns view its columns side by side: sheetW, sheetH in views.js)
+const viewW = () => sheetW() / cam.z, viewH = () => VIS_H1 / cam.z;
+const zMin = () => Math.max(0.25, Math.min(1, VIS_H1 / sheetH()));
 function applyCam() {
   if (typeof dragging === 'function' && dragging()) return;   // the view holds still under a drag in progress
   if (cam.fit) cam.z = zMin();
-  const H = canvasH(), vw = viewW(), vh = viewH();
-  cam.x = vw >= W ? (W - vw) / 2 : Math.min(Math.max(0, cam.x), W - vw);
+  const H = sheetH(), SW = sheetW(), vw = viewW(), vh = viewH();
+  cam.x = vw >= SW ? (SW - vw) / 2 : Math.min(Math.max(0, cam.x), SW - vw);
   cam.y = vh >= H ? (H - vh) / 2 : Math.min(Math.max(0, cam.y), H - vh);
   svg.setAttribute('viewBox', `${cam.x} ${cam.y} ${vw} ${vh}`);
   const lab = document.getElementById('zoom-pct'); if (lab) lab.textContent = Math.round(cam.z * 100) + '%';
@@ -29,7 +30,7 @@ const zoomCentre = f => zoomAt(f, cam.x + viewW() / 2, cam.y + viewH() / 2);
 svg.addEventListener('wheel', e => {
   const k = e.deltaMode === 1 ? 30 : e.deltaMode === 2 ? 300 : 1, dy = e.deltaY * k, dx = e.deltaX * k;
   if (e.ctrlKey || e.metaKey) { e.preventDefault(); const p = pt(e); zoomAt(Math.exp(-dy * 0.0015), p.x, p.y); return; }
-  if (viewW() >= W - 1e-6 && viewH() >= canvasH() - 1e-6) return;   // everything is in view: let the page scroll as normal
+  if (viewW() >= sheetW() - 1e-6 && viewH() >= sheetH() - 1e-6) return;   // everything is in view: let the page scroll as normal
   e.preventDefault(); cam.fit = false;
   const s = viewW() / svg.getBoundingClientRect().width;
   if (e.shiftKey) cam.x += (dy || dx) * s; else { cam.y += dy * s; cam.x += dx * s; }
