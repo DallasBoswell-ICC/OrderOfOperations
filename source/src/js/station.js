@@ -4,11 +4,12 @@
    circuit on it (each one once, however many rungs it is drawn in), in the order they come down the ladder, drawn
    as on the circuit, in chrome bezels, each with a legend plate. Pressing a button on it presses it in the circuit,
    so a button at the top of a long ladder can be worked while watching the rungs at the bottom. Drag it by its title
-   bar; the – folds it to its title bar; the Simulation tab shows or hides it. Where it is, and whether it is folded
+   bar; the arrow folds it to its title bar; Station on the Simulation tab shows or hides it (it starts off). Where it is, and whether it is folded
    or hidden, is remembered in the browser.
    ===================================================================== */
 const STATION_KEY = 'oo-circuit-builder:station';
-let ST = { x: null, y: null, min: false, hidden: false }, STV = [];   // STV: the station's operators, { p, v }
+let ST = { x: null, y: null, min: false, hidden: true },   // (off until it is first turned on with Station on the Simulation tab)
+    STV = [];   // STV: the station's operators, { p, v }
 try { Object.assign(ST, JSON.parse(localStorage.getItem(STATION_KEY) || '{}')); } catch (_) {}
 const saveStation = () => { try { localStorage.setItem(STATION_KEY, JSON.stringify(ST)); } catch (_) {} };
 const stationEl = document.getElementById('station');
@@ -79,5 +80,5 @@ document.getElementById('st-head').addEventListener('pointerdown', e => {
 document.getElementById('st-min').addEventListener('click', () => { ST.min = !ST.min; saveStation(); showStation(); });
 document.getElementById('st-toggle').addEventListener('click', () => { ST.hidden = !ST.hidden; saveStation(); showStation(); paint(); });
 window.addEventListener('resize', () => { if (!stationEl.hidden) placeStation(); });
-// the corner screws: the same square terminal screws that fasten the wires to L1 and L2
-document.querySelectorAll('.st-screw').forEach(s => screw(0, 0, el('g', {}, s)));
+// the corner screws: the heads of the screws that fasten the wires to L1 and L2
+document.querySelectorAll('.st-screw').forEach(s => screw(0, 0, el('g', {}, s), true));

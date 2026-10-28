@@ -219,7 +219,7 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
 .station.min .st-body { display: none; }
 .station.min .st-head { border-radius: 9px; }
 .st-body { position: relative; padding: 10px 26px 16px; max-height: calc(100vh - 60px); overflow: auto; }
-.st-screw { position: absolute; width: 15px; height: 15px; }
+.st-screw { position: absolute; width: 13px; height: 13px; }
 .st-name { width: max-content; max-width: 100%; margin: 0 auto 10px; padding: 3px 14px; background: #f2f2f2; border: 1px solid #888; border-radius: 3px; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .st-grid { display: grid; gap: 12px 16px; justify-content: center; align-items: end; }
 .st-op { display: flex; flex-direction: column; align-items: center; gap: 4px; }
@@ -382,7 +382,7 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
         <button type="button" data-mode="hold" data-tip="A momentary button stays down only while you hold it">Press and hold</button>
       </div>
     </div>
-      <div class="tgroup" id="st-group"><span class="label">Operator station</span><button type="button" class="tool big" id="st-toggle" aria-pressed="true" data-tip="Show or hide the operator station: every pushbutton and selector switch of the circuit in one panel you can drag anywhere, so you can work them while watching any part of the ladder"><svg viewBox="0 0 30 26" aria-hidden="true"><rect x="2" y="2" width="26" height="22" rx="3" fill="#c4c7ca" stroke="#8f9396" stroke-width="1.2"/><rect x="5" y="6" width="8" height="8" rx="2" fill="#FF0032" stroke="#9a9a9a" stroke-width="1.2"/><rect x="17" y="6" width="8" height="8" rx="2" fill="#00B050" stroke="#9a9a9a" stroke-width="1.2"/><rect x="5" y="17" width="8" height="3" rx=".6" fill="#111"/><rect x="17" y="17" width="8" height="3" rx=".6" fill="#111"/></svg><span>Station</span></button></div>
+      <div class="tgroup" id="st-group"><span class="label">Operator station</span><button type="button" class="tool big" id="st-toggle" aria-pressed="false" data-tip="Show or hide the operator station: every pushbutton and selector switch of the circuit in one panel you can drag anywhere, so you can work them while watching any part of the ladder"><svg viewBox="0 0 30 26" aria-hidden="true"><rect x="2" y="2" width="26" height="22" rx="3" fill="#c4c7ca" stroke="#8f9396" stroke-width="1.2"/><rect x="5" y="6" width="8" height="8" rx="2" fill="#FF0032" stroke="#9a9a9a" stroke-width="1.2"/><rect x="17" y="6" width="8" height="8" rx="2" fill="#00B050" stroke="#9a9a9a" stroke-width="1.2"/><rect x="5" y="17" width="8" height="3" rx=".6" fill="#111"/><rect x="17" y="17" width="8" height="3" rx=".6" fill="#111"/></svg><span>Station</span></button></div>
       <div class="tgroup"><span class="label">Simulation</span><button type="button" class="tool big reset" id="reset-btn" data-tip="Turn everything off and start over">
       <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M15.5 10a5.5 5.5 0 1 1-1.6-3.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14.4 2.8l.1 3.9-3.9.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reset</span></button></div>
     </div>
@@ -406,8 +406,8 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
   <div class="st-head" id="st-head" data-tip="Drag to move the operator station"><svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true"><g fill="#8d8d8d"><circle cx="4" cy="3" r="1.3"/><circle cx="10" cy="3" r="1.3"/><circle cx="4" cy="7" r="1.3"/><circle cx="10" cy="7" r="1.3"/><circle cx="4" cy="11" r="1.3"/><circle cx="10" cy="11" r="1.3"/></g></svg><span>Operator Station</span>
     <button type="button" class="st-min" id="st-min" aria-label="Fold the operator station to its title bar"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M3.5 10l4.5-4.5 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
   <div class="st-body">
-    <svg class="st-screw" style="left:6px;top:6px" viewBox="-14 -14 28 28" aria-hidden="true"></svg><svg class="st-screw" style="right:6px;top:6px" viewBox="-14 -14 28 28" aria-hidden="true"></svg>
-    <svg class="st-screw" style="left:6px;bottom:6px" viewBox="-14 -14 28 28" aria-hidden="true"></svg><svg class="st-screw" style="right:6px;bottom:6px" viewBox="-14 -14 28 28" aria-hidden="true"></svg>
+    <svg class="st-screw" style="left:6px;top:6px" viewBox="-10 -10 20 20" aria-hidden="true"></svg><svg class="st-screw" style="right:6px;top:6px" viewBox="-10 -10 20 20" aria-hidden="true"></svg>
+    <svg class="st-screw" style="left:6px;bottom:6px" viewBox="-10 -10 20 20" aria-hidden="true"></svg><svg class="st-screw" style="right:6px;bottom:6px" viewBox="-10 -10 20 20" aria-hidden="true"></svg>
     <div class="st-name" id="st-name">Operator station</div>
     <div class="st-grid" id="st-grid"></div>
   </div>
@@ -1438,9 +1438,12 @@ const DEFS = `
   <radialGradient id="gStud" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#e8e8e8"/><stop offset=".6" stop-color="#9a9a9a"/><stop offset="1" stop-color="#5a5a5a"/></radialGradient>`;
 // a square screw terminal (a little wider than the wire's channel, and than the bar it sits on), centred at x, y.
 // The screw has a combination head: a slot right across it for a flat screwdriver, and a cross for a Phillips
-function screw(x, y, g) {
-  el('rect', { x: x - 13, y: y - 13, width: 26, height: 26, rx: 3, fill: 'url(#gTerm)', stroke: '#2a2a2a', 'stroke-width': 1.2 }, g);
-  el('rect', { x: x - 10.4, y: y - 10.4, width: 20.8, height: 20.8, rx: 2, fill: 'none', stroke: 'rgba(0,0,0,.28)', 'stroke-width': 1 }, g);
+// (bare: the screw head alone, without the square terminal round it, as the operator station's corner screws)
+function screw(x, y, g, bare) {
+  if (!bare) {
+    el('rect', { x: x - 13, y: y - 13, width: 26, height: 26, rx: 3, fill: 'url(#gTerm)', stroke: '#2a2a2a', 'stroke-width': 1.2 }, g);
+    el('rect', { x: x - 10.4, y: y - 10.4, width: 20.8, height: 20.8, rx: 2, fill: 'none', stroke: 'rgba(0,0,0,.28)', 'stroke-width': 1 }, g);
+  }
   el('circle', { cx: x, cy: y, r: 8.6, fill: 'url(#gStud)', stroke: '#3a3a3a', 'stroke-width': 1 }, g);
   el('rect', { x: x - 8.6, y: y - 1.2, width: 17.2, height: 2.4, fill: '#2a2a2a' }, g);   // the flat slot, right across the head
   el('rect', { x: x - 1.2, y: y - 4.2, width: 2.4, height: 8.4, fill: '#2a2a2a' }, g);     // with it, a short cross arm: the Phillips recess
@@ -2017,11 +2020,12 @@ function bindSelector(g, p) {
    circuit on it (each one once, however many rungs it is drawn in), in the order they come down the ladder, drawn
    as on the circuit, in chrome bezels, each with a legend plate. Pressing a button on it presses it in the circuit,
    so a button at the top of a long ladder can be worked while watching the rungs at the bottom. Drag it by its title
-   bar; the – folds it to its title bar; the Simulation tab shows or hides it. Where it is, and whether it is folded
+   bar; the arrow folds it to its title bar; Station on the Simulation tab shows or hides it (it starts off). Where it is, and whether it is folded
    or hidden, is remembered in the browser.
    ===================================================================== */
 const STATION_KEY = 'oo-circuit-builder:station';
-let ST = { x: null, y: null, min: false, hidden: false }, STV = [];   // STV: the station's operators, { p, v }
+let ST = { x: null, y: null, min: false, hidden: true },   // (off until it is first turned on with Station on the Simulation tab)
+    STV = [];   // STV: the station's operators, { p, v }
 try { Object.assign(ST, JSON.parse(localStorage.getItem(STATION_KEY) || '{}')); } catch (_) {}
 const saveStation = () => { try { localStorage.setItem(STATION_KEY, JSON.stringify(ST)); } catch (_) {} };
 const stationEl = document.getElementById('station');
@@ -2092,8 +2096,8 @@ document.getElementById('st-head').addEventListener('pointerdown', e => {
 document.getElementById('st-min').addEventListener('click', () => { ST.min = !ST.min; saveStation(); showStation(); });
 document.getElementById('st-toggle').addEventListener('click', () => { ST.hidden = !ST.hidden; saveStation(); showStation(); paint(); });
 window.addEventListener('resize', () => { if (!stationEl.hidden) placeStation(); });
-// the corner screws: the same square terminal screws that fasten the wires to L1 and L2
-document.querySelectorAll('.st-screw').forEach(s => screw(0, 0, el('g', {}, s)));
+// the corner screws: the heads of the screws that fasten the wires to L1 and L2
+document.querySelectorAll('.st-screw').forEach(s => screw(0, 0, el('g', {}, s), true));
 
 /* ---- js/parts-edit.js ---- */
 /* =====================================================================

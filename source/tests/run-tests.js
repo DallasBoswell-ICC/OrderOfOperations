@@ -1315,7 +1315,9 @@ const DEF_CIRCUIT = `
       normalize(); fit(true); draw(); });
     if (await page.isVisible('#station')) out.push('the station shows while building');
     await page.click('#tab-run'); await page.waitForTimeout(100);
-    if (!(await page.isVisible('#station'))) return out.concat('no operator station while running');
+    if (await page.isVisible('#station')) out.push('the station shows before it has been turned on');
+    await page.click('#st-toggle'); await page.waitForTimeout(60);
+    if (!(await page.isVisible('#station'))) return out.concat('no operator station after turning it on');
     const plates = await page.$$eval('#st-grid .st-plate', es => es.map(e => e.textContent).join(','));
     if (plates !== 'START,HAND/OFF/AUTO,B') out.push('station operators: ' + plates + ' (expected START,HAND/OFF/AUTO,B: each once, top of the ladder first)');
     const g = await page.$$('#st-grid g.dev');
