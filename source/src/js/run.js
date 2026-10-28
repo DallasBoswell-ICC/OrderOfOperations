@@ -38,25 +38,8 @@ function paint() {
     const v = view.parts.get(p.id);
     for (const S of ['A', 'B']) paintLead(v.lead[S], p._lead && p._lead[S]);
     let k;
-    if (p.t === 'btn') {
-      // a button with a light built in: its cap is dim while the light is off, and lights up with it
-      const pr = !!down[p.L], lit = v.lit ? Math.max(0, ...lampsOf(p.L).map(litOf)) : 0; k = (pr ? 1 : 0) + ':' + lit.toFixed(3);
-      if (k === v.k) continue; v.k = k;
-      if (v.sec) {   // a secondary drawing pressed: its rim and letter go grey (where the main one's whole cap goes grey)
-        v.fill.setAttribute('fill', pr ? SEC_PRESSED : v.secFill);
-        v.fill.setAttribute('stroke', pr ? SEC_PRESSED_RIM : p.color);
-        v.text.style.fill = pr ? SEC_PRESSED_RIM : p.color;
-      } else {
-        v.fill.setAttribute('fill', v.lit ? mixOk(pr ? GREY : mixOk(p.color, GREY, .55), p.color, lit) : pr ? GREY : p.color);
-        v.text.style.fill = pr && lit < .5 ? LIGHT_TEXT : DARK_TEXT;
-      }
-      if (v.lit) {
-        v.halo.setAttribute('opacity', (lit * .6).toFixed(3));
-        v.badge.setAttribute('fill', mixRgb(GREY, p.color, lit));
-        v.badgeFil.setAttribute('stroke', lit > .5 ? 'rgba(255,255,255,.85)' : 'rgba(30,30,30,.55)');
-      }
-      v.press.setAttribute('transform', pr ? `translate(${p.x} ${p.y}) scale(.93) translate(${-p.x} ${-p.y})` : '');
-    } else if (p.t === 'con') {
+    if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
+    else if (p.t === 'con') {
       const s = CON[p.id]; if (!s) continue;
       const f = clamp01((simT - s.t0) / SWING), e = f * f * (3 - 2 * f);   // ease in and out
       const lift = (s.closing ? lerp(OPEN_LIFT, 0, e) : lerp(0, OPEN_LIFT, e)).toFixed(2);
@@ -66,14 +49,8 @@ function paint() {
       v.bladeShape.setAttribute('fill', s.shut ? v.col : BLADE_GREY);
       if (v.arrow) { v.arrow.setAttribute('fill', s.shut ? v.col : BLADE_GREY); v.arrow.setAttribute('stroke', s.shut ? v.col : BLADE_GREY); }
       v.posts.setAttribute('fill', s.shut ? v.col : GREY);
-    } else if (p.t === 'sel') {
-      const T = SELTURN[p.L], pos = selPos(p.L), A = SEL_ANG[selN(p)];
-      let ang = A[pos];
-      if (T) { const f = clamp01((simT - T.t0) / SEL_TURN), e = f * f * (3 - 2 * f); ang = A[T.from] + (A[T.to] - A[T.from]) * e; }
-      k = pos + ':' + ang.toFixed(2);
-      if (k === v.k) continue; v.k = k;
-      setSelector(v, p, pos, ang);
-    } else if (p.t === 'lamp') {
+    } else if (p.t === 'sel') paintSel(p, v);
+    else if (p.t === 'lamp') {
       const lit = litOf(p); k = lit.toFixed(3);
       if (k === v.k) continue; v.k = k;
       v.fill.setAttribute('fill', mixRgb(GREY, v.col, lit));
@@ -89,11 +66,41 @@ function paint() {
       if (v.timer) paintTimer(p, v, on ? f : 1 - f);
     }
   }
+  paintStation();
   const fl = document.getElementById('fault');
   if (fl.hidden !== !shortNow) {
     fl.hidden = !shortNow;
     fl.textContent = 'Short circuit! L1 is connected straight to L2 with no coil in between. In a real panel the fuse or breaker would open. Release the button or change the wiring to clear it.';
   }
+}
+// a pushbutton's cap (on the circuit, or on the operator station: v is that drawing, centred at x, y)
+function paintBtn(p, v, x, y) {
+  // a button with a light built in: its cap is dim while the light is off, and lights up with it
+  let k; const pr = !!down[p.L], lit = v.lit ? Math.max(0, ...lampsOf(p.L).map(litOf)) : 0; k = (pr ? 1 : 0) + ':' + lit.toFixed(3);
+  if (k === v.k) return; v.k = k;
+  if (v.sec) {   // a secondary drawing pressed: its rim and letter go grey (where the main one's whole cap goes grey)
+    v.fill.setAttribute('fill', pr ? SEC_PRESSED : v.secFill);
+    v.fill.setAttribute('stroke', pr ? SEC_PRESSED_RIM : p.color);
+    v.text.style.fill = pr ? SEC_PRESSED_RIM : p.color;
+  } else {
+    v.fill.setAttribute('fill', v.lit ? mixOk(pr ? GREY : mixOk(p.color, GREY, .55), p.color, lit) : pr ? GREY : p.color);
+    v.text.style.fill = pr && lit < .5 ? LIGHT_TEXT : DARK_TEXT;
+  }
+  if (v.lit) {
+    v.halo.setAttribute('opacity', (lit * .6).toFixed(3));
+    v.badge.setAttribute('fill', mixRgb(GREY, p.color, lit));
+    v.badgeFil.setAttribute('stroke', lit > .5 ? 'rgba(255,255,255,.85)' : 'rgba(30,30,30,.55)');
+  }
+  v.press.setAttribute('transform', pr ? `translate(${x} ${y}) scale(.93) translate(${-x} ${-y})` : '');
+}
+// a selector switch's handle turning, and its position names
+function paintSel(p, v) {
+  const T = SELTURN[p.L], pos = selPos(p.L), A = SEL_ANG[selN(p)];
+  let ang = A[pos];
+  if (T) { const f = clamp01((simT - T.t0) / SEL_TURN), e = f * f * (3 - 2 * f); ang = A[T.from] + (A[T.to] - A[T.from]) * e; }
+  const k = pos + ':' + ang.toFixed(2);
+  if (k === v.k) return; v.k = k;
+  setSelector(v, p, pos, ang);
 }
 // a part's lead: the latest change flows along it from where it started (the part's end, or its body), at the same
 // speed as along a wire; ahead of it, the lead still shows what it had before
@@ -133,6 +140,6 @@ function paintTimers() { for (const p of parts) if (isTimer(p)) { const v = view
 // turns it one position left, its right half one right (or the arrow keys when it has the focus)
 function bindSelector(g, p) {
   g.setAttribute('class', 'dev'); g.setAttribute('tabindex', '0'); g.setAttribute('role', 'slider'); g.setAttribute('aria-label', captionOf(p) + ': turn left or right');
-  g.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); const at = e.target.closest && e.target.closest('[data-pos]'); if (at) return turn(p.L, +at.dataset.pos); const q = pt(e); turn(p.L, selPos(p.L) + (q.x < p.x ? -1 : 1)); });
+  g.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); const at = e.target.closest && e.target.closest('[data-pos]'); if (at) return turn(p.L, +at.dataset.pos); const r = g.getBoundingClientRect(); turn(p.L, selPos(p.L) + (e.clientX < r.left + r.width / 2 ? -1 : 1)); });
   g.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); turn(p.L, selPos(p.L) + (e.key === 'ArrowLeft' ? -1 : 1)); } });
 }

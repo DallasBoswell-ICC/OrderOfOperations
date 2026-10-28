@@ -22,8 +22,20 @@ const DEFS = `
   <linearGradient id="gBar" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8a7a4a"/><stop offset=".45" stop-color="#d9c27a"/><stop offset="1" stop-color="#7a6a3c"/></linearGradient>
   <filter id="fGlow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="7"/></filter>
   <linearGradient id="gTerm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d4d4d4"/><stop offset=".5" stop-color="#a3a3a3"/><stop offset="1" stop-color="#6e6e6e"/></linearGradient>
+  <radialGradient id="gChrome" cx=".38" cy=".3" r=".85"><stop offset="0" stop-color="#fafafa"/><stop offset=".5" stop-color="#bdbdbd"/><stop offset="1" stop-color="#6a6a6a"/></radialGradient>
   <radialGradient id="gKnob" cx=".4" cy=".35" r=".75"><stop offset="0" stop-color="#5a5a5a"/><stop offset="1" stop-color="#262626"/></radialGradient>
   <radialGradient id="gStud" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#e8e8e8"/><stop offset=".6" stop-color="#9a9a9a"/><stop offset="1" stop-color="#5a5a5a"/></radialGradient>`;
+// a square screw terminal (a little wider than the wire's channel, and than the bar it sits on), centred at x, y.
+// The screw has a combination head: a slot right across it for a flat screwdriver, and a cross for a Phillips
+function screw(x, y, g) {
+  el('rect', { x: x - 13, y: y - 13, width: 26, height: 26, rx: 3, fill: 'url(#gTerm)', stroke: '#2a2a2a', 'stroke-width': 1.2 }, g);
+  el('rect', { x: x - 10.4, y: y - 10.4, width: 20.8, height: 20.8, rx: 2, fill: 'none', stroke: 'rgba(0,0,0,.28)', 'stroke-width': 1 }, g);
+  el('circle', { cx: x, cy: y, r: 8.6, fill: 'url(#gStud)', stroke: '#3a3a3a', 'stroke-width': 1 }, g);
+  el('rect', { x: x - 8.6, y: y - 1.2, width: 17.2, height: 2.4, fill: '#2a2a2a' }, g);   // the flat slot, right across the head
+  el('rect', { x: x - 1.2, y: y - 4.2, width: 2.4, height: 8.4, fill: '#2a2a2a' }, g);     // with it, a short cross arm: the Phillips recess
+  el('rect', { x: x - 2.4, y: y - 2.4, width: 4.8, height: 4.8, fill: '#2a2a2a', transform: `rotate(45 ${x} ${y})` }, g);   // its deeper centre
+  return g;
+}
 const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
 const captionOf = p => p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
@@ -65,7 +77,7 @@ const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x +
 // how far above a part's middle its name is written (clear of the badges on its top corners)
 const capTop = p => (p.t === 'con' ? CON_H / 2 + 1 : p.t === 'lamp' ? BODYH(p.t) / 2 + 10 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 // a part, in the same style as the Order of Operations simulators
-function drawPart(p, g, x, y, chan) {
+function drawPart(p, g, x, y, chan, onStation) {
   const v = {}, T = TERM(p), half = BODYH(p.t) / 2;
   el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
   // the short leads between the part's ends and its body: each drawn in two pieces, so the current can flow along
@@ -93,7 +105,7 @@ function drawPart(p, g, x, y, chan) {
     v.text = el('text', { x, y: y + 6.6, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: DARK_TEXT, style: v.sec ? `fill:${p.color}` : '' }, v.press); capText(v.text, nameOf(p), p.nc ? 35 : 37, 19, y + 6.6);
     // the same button drawn more than once (one operator with several contact blocks: pressing one presses them
     // all): a chain-link badge on each one's top left corner
-    if (parts.filter(q => q.t === 'btn' && q.L === p.L).length > 1) {
+    if (!onStation && parts.filter(q => q.t === 'btn' && q.L === p.L).length > 1) {
       const bx = x - BOX / 2 + 3, by = y - BOX / 2 + 3;
       el('circle', { cx: bx, cy: by, r: 9, fill: '#1f1f1f', stroke: p.color, 'stroke-width': 1.4 }, g);
       const ln = el('g', { transform: `rotate(-45 ${bx} ${by})`, fill: 'none', stroke: '#e6e6e6', 'stroke-width': 1.5 }, g);
@@ -165,7 +177,7 @@ function drawPart(p, g, x, y, chan) {
     else drawTimer(p, g, x, y, v);
   }
   // its name, above it (the other contact blocks of a pushbutton or selector switch go without: the dashed line joins them to it)
-  if (!v.sec) el('text', { x, y: y - capTop(p), 'text-anchor': 'middle', class: 'cap' }, g).textContent = captionOf(p);
+  if (!v.sec && !onStation) el('text', { x, y: y - capTop(p), 'text-anchor': 'middle', class: 'cap' }, g).textContent = captionOf(p);
   return v;
 }
 // a horizontal run from lo to hi at height y, hopping over every crossing in hops

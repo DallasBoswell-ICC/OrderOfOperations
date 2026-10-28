@@ -207,6 +207,28 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
    inside the window: below what it describes, or above it when there is no room below */
 .tipbox { position: fixed; z-index: 1000; max-width: min(300px, calc(100vw - 16px)); padding: 7px 10px; border-radius: 6px; background: #111214; color: #ececec; border: 1px solid #3a3b3f;
   font-size: .8rem; font-weight: 400; line-height: 1.35; text-align: left; white-space: normal; overflow-wrap: break-word; box-shadow: 0 8px 22px rgba(0,0,0,.5); pointer-events: none; }
+
+/* the operator station: a steel enclosure floating over the panel */
+.station { position: fixed; z-index: 50; min-width: 180px; max-width: calc(100vw - 8px); border-radius: 10px; background: linear-gradient(#d9dbdd, #b7babd); border: 1px solid #8f9396; color: #222;
+  box-shadow: 0 18px 40px rgba(0,0,0,.55); user-select: none; -webkit-user-select: none; }
+.st-head { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 10px; background: #2c2d30; color: #ececec; font-size: .8rem; font-weight: 600; border-radius: 9px 9px 0 0; cursor: move; touch-action: none; }
+.st-head span { flex: 1; white-space: nowrap; }
+.st-min { display: inline-grid; place-items: center; width: 24px; height: 22px; padding: 0; color: #bfbfbf; background: none; border: 1px solid transparent; border-radius: 5px; cursor: pointer; }
+.st-min:hover { background: #4a4b50; color: #fff; }
+.station.min .st-min svg { transform: rotate(180deg); }
+.station.min .st-body { display: none; }
+.station.min .st-head { border-radius: 9px; }
+.st-body { position: relative; padding: 10px 26px 16px; max-height: calc(100vh - 60px); overflow: auto; }
+.st-screw { position: absolute; width: 15px; height: 15px; }
+.st-name { width: max-content; max-width: 100%; margin: 0 auto 10px; padding: 3px 14px; background: #f2f2f2; border: 1px solid #888; border-radius: 3px; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-grid { display: grid; gap: 12px 16px; justify-content: center; align-items: end; }
+.st-op { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.st-dev { overflow: visible; }
+.st-dev .dev { cursor: pointer; }
+.st-dev .dev:focus-visible { outline: none; }
+.st-dev .dev:focus-visible > :first-child { stroke: var(--gold); stroke-width: 3; }
+.st-plate { min-width: 64px; max-width: 96px; text-align: center; padding: 2px 6px; background: #111; color: #fff; font-size: .66rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; border-radius: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-tag { font-size: .6rem; color: #4a4d50; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -360,6 +382,7 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
         <button type="button" data-mode="hold" data-tip="A momentary button stays down only while you hold it">Press and hold</button>
       </div>
     </div>
+      <div class="tgroup" id="st-group"><span class="label">Operator station</span><button type="button" class="tool big" id="st-toggle" aria-pressed="true" data-tip="Show or hide the operator station: every pushbutton and selector switch of the circuit in one panel you can drag anywhere, so you can work them while watching any part of the ladder"><svg viewBox="0 0 30 26" aria-hidden="true"><rect x="2" y="2" width="26" height="22" rx="3" fill="#c4c7ca" stroke="#8f9396" stroke-width="1.2"/><rect x="5" y="6" width="8" height="8" rx="2" fill="#FF0032" stroke="#9a9a9a" stroke-width="1.2"/><rect x="17" y="6" width="8" height="8" rx="2" fill="#00B050" stroke="#9a9a9a" stroke-width="1.2"/><rect x="5" y="17" width="8" height="3" rx=".6" fill="#111"/><rect x="17" y="17" width="8" height="3" rx=".6" fill="#111"/></svg><span>Station</span></button></div>
       <div class="tgroup"><span class="label">Simulation</span><button type="button" class="tool big reset" id="reset-btn" data-tip="Turn everything off and start over">
       <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M15.5 10a5.5 5.5 0 1 1-1.6-3.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14.4 2.8l.1 3.9-3.9.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reset</span></button></div>
     </div>
@@ -378,6 +401,17 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
 
 </div>
 
+<!-- the operator station (Run mode): every pushbutton and selector switch on the circuit, floating over the panel -->
+<div class="station" id="station" role="region" aria-label="Operator station" hidden>
+  <div class="st-head" id="st-head" data-tip="Drag to move the operator station"><svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true"><g fill="#8d8d8d"><circle cx="4" cy="3" r="1.3"/><circle cx="10" cy="3" r="1.3"/><circle cx="4" cy="7" r="1.3"/><circle cx="10" cy="7" r="1.3"/><circle cx="4" cy="11" r="1.3"/><circle cx="10" cy="11" r="1.3"/></g></svg><span>Operator Station</span>
+    <button type="button" class="st-min" id="st-min" aria-label="Fold the operator station to its title bar"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M3.5 10l4.5-4.5 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+  <div class="st-body">
+    <svg class="st-screw" style="left:6px;top:6px" viewBox="-14 -14 28 28" aria-hidden="true"></svg><svg class="st-screw" style="right:6px;top:6px" viewBox="-14 -14 28 28" aria-hidden="true"></svg>
+    <svg class="st-screw" style="left:6px;bottom:6px" viewBox="-14 -14 28 28" aria-hidden="true"></svg><svg class="st-screw" style="right:6px;bottom:6px" viewBox="-14 -14 28 28" aria-hidden="true"></svg>
+    <div class="st-name" id="st-name">Operator station</div>
+    <div class="st-grid" id="st-grid"></div>
+  </div>
+</div>
 <div class="toast" id="toast" role="status" hidden></div>
 <dialog id="save-dlg" aria-labelledby="save-title">
   <form method="dialog" class="dlg">
@@ -1399,8 +1433,20 @@ const DEFS = `
   <linearGradient id="gBar" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8a7a4a"/><stop offset=".45" stop-color="#d9c27a"/><stop offset="1" stop-color="#7a6a3c"/></linearGradient>
   <filter id="fGlow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="7"/></filter>
   <linearGradient id="gTerm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d4d4d4"/><stop offset=".5" stop-color="#a3a3a3"/><stop offset="1" stop-color="#6e6e6e"/></linearGradient>
+  <radialGradient id="gChrome" cx=".38" cy=".3" r=".85"><stop offset="0" stop-color="#fafafa"/><stop offset=".5" stop-color="#bdbdbd"/><stop offset="1" stop-color="#6a6a6a"/></radialGradient>
   <radialGradient id="gKnob" cx=".4" cy=".35" r=".75"><stop offset="0" stop-color="#5a5a5a"/><stop offset="1" stop-color="#262626"/></radialGradient>
   <radialGradient id="gStud" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#e8e8e8"/><stop offset=".6" stop-color="#9a9a9a"/><stop offset="1" stop-color="#5a5a5a"/></radialGradient>`;
+// a square screw terminal (a little wider than the wire's channel, and than the bar it sits on), centred at x, y.
+// The screw has a combination head: a slot right across it for a flat screwdriver, and a cross for a Phillips
+function screw(x, y, g) {
+  el('rect', { x: x - 13, y: y - 13, width: 26, height: 26, rx: 3, fill: 'url(#gTerm)', stroke: '#2a2a2a', 'stroke-width': 1.2 }, g);
+  el('rect', { x: x - 10.4, y: y - 10.4, width: 20.8, height: 20.8, rx: 2, fill: 'none', stroke: 'rgba(0,0,0,.28)', 'stroke-width': 1 }, g);
+  el('circle', { cx: x, cy: y, r: 8.6, fill: 'url(#gStud)', stroke: '#3a3a3a', 'stroke-width': 1 }, g);
+  el('rect', { x: x - 8.6, y: y - 1.2, width: 17.2, height: 2.4, fill: '#2a2a2a' }, g);   // the flat slot, right across the head
+  el('rect', { x: x - 1.2, y: y - 4.2, width: 2.4, height: 8.4, fill: '#2a2a2a' }, g);     // with it, a short cross arm: the Phillips recess
+  el('rect', { x: x - 2.4, y: y - 2.4, width: 4.8, height: 4.8, fill: '#2a2a2a', transform: `rotate(45 ${x} ${y})` }, g);   // its deeper centre
+  return g;
+}
 const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
 const captionOf = p => p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
@@ -1442,7 +1488,7 @@ const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x +
 // how far above a part's middle its name is written (clear of the badges on its top corners)
 const capTop = p => (p.t === 'con' ? CON_H / 2 + 1 : p.t === 'lamp' ? BODYH(p.t) / 2 + 10 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 // a part, in the same style as the Order of Operations simulators
-function drawPart(p, g, x, y, chan) {
+function drawPart(p, g, x, y, chan, onStation) {
   const v = {}, T = TERM(p), half = BODYH(p.t) / 2;
   el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
   // the short leads between the part's ends and its body: each drawn in two pieces, so the current can flow along
@@ -1470,7 +1516,7 @@ function drawPart(p, g, x, y, chan) {
     v.text = el('text', { x, y: y + 6.6, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: DARK_TEXT, style: v.sec ? `fill:${p.color}` : '' }, v.press); capText(v.text, nameOf(p), p.nc ? 35 : 37, 19, y + 6.6);
     // the same button drawn more than once (one operator with several contact blocks: pressing one presses them
     // all): a chain-link badge on each one's top left corner
-    if (parts.filter(q => q.t === 'btn' && q.L === p.L).length > 1) {
+    if (!onStation && parts.filter(q => q.t === 'btn' && q.L === p.L).length > 1) {
       const bx = x - BOX / 2 + 3, by = y - BOX / 2 + 3;
       el('circle', { cx: bx, cy: by, r: 9, fill: '#1f1f1f', stroke: p.color, 'stroke-width': 1.4 }, g);
       const ln = el('g', { transform: `rotate(-45 ${bx} ${by})`, fill: 'none', stroke: '#e6e6e6', 'stroke-width': 1.5 }, g);
@@ -1542,7 +1588,7 @@ function drawPart(p, g, x, y, chan) {
     else drawTimer(p, g, x, y, v);
   }
   // its name, above it (the other contact blocks of a pushbutton or selector switch go without: the dashed line joins them to it)
-  if (!v.sec) el('text', { x, y: y - capTop(p), 'text-anchor': 'middle', class: 'cap' }, g).textContent = captionOf(p);
+  if (!v.sec && !onStation) el('text', { x, y: y - capTop(p), 'text-anchor': 'middle', class: 'cap' }, g).textContent = captionOf(p);
   return v;
 }
 // a horizontal run from lo to hi at height y, hopping over every crossing in hops
@@ -1710,15 +1756,7 @@ function draw() {
   }
   // a square screw terminal wherever a wire meets a bar, and the bar's name next to it. The screw has a combination
   // head: a slot right across it for a flat screwdriver, and a cross for a Phillips
-  const terminal = (x, y) => {   // (a little wider than the wire's channel, and than the bar it sits on)
-    const g = el('g', {});
-    el('rect', { x: x - 13, y: y - 13, width: 26, height: 26, rx: 3, fill: 'url(#gTerm)', stroke: '#2a2a2a', 'stroke-width': 1.2 }, g);
-    el('rect', { x: x - 10.4, y: y - 10.4, width: 20.8, height: 20.8, rx: 2, fill: 'none', stroke: 'rgba(0,0,0,.28)', 'stroke-width': 1 }, g);
-    el('circle', { cx: x, cy: y, r: 8.6, fill: 'url(#gStud)', stroke: '#3a3a3a', 'stroke-width': 1 }, g);
-    el('rect', { x: x - 8.6, y: y - 1.2, width: 17.2, height: 2.4, fill: '#2a2a2a' }, g);   // the flat slot, right across the head
-    el('rect', { x: x - 1.2, y: y - 4.2, width: 2.4, height: 8.4, fill: '#2a2a2a' }, g);     // with it, a short cross arm: the Phillips recess
-    el('rect', { x: x - 2.4, y: y - 2.4, width: 4.8, height: 4.8, fill: '#2a2a2a', transform: `rotate(45 ${x} ${y})` }, g);   // its deeper centre
-  };
+  const terminal = (x, y) => screw(x, y, el('g', {}));
   // a terminal screw wherever a wire meets a bar, and the bar's name next to it, as in the simulators
   const seen = new Set();
   for (const fd of net.feeds) {
@@ -1866,25 +1904,8 @@ function paint() {
     const v = view.parts.get(p.id);
     for (const S of ['A', 'B']) paintLead(v.lead[S], p._lead && p._lead[S]);
     let k;
-    if (p.t === 'btn') {
-      // a button with a light built in: its cap is dim while the light is off, and lights up with it
-      const pr = !!down[p.L], lit = v.lit ? Math.max(0, ...lampsOf(p.L).map(litOf)) : 0; k = (pr ? 1 : 0) + ':' + lit.toFixed(3);
-      if (k === v.k) continue; v.k = k;
-      if (v.sec) {   // a secondary drawing pressed: its rim and letter go grey (where the main one's whole cap goes grey)
-        v.fill.setAttribute('fill', pr ? SEC_PRESSED : v.secFill);
-        v.fill.setAttribute('stroke', pr ? SEC_PRESSED_RIM : p.color);
-        v.text.style.fill = pr ? SEC_PRESSED_RIM : p.color;
-      } else {
-        v.fill.setAttribute('fill', v.lit ? mixOk(pr ? GREY : mixOk(p.color, GREY, .55), p.color, lit) : pr ? GREY : p.color);
-        v.text.style.fill = pr && lit < .5 ? LIGHT_TEXT : DARK_TEXT;
-      }
-      if (v.lit) {
-        v.halo.setAttribute('opacity', (lit * .6).toFixed(3));
-        v.badge.setAttribute('fill', mixRgb(GREY, p.color, lit));
-        v.badgeFil.setAttribute('stroke', lit > .5 ? 'rgba(255,255,255,.85)' : 'rgba(30,30,30,.55)');
-      }
-      v.press.setAttribute('transform', pr ? `translate(${p.x} ${p.y}) scale(.93) translate(${-p.x} ${-p.y})` : '');
-    } else if (p.t === 'con') {
+    if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
+    else if (p.t === 'con') {
       const s = CON[p.id]; if (!s) continue;
       const f = clamp01((simT - s.t0) / SWING), e = f * f * (3 - 2 * f);   // ease in and out
       const lift = (s.closing ? lerp(OPEN_LIFT, 0, e) : lerp(0, OPEN_LIFT, e)).toFixed(2);
@@ -1894,14 +1915,8 @@ function paint() {
       v.bladeShape.setAttribute('fill', s.shut ? v.col : BLADE_GREY);
       if (v.arrow) { v.arrow.setAttribute('fill', s.shut ? v.col : BLADE_GREY); v.arrow.setAttribute('stroke', s.shut ? v.col : BLADE_GREY); }
       v.posts.setAttribute('fill', s.shut ? v.col : GREY);
-    } else if (p.t === 'sel') {
-      const T = SELTURN[p.L], pos = selPos(p.L), A = SEL_ANG[selN(p)];
-      let ang = A[pos];
-      if (T) { const f = clamp01((simT - T.t0) / SEL_TURN), e = f * f * (3 - 2 * f); ang = A[T.from] + (A[T.to] - A[T.from]) * e; }
-      k = pos + ':' + ang.toFixed(2);
-      if (k === v.k) continue; v.k = k;
-      setSelector(v, p, pos, ang);
-    } else if (p.t === 'lamp') {
+    } else if (p.t === 'sel') paintSel(p, v);
+    else if (p.t === 'lamp') {
       const lit = litOf(p); k = lit.toFixed(3);
       if (k === v.k) continue; v.k = k;
       v.fill.setAttribute('fill', mixRgb(GREY, v.col, lit));
@@ -1917,11 +1932,41 @@ function paint() {
       if (v.timer) paintTimer(p, v, on ? f : 1 - f);
     }
   }
+  paintStation();
   const fl = document.getElementById('fault');
   if (fl.hidden !== !shortNow) {
     fl.hidden = !shortNow;
     fl.textContent = 'Short circuit! L1 is connected straight to L2 with no coil in between. In a real panel the fuse or breaker would open. Release the button or change the wiring to clear it.';
   }
+}
+// a pushbutton's cap (on the circuit, or on the operator station: v is that drawing, centred at x, y)
+function paintBtn(p, v, x, y) {
+  // a button with a light built in: its cap is dim while the light is off, and lights up with it
+  let k; const pr = !!down[p.L], lit = v.lit ? Math.max(0, ...lampsOf(p.L).map(litOf)) : 0; k = (pr ? 1 : 0) + ':' + lit.toFixed(3);
+  if (k === v.k) return; v.k = k;
+  if (v.sec) {   // a secondary drawing pressed: its rim and letter go grey (where the main one's whole cap goes grey)
+    v.fill.setAttribute('fill', pr ? SEC_PRESSED : v.secFill);
+    v.fill.setAttribute('stroke', pr ? SEC_PRESSED_RIM : p.color);
+    v.text.style.fill = pr ? SEC_PRESSED_RIM : p.color;
+  } else {
+    v.fill.setAttribute('fill', v.lit ? mixOk(pr ? GREY : mixOk(p.color, GREY, .55), p.color, lit) : pr ? GREY : p.color);
+    v.text.style.fill = pr && lit < .5 ? LIGHT_TEXT : DARK_TEXT;
+  }
+  if (v.lit) {
+    v.halo.setAttribute('opacity', (lit * .6).toFixed(3));
+    v.badge.setAttribute('fill', mixRgb(GREY, p.color, lit));
+    v.badgeFil.setAttribute('stroke', lit > .5 ? 'rgba(255,255,255,.85)' : 'rgba(30,30,30,.55)');
+  }
+  v.press.setAttribute('transform', pr ? `translate(${x} ${y}) scale(.93) translate(${-x} ${-y})` : '');
+}
+// a selector switch's handle turning, and its position names
+function paintSel(p, v) {
+  const T = SELTURN[p.L], pos = selPos(p.L), A = SEL_ANG[selN(p)];
+  let ang = A[pos];
+  if (T) { const f = clamp01((simT - T.t0) / SEL_TURN), e = f * f * (3 - 2 * f); ang = A[T.from] + (A[T.to] - A[T.from]) * e; }
+  const k = pos + ':' + ang.toFixed(2);
+  if (k === v.k) return; v.k = k;
+  setSelector(v, p, pos, ang);
 }
 // a part's lead: the latest change flows along it from where it started (the part's end, or its body), at the same
 // speed as along a wire; ahead of it, the lead still shows what it had before
@@ -1961,9 +2006,94 @@ function paintTimers() { for (const p of parts) if (isTimer(p)) { const v = view
 // turns it one position left, its right half one right (or the arrow keys when it has the focus)
 function bindSelector(g, p) {
   g.setAttribute('class', 'dev'); g.setAttribute('tabindex', '0'); g.setAttribute('role', 'slider'); g.setAttribute('aria-label', captionOf(p) + ': turn left or right');
-  g.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); const at = e.target.closest && e.target.closest('[data-pos]'); if (at) return turn(p.L, +at.dataset.pos); const q = pt(e); turn(p.L, selPos(p.L) + (q.x < p.x ? -1 : 1)); });
+  g.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); const at = e.target.closest && e.target.closest('[data-pos]'); if (at) return turn(p.L, +at.dataset.pos); const r = g.getBoundingClientRect(); turn(p.L, selPos(p.L) + (e.clientX < r.left + r.width / 2 ? -1 : 1)); });
   g.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); turn(p.L, selPos(p.L) + (e.key === 'ArrowLeft' ? -1 : 1)); } });
 }
+
+/* ---- js/station.js ---- */
+/* =====================================================================
+   the operator station
+   In Run mode, a small steel enclosure floating over the panel with every pushbutton and selector switch of the
+   circuit on it (each one once, however many rungs it is drawn in), in the order they come down the ladder, drawn
+   as on the circuit, in chrome bezels, each with a legend plate. Pressing a button on it presses it in the circuit,
+   so a button at the top of a long ladder can be worked while watching the rungs at the bottom. Drag it by its title
+   bar; the – folds it to its title bar; the Simulation tab shows or hides it. Where it is, and whether it is folded
+   or hidden, is remembered in the browser.
+   ===================================================================== */
+const STATION_KEY = 'oo-circuit-builder:station';
+let ST = { x: null, y: null, min: false, hidden: false }, STV = [];   // STV: the station's operators, { p, v }
+try { Object.assign(ST, JSON.parse(localStorage.getItem(STATION_KEY) || '{}')); } catch (_) {}
+const saveStation = () => { try { localStorage.setItem(STATION_KEY, JSON.stringify(ST)); } catch (_) {} };
+const stationEl = document.getElementById('station');
+// the operators: the main drawing of each pushbutton and selector switch, top of the ladder first
+const operators = () => {
+  const seen = new Set(), out = [];
+  for (const p of [...parts].sort((a, b) => a.y - b.y || a.x - b.x)) if (isOp(p) && !seen.has(p.t + p.L)) { seen.add(p.t + p.L); out.push(p.t === 'btn' ? mainBtn(p.L) : mainSel(p.L)); }
+  return out;
+};
+const plateOf = p => p.t === 'sel' ? ((p.names || []).filter(Boolean).join('/') || `${p.L} SELECTOR`) : nameOf(p);
+const tagOf = p => p.t === 'sel' ? `${p.L} · ${selN(p)}-position` : `${p.L} · ${p.nc ? 'NC' : 'NO'}${p.maint ? ' · maint.' : ''}`;
+function buildStation() {
+  const grid = document.getElementById('st-grid'); grid.innerHTML = ''; STV = [];
+  // (drawn while showing, though unseen, so the labels can be measured and shrunk to fit their caps)
+  stationEl.hidden = false; stationEl.style.visibility = 'hidden'; stationEl.classList.remove('min');
+  const ops = editing ? [] : operators();
+  document.getElementById('st-name').textContent = circuitName || 'Operator station';
+  grid.style.gridTemplateColumns = `repeat(${Math.max(1, Math.min(4, ops.length))}, auto)`;
+  for (const p of ops) {
+    const cell = document.createElement('div'); cell.className = 'st-op';
+    const half = BODYH(p.t) / 2 + 12, s = document.createElementNS(NS, 'svg');
+    s.setAttribute('viewBox', `${-half} ${-half} ${2 * half} ${2 * half}`); s.setAttribute('class', 'st-dev');
+    s.style.width = s.style.height = Math.round(2 * half * .84) + 'px';
+    cell.append(s); grid.append(cell);
+    const g = el('g', {}, s);
+    // the chrome bezel round it, the shape of its body
+    if (p.t === 'btn' && p.nc) { const R = BOX / 2 * 1.08 + 8; el('path', { d: hexPath(0, 0, R, R * .2), fill: 'url(#gChrome)', stroke: '#4a4a4a', 'stroke-width': 1.2 }, g); }
+    else { const b = BODYH(p.t) + 16; el('rect', { x: -b / 2, y: -b / 2, width: b, height: b, rx: b * .2, fill: 'url(#gChrome)', stroke: '#4a4a4a', 'stroke-width': 1.2 }, g); }
+    const v = drawPart(p, g, 0, 0, document.createElementNS(NS, 'g'), true);
+    if (p.t === 'btn') bindButton(g, p); else bindSelector(g, p);
+    g.setAttribute('aria-label', `${plateOf(p)} (${captionOf(p)})`);
+    const pl = document.createElement('div'); pl.className = 'st-plate'; pl.textContent = plateOf(p); cell.append(pl);
+    const tg = document.createElement('div'); tg.className = 'st-tag'; tg.textContent = tagOf(p); cell.append(tg);
+    STV.push({ p, v });
+  }
+  stationEl.style.visibility = '';
+  showStation();
+}
+function showStation() {
+  const ops = STV.length, on = !editing && ops > 0;
+  stationEl.hidden = !on || ST.hidden;
+  stationEl.classList.toggle('min', !!ST.min);
+  const t = document.getElementById('st-toggle');
+  if (t) { t.setAttribute('aria-pressed', String(on && !ST.hidden)); t.disabled = !ops; document.getElementById('st-group').hidden = editing; }
+  document.getElementById('st-min').setAttribute('aria-label', ST.min ? 'Open the operator station' : 'Fold the operator station to its title bar');
+  if (!stationEl.hidden) placeStation();
+}
+// keep it inside the window
+function placeStation() {
+  const r = stationEl.getBoundingClientRect(), st = document.getElementById('stage').getBoundingClientRect();
+  let x = ST.x ?? st.right - r.width - 16, y = ST.y ?? st.top + 16;   // (first time: the top right of the panel, where the coils and lights are)
+  x = Math.max(0, Math.min(x, window.innerWidth - Math.min(r.width, window.innerWidth)));
+  y = Math.max(0, Math.min(y, window.innerHeight - 34));
+  stationEl.style.left = x + 'px'; stationEl.style.top = y + 'px';
+}
+function paintStation() { if (stationEl.hidden) return; for (const { p, v } of STV) if (p.t === 'btn') paintBtn(p, v, 0, 0); else paintSel(p, v); }
+document.getElementById('st-head').addEventListener('pointerdown', e => {
+  if (e.button !== 0 || e.target.closest('button')) return;
+  e.preventDefault();
+  const r = stationEl.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top, h = e.currentTarget;
+  try { h.setPointerCapture(e.pointerId); } catch (_) {}
+  document.body.classList.add('dragging');
+  const mv = ev => { ST.x = ev.clientX - dx; ST.y = ev.clientY - dy; placeStation(); };
+  const up = () => { h.removeEventListener('pointermove', mv); h.removeEventListener('pointerup', up); h.removeEventListener('pointercancel', up); document.body.classList.remove('dragging');
+    const q = stationEl.getBoundingClientRect(); ST.x = q.left; ST.y = q.top; saveStation(); };
+  h.addEventListener('pointermove', mv); h.addEventListener('pointerup', up); h.addEventListener('pointercancel', up);
+});
+document.getElementById('st-min').addEventListener('click', () => { ST.min = !ST.min; saveStation(); showStation(); });
+document.getElementById('st-toggle').addEventListener('click', () => { ST.hidden = !ST.hidden; saveStation(); showStation(); paint(); });
+window.addEventListener('resize', () => { if (!stationEl.hidden) placeStation(); });
+// the corner screws: the same square terminal screws that fasten the wires to L1 and L2
+document.querySelectorAll('.st-screw').forEach(s => screw(0, 0, el('g', {}, s)));
 
 /* ---- js/parts-edit.js ---- */
 /* =====================================================================
@@ -3094,12 +3224,12 @@ document.getElementById('save-sim').addEventListener('click', async () => { cons
 
 /* ---- js/main.js ---- */
 /* ---------------- build / run ---------------- */
-function afterRunStart() { document.getElementById('mode-group').hidden = !parts.some(p => p.t === 'btn' && !p.maint); document.getElementById('timer-group').hidden = !parts.some(isTimer); paint(); }
+function afterRunStart() { buildStation(); document.getElementById('mode-group').hidden = !parts.some(p => p.t === 'btn' && !p.maint); document.getElementById('timer-group').hidden = !parts.some(isTimer); paint(); }
 function setMode(run) {
   editing = !run;
   document.getElementById('tab-edit').setAttribute('aria-selected', String(!run));
   document.getElementById('tab-run').setAttribute('aria-selected', String(run));
-  closeMenus(); showRibbon();
+  closeMenus(); showRibbon(); if (!run) buildStation();
   document.getElementById('fault').hidden = true;
   sel = null; preview = null; setTool('select');
   if (cam.fit) { fit(true); fitView(); }

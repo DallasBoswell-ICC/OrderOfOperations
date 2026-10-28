@@ -1305,6 +1305,49 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Operator station: every button and selector once, in ladder order; pressing there presses it in the circuit; drag, fold, hide; only while running', async page => {
+    const out = [];
+    await page.evaluate(() => { W = W_MIN; parts = [P('btn', 160, 160, { L: 'A', maint: false, color: '#00B050', label: 'START' }), P('coil', 700, 160, { L: 'X', color: '#FFDC00' }),
+        P('btn', 160, 320, { L: 'A', maint: false, color: '#00B050', label: 'START' }), P('sel', 400, 320, { L: 'S', n: 3, pos: 1, closedIn: [0], color: '#0070C0', names: ['HAND', 'OFF', 'AUTO'] }), P('lamp', 700, 320, { L: '', color: '#FF0032' }),
+        P('btn', 160, 480, { L: 'B', nc: true, maint: true, color: '#FF0032' }), P('lamp', 700, 480, { L: '', color: '#0070C0' })];
+      wires = [Wr(0, 160, 120, 160), Wr(200, 160, 640, 160), Wr(760, 160, W, 160), Wr(0, 320, 120, 320), Wr(200, 320, 340, 320), Wr(460, 320, 640, 320), Wr(760, 320, W, 320),
+        Wr(0, 480, 120, 480), Wr(200, 480, 640, 480), Wr(760, 480, W, 480)];
+      normalize(); fit(true); draw(); });
+    if (await page.isVisible('#station')) out.push('the station shows while building');
+    await page.click('#tab-run'); await page.waitForTimeout(100);
+    if (!(await page.isVisible('#station'))) return out.concat('no operator station while running');
+    const plates = await page.$$eval('#st-grid .st-plate', es => es.map(e => e.textContent).join(','));
+    if (plates !== 'START,HAND/OFF/AUTO,B') out.push('station operators: ' + plates + ' (expected START,HAND/OFF/AUTO,B: each once, top of the ladder first)');
+    const g = await page.$$('#st-grid g.dev');
+    // momentary A: pressed on the station, it is pressed in the circuit (both drawings), and X picks up
+    await g[0].click(); await page.waitForTimeout(50);
+    const r = await page.evaluate(() => ({ down: !!down.A, caps: parts.filter(p => p.L === 'A').map(p => view.parts.get(p.id).press.getAttribute('transform') ? 'in' : 'out') }));
+    if (!r.down) out.push('pressing START on the station did not press A');
+    if (r.caps.join() !== 'in,in') out.push('A on the circuit did not show pressed: ' + r.caps.join());
+    // the selector: press AUTO on it
+    const auto = await page.$$('#st-grid [data-pos="2"]'); await auto[0].click(); await page.waitForTimeout(60);
+    if (await page.evaluate(() => selPos('S')) !== 2) out.push('pressing AUTO on the station did not turn the switch');
+    await page.evaluate(() => paint());
+    const ang = await page.evaluate(() => { const p = parts.find(q => q.t === 'sel'); return view.parts.get(p.id).handle.getAttribute('transform'); });
+    // drag it by its title bar; it stays inside the window
+    const h = await page.locator('#st-head').boundingBox();
+    await page.mouse.move(h.x + 40, h.y + 10); await page.mouse.down(); await page.mouse.move(h.x - 220, h.y + 250, { steps: 6 }); await page.mouse.up();
+    const h2 = await page.locator('#st-head').boundingBox();
+    if (Math.abs(h2.x - h.x + 260) > 2 || Math.abs(h2.y - h.y - 240) > 2) out.push('dragging moved it by ' + Math.round(h2.x - h.x) + ', ' + Math.round(h2.y - h.y) + ' (expected -260, 240)');
+    await page.mouse.move(h2.x + 40, h2.y + 10); await page.mouse.down(); await page.mouse.move(h2.x + 4000, h2.y + 4000, { steps: 4 }); await page.mouse.up();
+    const b = await page.locator('#station').boundingBox(), vp = page.viewportSize();
+    if (b.x + b.width > vp.width + 1 || b.y > vp.height - 20) out.push('dragged off the window: ' + JSON.stringify(b));
+    // fold it, hide it from the ribbon, and it comes back as it was after a reload
+    await page.click('#st-min'); if (await page.isVisible('#st-grid')) out.push('folding did not fold it');
+    await page.click('#st-min'); if (!(await page.isVisible('#st-grid'))) out.push('it did not open again');
+    await page.click('#st-toggle'); if (await page.isVisible('#station')) out.push('the Station button did not hide it');
+    await page.reload(); await page.waitForTimeout(300); await page.click('#tab-run'); await page.waitForTimeout(100);
+    if (await page.isVisible('#station')) out.push('hidden, it came back after a reload');
+    await page.click('#st-toggle'); if (!(await page.isVisible('#station'))) out.push('the Station button did not show it again');
+    await page.click('#tab-edit'); if (await page.isVisible('#station')) out.push('the station stays while building');
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

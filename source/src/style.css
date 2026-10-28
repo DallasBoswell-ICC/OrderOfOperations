@@ -194,3 +194,25 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
    inside the window: below what it describes, or above it when there is no room below */
 .tipbox { position: fixed; z-index: 1000; max-width: min(300px, calc(100vw - 16px)); padding: 7px 10px; border-radius: 6px; background: #111214; color: #ececec; border: 1px solid #3a3b3f;
   font-size: .8rem; font-weight: 400; line-height: 1.35; text-align: left; white-space: normal; overflow-wrap: break-word; box-shadow: 0 8px 22px rgba(0,0,0,.5); pointer-events: none; }
+
+/* the operator station: a steel enclosure floating over the panel */
+.station { position: fixed; z-index: 50; min-width: 180px; max-width: calc(100vw - 8px); border-radius: 10px; background: linear-gradient(#d9dbdd, #b7babd); border: 1px solid #8f9396; color: #222;
+  box-shadow: 0 18px 40px rgba(0,0,0,.55); user-select: none; -webkit-user-select: none; }
+.st-head { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 10px; background: #2c2d30; color: #ececec; font-size: .8rem; font-weight: 600; border-radius: 9px 9px 0 0; cursor: move; touch-action: none; }
+.st-head span { flex: 1; white-space: nowrap; }
+.st-min { display: inline-grid; place-items: center; width: 24px; height: 22px; padding: 0; color: #bfbfbf; background: none; border: 1px solid transparent; border-radius: 5px; cursor: pointer; }
+.st-min:hover { background: #4a4b50; color: #fff; }
+.station.min .st-min svg { transform: rotate(180deg); }
+.station.min .st-body { display: none; }
+.station.min .st-head { border-radius: 9px; }
+.st-body { position: relative; padding: 10px 26px 16px; max-height: calc(100vh - 60px); overflow: auto; }
+.st-screw { position: absolute; width: 15px; height: 15px; }
+.st-name { width: max-content; max-width: 100%; margin: 0 auto 10px; padding: 3px 14px; background: #f2f2f2; border: 1px solid #888; border-radius: 3px; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-grid { display: grid; gap: 12px 16px; justify-content: center; align-items: end; }
+.st-op { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.st-dev { overflow: visible; }
+.st-dev .dev { cursor: pointer; }
+.st-dev .dev:focus-visible { outline: none; }
+.st-dev .dev:focus-visible > :first-child { stroke: var(--gold); stroke-width: 3; }
+.st-plate { min-width: 64px; max-width: 96px; text-align: center; padding: 2px 6px; background: #111; color: #fff; font-size: .66rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; border-radius: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-tag { font-size: .6rem; color: #4a4d50; white-space: nowrap; }

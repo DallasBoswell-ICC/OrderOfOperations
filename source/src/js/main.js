@@ -1,10 +1,10 @@
 /* ---------------- build / run ---------------- */
-function afterRunStart() { document.getElementById('mode-group').hidden = !parts.some(p => p.t === 'btn' && !p.maint); document.getElementById('timer-group').hidden = !parts.some(isTimer); paint(); }
+function afterRunStart() { buildStation(); document.getElementById('mode-group').hidden = !parts.some(p => p.t === 'btn' && !p.maint); document.getElementById('timer-group').hidden = !parts.some(isTimer); paint(); }
 function setMode(run) {
   editing = !run;
   document.getElementById('tab-edit').setAttribute('aria-selected', String(!run));
   document.getElementById('tab-run').setAttribute('aria-selected', String(run));
-  closeMenus(); showRibbon();
+  closeMenus(); showRibbon(); if (!run) buildStation();
   document.getElementById('fault').hidden = true;
   sel = null; preview = null; setTool('select');
   if (cam.fit) { fit(true); fitView(); }
