@@ -184,7 +184,7 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
 .rpanel .seg button { padding: 4px 10px; }
 .rpanel select { padding: 4px 8px; width: auto; max-width: 13em; }
 /* ribbon buttons: big (icon over its name) and small (in stacks of three) */
-.tool.big { flex-direction: column; justify-content: flex-start; gap: 3px; min-width: 58px; padding: 5px 6px 4px; background: transparent; border-color: transparent; font-size: .76rem; line-height: 1.12; text-align: center; height: auto; }
+.tool.big { flex-direction: column; justify-content: flex-start; gap: 3px; min-width: 52px; padding: 5px 4px 4px; background: transparent; border-color: transparent; font-size: .76rem; line-height: 1.12; text-align: center; height: auto; }
 .tool.big svg { width: 32px; height: 28px; }
 .tool.big:hover:not(:disabled) { background: #3a3b40; }
 .tool.big[aria-pressed="true"] { background: #4d462e; border-color: var(--gold); }
@@ -270,6 +270,9 @@ body.fs .wrap { padding-top: 8px; }
 #speed-group #speed-out { min-width: 0; }
 #timer-group .seg, #mode-group .seg { flex-direction: column; }
 #timer-group .seg button, #mode-group .seg button { padding: 3px 10px; text-align: left; }
+
+/* supply boxes */
+.cap.srccap { fill: #e2cc85; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -332,7 +335,7 @@ body.fs .wrap { padding-top: 8px; }
         </div>
         <div class="stack">
           <button type="button" class="tool small danger" id="del" data-tip="Delete the selected part or wire (Delete key)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg><span>Delete</span></button>
-          <button type="button" class="tool small" id="clear" data-tip="Start with an empty panel"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg><span>Clear panel</span></button>
+          <button type="button" class="tool small" id="clear" data-tip="Start with an empty panel"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg><span>Clear</span></button>
         </div>
       </div><div class="gname">Edit</div></div>
       <div class="rgrp"><div class="gbody">
@@ -345,9 +348,8 @@ body.fs .wrap { padding-top: 8px; }
            A new kind of component is one more button here. -->
       <div class="rgrp" id="part-groups-pb"><div class="gbody"><button type="button" class="tool big" data-part="btn-no" data-tip="Pushbutton, normally open. Drag it onto the panel, or onto a wire to put it in that wire.">
         <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FF0032" stroke-width="1.6"/><rect x="8.5" y="6.5" width="13" height="13" rx="2.4" fill="#FF0032"/></svg><span>Button<br>NO</span></button><button type="button" class="tool big" data-part="btn-nc" data-tip="Pushbutton, normally closed">
-        <svg viewBox="0 0 30 26"><path d="M15 1 L26 7.3 L26 18.7 L15 25 L4 18.7 L4 7.3 Z" fill="#222" stroke="#FF9600" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 6 L21.5 9.7 L21.5 16.3 L15 20 L8.5 16.3 L8.5 9.7 Z" fill="#FF9600"/></svg><span>Button<br>NC</span></button></div><div class="gname">Pushbuttons</div></div>
-      <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="sel" data-tip="Selector switch: 2 to 4 positions, turned left or right. Put the same letter in several rungs for its contact blocks, each closed in the positions you choose.">
-        <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#0070C0" stroke-width="1.6"/><circle cx="15" cy="15" r="6.5" fill="#444"/><rect x="12.6" y="7.5" width="4.8" height="15" rx="2.4" fill="#0070C0" transform="rotate(45 15 15)"/></svg><span>Selector<br>switch</span></button></div><div class="gname">Selectors</div></div>
+        <svg viewBox="0 0 30 26"><path d="M15 1 L26 7.3 L26 18.7 L15 25 L4 18.7 L4 7.3 Z" fill="#222" stroke="#FF9600" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 6 L21.5 9.7 L21.5 16.3 L15 20 L8.5 16.3 L8.5 9.7 Z" fill="#FF9600"/></svg><span>Button<br>NC</span></button><button type="button" class="tool big" data-part="sel" data-tip="Selector switch: 2 to 4 positions, turned left or right. Put the same letter in several rungs for its contact blocks, each closed in the positions you choose.">
+        <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#0070C0" stroke-width="1.6"/><circle cx="15" cy="15" r="6.5" fill="#444"/><rect x="12.6" y="7.5" width="4.8" height="15" rx="2.4" fill="#0070C0" transform="rotate(45 15 15)"/></svg><span>Selector<br>switch</span></button></div><div class="gname">Switches</div></div>
       <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="coil" data-tip="Relay coil">
         <svg viewBox="0 0 30 26"><circle cx="15" cy="13" r="11.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="15" cy="13" r="7.5" fill="#555"/></svg><span>Coil</span></button><button type="button" class="tool big" data-part="timer" data-tip="On-delay timer: a relay coil whose contacts change only once it has been energized for its set time. Losing power resets it at once. Set the time in its settings.">
         <svg viewBox="0 0 30 26"><circle cx="13" cy="14" r="10.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="13" cy="14" r="6.8" fill="#555"/><rect x="18" y="1" width="11" height="11" rx="2" fill="#222" stroke="#FFDC00" stroke-width="1.2"/><path d="M21 3.5h5l-2.5 3 2.5 3h-5l2.5-3z" fill="#d8d8d8"/></svg><span>On-delay<br>timer</span></button><button type="button" class="tool big" data-part="timer-off" data-tip="Off-delay timer: its timed contacts change as soon as it is energized, and go back only once its set time has run out after it loses power. Energized again before then, it stops timing. Set the time in its settings.">
@@ -357,6 +359,14 @@ body.fs .wrap { padding-top: 8px; }
         <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="12.7" width="14" height="2.6" rx="1.3" fill="#FFDC00"/><circle cx="10" cy="14" r="2.4" fill="#FFDC00"/><circle cx="20" cy="14" r="2.4" fill="#FFDC00"/></svg><span>Contact<br>NC</span></button></div><div class="gname">Contacts</div></div>
       <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="lamp" data-tip="Pilot light: lights while current flows through it, wired from L1 to L2 like a coil. In its settings it can be built into a pushbutton, so the button lights up with it.">
         <svg viewBox="0 0 30 26"><g stroke="#00B050" stroke-width="1.6" stroke-linecap="round"><path d="M15 1v2.5M15 22.5V25M3 13h2.5M24.5 13H27M6.5 4.5l1.8 1.8M21.7 19.7l1.8 1.8M23.5 4.5l-1.8 1.8M8.3 19.7l-1.8 1.8"/></g><circle cx="15" cy="13" r="8" fill="#222" stroke="#00B050" stroke-width="1.6"/><circle cx="15" cy="13" r="5.2" fill="#00B050"/><path d="M12.8 10.8l4.4 4.4M17.2 10.8l-4.4 4.4" stroke="#fff" stroke-opacity=".85" stroke-width="1.3" stroke-linecap="round"/></svg><span>Pilot<br>light</span></button></div><div class="gname">Lights</div></div>
+      <div class="rgrp" id="power-group"><div class="gbody">
+        <div class="stack">
+          <button type="button" class="tool small" data-power="bars" aria-pressed="true" data-tip="Power the circuit from the L1 and L2 bars down its sides, as a ladder diagram is drawn"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="2" width="3" height="16" rx="1" fill="currentColor"/><rect x="15" y="2" width="3" height="16" rx="1" fill="currentColor"/><path d="M5 7h10M5 13h10" stroke="currentColor" stroke-width="1.3"/></svg><span>Bars</span></button>
+          <button type="button" class="tool small" data-power="boxes" aria-pressed="false" data-tip="Power the circuit from supply boxes placed anywhere instead of the bars"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="6" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="11" y="6" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span>Boxes</span></button>
+        </div>
+        <button type="button" class="tool big src-tool" data-part="src-l1" hidden data-tip="L1 Supply: where the circuit gets its power. Wire to its left, right or bottom; use as many as you like."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#e2cc85" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="#f2e6b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L1<br>supply</span></button>
+        <button type="button" class="tool big src-tool" data-part="src-l2" hidden data-tip="L2 Return: where the current goes back. Wire to its left, right or bottom; use as many as you like."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#e2cc85" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="#f2e6b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L2<br>return</span></button>
+      </div><div class="gname">Power</div></div>
       <div class="rgrp show-group"><div class="gbody"><div class="stack">
           <button type="button" class="tool small" data-show="rungs" aria-pressed="true" data-tip="Numbers down the L1 bar for every line, branches included; after each coil's name, the lines its contacts are on (normally closed underlined); on each contact, the line its coil is on. Press a number to go there."><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="3" width="6" height="5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="2" y="12" width="6" height="5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10 5.5h8M10 14.5h8" stroke="currentColor" stroke-width="1.4"/></svg><span>Rung numbers</span></button>
           <button type="button" class="tool small" data-show="overview" aria-pressed="true" data-tip="The overview strip: the whole circuit, small, down the right of the panel (when it is too long to fit). Press or drag on it to move the view."><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="2" width="11" height="16" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="15" y="2" width="3" height="16" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="15" y="5" width="3" height="5" fill="currentColor"/></svg><span>Overview</span></button>
@@ -551,6 +561,12 @@ const WIDE = t => LOADT(t) || t === 'sel';                                // par
 const BODYH = t => LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
 const TERM = p => WIDE(p.t) ? 60 : 40;
 const isOp = p => p.t === 'btn' || p.t === 'sel';   // operators: pushbuttons and selector switches (they tint the current with their colour)
+/* Power: each circuit is fed either by the L1 and L2 bars down its sides (POWER 'bars', as a ladder diagram is drawn),
+   or by supply boxes placed anywhere on it ('boxes'): an L1 Supply box and an L2 Return box, each with three
+   connection points (left, right and bottom), every one of them L1 or L2. */
+let POWER = 'bars';
+const barsOn = () => POWER === 'bars';
+const isSrc = p => p.t === 'l1' || p.t === 'l2';
 const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel';   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre
 
 /* ---- js/model.js ---- */
@@ -663,13 +679,13 @@ PRESETS.stress = () => {
 // G and S follow one another through their contacts, and each lights its own lamp
 const TRAFFIC = {"app":"order-of-operations-circuit-builder","v":1,"name":"Traffic light","w":800,"fw":1,"parts":[["btn",340,200,"A",0,0,"00B050"],["con",340,300,"R",0,1,""],["coil",640,200,"R",0,1,"FFFFFF"],["lamp",640,400,"",0,1,"FF0032"],["lamp",640,500,"",0,1,"FFDC00"],["lamp",640,600,"",0,1,"00B050"],["con",340,400,"R",0,1,""],["con",340,500,"Y",0,1,""],["con",340,600,"G",0,1,""],["con",340,1000,"R",0,1,""],["con",340,1100,"Y",0,1,""],["coil",640,1000,"Y",0,1,"FFFFFF"],["coil",640,1100,"G",0,1,"FFFFFF"],["con",140,200,"M",0,1,""],["coil",640,80,"M",0,1,"0070C0"],["btn",140,80,"B",1,0,"0070C0"],["con",140,400,"M",0,1,""],["con",140,500,"M",0,1,""],["con",140,600,"M",0,1,""],["con",140,1000,"M",0,1,""],["con",140,1100,"M",0,1,""],["lamp",640,700,"",0,1,"0070C0"],["con",140,700,"M",0,1,""],["con",340,700,"S",0,1,""],["con",140,1200,"M",0,1,""],["con",340,1200,"G",0,1,""],["coil",640,1200,"S",0,1,"FFFFFF"]],"wires":[[0,200,100,200],[180,200,300,200],[380,200,580,200],[700,200,800,200],[260,300,300,300],[380,300,420,300],[0,400,100,400],[180,400,300,400],[380,400,580,400],[700,400,800,400],[0,500,100,500],[180,500,300,500],[380,500,580,500],[700,500,800,500],[0,600,100,600],[180,600,300,600],[380,600,580,600],[700,600,800,600],[0,1000,100,1000],[180,1000,300,1000],[380,1000,580,1000],[700,1000,800,1000],[0,1100,100,1100],[180,1100,300,1100],[380,1100,580,1100],[700,1100,800,1100],[0,80,100,80],[180,80,580,80],[700,80,800,80],[0,700,100,700],[180,700,300,700],[380,700,580,700],[700,700,800,700],[0,1200,100,1200],[180,1200,300,1200],[380,1200,580,1200],[700,1200,800,1200],[420,200,420,300],[260,200,260,300]]};
 PRESETS.traffic = () => { const c = readCircuit(TRAFFIC); return [c.parts, c.wires, c.w, c.fixed]; };
-function loadPreset(k) { W = W_MIN; W_USER = null; const r = PRESETS[k](); [parts, wires] = r; if (r[2]) W = r[2]; if (r[3]) W_USER = W; normalize(); }
+function loadPreset(k) { W = W_MIN; W_USER = null; POWER = 'bars'; const r = PRESETS[k](); [parts, wires] = r; if (r[2]) W = r[2]; if (r[3]) W_USER = W; normalize(); }
 
 /* ---- js/geometry.js ---- */
 /* ---------------- geometry ---------------- */
 const snap = v => Math.round(v / G) * G;
 const key = (x, y) => x + ',' + y;
-const terms = p => [[p.x - TERM(p), p.y], [p.x + TERM(p), p.y]];
+const terms = p => isSrc(p) ? [[p.x - TERM(p), p.y], [p.x + TERM(p), p.y], [p.x, p.y + TERM(p)]] : [[p.x - TERM(p), p.y], [p.x + TERM(p), p.y]];   // (a supply box: left, right and bottom)
 /* The sheet is as wide as it needs to be to fill the panel with the whole circuit in view: on a wide screen, or for a
    tall circuit, the L2 bar moves out to the right edge and the wires fastened to it stretch to meet it. (It is never
    narrower than W_MIN, nor so narrow that a part would end up past L2.) Once the L1 or L2 bar has been moved by hand,
@@ -750,6 +766,7 @@ function network() {
     }
   }
   for (const p of parts) {
+    if (isSrc(p)) continue;   // (supply boxes are not a way through: their connection points are L1 or L2, below)
     const [[ax, ay], [bx, by]] = terms(p);
     p._a = node(ax, ay, key(ax, ay)); p._b = node(bx, by, key(bx, by));
     edges.push({ a: p._a, b: p._b, w: 2 * TERM(p), kind: 'part', part: p });
@@ -761,8 +778,13 @@ function network() {
   for (const [k, i] of index) {
     if (k.includes('#')) continue;
     const n = nodes[i];
-    if (n.x === 0) { edges.push({ a: L1, b: i, w: 0, kind: 'w' }); feeds.push({ x: 0, y: n.y, t: 'L1' }); feedV.set(i, 1); }
-    if (n.x === W) { edges.push({ a: L2, b: i, w: 0, kind: 'w' }); feeds.push({ x: W, y: n.y, t: 'L2' }); feedV.set(i, 0); }
+    if (barsOn() && n.x === 0) { edges.push({ a: L1, b: i, w: 0, kind: 'w' }); feeds.push({ x: 0, y: n.y, t: 'L1', bar: true }); feedV.set(i, 1); }
+    if (barsOn() && n.x === W) { edges.push({ a: L2, b: i, w: 0, kind: 'w' }); feeds.push({ x: W, y: n.y, t: 'L2', bar: true }); feedV.set(i, 0); }
+  }
+  // the supply boxes: every connection point of an L1 box is L1, of an L2 box L2
+  for (const p of parts) if (isSrc(p)) {
+    const one = p.t === 'l1';
+    p._t = terms(p).map(([x, y]) => { const i = node(x, y, key(x, y)); edges.push({ a: one ? L1 : L2, b: i, w: 0, kind: 'w' }); feeds.push({ x, y, t: one ? 'L1' : 'L2', box: p }); feedV.set(i, one ? 1 : 0); return i; });
   }
   const adj = nodes.map(() => []);
   edges.forEach((e, i) => { e.i = i; adj[e.a].push(i); adj[e.b].push(i); });
@@ -785,6 +807,7 @@ function wiringIssues(net) {
   const f = components(net, e => e.kind === 'w' || isSw(e.part)), l1 = f(net.L1), l2 = f(net.L2), out = new Map();
   if (l1 === l2) out.set('short', true);
   for (const p of parts) {
+    if (isSrc(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); continue; }
     const a = f(p._a), b = f(p._b);
     if (LOADT(p.t)) { if (!((a === l1 && b === l2) || (a === l2 && b === l1))) out.set(p.id, 'Not wired from L1 to L2'); }
     else if (net.adj[p._a].length < 2 || net.adj[p._b].length < 2) out.set(p.id, 'An end is not connected');
@@ -1525,7 +1548,7 @@ function screw(x, y, g, bare) {
 }
 const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
-const captionOf = p => p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -1558,7 +1581,7 @@ const capTop = p => (p.t === 'con' ? CON_H / 2 + 1 : p.t === 'lamp' ? BODYH(p.t)
 // a part, in the same style as the Order of Operations simulators
 function drawPart(p, g, x, y, chan, onStation) {
   const v = {}, T = TERM(p), half = BODYH(p.t) / 2;
-  el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
+  if (!isSrc(p)) el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
   // the short leads between the part's ends and its body: each drawn in two pieces, so the current can flow along
   // them (the new colour, and what was there before it)
   const lead = () => el('line', { x1: x, y1: y, x2: x, y2: y, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g);
@@ -1639,6 +1662,18 @@ function drawPart(p, g, x, y, chan, onStation) {
     }
   } else if (p.t === 'sel') {
     drawSelector(p, g, x, y, v);
+  } else if (isSrc(p)) {
+    // a supply box: L1 or L2, wired from its left, its right or its bottom (a double chevron, as on a print)
+    // (its leads: while building, all three; while running, only those wired, with L1 live in them)
+    v.lead = null;
+    const used = ([tx, ty]) => editing || !parts.includes(p) || connects(pointInfo(tx, ty, new Set(), p));
+    const [l, r, b] = terms(p), leads = [[l, x - half, y], [r, x + half, y], [b, x, y + half]].filter(([t]) => used(t));
+    for (const [[tx, ty], bx, by] of leads) {
+      el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
+      if (!editing && p.t === 'l1') el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: OFF_WHITE, 'stroke-width': 8.9 }, g);
+    }
+    el('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: '#e2cc85', 'stroke-width': 2.2 }, g);
+    for (const oy of [-7, 7]) el('path', { d: `M ${x - 13} ${y + oy - 6.5} L ${x} ${y + oy + 6.5} L ${x + 13} ${y + oy - 6.5}`, fill: 'none', stroke: '#f2e6b8', 'stroke-width': 3.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
   } else if (p.t === 'lamp') {
     // a pilot light: a lens with a filament, that glows when lit
     const col = lampColour(p); v.col = col;
@@ -1655,7 +1690,7 @@ function drawPart(p, g, x, y, chan, onStation) {
     else drawTimer(p, g, x, y, v);
   }
   // its name, above it (the other contact blocks of a pushbutton or selector switch go without: the dashed line joins them to it)
-  if (!v.sec && !onStation) (v.cap = el('text', { x, y: y - capTop(p), 'text-anchor': 'middle', class: 'cap' }, g)).textContent = captionOf(p);
+  if (!v.sec && !onStation) (v.cap = el('text', { x, y: y - capTop(p), 'text-anchor': 'middle', class: isSrc(p) ? 'cap srccap' : 'cap' }, g)).textContent = captionOf(p);
   return v;
 }
 // a horizontal run from lo to hi at height y, hopping over every crossing in hops
@@ -1758,7 +1793,7 @@ const selCount = () => sel ? sel.parts.size + sel.wires.size + (sel.terms ? sel.
    is named by its bar and height: 'L1:200'. */
 const termKey = (x, y) => (x === 0 ? 'L1:' : 'L2:') + y;
 const selHasT = (x, y) => !!sel && !!sel.terms && (x === 0 || x === W) && sel.terms.has(termKey(x, y));
-const barTerms = () => { const m = new Map(); for (const w of wires) for (const [x, y] of [[w.x1, w.y1], [w.x2, w.y2]]) if (x === 0 || x === W) m.set(termKey(x, y), [x, y]); return m; };
+const barTerms = () => { const m = new Map(); if (barsOn()) for (const w of wires) for (const [x, y] of [[w.x1, w.y1], [w.x2, w.y2]]) if (x === 0 || x === W) m.set(termKey(x, y), [x, y]); return m; };
 // undo and redo: each change remembers how things were before it (a new change forgets what could be redone)
 const history = [], future = [];
 function remember(s) { history.push(s); if (history.length > 100) history.shift(); future.length = 0; }
@@ -1836,7 +1871,7 @@ function renderInto(target, V, L) {
     for (const [, subs] of byWire) V.runs.push({ subs, n: V.runs.length, g: el('g', {}, layer(subs[0].x1, subs[0].x2, wy(subs[0].wire))), last: '' });
   }
   // the L1 bar down the left edge and the L2 bar down the right: wires connect by running into them
-  for (const bd of bands) for (const [x, t] of [[0, 'L1'], [W - BAR, 'L2']]) {
+  for (const bd of bands) for (const [x, t] of barsOn() ? [[0, 'L1'], [W - BAR, 'L2']] : []) {
     const g = el('g', { style: editing ? 'cursor:crosshair' : '' }, bd.g), top = bd.y0 + 6, bot = bd.y1 - 6;
     el('rect', { x, y: top, width: BAR, height: bot - top, rx: 3, fill: 'url(#gBar)', stroke: '#262626', 'stroke-width': 1.5 }, g);
     el('text', { x: x + BAR / 2, y: bot - 9, 'text-anchor': 'middle', class: 'railtag' }, g).textContent = t;   // (its name, once, stamped at its foot)
@@ -1857,6 +1892,7 @@ function renderInto(target, V, L) {
   // a terminal screw wherever a wire meets a bar, and the bar's name next to it, as in the simulators
   const seen = new Set();
   for (const fd of net.feeds) {
+    if (!fd.bar) continue;   // (a supply box's connection points are drawn with it)
     const k = fd.t + fd.y; if (seen.has(k)) continue; seen.add(k);
     const sx = fd.t === 'L1' ? BAR / 2 : W - BAR / 2;
     terminal(sx, fd.y);
@@ -2007,7 +2043,7 @@ function paintView(V) {
   }
   // parts: each one is only touched when how it looks has changed (redrawing a part, with its shadow, is costly)
   for (const p of parts) {
-    const v = V.parts.get(p.id); if (!v) continue;
+    const v = V.parts.get(p.id); if (!v || isSrc(p)) continue;
     for (const S of ['A', 'B']) paintLead(v.lead[S], p._lead && p._lead[S]);
     let k;
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
@@ -2207,14 +2243,15 @@ const coilLetters = () => new Set(parts.filter(p => p.t === 'coil').map(p => p.L
 function newPart(kind, x, y) {
   if (kind === 'coil') { const u = new Set([...coilLetters(), ...opLetters()]); const L = [...'XYZW' + ALL].find(c => !u.has(c)); return P('coil', x, y, { L, color: COIL_COL[L] || '#FFDC00' }); }
   if (kind.startsWith('timer')) { const u = new Set([...coilLetters(), ...opLetters()]); const L = [...'TUVRS' + ALL].find(c => !u.has(c)); const p = P('coil', x, y, { L, color: COIL_COL[L] || '#FFDC00', delay: 5 }); if (kind === 'timer-off') p.tof = true; return p; }   // a timer (on- or off-delay), set to 5 s
-  if (kind === 'lamp') return P('lamp', x, y, { L: '', color: '#00B050' });   // a light of its own (build it into a button in its settings)
+  if (kind === 'lamp') return P('lamp', x, y, { L: '', color: '#00B050' });
+  if (kind === 'src-l1' || kind === 'src-l2') return P(kind.slice(4), x, y, { L: '' });   // a supply box   // a light of its own (build it into a button in its settings)
   if (kind.startsWith('con')) { const cs = [...coilLetters()]; return P('con', x, y, { L: cs[0] || 'X', nc: kind === 'con-nc' }); }   // worked by the first coil (change it in its settings)
   const u = new Set([...coilLetters(), ...opLetters()]);
   if (kind === 'sel') { const L = [...'SJKMN' + ALL].find(c => !u.has(c)); return P('sel', x, y, { L, n: 3, closedIn: [0], pos: 1, color: '#0070C0' }); }   // a 3-position selector switch, turned to the middle; this drawing is closed in position 1
   const L = [...'ABCDEFGH' + ALL].find(c => !u.has(c));
   return P('btn', x, y, { L, nc: kind === 'btn-nc', maint: true, color: BTN_COL[L] || '#FF0032' });
 }
-const kindOf = k => k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k.startsWith('con') ? 'con' : k === 'sel' ? 'sel' : 'btn';
+const kindOf = k => k === 'src-l1' || k === 'src-l2' ? k.slice(4) : k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k.startsWith('con') ? 'con' : k === 'sel' ? 'sel' : 'btn';
 // a horizontal wire running right through where a part's ends will be: the part goes into it
 function spliceTarget(x, y, t) { const h = WIDE(t) ? 60 : 40; return wires.find(w => w.y1 === y && w.y2 === y && Math.min(w.x1, w.x2) <= x - h && Math.max(w.x1, w.x2) >= x + h); }
 function placePart(kind, x, y) {
@@ -2238,7 +2275,7 @@ function pointInfo(x, y, skip = new Set(), skipPart = null) {
   const skipP = skipPart instanceof Set ? skipPart : new Set(skipPart ? [skipPart] : []);
   for (const w of wires) { if (skip.has(w)) continue; if (isEnd(w, x, y)) ends++; else if (onSeg(w, x, y)) interior = true; }
   for (const q of parts) if (!skipP.has(q)) for (const [tx, ty] of terms(q)) if (tx === x && ty === y) term = true;
-  return { ends, interior, term, bar: x === 0 || x === W };
+  return { ends, interior, term, bar: barsOn() && (x === 0 || x === W) };
 }
 const connects = i => i.ends > 0 || i.interior || i.term || i.bar;
 function chainFrom(S, w, stop) {
@@ -2294,10 +2331,10 @@ function movedGroup(partIds, wireIds0, dx, dy, termIds) {
 function movedGroup1(partIds, wireIds, dx, dy, termIds) {
   const P = parts.filter(p => partIds.has(p.id)), PS = new Set(P);
   // a selected terminal on a bar moves with the group, but only up or down: it slides along its bar
-  const onSelBar = (x, y) => (x === 0 || x === W) && termIds.has(termKey(x, y));
+  const onSelBar = (x, y) => barsOn() && (x === 0 || x === W) && termIds.has(termKey(x, y));
   const to = (x, y) => onSelBar(x, y) ? [x, y + dy] : [x + dx, y + dy];
   // a selected wire fastened to a part that is staying put (or to a bar) stays fastened: it is redrawn, not carried along
-  const fixedPt = (x, y) => !onSelBar(x, y) && (x === 0 || x === W || parts.some(q => !partIds.has(q.id) && terms(q).some(([a, b]) => a === x && b === y)));
+  const fixedPt = (x, y) => !onSelBar(x, y) && ((barsOn() && (x === 0 || x === W)) || parts.some(q => !partIds.has(q.id) && terms(q).some(([a, b]) => a === x && b === y)));
   const WS = wires.filter(w => wireIds.has(w.id) && !fixedPt(w.x1, w.y1) && !fixedPt(w.x2, w.y2));
   const pts = new Map();
   for (const p of P) for (const [x, y] of terms(p)) pts.set(key(x, y), [x + dx, y + dy]);
@@ -2316,7 +2353,7 @@ function movedGroup1(partIds, wireIds, dx, dy, termIds) {
     }
     // an end sitting right on the end of a part that stays put (or on a bar), joined with no wire between: a wire is
     // drawn to keep them joined
-    if ((dx || dy) && !onSelBar(x, y) && (x === 0 || x === W || parts.some(q => !partIds.has(q.id) && terms(q).some(([a, b]) => a === x && b === y))))
+    if ((dx || dy) && !onSelBar(x, y) && ((barsOn() && (x === 0 || x === W)) || parts.some(q => !partIds.has(q.id) && terms(q).some(([a, b]) => a === x && b === y))))
       add.push(...route([x, y], 'h', NM, null));
   }
   const hits = [];
@@ -2324,8 +2361,8 @@ function movedGroup1(partIds, wireIds, dx, dy, termIds) {
   return { wires: wires.filter(w => !used.has(w)).concat(add.map(q => q.id ? { id: q.id, x1: q[0], y1: q[1], x2: q[2], y2: q[3] } : Wr(...q))), hits };
 }
 function movedWires(p, nx, ny) { return movedGroup(new Set([p.id]), new Set(), nx - p.x, ny - p.y); }
-const stateOf = () => JSON.stringify({ parts, wires, W, WU: W_USER }, (k, v) => k.startsWith('_') ? undefined : v);
-function restore(st) { const o = JSON.parse(st); parts = o.parts; wires = o.wires; if (o.W) W = o.W; W_USER = o.WU ?? null; }
+const stateOf = () => JSON.stringify({ parts, wires, W, WU: W_USER, PW: POWER }, (k, v) => k.startsWith('_') ? undefined : v);
+function restore(st) { const o = JSON.parse(st); parts = o.parts; wires = o.wires; if (o.W) W = o.W; W_USER = o.WU ?? null; POWER = o.PW || 'bars'; }
 
 // a wire running across a part's body (other than the run it sits in, along its own line): a part can't go there, as
 // the wire would be hidden under it and cut
@@ -2348,7 +2385,7 @@ function normalize() {
   const add = (m, k, a, b, id) => { if (a === b) return; if (!m.has(k)) m.set(k, []); m.get(k).push([Math.min(a, b), Math.max(a, b), [id]]); };
   // (a wire lying along L1 or L2 does nothing, as the bar joins everything on it, and it would hide behind the bar
   // where it cannot be picked, leaving stray screw terminals: such pieces are dropped, as when a run to a bar slides)
-  for (const w of wires) { if (w.y1 === w.y2) add(Hs, w.y1, w.x1, w.x2, w.id); else if (w.x1 === w.x2 && w.x1 !== 0 && w.x1 !== W) add(Vs, w.x1, w.y1, w.y2, w.id); }
+  for (const w of wires) { if (w.y1 === w.y2) add(Hs, w.y1, w.x1, w.x2, w.id); else if (w.x1 === w.x2 && !(barsOn() && (w.x1 === 0 || w.x1 === W))) add(Vs, w.x1, w.y1, w.y2, w.id); }
   // Wires in line that overlap become one. Two that only meet end to end become one too, unless they meet on a wire
   // running across: there their ends make a junction (as when parallel branches are wired into the middle of a run),
   // and joined up they would only cross it, hopping over it instead of connecting.
@@ -2495,7 +2532,7 @@ svg.addEventListener('pointerdown', e => {
   if (tool !== 'select') { placePart(tool, p.x, p.y); setTool('select'); return; }
   const he = hitEnd(p), q = hitPart(p), w = hitWire(p);
   // a terminal on a bar (where a wire ends on it)
-  const tb = p.x < BAR + 6 ? 0 : p.x > W - BAR - 6 ? W : null;
+  const tb = !barsOn() ? null : p.x < BAR + 6 ? 0 : p.x > W - BAR - 6 ? W : null;
   const ht = tb === null ? null : [...barTerms().values()].find(([x, y]) => x === tb && Math.abs(p.y - y) < 14);
   if (e.shiftKey && ht) {   // shift-click a terminal: add it to the selection, or take it out
     if (!sel) sel = { parts: new Set(), wires: new Set() };
@@ -2533,8 +2570,8 @@ svg.addEventListener('pointerdown', e => {
   if (onHandle(W - BAR / 2)) return barDrag(e, 'L2');
   // the end of a part with nothing on it, or a bar: draw a new wire from it
   for (const qq of parts) for (const [x, y] of terms(qq)) if (Math.hypot(p.x - x, p.y - y) < 13) return startWire([x, y]);
-  if (p.x < BAR + 6) return startWire([0, clampY(p.y)]);
-  if (p.x > W - BAR - 6) return startWire([W, clampY(p.y)]);
+  if (barsOn() && p.x < BAR + 6) return startWire([0, clampY(p.y)]);
+  if (barsOn() && p.x > W - BAR - 6) return startWire([W, clampY(p.y)]);
   // a part: drag it, and its wires follow
   if (q) {
     sel = selOne('p', q.id); ribbonTab = 'part'; say(''); draw();   // (a part picked on the panel opens its tab on the ribbon)
@@ -2798,7 +2835,7 @@ try { Object.assign(SHOW, JSON.parse(localStorage.getItem(SHOW_KEY) || '{}')); }
 // the lines, top first: every line that starts at L1, and every branch with a part on it (each its own number, as on
 // a print); lines closer together than a part is tall count as one
 function rungYs(net) {
-  const ys = [...net.feeds.filter(f => f.t === 'L1').map(f => f.y), ...parts.map(p => p.y)].sort((a, b) => a - b), out = [];
+  const ys = [...net.feeds.filter(f => f.t === 'L1' && f.bar).map(f => f.y), ...parts.map(p => p.y)].sort((a, b) => a - b), out = [];
   for (const y of ys) if (!out.length || y - out[out.length - 1] > 20) out.push(y);
   return out;
 }
@@ -2922,7 +2959,7 @@ function drawOverview() {
     if (LOADT(p.t)) { c.beginPath(); c.arc(p.x, p.y, h / 2, 0, 2 * Math.PI); c.fill(); c.stroke(); }
     else { c.fillRect(p.x - h / 2, p.y - h / 2, h, h); c.strokeRect(p.x - h / 2, p.y - h / 2, h, h); }
   }
-  c.fillStyle = '#d9c27a'; c.fillRect(0, 0, BAR, H); c.fillRect(W - BAR, 0, BAR, H);
+  if (barsOn()) { c.fillStyle = '#d9c27a'; c.fillRect(0, 0, BAR, H); c.fillRect(W - BAR, 0, BAR, H); }
   c.setTransform(1, 0, 0, 1, 0, 0);
   ovView();
 }
@@ -2958,7 +2995,7 @@ document.querySelectorAll('.tool[data-part]').forEach(b => {
     if (e.button !== 0 || !editing) return;
     e.preventDefault();
     const sx = e.clientX, sy = e.clientY; let moved = false, ghost = null;
-    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('timer') ? { t: 'coil', L: '?', color: '#FFDC00', delay: 5, tof: kind === 'timer-off' } : kind === 'lamp' ? { t: 'lamp', L: '', color: '#00B050' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind === 'con-nc' } : kind === 'sel' ? { t: 'sel', L: '?', n: 3, closedIn: [0], pos: 1, color: '#0070C0' } : { t: 'btn', L: '?', nc: kind === 'btn-nc', color: '#9a9a9a' };
+    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('timer') ? { t: 'coil', L: '?', color: '#FFDC00', delay: 5, tof: kind === 'timer-off' } : kind === 'lamp' ? { t: 'lamp', L: '', color: '#00B050' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind === 'con-nc' } : kind === 'sel' ? { t: 'sel', L: '?', n: 3, closedIn: [0], pos: 1, color: '#0070C0' } : kind.startsWith('src-') ? { t: kind.slice(4), L: '' } : { t: 'btn', L: '?', nc: kind === 'btn-nc', color: '#9a9a9a' };
     const mv = ev => {
       if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 5) { moved = true; closeMenus(); ghost = document.createElement('div'); ghost.className = 'ghost'; ghost.innerHTML = b.innerHTML; document.body.append(ghost); document.body.classList.add('dragging'); }
       if (!moved) return;
@@ -3067,6 +3104,20 @@ document.addEventListener('focusout', hideTip);
 window.addEventListener('scroll', hideTip, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTip(); });
 
+/* ---------------- power: the L1 and L2 bars, or supply boxes ----------------
+   Each circuit is powered one way or the other (kept with it). With boxes the bars go: wires no longer connect at
+   the edges of the sheet, and the L1 Supply and L2 Return boxes on the Home tab feed it instead. */
+function showPower() {
+  document.querySelectorAll('[data-power]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.power === POWER)));
+  document.querySelectorAll('.src-tool').forEach(b => b.hidden = barsOn());
+}
+document.querySelectorAll('[data-power]').forEach(b => b.addEventListener('click', () => {
+  if (b.dataset.power === POWER || !editing) return;
+  snapshot(); POWER = b.dataset.power; normalize(); sel = null;
+  say(barsOn() ? 'Powered by the L1 and L2 bars.' : 'Powered by supply boxes: place an L1 Supply and an L2 Return, and wire to their left, right or bottom.');
+  fitView(); fit(true); draw();
+}));
+
 /* ---- js/clipboard.js ---- */
 /* ---------------- copy, cut and paste ----------------
    Ctrl+C copies the selected parts and wires, Ctrl+X cuts them, Ctrl+V pastes (or the Copy and Paste buttons).
@@ -3153,6 +3204,7 @@ function renderProps() {
   if (typeof updateClipButtons === 'function') updateClipButtons();
   document.getElementById('p-main').hidden = !(p && p.t === 'btn' && mainBtn(p.L) !== p);
   document.getElementById('s-main').hidden = !(p && p.t === 'sel' && mainSel(p.L) !== p);
+  showPower();
   document.getElementById('undo').disabled = !history.length;
   document.getElementById('redo').disabled = !future.length;
   // the gold tab for one selected part, named after it (a part picked on the panel opens it; one just placed from
@@ -3350,9 +3402,9 @@ const APP_ID = 'order-of-operations-circuit-builder', AUTOSAVE_KEY = 'oo-circuit
 let circuitName = '';
 
 function circuitData() {
-  const w = W_USER ? W : contentRight(), x = v => v === W ? w : v;   // (a length set by moving the bars is kept)
+  const w = W_USER ? W : contentRight(), x = v => barsOn() && v === W ? w : v;   // (a length set by moving the bars is kept)
   return {
-    app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}),
+    app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}), ...(barsOn() ? {} : { pw: 'boxes' }),
     parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
       if (p.t === 'sel') { while (a.length < 7) a.push(null); a.length = 7; a.push(selN(p), (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, (p.names || []).join('/'), p.pos || 0); }   // a selector switch: positions, closed-in mask, (no label), names, start
       if (p.lk) { while (a.length < 12) a.push(null); a.push(p.lk[0], p.lk[1]); }   // (its dashed link line, moved out of the way)
@@ -3368,7 +3420,7 @@ function readCircuit(d) {
   const num = v => { const n = Number(v); if (!Number.isFinite(n)) throw new Error('The circuit is damaged (a position is not a number).'); return snap(n); };
   const hex = c => /^[0-9a-f]{6}$/i.test(c || '') ? '#' + c.toUpperCase() : null;
   const ps = d.parts.slice(0, 200).map(a => {
-    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sel' ? 'sel' : 'btn', L = String(a[3] || (t === 'lamp' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' ? '' : 'A');
+    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sel' ? 'sel' : a[0] === 'l1' || a[0] === 'l2' ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
     const p = P(t, num(a[1]), num(a[2]), { L, color: hex(a[6]) || (t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : BTN_COL[L] || '#FF0032') });
     if (t === 'btn') { p.nc = !!a[4]; p.maint = a[5] !== 0; }
     if (t === 'sel') {
@@ -3379,6 +3431,7 @@ function readCircuit(d) {
       p.pos = Math.max(0, Math.min(p.n - 1, Math.round(Number(a[11])) || 0));
     }
     if ((t === 'btn' || t === 'sel') && a.length >= 14) { const dx = Math.round(Number(a[12])) || 0, dy = Math.round(Number(a[13])) || 0; if (dx || dy) p.lk = [Math.max(-5000, Math.min(5000, dx)), Math.max(-5000, Math.min(5000, dy))]; }
+    if (t === 'l1' || t === 'l2') delete p.color;   // (a supply box has no colour of its own)
     if (t === 'con') { p.nc = !!a[4]; delete p.color; if (a[7] === 1) p.inst = true; }   // (a timer's instantaneous contact)
     if (t === 'coil' && a[7] !== undefined) { const n = Math.round(Number(a[7])); if (n >= 1) { p.delay = Math.min(999, n); if (a[8] === 1) p.tof = true; } }   // a timer (a[8] = 1: off-delay)
     if ((t === 'btn' || t === 'coil') && typeof a[9] === 'string' && a[9].trim()) p.label = a[9].replace(/\s+/g, ' ').trim().slice(0, 8);   // (a label written on it)
@@ -3388,11 +3441,11 @@ function readCircuit(d) {
   const ws = d.wires.slice(0, 2000).map(a => [num(a[0]), num(a[1]), num(a[2]), num(a[3])])
     .filter(([x1, y1, x2, y2]) => (x1 === x2 || y1 === y2) && (x1 !== x2 || y1 !== y2))
     .map(([x1, y1, x2, y2]) => Wr(Math.min(w, Math.max(0, x1)), Math.max(0, y1), Math.min(w, Math.max(0, x2)), Math.max(0, y2)));
-  return { w, fixed: !!d.fw, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
+  return { w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
 }
 function useCircuit(c, how) {
   snapshot();
-  parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; circuitName = c.name; normalize(); sel = null;
+  parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; circuitName = c.name; normalize(); sel = null;
   fitView(); fit(true);
   say(how);
   if (editing) draw(); else { NET = network(); draw(); startRun(); afterRunStart(); }
@@ -3500,7 +3553,7 @@ function scheduleAutosave() {
   autosaveTimer = setTimeout(() => { try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(circuitData())); } catch (_) {} }, 400);
 }
 function restoreAutosave() {
-  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; circuitName = c.name; normalize(); return true; }
+  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; circuitName = c.name; normalize(); return true; }
   catch (_) { return false; }
 }
 
@@ -3702,7 +3755,7 @@ window.addEventListener('resize', () => { if (fit(editing && !dragging())) { if 
 
 if (LOCKED) {
   // a locked simulator: its own circuit, straight into Run mode, with its name as the title
-  try { const c = readCircuit(LOCKED.circuit); parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; circuitName = c.name; normalize(); }
+  try { const c = readCircuit(LOCKED.circuit); parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; circuitName = c.name; normalize(); }
   catch (_) { loadPreset('blank'); }
   document.body.classList.add('locked');
   document.querySelector('h1 span').textContent = circuitName || 'Circuit';

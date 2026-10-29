@@ -10,7 +10,7 @@ try { Object.assign(SHOW, JSON.parse(localStorage.getItem(SHOW_KEY) || '{}')); }
 // the lines, top first: every line that starts at L1, and every branch with a part on it (each its own number, as on
 // a print); lines closer together than a part is tall count as one
 function rungYs(net) {
-  const ys = [...net.feeds.filter(f => f.t === 'L1').map(f => f.y), ...parts.map(p => p.y)].sort((a, b) => a - b), out = [];
+  const ys = [...net.feeds.filter(f => f.t === 'L1' && f.bar).map(f => f.y), ...parts.map(p => p.y)].sort((a, b) => a - b), out = [];
   for (const y of ys) if (!out.length || y - out[out.length - 1] > 20) out.push(y);
   return out;
 }

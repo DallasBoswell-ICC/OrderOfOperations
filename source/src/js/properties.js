@@ -20,6 +20,7 @@ function renderProps() {
   if (typeof updateClipButtons === 'function') updateClipButtons();
   document.getElementById('p-main').hidden = !(p && p.t === 'btn' && mainBtn(p.L) !== p);
   document.getElementById('s-main').hidden = !(p && p.t === 'sel' && mainSel(p.L) !== p);
+  showPower();
   document.getElementById('undo').disabled = !history.length;
   document.getElementById('redo').disabled = !future.length;
   // the gold tab for one selected part, named after it (a part picked on the panel opens it; one just placed from

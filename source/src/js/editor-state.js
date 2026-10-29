@@ -10,7 +10,7 @@ const selCount = () => sel ? sel.parts.size + sel.wires.size + (sel.terms ? sel.
    is named by its bar and height: 'L1:200'. */
 const termKey = (x, y) => (x === 0 ? 'L1:' : 'L2:') + y;
 const selHasT = (x, y) => !!sel && !!sel.terms && (x === 0 || x === W) && sel.terms.has(termKey(x, y));
-const barTerms = () => { const m = new Map(); for (const w of wires) for (const [x, y] of [[w.x1, w.y1], [w.x2, w.y2]]) if (x === 0 || x === W) m.set(termKey(x, y), [x, y]); return m; };
+const barTerms = () => { const m = new Map(); if (barsOn()) for (const w of wires) for (const [x, y] of [[w.x1, w.y1], [w.x2, w.y2]]) if (x === 0 || x === W) m.set(termKey(x, y), [x, y]); return m; };
 // undo and redo: each change remembers how things were before it (a new change forgets what could be redone)
 const history = [], future = [];
 function remember(s) { history.push(s); if (history.length > 100) history.shift(); future.length = 0; }

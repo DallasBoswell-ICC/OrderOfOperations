@@ -61,7 +61,7 @@ function renderInto(target, V, L) {
     for (const [, subs] of byWire) V.runs.push({ subs, n: V.runs.length, g: el('g', {}, layer(subs[0].x1, subs[0].x2, wy(subs[0].wire))), last: '' });
   }
   // the L1 bar down the left edge and the L2 bar down the right: wires connect by running into them
-  for (const bd of bands) for (const [x, t] of [[0, 'L1'], [W - BAR, 'L2']]) {
+  for (const bd of bands) for (const [x, t] of barsOn() ? [[0, 'L1'], [W - BAR, 'L2']] : []) {
     const g = el('g', { style: editing ? 'cursor:crosshair' : '' }, bd.g), top = bd.y0 + 6, bot = bd.y1 - 6;
     el('rect', { x, y: top, width: BAR, height: bot - top, rx: 3, fill: 'url(#gBar)', stroke: '#262626', 'stroke-width': 1.5 }, g);
     el('text', { x: x + BAR / 2, y: bot - 9, 'text-anchor': 'middle', class: 'railtag' }, g).textContent = t;   // (its name, once, stamped at its foot)
@@ -82,6 +82,7 @@ function renderInto(target, V, L) {
   // a terminal screw wherever a wire meets a bar, and the bar's name next to it, as in the simulators
   const seen = new Set();
   for (const fd of net.feeds) {
+    if (!fd.bar) continue;   // (a supply box's connection points are drawn with it)
     const k = fd.t + fd.y; if (seen.has(k)) continue; seen.add(k);
     const sx = fd.t === 'L1' ? BAR / 2 : W - BAR / 2;
     terminal(sx, fd.y);

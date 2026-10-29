@@ -1459,6 +1459,46 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Supply boxes: a circuit powered by L1 Supply and L2 Return boxes instead of the bars (wired from their left, right or bottom) runs; switching back and forth, saving and undo keep it', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    if (await page.isVisible('[data-part="src-l1"]')) out.push('the supply boxes are offered while the circuit has bars');
+    await page.click('[data-power="boxes"]'); await page.waitForTimeout(60);
+    if (!(await page.isVisible('[data-part="src-l1"]'))) return out.concat('no supply boxes to place after choosing Boxes');
+    if (await page.evaluate(() => [...svg.querySelectorAll('rect')].some(r => r.getAttribute('fill') === 'url(#gBar)'))) out.push('the bars still show with Boxes');
+    // place the boxes from the ribbon, then wire a start/stop circuit to them (the second rung fed from the L1 box's bottom)
+    await toolbarDrop(page, 'src-l1', 80, 160); await toolbarDrop(page, 'src-l2', 860, 160);
+    const kinds = await page.evaluate(() => parts.map(p => p.t).join());
+    if (kinds !== 'l1,l2') out.push('placed from the ribbon: ' + kinds);
+    await page.evaluate(() => {
+      parts.push(P('btn', 240, 160, { L: 'A', nc: true, maint: false, color: '#FF0032' }), P('btn', 400, 160, { L: 'B', maint: false, color: '#00B050' }), P('coil', 680, 160, { L: 'M', color: '#FFDC00' }),
+        P('con', 400, 280, { L: 'M' }), P('con', 240, 420, { L: 'M' }), P('lamp', 680, 420, { L: '', color: '#00B050' }), P('l2', 860, 420, { L: '' }));
+      wires.push(Wr(120,160,200,160), Wr(280,160,360,160), Wr(440,160,620,160), Wr(740,160,820,160), Wr(320,160,320,280), Wr(320,280,360,280), Wr(440,280,480,280), Wr(480,280,480,160),
+        Wr(80,200,80,420), Wr(80,420,200,420), Wr(280,420,620,420), Wr(740,420,820,420), Wr(0, 600, 300, 600));   // (the last one runs to the sheet's edge: no longer a bar)
+      normalize(); draw(); });
+    const iss = await page.evaluate(() => [...wiringIssues(network()).keys()].length);
+    if (iss) out.push(iss + ' wiring problem(s)');
+    if (await page.evaluate(() => network().feeds.some(f => f.bar))) out.push('a wire at the edge of the sheet is still fed as if there were a bar');
+    const saved = await page.evaluate(() => JSON.stringify(circuitData()));
+    if (!saved.includes('"pw":"boxes"')) out.push('the circuit was saved without its power setting');
+    await page.click('#tab-run');
+    const r = await page.evaluate(new Function(STEP + `const on = () => parts.filter(p => LOADT(p.t)).map(p => coilOn[p.id] ? 1 : 0).join('');
+      step(2); const a = on(); press('B', true); step(3); press('B', false); step(3); const b = on(); press('A', true); step(3); press('A', false); step(2); return [a, b, on()];`));
+    if (r.join() !== '00,11,00') out.push('running (M coil, light): before ' + r[0] + ', after START ' + r[1] + ', after STOP ' + r[2] + ' (expected 00, 11, 00)');
+    await page.click('#tab-edit');
+    // back to bars, undo, and open the saved circuit again
+    await page.click('[data-power="bars"]'); await page.waitForTimeout(40);
+    if (!(await page.evaluate(() => barsOn()))) out.push('Bars did not switch back');
+    await page.click('#undo'); await page.waitForTimeout(40);
+    if (await page.evaluate(() => POWER) !== 'boxes') out.push('undo did not go back to boxes');
+    await page.evaluate(async c => useCircuit(await decodeCircuit(c), ''), 'OO0.' + Buffer.from(saved).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''));
+    if ((await page.evaluate(() => JSON.stringify(circuitData()))) !== saved) out.push('the circuit changed after saving and opening');
+    // a box wired to nothing is flagged
+    await page.evaluate(() => { parts.push(P('l1', 500, 700, { L: '' })); draw(); });
+    if (!(await page.evaluate(() => [...wiringIssues(network()).values()].includes('Not wired to anything')))) out.push('a box wired to nothing is not flagged');
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

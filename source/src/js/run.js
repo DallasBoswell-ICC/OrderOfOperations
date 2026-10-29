@@ -46,7 +46,7 @@ function paintView(V) {
   }
   // parts: each one is only touched when how it looks has changed (redrawing a part, with its shadow, is costly)
   for (const p of parts) {
-    const v = V.parts.get(p.id); if (!v) continue;
+    const v = V.parts.get(p.id); if (!v || isSrc(p)) continue;
     for (const S of ['A', 'B']) paintLead(v.lead[S], p._lead && p._lead[S]);
     let k;
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);

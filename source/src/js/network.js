@@ -25,6 +25,7 @@ function network() {
     }
   }
   for (const p of parts) {
+    if (isSrc(p)) continue;   // (supply boxes are not a way through: their connection points are L1 or L2, below)
     const [[ax, ay], [bx, by]] = terms(p);
     p._a = node(ax, ay, key(ax, ay)); p._b = node(bx, by, key(bx, by));
     edges.push({ a: p._a, b: p._b, w: 2 * TERM(p), kind: 'part', part: p });
@@ -36,8 +37,13 @@ function network() {
   for (const [k, i] of index) {
     if (k.includes('#')) continue;
     const n = nodes[i];
-    if (n.x === 0) { edges.push({ a: L1, b: i, w: 0, kind: 'w' }); feeds.push({ x: 0, y: n.y, t: 'L1' }); feedV.set(i, 1); }
-    if (n.x === W) { edges.push({ a: L2, b: i, w: 0, kind: 'w' }); feeds.push({ x: W, y: n.y, t: 'L2' }); feedV.set(i, 0); }
+    if (barsOn() && n.x === 0) { edges.push({ a: L1, b: i, w: 0, kind: 'w' }); feeds.push({ x: 0, y: n.y, t: 'L1', bar: true }); feedV.set(i, 1); }
+    if (barsOn() && n.x === W) { edges.push({ a: L2, b: i, w: 0, kind: 'w' }); feeds.push({ x: W, y: n.y, t: 'L2', bar: true }); feedV.set(i, 0); }
+  }
+  // the supply boxes: every connection point of an L1 box is L1, of an L2 box L2
+  for (const p of parts) if (isSrc(p)) {
+    const one = p.t === 'l1';
+    p._t = terms(p).map(([x, y]) => { const i = node(x, y, key(x, y)); edges.push({ a: one ? L1 : L2, b: i, w: 0, kind: 'w' }); feeds.push({ x, y, t: one ? 'L1' : 'L2', box: p }); feedV.set(i, one ? 1 : 0); return i; });
   }
   const adj = nodes.map(() => []);
   edges.forEach((e, i) => { e.i = i; adj[e.a].push(i); adj[e.b].push(i); });
@@ -60,6 +66,7 @@ function wiringIssues(net) {
   const f = components(net, e => e.kind === 'w' || isSw(e.part)), l1 = f(net.L1), l2 = f(net.L2), out = new Map();
   if (l1 === l2) out.set('short', true);
   for (const p of parts) {
+    if (isSrc(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); continue; }
     const a = f(p._a), b = f(p._b);
     if (LOADT(p.t)) { if (!((a === l1 && b === l2) || (a === l2 && b === l1))) out.set(p.id, 'Not wired from L1 to L2'); }
     else if (net.adj[p._a].length < 2 || net.adj[p._b].length < 2) out.set(p.id, 'An end is not connected');

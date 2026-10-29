@@ -9,7 +9,7 @@ function normalize() {
   const add = (m, k, a, b, id) => { if (a === b) return; if (!m.has(k)) m.set(k, []); m.get(k).push([Math.min(a, b), Math.max(a, b), [id]]); };
   // (a wire lying along L1 or L2 does nothing, as the bar joins everything on it, and it would hide behind the bar
   // where it cannot be picked, leaving stray screw terminals: such pieces are dropped, as when a run to a bar slides)
-  for (const w of wires) { if (w.y1 === w.y2) add(Hs, w.y1, w.x1, w.x2, w.id); else if (w.x1 === w.x2 && w.x1 !== 0 && w.x1 !== W) add(Vs, w.x1, w.y1, w.y2, w.id); }
+  for (const w of wires) { if (w.y1 === w.y2) add(Hs, w.y1, w.x1, w.x2, w.id); else if (w.x1 === w.x2 && !(barsOn() && (w.x1 === 0 || w.x1 === W))) add(Vs, w.x1, w.y1, w.y2, w.id); }
   // Wires in line that overlap become one. Two that only meet end to end become one too, unless they meet on a wire
   // running across: there their ends make a junction (as when parallel branches are wired into the middle of a run),
   // and joined up they would only cross it, hopping over it instead of connecting.

@@ -171,7 +171,7 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
 .rpanel .seg button { padding: 4px 10px; }
 .rpanel select { padding: 4px 8px; width: auto; max-width: 13em; }
 /* ribbon buttons: big (icon over its name) and small (in stacks of three) */
-.tool.big { flex-direction: column; justify-content: flex-start; gap: 3px; min-width: 58px; padding: 5px 6px 4px; background: transparent; border-color: transparent; font-size: .76rem; line-height: 1.12; text-align: center; height: auto; }
+.tool.big { flex-direction: column; justify-content: flex-start; gap: 3px; min-width: 52px; padding: 5px 4px 4px; background: transparent; border-color: transparent; font-size: .76rem; line-height: 1.12; text-align: center; height: auto; }
 .tool.big svg { width: 32px; height: 28px; }
 .tool.big:hover:not(:disabled) { background: #3a3b40; }
 .tool.big[aria-pressed="true"] { background: #4d462e; border-color: var(--gold); }
@@ -257,3 +257,6 @@ body.fs .wrap { padding-top: 8px; }
 #speed-group #speed-out { min-width: 0; }
 #timer-group .seg, #mode-group .seg { flex-direction: column; }
 #timer-group .seg button, #mode-group .seg button { padding: 3px 10px; text-align: left; }
+
+/* supply boxes */
+.cap.srccap { fill: #e2cc85; font-weight: 700; }

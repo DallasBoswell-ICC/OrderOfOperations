@@ -1,7 +1,7 @@
 /* ---------------- geometry ---------------- */
 const snap = v => Math.round(v / G) * G;
 const key = (x, y) => x + ',' + y;
-const terms = p => [[p.x - TERM(p), p.y], [p.x + TERM(p), p.y]];
+const terms = p => isSrc(p) ? [[p.x - TERM(p), p.y], [p.x + TERM(p), p.y], [p.x, p.y + TERM(p)]] : [[p.x - TERM(p), p.y], [p.x + TERM(p), p.y]];   // (a supply box: left, right and bottom)
 /* The sheet is as wide as it needs to be to fill the panel with the whole circuit in view: on a wide screen, or for a
    tall circuit, the L2 bar moves out to the right edge and the wires fastened to it stretch to meet it. (It is never
    narrower than W_MIN, nor so narrow that a part would end up past L2.) Once the L1 or L2 bar has been moved by hand,

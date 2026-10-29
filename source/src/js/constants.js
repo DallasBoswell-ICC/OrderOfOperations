@@ -36,4 +36,10 @@ const WIDE = t => LOADT(t) || t === 'sel';                                // par
 const BODYH = t => LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
 const TERM = p => WIDE(p.t) ? 60 : 40;
 const isOp = p => p.t === 'btn' || p.t === 'sel';   // operators: pushbuttons and selector switches (they tint the current with their colour)
+/* Power: each circuit is fed either by the L1 and L2 bars down its sides (POWER 'bars', as a ladder diagram is drawn),
+   or by supply boxes placed anywhere on it ('boxes'): an L1 Supply box and an L2 Return box, each with three
+   connection points (left, right and bottom), every one of them L1 or L2. */
+let POWER = 'bars';
+const barsOn = () => POWER === 'bars';
+const isSrc = p => p.t === 'l1' || p.t === 'l2';
 const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel';   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre

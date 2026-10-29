@@ -9,7 +9,7 @@ function pointInfo(x, y, skip = new Set(), skipPart = null) {
   const skipP = skipPart instanceof Set ? skipPart : new Set(skipPart ? [skipPart] : []);
   for (const w of wires) { if (skip.has(w)) continue; if (isEnd(w, x, y)) ends++; else if (onSeg(w, x, y)) interior = true; }
   for (const q of parts) if (!skipP.has(q)) for (const [tx, ty] of terms(q)) if (tx === x && ty === y) term = true;
-  return { ends, interior, term, bar: x === 0 || x === W };
+  return { ends, interior, term, bar: barsOn() && (x === 0 || x === W) };
 }
 const connects = i => i.ends > 0 || i.interior || i.term || i.bar;
 function chainFrom(S, w, stop) {
@@ -65,10 +65,10 @@ function movedGroup(partIds, wireIds0, dx, dy, termIds) {
 function movedGroup1(partIds, wireIds, dx, dy, termIds) {
   const P = parts.filter(p => partIds.has(p.id)), PS = new Set(P);
   // a selected terminal on a bar moves with the group, but only up or down: it slides along its bar
-  const onSelBar = (x, y) => (x === 0 || x === W) && termIds.has(termKey(x, y));
+  const onSelBar = (x, y) => barsOn() && (x === 0 || x === W) && termIds.has(termKey(x, y));
   const to = (x, y) => onSelBar(x, y) ? [x, y + dy] : [x + dx, y + dy];
   // a selected wire fastened to a part that is staying put (or to a bar) stays fastened: it is redrawn, not carried along
-  const fixedPt = (x, y) => !onSelBar(x, y) && (x === 0 || x === W || parts.some(q => !partIds.has(q.id) && terms(q).some(([a, b]) => a === x && b === y)));
+  const fixedPt = (x, y) => !onSelBar(x, y) && ((barsOn() && (x === 0 || x === W)) || parts.some(q => !partIds.has(q.id) && terms(q).some(([a, b]) => a === x && b === y)));
   const WS = wires.filter(w => wireIds.has(w.id) && !fixedPt(w.x1, w.y1) && !fixedPt(w.x2, w.y2));
   const pts = new Map();
   for (const p of P) for (const [x, y] of terms(p)) pts.set(key(x, y), [x + dx, y + dy]);
@@ -87,7 +87,7 @@ function movedGroup1(partIds, wireIds, dx, dy, termIds) {
     }
     // an end sitting right on the end of a part that stays put (or on a bar), joined with no wire between: a wire is
     // drawn to keep them joined
-    if ((dx || dy) && !onSelBar(x, y) && (x === 0 || x === W || parts.some(q => !partIds.has(q.id) && terms(q).some(([a, b]) => a === x && b === y))))
+    if ((dx || dy) && !onSelBar(x, y) && ((barsOn() && (x === 0 || x === W)) || parts.some(q => !partIds.has(q.id) && terms(q).some(([a, b]) => a === x && b === y))))
       add.push(...route([x, y], 'h', NM, null));
   }
   const hits = [];
@@ -95,8 +95,8 @@ function movedGroup1(partIds, wireIds, dx, dy, termIds) {
   return { wires: wires.filter(w => !used.has(w)).concat(add.map(q => q.id ? { id: q.id, x1: q[0], y1: q[1], x2: q[2], y2: q[3] } : Wr(...q))), hits };
 }
 function movedWires(p, nx, ny) { return movedGroup(new Set([p.id]), new Set(), nx - p.x, ny - p.y); }
-const stateOf = () => JSON.stringify({ parts, wires, W, WU: W_USER }, (k, v) => k.startsWith('_') ? undefined : v);
-function restore(st) { const o = JSON.parse(st); parts = o.parts; wires = o.wires; if (o.W) W = o.W; W_USER = o.WU ?? null; }
+const stateOf = () => JSON.stringify({ parts, wires, W, WU: W_USER, PW: POWER }, (k, v) => k.startsWith('_') ? undefined : v);
+function restore(st) { const o = JSON.parse(st); parts = o.parts; wires = o.wires; if (o.W) W = o.W; W_USER = o.WU ?? null; POWER = o.PW || 'bars'; }
 
 // a wire running across a part's body (other than the run it sits in, along its own line): a part can't go there, as
 // the wire would be hidden under it and cut

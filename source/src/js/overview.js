@@ -53,7 +53,7 @@ function drawOverview() {
     if (LOADT(p.t)) { c.beginPath(); c.arc(p.x, p.y, h / 2, 0, 2 * Math.PI); c.fill(); c.stroke(); }
     else { c.fillRect(p.x - h / 2, p.y - h / 2, h, h); c.strokeRect(p.x - h / 2, p.y - h / 2, h, h); }
   }
-  c.fillStyle = '#d9c27a'; c.fillRect(0, 0, BAR, H); c.fillRect(W - BAR, 0, BAR, H);
+  if (barsOn()) { c.fillStyle = '#d9c27a'; c.fillRect(0, 0, BAR, H); c.fillRect(W - BAR, 0, BAR, H); }
   c.setTransform(1, 0, 0, 1, 0, 0);
   ovView();
 }
