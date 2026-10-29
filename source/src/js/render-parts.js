@@ -162,10 +162,14 @@ function drawPart(p, g, x, y, chan, onStation) {
     // (its leads: while building, all three; while running, only those wired, with L1 live in them)
     v.lead = null;
     const used = ([tx, ty]) => editing || !parts.includes(p) || connects(pointInfo(tx, ty, new Set(), p));
-    const [l, r, b] = terms(p), leads = [[l, x - half, y], [r, x + half, y], [b, x, y + half]].filter(([t]) => used(t));
-    for (const [[tx, ty], bx, by] of leads) {
+    const [l, r, b] = terms(p), leads = [[l, x - half, y, 0], [r, x + half, y, 1], [b, x, y + half, 2]].filter(([t]) => used(t));
+    // (L2's leads light up with the return current as it arrives at them, so it runs right into the box)
+    v.src = [];
+    for (const [[tx, ty], bx, by, i] of leads) {
       el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
-      if (!editing && p.t === 'l1') el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: OFF_WHITE, 'stroke-width': 8.9 }, g);
+      if (editing) continue;
+      if (p.t === 'l1') el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: OFF_WHITE, 'stroke-width': 8.9 }, g);
+      else if (p._t) v.src.push({ n: p._t[i], ln: el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g) });
     }
     el('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: '#e2cc85', 'stroke-width': 2.2 }, g);
     for (const oy of [-7, 7]) el('path', { d: `M ${x - 13} ${y + oy - 6.5} L ${x} ${y + oy + 6.5} L ${x + 13} ${y + oy - 6.5}`, fill: 'none', stroke: '#f2e6b8', 'stroke-width': 3.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);

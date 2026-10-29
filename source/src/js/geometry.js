@@ -10,19 +10,20 @@ let W = W_MIN, W_USER = null;
 function contentRight(floor = W_MIN) {
   let m = floor;
   for (const p of parts) m = Math.max(m, p.x + TERM(p) + 40);
-  for (const w of wires) for (const x of [w.x1, w.x2]) if (x !== W) m = Math.max(m, x + 20);
+  for (const w of wires) for (const x of [w.x1, w.x2]) if (x !== W || !barsOn()) m = Math.max(m, x + 20);
   return Math.ceil(m / G) * G;
 }
 const contentH = () => { let m = 0; for (const p of parts) m = Math.max(m, p.y + 60); for (const w of wires) m = Math.max(m, w.y1, w.y2); return Math.max(400, snap(m + 120)); };
 // move the L2 bar to x = nw: wire ends on it move with it
 function setWidth(nw) {
   if (nw === W) return false;
-  for (const w of wires) { if (w.x1 === W) w.x1 = nw; if (w.x2 === W) w.x2 = nw; }
+  if (barsOn()) for (const w of wires) { if (w.x1 === W) w.x1 = nw; if (w.x2 === W) w.x2 = nw; }
   W = nw; normalize();
   return true;
 }
 // the width that fills a panel of the given size (in screen pixels) with the whole circuit
-function fitWidth(pw, ph) { return W_USER ? Math.max(contentRight(BAR_MIN), W_USER) : Math.max(contentRight(), Math.ceil(contentH() * pw / Math.max(ph, 1) / G) * G); }
+// (with supply boxes there's no L2 bar to stretch out: the sheet is just as wide as the circuit, viewed at 100%)
+function fitWidth(pw, ph) { return !barsOn() ? contentRight() + 120 : W_USER ? Math.max(contentRight(BAR_MIN), W_USER) : Math.max(contentRight(), Math.ceil(contentH() * pw / Math.max(ph, 1) / G) * G); }
 const BAR_MIN = 240;   // the shortest a circuit can be made by moving the bars
 // how far right the L1 bar can move: up to 40 units short of the first part or wire corner
 function leftRoom() {
@@ -47,9 +48,11 @@ function canvasH() {
   for (const w of wires) m = Math.max(m, w.y1, w.y2);
   return Math.max(400, VIS_H1, snap(m + 120));
 }
+// how far right things can go: to the L2 bar, or with supply boxes, on past the sheet's edge (which then moves out)
+const rightEdge = () => barsOn() ? W : W + 400;
 function overlaps(p, x, y, t) {
   const hw = WIDE(t) ? 60 : 40;
   return parts.some(q => q !== p && Math.abs(q.x - x) < hw + TERM(q) && Math.abs(q.y - y) < 80);
 }
-const clampPart = (x, y, t) => { const h = WIDE(t) ? 60 : 40; return [Math.min(W - h - 40, Math.max(h + 40, snap(x))), Math.max(60, snap(y))]; };   // (clear of the bars)
-const clampX = x => Math.min(W, Math.max(0, snap(x))), clampY = y => Math.max(40, snap(y));
+const clampPart = (x, y, t) => { const h = WIDE(t) ? 60 : 40; return [Math.min(rightEdge() - h - 40, Math.max(h + 40, snap(x))), Math.max(60, snap(y))]; };   // (clear of the bars)
+const clampX = x => Math.min(rightEdge(), Math.max(0, snap(x))), clampY = y => Math.max(40, snap(y));

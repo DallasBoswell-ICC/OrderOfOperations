@@ -13,7 +13,7 @@ const viewW = () => sheetW() / cam.z, viewH = () => VIS_H1 / cam.z;
 const zMin = () => Math.max(0.25, Math.min(1, VIS_H1 / sheetH()));
 function applyCam() {
   if (typeof dragging === 'function' && dragging()) return;   // the view holds still under a drag in progress
-  if (cam.fit) cam.z = zMin();
+  if (cam.fit) cam.z = barsOn() || LAYOUT ? zMin() : 1;   // (a circuit on supply boxes opens at its full width, and scrolls)
   const H = sheetH(), SW = sheetW(), vw = viewW(), vh = viewH();
   cam.x = vw >= SW ? (SW - vw) / 2 : Math.min(Math.max(0, cam.x), SW - vw);
   cam.y = vh >= H ? (H - vh) / 2 : Math.min(Math.max(0, cam.y), H - vh);

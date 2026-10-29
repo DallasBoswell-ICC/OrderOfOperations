@@ -1499,6 +1499,26 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Supply boxes: Run keeps the Build view, and the return current lights the L2 lead', async page => {
+    const out = [];
+    await page.evaluate(() => {
+      loadPreset('blank'); document.querySelector('[data-power="boxes"]').click();
+      parts.push(P('l1', 80, 40, { L: '' }), P('l2', 800, 40, { L: '' }));
+      for (let i = 0; i < 12; i++) { const y = 160 + i * 140; parts.push(P('btn', 240, y, { L: 'ABCDEFGHJKLM'[i], maint: true, color: '#FF0032' }), P('coil', 600, y, { L: 'NPQRSTUVWXYZ'[i], color: '#FFDC00' }));
+        wires.push(Wr(80, y, 200, y), Wr(280, y, 540, y), Wr(660, y, 800, y)); }
+      wires.push(Wr(80, 80, 80, 1700), Wr(800, 80, 800, 1700)); normalize(); draw();
+    });
+    const before = await page.evaluate(() => svg.getAttribute('viewBox'));
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300));
+    const after = await page.evaluate(() => svg.getAttribute('viewBox'));
+    if (before !== after) out.push(`the view changed on entering Run: ${before} -> ${after}`);
+    await page.evaluate(() => { press('A', true); });
+    await page.waitForTimeout(1200);
+    const lit = await page.evaluate(() => view.parts.get(parts.find(p => p.t === 'l2').id).src.some(q => q.c && q.c !== 'transparent'));
+    if (!lit) out.push('the L2 box lead stayed dark');
+    await page.click('#tab-edit'); await page.evaluate(() => setSpeed(1));
+    return out;
+  });
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

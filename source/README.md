@@ -1,7 +1,5 @@
 > **On this site:** this folder is the Circuit Builder's source. The page students use is `Circuit_Builder.html` at the top of the repository: after a change, run `python3 build.py` here and copy `dist/Circuit_Builder.html` up over it.
 
-# Order of Operations: Circuit Builder
-
 A relay-logic circuit builder for an electrical troubleshooting class. Students place pushbuttons and coils on a panel, wire them between the L1 bar (left) and the L2 bar (right), and press **Run** to watch the current flow, tinted by the buttons it has passed through.
 
 The file students use is **`dist/Circuit_Builder.html`**: one self-contained page that opens in any browser, offline, with nothing to install.

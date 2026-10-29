@@ -694,19 +694,20 @@ let W = W_MIN, W_USER = null;
 function contentRight(floor = W_MIN) {
   let m = floor;
   for (const p of parts) m = Math.max(m, p.x + TERM(p) + 40);
-  for (const w of wires) for (const x of [w.x1, w.x2]) if (x !== W) m = Math.max(m, x + 20);
+  for (const w of wires) for (const x of [w.x1, w.x2]) if (x !== W || !barsOn()) m = Math.max(m, x + 20);
   return Math.ceil(m / G) * G;
 }
 const contentH = () => { let m = 0; for (const p of parts) m = Math.max(m, p.y + 60); for (const w of wires) m = Math.max(m, w.y1, w.y2); return Math.max(400, snap(m + 120)); };
 // move the L2 bar to x = nw: wire ends on it move with it
 function setWidth(nw) {
   if (nw === W) return false;
-  for (const w of wires) { if (w.x1 === W) w.x1 = nw; if (w.x2 === W) w.x2 = nw; }
+  if (barsOn()) for (const w of wires) { if (w.x1 === W) w.x1 = nw; if (w.x2 === W) w.x2 = nw; }
   W = nw; normalize();
   return true;
 }
 // the width that fills a panel of the given size (in screen pixels) with the whole circuit
-function fitWidth(pw, ph) { return W_USER ? Math.max(contentRight(BAR_MIN), W_USER) : Math.max(contentRight(), Math.ceil(contentH() * pw / Math.max(ph, 1) / G) * G); }
+// (with supply boxes there's no L2 bar to stretch out: the sheet is just as wide as the circuit, viewed at 100%)
+function fitWidth(pw, ph) { return !barsOn() ? contentRight() + 120 : W_USER ? Math.max(contentRight(BAR_MIN), W_USER) : Math.max(contentRight(), Math.ceil(contentH() * pw / Math.max(ph, 1) / G) * G); }
 const BAR_MIN = 240;   // the shortest a circuit can be made by moving the bars
 // how far right the L1 bar can move: up to 40 units short of the first part or wire corner
 function leftRoom() {
@@ -731,12 +732,14 @@ function canvasH() {
   for (const w of wires) m = Math.max(m, w.y1, w.y2);
   return Math.max(400, VIS_H1, snap(m + 120));
 }
+// how far right things can go: to the L2 bar, or with supply boxes, on past the sheet's edge (which then moves out)
+const rightEdge = () => barsOn() ? W : W + 400;
 function overlaps(p, x, y, t) {
   const hw = WIDE(t) ? 60 : 40;
   return parts.some(q => q !== p && Math.abs(q.x - x) < hw + TERM(q) && Math.abs(q.y - y) < 80);
 }
-const clampPart = (x, y, t) => { const h = WIDE(t) ? 60 : 40; return [Math.min(W - h - 40, Math.max(h + 40, snap(x))), Math.max(60, snap(y))]; };   // (clear of the bars)
-const clampX = x => Math.min(W, Math.max(0, snap(x))), clampY = y => Math.max(40, snap(y));
+const clampPart = (x, y, t) => { const h = WIDE(t) ? 60 : 40; return [Math.min(rightEdge() - h - 40, Math.max(h + 40, snap(x))), Math.max(60, snap(y))]; };   // (clear of the bars)
+const clampX = x => Math.min(rightEdge(), Math.max(0, snap(x))), clampY = y => Math.max(40, snap(y));
 
 /* ---- js/network.js ---- */
 /* ---------------- connectivity ----------------
@@ -1667,10 +1670,14 @@ function drawPart(p, g, x, y, chan, onStation) {
     // (its leads: while building, all three; while running, only those wired, with L1 live in them)
     v.lead = null;
     const used = ([tx, ty]) => editing || !parts.includes(p) || connects(pointInfo(tx, ty, new Set(), p));
-    const [l, r, b] = terms(p), leads = [[l, x - half, y], [r, x + half, y], [b, x, y + half]].filter(([t]) => used(t));
-    for (const [[tx, ty], bx, by] of leads) {
+    const [l, r, b] = terms(p), leads = [[l, x - half, y, 0], [r, x + half, y, 1], [b, x, y + half, 2]].filter(([t]) => used(t));
+    // (L2's leads light up with the return current as it arrives at them, so it runs right into the box)
+    v.src = [];
+    for (const [[tx, ty], bx, by, i] of leads) {
       el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
-      if (!editing && p.t === 'l1') el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: OFF_WHITE, 'stroke-width': 8.9 }, g);
+      if (editing) continue;
+      if (p.t === 'l1') el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: OFF_WHITE, 'stroke-width': 8.9 }, g);
+      else if (p._t) v.src.push({ n: p._t[i], ln: el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g) });
     }
     el('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: '#e2cc85', 'stroke-width': 2.2 }, g);
     for (const oy of [-7, 7]) el('path', { d: `M ${x - 13} ${y + oy - 6.5} L ${x} ${y + oy + 6.5} L ${x + 13} ${y + oy - 6.5}`, fill: 'none', stroke: '#f2e6b8', 'stroke-width': 3.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
@@ -1815,6 +1822,7 @@ function say(t) { document.getElementById('msg').textContent = t || ''; }
 let VIEWS = [view], view2 = {};
 function draw() {
   needPaint = true;
+  if (!barsOn()) { const n = fitWidth(); if (n > W) W = n; }   // (with supply boxes, the sheet grows to take in whatever's been added past its edge)
   LAYOUT = !editing && viewMode === 'columns' ? layoutColumns() : null;
   applyCam();
   view.tag = 'a'; renderInto(svg, view, LAYOUT);
@@ -2043,7 +2051,8 @@ function paintView(V) {
   }
   // parts: each one is only touched when how it looks has changed (redrawing a part, with its shadow, is costly)
   for (const p of parts) {
-    const v = V.parts.get(p.id); if (!v || isSrc(p)) continue;
+    const v = V.parts.get(p.id); if (!v) continue;
+    if (isSrc(p)) { if (v.src) for (const q of v.src) { const c = colAt(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } continue; }
     for (const S of ['A', 'B']) paintLead(v.lead[S], p._lead && p._lead[S]);
     let k;
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
@@ -2653,7 +2662,7 @@ const viewW = () => sheetW() / cam.z, viewH = () => VIS_H1 / cam.z;
 const zMin = () => Math.max(0.25, Math.min(1, VIS_H1 / sheetH()));
 function applyCam() {
   if (typeof dragging === 'function' && dragging()) return;   // the view holds still under a drag in progress
-  if (cam.fit) cam.z = zMin();
+  if (cam.fit) cam.z = barsOn() || LAYOUT ? zMin() : 1;   // (a circuit on supply boxes opens at its full width, and scrolls)
   const H = sheetH(), SW = sheetW(), vw = viewW(), vh = viewH();
   cam.x = vw >= SW ? (SW - vw) / 2 : Math.min(Math.max(0, cam.x), SW - vw);
   cam.y = vh >= H ? (H - vh) / 2 : Math.min(Math.max(0, cam.y), H - vh);

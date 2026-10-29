@@ -5,6 +5,7 @@
 let VIEWS = [view], view2 = {};
 function draw() {
   needPaint = true;
+  if (!barsOn()) { const n = fitWidth(); if (n > W) W = n; }   // (with supply boxes, the sheet grows to take in whatever's been added past its edge)
   LAYOUT = !editing && viewMode === 'columns' ? layoutColumns() : null;
   applyCam();
   view.tag = 'a'; renderInto(svg, view, LAYOUT);
