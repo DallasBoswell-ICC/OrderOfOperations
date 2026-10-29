@@ -182,7 +182,7 @@ function drawPart(p, g, x, y, chan, onStation) {
     else drawTimer(p, g, x, y, v);
   }
   // its name, above it (the other contact blocks of a pushbutton or selector switch go without: the dashed line joins them to it)
-  if (!v.sec && !onStation) el('text', { x, y: y - capTop(p), 'text-anchor': 'middle', class: 'cap' }, g).textContent = captionOf(p);
+  if (!v.sec && !onStation) (v.cap = el('text', { x, y: y - capTop(p), 'text-anchor': 'middle', class: 'cap' }, g)).textContent = captionOf(p);
   return v;
 }
 // a horizontal run from lo to hi at height y, hopping over every crossing in hops

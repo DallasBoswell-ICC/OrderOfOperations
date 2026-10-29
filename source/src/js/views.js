@@ -90,7 +90,7 @@ document.getElementById('zoom-fit2').addEventListener('click', () => { cam2 = { 
 function setViewMode(m) {
   const was = viewMode; viewMode = m;
   try { localStorage.setItem(VIEW_KEY, m); } catch (_) {}
-  showViewMode();
+  showViewMode(); showOverview();
   if (!editing && m === 'split' && was !== 'split') splitStart();
   else if (m !== was) fitView();
   fit(); draw(); if (!editing) paint();

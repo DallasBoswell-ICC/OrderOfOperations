@@ -36,6 +36,8 @@ MODULES = [
     "pointer.js",        # mouse and touch in Build mode (drag, reshape, box select)
     "camera.js",         # zoom and pan
     "views.js",          # columns and split view while running; full screen
+    "refs.js",           # rung numbers and cross-references
+    "overview.js",       # the overview strip
     "toolbar.js",        # the toolbar, Delete/Undo/Clear, keyboard shortcuts
     "clipboard.js",      # copy, cut and paste
     "properties.js",     # the selected part's settings

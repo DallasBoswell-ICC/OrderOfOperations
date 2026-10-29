@@ -59,7 +59,7 @@ function showStation() {
 }
 // keep it inside the window
 function placeStation() {
-  const r = stationEl.getBoundingClientRect(), st = document.getElementById('stage').getBoundingClientRect();
+  const r = stationEl.getBoundingClientRect(), st = svg.getBoundingClientRect();
   let x = ST.x ?? st.right - r.width - 16, y = ST.y ?? st.top + 16;   // (first time: the top right of the panel, where the coils and lights are)
   x = Math.max(0, Math.min(x, window.innerWidth - Math.min(r.width, window.innerWidth)));
   y = Math.max(0, Math.min(y, window.innerHeight - 34));

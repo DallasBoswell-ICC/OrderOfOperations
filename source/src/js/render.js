@@ -13,6 +13,7 @@ function draw() {
   else { svg2.innerHTML = ''; view2 = {}; }
   WORLD = view.world;
   renderProps();
+  showOverview();
   if (fit()) { applyCam(); requestAnimationFrame(draw); }   // the panel changed size: draw again to fill it
   scheduleAutosave();
 }
@@ -24,7 +25,7 @@ function renderInto(target, V, L) {
   WORLD = V.world = el('g', { class: 'world' }, target);
   // the bands of rungs (one, the whole circuit, unless in columns): each its own group, moved into its column
   const bands = (L ? L.bands : [{ y0: 0, y1: H, dx: 0, dy: 0 }]).map((b, n) => ({ ...b, n, g: el('g', b.dx || b.dy ? { transform: `translate(${b.dx} ${b.dy})` } : {}) }));
-  const B = y => bands.find(b => y < b.y1) || bands[bands.length - 1];
+  const B = V.B = y => bands.find(b => y < b.y1) || bands[bands.length - 1];
   for (const b of bands) {
     el('rect', { x: 0, y: b.y0, width: W, height: b.y1 - b.y0, fill: '#404040' }, b.g);   // the sheet the circuit is drawn on
     if (editing) el('rect', { x: 0, y: 0, width: W, height: H, fill: 'url(#gridMajor)' }, b.g);   // positioning grid while building
@@ -108,6 +109,7 @@ function renderInto(target, V, L) {
     } else if (p.t === 'btn') bindButton(g, p);
     else if (p.t === 'sel') bindSelector(g, p);
   }
+  if (SHOW.rungs) drawRefs(V, B, net);
   if (editing && V === view) {
     const f = document.getElementById('fault');
     f.hidden = !issues.has('short');

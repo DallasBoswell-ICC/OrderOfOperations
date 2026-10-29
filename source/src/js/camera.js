@@ -19,6 +19,7 @@ function applyCam() {
   cam.y = vh >= H ? (H - vh) / 2 : Math.min(Math.max(0, cam.y), H - vh);
   svg.setAttribute('viewBox', `${cam.x} ${cam.y} ${vw} ${vh}`);
   const lab = document.getElementById('zoom-pct'); if (lab) lab.textContent = Math.round(cam.z * 100) + '%';
+  if (typeof ovView === 'function') ovView();
 }
 function zoomAt(f, px, py) {
   const z = Math.min(ZMAX, Math.max(zMin(), cam.z * f)); if (Math.abs(z - cam.z) < 1e-6) return;

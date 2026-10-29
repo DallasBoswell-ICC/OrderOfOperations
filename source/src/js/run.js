@@ -19,7 +19,7 @@ function frame(now) {
 }
 function paint() {
   for (const V of VIEWS) paintView(V);
-  paintStation();
+  paintStation(); overviewTick();
   const fl = document.getElementById('fault');
   if (fl.hidden !== !shortNow) {
     fl.hidden = !shortNow;

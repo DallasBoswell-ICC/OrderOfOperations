@@ -1407,6 +1407,58 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Rung numbers and cross-references: every rung numbered; a coil lists its contacts\' rungs (NC underlined), a contact its coil\'s; pressing one goes there; can be turned off', async page => {
+    const out = [], json = require('fs').readFileSync(require('path').join(__dirname, 'traffic-man-auto.json'), 'utf8');
+    await page.evaluate(j => useCircuit(readCircuit(JSON.parse(j)), ''), json);
+    const r = await page.evaluate(() => {
+      const nos = [...document.querySelectorAll('#svg .rungno')].map(g => g.dataset.rung);
+      const capOf = L => { const p = parts.find(q => q.t === 'coil' && q.L === L); return view.parts.get(p.id).cap; };
+      const x = capOf('X'), xs = [...x.querySelectorAll('.xref')].map(t => t.textContent + (t.getAttribute('text-decoration') ? '_' : ''));
+      const y = [...capOf('Y').querySelectorAll('.xref')].map(t => t.textContent + (t.getAttribute('text-decoration') ? '_' : ''));
+      const c = parts.find(q => q.t === 'con' && q.L === 'U' && q.y > 1700), cr = [...view.parts.get(c.id).cap.parentNode.querySelectorAll('text.xref')].map(t => t.textContent);
+      return { nos, n: rungYs(network()).length, x: x.textContent, xs, y, cr, u: String(rungAt(rungYs(network()), parts.find(q => q.t === 'coil' && q.L === 'U').y)) };
+    });
+    if (r.nos.length !== r.n || r.nos.join() !== Array.from({ length: r.n }, (_, i) => i + 1).join()) out.push('rung numbers: ' + r.nos.join());
+    if (r.xs.join() !== '1,3') out.push('the X coil (MCR) lists its contacts on rungs ' + r.xs.join() + ' (expected 1,3: rung 1 for its seal-in, rung 3 for the X contact)');
+    if (!r.y.some(s => s.endsWith('_'))) out.push('the Y coil does not underline its normally closed contacts: ' + r.y.join());
+    if (r.u !== '8' || r.cr.join() !== r.u) out.push('a U contact shows its coil on rung ' + r.cr.join() + ' (the U timer is on rung ' + r.u + ', expected 8)');
+    // press a number: the view goes to that rung
+    await page.click('#tab-run'); await page.waitForTimeout(100);
+    await page.evaluate(() => { cam = { x: 0, y: 0, z: 1, fit: false }; applyCam(); });
+    await page.evaluate(() => { const p = parts.find(q => q.t === 'con' && q.L === 'U' && q.y > 1700); view.parts.get(p.id).cap.parentNode.querySelector('text.xref').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); });
+    const yy = await page.evaluate(() => { const u = parts.find(q => q.t === 'coil' && q.L === 'U'); return [cam.y, cam.y + viewH(), u.y]; });
+    if (!(yy[2] > yy[0] && yy[2] < yy[1])) out.push('pressing 8 did not bring rung 8 into view: ' + JSON.stringify(yy));
+    await page.click('[data-show="rungs"] >> nth=-1'); await page.waitForTimeout(60);
+    if (await page.evaluate(() => document.querySelectorAll('#svg .rungno, #svg .xref').length)) out.push('turned off, the rung numbers still show');
+    await page.click('[data-show="rungs"] >> nth=-1');
+    return out;
+  });
+
+  await check('Overview strip: shows the whole of a long circuit beside the panel, with the part in view boxed; pressing it moves the view; not when everything fits, nor in columns', async page => {
+    const out = [], json = require('fs').readFileSync(require('path').join(__dirname, 'traffic-man-auto.json'), 'utf8');
+    await page.selectOption('#preset', 'io'); await page.waitForTimeout(60);
+    if (await page.isVisible('#overview')) out.push('the strip shows for a circuit that fits');
+    await page.evaluate(j => useCircuit(readCircuit(JSON.parse(j)), ''), json);
+    await page.click('#tab-run'); await page.waitForTimeout(100);
+    await page.evaluate(() => { cam = { x: 0, y: 0, z: 1, fit: false }; applyCam(); });
+    if (!(await page.isVisible('#overview'))) return out.concat('no strip for a long circuit');
+    const ov = await page.locator('#overview').boundingBox(), sv = await page.locator('#svg').boundingBox();
+    if (sv.x + sv.width > ov.x + 1) out.push('the strip covers the panel instead of sitting beside it');
+    const box0 = await page.locator('#ov-view').boundingBox();
+    await page.mouse.click(ov.x + ov.width / 2, ov.y + ov.height - 30); await page.waitForTimeout(60);
+    const r = await page.evaluate(() => ({ y: cam.y, bottom: canvasH() - viewH() }));
+    if (r.y < r.bottom - 300) out.push('pressing the bottom of the strip did not move the view to the bottom: ' + JSON.stringify(r));
+    const box1 = await page.locator('#ov-view').boundingBox();
+    if (!(box1.y > box0.y + 20)) out.push('the box on the strip did not follow the view');
+    await page.click('[data-view="columns"]'); await page.waitForTimeout(100);
+    if (await page.isVisible('#overview')) out.push('the strip shows in columns view');
+    await page.click('[data-view="normal"]'); await page.waitForTimeout(100);
+    await page.click('[data-show="overview"] >> nth=-1'); await page.waitForTimeout(60);
+    if (await page.isVisible('#overview')) out.push('turned off, the strip still shows');
+    await page.click('[data-show="overview"] >> nth=-1');
+    return out;
+  });
+
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

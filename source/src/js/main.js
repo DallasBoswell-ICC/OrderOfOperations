@@ -5,7 +5,7 @@ function setMode(run) {
   document.getElementById('tab-edit').setAttribute('aria-selected', String(!run));
   document.getElementById('tab-run').setAttribute('aria-selected', String(run));
   closeMenus(); showRibbon(); if (!run) buildStation();
-  showViewMode(); if (run && viewMode === 'split') splitStart();
+  showViewMode(); showOverview(); if (run && viewMode === 'split') splitStart();
   document.getElementById('fault').hidden = true;
   sel = null; preview = null; setTool('select');
   if (cam.fit) { fit(true); fitView(); }
@@ -87,4 +87,5 @@ if (LOCKED) {
   if (!restoreAutosave()) loadPreset('andor');   // carry on with the circuit from last time, if there is one
   fit(true); draw();
 }
+showOverview();
 requestAnimationFrame(frame);
