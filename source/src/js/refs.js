@@ -36,6 +36,10 @@ function drawRefs(V, B, net) {
         if (r.nc) { t.dataset.nc = '1'; nc.push(t); }
         t.dataset.tip = `A normally ${r.nc ? 'closed' : 'open'} ${p.L} contact is on rung ${r.n}: press to go there`;
       });
+      // the dark outline that keeps the name readable over the grid, drawn as a copy behind it (drawn with it, each
+      // comma's outline would cover the edge of the number before it)
+      const halo = v.cap.cloneNode(true); halo.setAttribute('class', 'cap caphalo'); halo.removeAttribute('data-tip');
+      v.cap.parentNode.insertBefore(halo, v.cap); v.cap.classList.add('nohalo');
       // the normally closed ones underlined (a line drawn over the name, from the start of the number to its end)
       for (const t of nc) {
         let x1, x2; try { const n = t.getNumberOfChars(); x1 = t.getStartPositionOfChar(0).x; x2 = t.getEndPositionOfChar(n - 1).x; } catch (_) { continue; }

@@ -239,6 +239,8 @@ body.fs .wrap { padding-top: 8px; }
 .xref:hover { fill: #fff; }
 .xsep { fill: #8d8d8d; }
 .xline { stroke: #f2d27a; pointer-events: none; }
+.cap.nohalo { stroke: none; }
+.caphalo, .caphalo tspan { fill: #404040; stroke: #404040; pointer-events: none; }
 .rungno { pointer-events: none; }
 .rungflash { animation: rungFlash 1.4s ease-out forwards; }
 @keyframes rungFlash { 0% { opacity: .28; } 100% { opacity: 0; } }
