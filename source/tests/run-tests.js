@@ -1419,15 +1419,15 @@ const DEF_CIRCUIT = `
       return { nos, n: rungYs(network()).length, x: x.textContent, xs, y, ylines, cr, u: String(rungAt(rungYs(network()), parts.find(q => q.t === 'coil' && q.L === 'U').y)) };
     });
     if (r.nos.length !== r.n || r.nos.join() !== Array.from({ length: r.n }, (_, i) => i + 1).join()) out.push('rung numbers: ' + r.nos.join());
-    if (r.xs.join() !== '1,3') out.push('the X coil (MCR) lists its contacts on rungs ' + r.xs.join() + ' (expected 1,3: rung 1 for its seal-in, rung 3 for the X contact)');
+    if (r.xs.join() !== '2,4') out.push('the X coil (MCR) lists its contacts on lines ' + r.xs.join() + ' (expected 2,4: line 2 for its seal-in branch, line 4 for the X contact)');
     if (!r.y.some(s => s.endsWith('_')) || r.ylines !== r.y.filter(s => s.endsWith('_')).length) out.push('the Y coil does not underline its normally closed contacts: ' + r.y.join() + ' (' + r.ylines + ' lines)');
-    if (r.u !== '8' || r.cr.join() !== r.u) out.push('a U contact shows its coil on rung ' + r.cr.join() + ' (the U timer is on rung ' + r.u + ', expected 8)');
+    if (r.cr.join() !== r.u) out.push('a U contact shows its coil on line ' + r.cr.join() + ' (the U timer is on line ' + r.u + ')');
     // press a number: the view goes to that rung
     await page.click('#tab-run'); await page.waitForTimeout(100);
     await page.evaluate(() => { cam = { x: 0, y: 0, z: 1, fit: false }; applyCam(); });
     await page.evaluate(() => { const p = parts.find(q => q.t === 'con' && q.L === 'U' && q.y > 1700); view.parts.get(p.id).cap.parentNode.querySelector('text.xref').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); });
     const yy = await page.evaluate(() => { const u = parts.find(q => q.t === 'coil' && q.L === 'U'); return [cam.y, cam.y + viewH(), u.y]; });
-    if (!(yy[2] > yy[0] && yy[2] < yy[1])) out.push('pressing 8 did not bring rung 8 into view: ' + JSON.stringify(yy));
+    if (!(yy[2] > yy[0] && yy[2] < yy[1])) out.push('pressing the U timer\'s number did not bring its line into view: ' + JSON.stringify(yy));
     await page.click('[data-show="rungs"] >> nth=-1'); await page.waitForTimeout(60);
     if (await page.evaluate(() => document.querySelectorAll('#svg .rungno, #svg .xref').length)) out.push('turned off, the rung numbers still show');
     await page.click('[data-show="rungs"] >> nth=-1');

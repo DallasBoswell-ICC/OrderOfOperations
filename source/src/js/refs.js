@@ -1,16 +1,20 @@
 /* =====================================================================
    rung numbers and cross-references, as on a print (Show: Rung numbers)
-   Every rung is numbered, down the L1 bar: a rung is a line of wire that starts at L1 (a branch below it, that does
-   not reach L1 itself, belongs to the rung above). After each coil's (and timer's) name, the rungs its contacts are
+   Every line is numbered, down the L1 bar: each line that starts at L1, and each branch line with a part on it. After each coil's (and timer's) name, the rungs its contacts are
    in, the normally closed ones underlined; on a tag on each contact's corner, the rung its coil is in. Pressing a number
    takes the view to that rung and lights it up for a moment.
    ===================================================================== */
 const SHOW_KEY = 'oo-circuit-builder:show';
 const SHOW = { rungs: true, overview: true };
 try { Object.assign(SHOW, JSON.parse(localStorage.getItem(SHOW_KEY) || '{}')); } catch (_) {}
-// the rungs: where wires start at L1, top first
-const rungYs = net => [...new Set(net.feeds.filter(f => f.t === 'L1').map(f => f.y))].sort((a, b) => a - b);
-// the number of the rung a part at height y is on (the rung at or above it)
+// the lines, top first: every line that starts at L1, and every branch with a part on it (each its own number, as on
+// a print); lines closer together than a part is tall count as one
+function rungYs(net) {
+  const ys = [...net.feeds.filter(f => f.t === 'L1').map(f => f.y), ...parts.map(p => p.y)].sort((a, b) => a - b), out = [];
+  for (const y of ys) if (!out.length || y - out[out.length - 1] > 20) out.push(y);
+  return out;
+}
+// the number of the line a part at height y is on (the line at or above it)
 function rungAt(ys, y) { let n = 1; for (let i = 0; i < ys.length; i++) if (ys[i] <= y + 1) n = i + 1; return n; }
 function drawRefs(V, B, net) {
   const ys = V.rungYs = rungYs(net); if (!ys.length) return;
