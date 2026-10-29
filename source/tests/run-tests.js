@@ -1413,14 +1413,14 @@ const DEF_CIRCUIT = `
     const r = await page.evaluate(() => {
       const nos = [...document.querySelectorAll('#svg .rungno')].map(g => g.dataset.rung);
       const capOf = L => { const p = parts.find(q => q.t === 'coil' && q.L === L); return view.parts.get(p.id).cap; };
-      const x = capOf('X'), xs = [...x.querySelectorAll('.xref')].map(t => t.textContent + (t.getAttribute('text-decoration') ? '_' : ''));
-      const y = [...capOf('Y').querySelectorAll('.xref')].map(t => t.textContent + (t.getAttribute('text-decoration') ? '_' : ''));
+      const x = capOf('X'), xs = [...x.querySelectorAll('.xref')].map(t => t.textContent + (t.dataset.nc ? '_' : ''));
+      const y = [...capOf('Y').querySelectorAll('.xref')].map(t => t.textContent + (t.dataset.nc ? '_' : '')), ylines = capOf('Y').parentNode.querySelectorAll('.xline').length;
       const c = parts.find(q => q.t === 'con' && q.L === 'U' && q.y > 1700), cr = [...view.parts.get(c.id).cap.parentNode.querySelectorAll('text.xref')].map(t => t.textContent);
-      return { nos, n: rungYs(network()).length, x: x.textContent, xs, y, cr, u: String(rungAt(rungYs(network()), parts.find(q => q.t === 'coil' && q.L === 'U').y)) };
+      return { nos, n: rungYs(network()).length, x: x.textContent, xs, y, ylines, cr, u: String(rungAt(rungYs(network()), parts.find(q => q.t === 'coil' && q.L === 'U').y)) };
     });
     if (r.nos.length !== r.n || r.nos.join() !== Array.from({ length: r.n }, (_, i) => i + 1).join()) out.push('rung numbers: ' + r.nos.join());
     if (r.xs.join() !== '1,3') out.push('the X coil (MCR) lists its contacts on rungs ' + r.xs.join() + ' (expected 1,3: rung 1 for its seal-in, rung 3 for the X contact)');
-    if (!r.y.some(s => s.endsWith('_'))) out.push('the Y coil does not underline its normally closed contacts: ' + r.y.join());
+    if (!r.y.some(s => s.endsWith('_')) || r.ylines !== r.y.filter(s => s.endsWith('_')).length) out.push('the Y coil does not underline its normally closed contacts: ' + r.y.join() + ' (' + r.ylines + ' lines)');
     if (r.u !== '8' || r.cr.join() !== r.u) out.push('a U contact shows its coil on rung ' + r.cr.join() + ' (the U timer is on rung ' + r.u + ', expected 8)');
     // press a number: the view goes to that rung
     await page.click('#tab-run'); await page.waitForTimeout(100);

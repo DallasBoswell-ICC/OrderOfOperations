@@ -39,7 +39,7 @@ select { font: inherit; font-size: .88rem; color: var(--ink); background: var(--
 .stage { position: relative; width: 100%; background: #2b2c2f; border-radius: 10px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,.35); margin: 0 auto; }
 .stage svg { display: block; width: 100%; height: 100%; user-select: none; -webkit-user-select: none; touch-action: none; }
 .cap { font-size: 12.5px; fill: var(--muted); pointer-events: none; stroke: #404040; stroke-width: 5px; stroke-linejoin: round; paint-order: stroke; }
-.rail { font-size: 20.3px; font-weight: 700; fill: var(--gold); pointer-events: none; }
+.railtag { font-size: 12px; font-weight: 800; fill: #3d3418; pointer-events: none; }
 .devtext { font-weight: 700; pointer-events: none; }
 .dev { cursor: pointer; outline: none; }
 .zoombar { position: absolute; right: 10px; bottom: 10px; display: flex; align-items: center; gap: 2px; background: rgba(28,29,31,.85); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
@@ -238,6 +238,7 @@ body.fs .wrap { padding-top: 8px; }
 .xref { fill: #f2d27a; font-weight: 700; cursor: pointer; pointer-events: auto; }
 .xref:hover { fill: #fff; }
 .xsep { fill: #8d8d8d; }
+.xline { stroke: #f2d27a; pointer-events: none; }
 .rungno { pointer-events: none; }
 .rungflash { animation: rungFlash 1.4s ease-out forwards; }
 @keyframes rungFlash { 0% { opacity: .28; } 100% { opacity: 0; } }

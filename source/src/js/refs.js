@@ -29,12 +29,20 @@ function drawRefs(V, B, net) {
       if (!refs.length) continue;
       refs.sort((a, b) => a.n - b.n || a.nc - b.nc);
       el('tspan', { class: 'xsep' }, v.cap).textContent = '  ';
+      const nc = [];
       refs.forEach((r, i) => {
         if (i) el('tspan', { class: 'xsep' }, v.cap).textContent = ', ';
         const t = el('tspan', {}, v.cap); t.textContent = r.n; go(t, r.y);
-        if (r.nc) t.setAttribute('text-decoration', 'underline');
+        if (r.nc) { t.dataset.nc = '1'; nc.push(t); }
         t.dataset.tip = `A normally ${r.nc ? 'closed' : 'open'} ${p.L} contact is on rung ${r.n}: press to go there`;
       });
+      // the normally closed ones underlined (a line drawn over the name, from the start of the number to its end)
+      for (const t of nc) {
+        let x1, x2; try { const n = t.getNumberOfChars(); x1 = t.getStartPositionOfChar(0).x; x2 = t.getEndPositionOfChar(n - 1).x; } catch (_) { continue; }
+        if (!(x2 > x1)) continue;
+        const y = +v.cap.getAttribute('y') + 2.6;
+        el('line', { x1, y1: y, x2, y2: y, class: 'xline', 'stroke-width': 1.4 }, v.cap.parentNode);
+      }
     } else if (p.t === 'con') {
       const c = parts.find(q => q.t === 'coil' && q.L === p.L); if (!c) continue;
       // (on a tag on its top left corner, so a row of contacts close together keeps its names apart)

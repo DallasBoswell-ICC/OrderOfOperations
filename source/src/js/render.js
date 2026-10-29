@@ -64,6 +64,7 @@ function renderInto(target, V, L) {
   for (const bd of bands) for (const [x, t] of [[0, 'L1'], [W - BAR, 'L2']]) {
     const g = el('g', { style: editing ? 'cursor:crosshair' : '' }, bd.g), top = bd.y0 + 6, bot = bd.y1 - 6;
     el('rect', { x, y: top, width: BAR, height: bot - top, rx: 3, fill: 'url(#gBar)', stroke: '#262626', 'stroke-width': 1.5 }, g);
+    el('text', { x: x + BAR / 2, y: bot - 9, 'text-anchor': 'middle', class: 'railtag' }, g).textContent = t;   // (its name, once, stamped at its foot)
     el('title', {}, g).textContent = editing ? `${t}: drag from here to draw a wire, or end a wire here` : t;
     if (editing) {
       // a handle at the top of each bar: drag it sideways to make the circuit longer or shorter
@@ -86,7 +87,6 @@ function renderInto(target, V, L) {
     terminal(sx, fd.y);
     // (selected: outlined, kept inside the panel's edge)
     if (editing && selHasT(fd.t === 'L1' ? 0 : W, fd.y)) el('rect', { x: fd.t === 'L1' ? 1.5 : W - BAR - 18.5, y: fd.y - 19, width: BAR + 17, height: 38, rx: 7, fill: 'rgba(255,192,0,.16)', stroke: '#ffc000', 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'pointer-events': 'none' }, B(fd.y).top);
-    el('text', fd.t === 'L1' ? { x: BAR + 8, y: fd.y - 22, class: 'rail' } : { x: W - BAR - 8, y: fd.y + 38, class: 'rail', 'text-anchor': 'end' }, B(fd.y).top).textContent = fd.t;
   }
   const issues = editing ? wiringIssues(net) : new Map();
   for (const bd of bands) { bd.links = el('g', {}, bd.g); bd.parts = el('g', {}, bd.g); }

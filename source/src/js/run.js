@@ -66,7 +66,6 @@ function paintView(V) {
       if (k === v.k) continue; v.k = k;
       v.fill.setAttribute('fill', mixRgb(GREY, v.col, lit));
       v.glow.setAttribute('opacity', (lit * .55).toFixed(3));
-      v.rays.setAttribute('stroke', mixRgb('#5a5a5a', v.col, lit));
       v.fil.setAttribute('stroke', lit > .5 ? 'rgba(255,255,255,.85)' : 'rgba(30,30,30,.55)');
     } else {
       const on = !!coilOn[p.id], f = p._chg == null ? 1 : clamp01((simT - p._chg) / .5);

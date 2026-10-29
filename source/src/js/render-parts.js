@@ -70,17 +70,9 @@ const lampColour = p => p.L ? (parts.find(q => q.t === 'btn' && q.L === p.L) || 
 // how lit a light is right now, 0 to 1 (it comes on and goes off over a moment, as a filament does)
 const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return on ? f : 1 - f; };
-function lampRays(x, y, R, g) {
-  const rays = el('g', { 'stroke-width': 3.2, 'stroke-linecap': 'round', stroke: '#5a5a5a' }, g);
-  for (let k = 0; k < 8; k++) {
-    const a = k * Math.PI / 4 + Math.PI / 8, r1 = R + 5, r2 = R + 13;
-    el('line', { x1: x + r1 * Math.cos(a), y1: y + r1 * Math.sin(a), x2: x + r2 * Math.cos(a), y2: y + r2 * Math.sin(a) }, rays);
-  }
-  return rays;
-}
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => (p.t === 'con' ? CON_H / 2 + 1 : p.t === 'lamp' ? BODYH(p.t) / 2 + 10 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => (p.t === 'con' ? CON_H / 2 + 1 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 // a part, in the same style as the Order of Operations simulators
 function drawPart(p, g, x, y, chan, onStation) {
   const v = {}, T = TERM(p), half = BODYH(p.t) / 2;
@@ -166,10 +158,9 @@ function drawPart(p, g, x, y, chan, onStation) {
   } else if (p.t === 'sel') {
     drawSelector(p, g, x, y, v);
   } else if (p.t === 'lamp') {
-    // a pilot light: a lens with a filament, that glows and sends out rays when lit
+    // a pilot light: a lens with a filament, that glows when lit
     const col = lampColour(p); v.col = col;
     v.glow = el('circle', { cx: x, cy: y, r: COIL / 2 + 6, fill: col, opacity: 0, filter: 'url(#fGlow)' }, g);
-    v.rays = lampRays(x, y, COIL / 2, g);
     el('circle', { cx: x, cy: y, r: COIL / 2, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
     v.fill = el('circle', { cx: x, cy: y, r: COIL_IN / 2, fill: GREY, stroke: '#1d2733', 'stroke-width': 1.2 }, g);
     el('circle', { cx: x, cy: y, r: COIL_IN / 2, fill: 'url(#gDome)' }, g);
