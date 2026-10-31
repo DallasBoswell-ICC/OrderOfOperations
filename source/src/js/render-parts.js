@@ -43,7 +43,7 @@ function screw(x, y, g, bare) {
 }
 const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
-const captionOf = p => p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -72,7 +72,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => (p.t === 'con' ? CON_H / 2 + 1 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => (p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_H / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 // a part, in the same style as the Order of Operations simulators
 function drawPart(p, g, x, y, chan, onStation) {
   const v = {}, T = TERM(p), half = BODYH(p.t) / 2;
@@ -173,6 +173,23 @@ function drawPart(p, g, x, y, chan, onStation) {
     }
     el('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: '#e2cc85', 'stroke-width': 2.2 }, g);
     for (const oy of [-7, 7]) el('path', { d: `M ${x - 13} ${y + oy - 6.5} L ${x} ${y + oy + 6.5} L ${x + 13} ${y + oy - 6.5}`, fill: 'none', stroke: '#f2e6b8', 'stroke-width': 3.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+  } else if (p.t === 'sol') {
+    // a solenoid: the lightning bolt from the print in a box, with a terminal ring at each end (drawn at full size and
+    // scaled down). The current runs along the bolt and fills the rings: in the solenoid's colour once it has pulled in
+    const k = SOL_K, W0 = SOL_W / k, H0 = SOL_H / k, col = p.color || SOL_COL, s = el('g', { transform: `translate(${x} ${y}) scale(${k})` }, g);
+    const L = -W0 / 2, R = W0 / 2, px = [L + 19, R - 19], H = (px[1] - px[0] - 8) * .42, w = H * .47;
+    const d = `M ${L + 2} 0 H ${-w} L 0 ${-H} V ${H} L ${w} 0 H ${R - 2}`, path = (a, to) => el('path', Object.assign({ d, fill: 'none', 'stroke-linejoin': 'round' }, a), to);
+    const rings = (r, a, to) => { for (const cx of px) el('circle', Object.assign({ cx, cy: 0, r }, a), to); };
+    v.glow = path({ stroke: col, 'stroke-width': 18, opacity: 0, filter: 'url(#fGlow)' }, s);
+    el('rect', { x: L, y: -H0 / 2, width: W0, height: H0, rx: 14, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 / k }, s);
+    // the channel and its coloured edge, the rings in the same layers, then the current inside both (with the same
+    // dark gap inside the edge: 2.25)
+    path({ stroke: '#1d1d1d', 'stroke-width': 22 }, s); rings(15, { fill: '#1d1d1d' }, s);
+    path({ stroke: col, 'stroke-width': 14, opacity: .9 }, s); rings(11.5, { fill: col, opacity: .9 }, s);
+    path({ stroke: '#1d1d1d', 'stroke-width': 10.5 }, s); rings(9.75, { fill: '#1d1d1d' }, s);
+    v.bolt = el('g', { color: 'transparent' }, s);
+    path({ stroke: 'currentColor', 'stroke-width': 6 }, v.bolt); rings(7.5, { fill: 'currentColor' }, v.bolt);
+    v.col = col;
   } else if (p.t === 'lamp') {
     // a pilot light: a lens with a filament, that glows when lit
     const col = lampColour(p); v.col = col;

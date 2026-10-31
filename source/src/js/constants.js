@@ -27,9 +27,12 @@ const ALL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const CON_H = BOX;                   // a relay contact's box is square, the size of a button's (room for a timed contact's arrow)
 const CT = 0.2, SWING = 0.4;         // relay contacts start to move this long after their coil changes, and take this long to swing
 const OPEN_LIFT = 15, BLADE_GREY = '#a6a6a6';   // how far an open contact's bar lifts off its posts
-// loads: things current passes through to L2 (a relay coil, or a pilot light). They are the same size and are
-// passed through the same way; only a coil works contacts
-const LOADT = t => t === 'coil' || t === 'lamp';
+// loads: things current passes through to L2 (a relay coil, a pilot light or a solenoid). They take the same room and
+// are passed through the same way; only a coil works contacts. A solenoid works something outside the circuit (a
+// pneumatic or hydraulic valve): it is numbered (SOL1, SOL2 ...) rather than lettered, and solOn says if it has pulled in
+const LOADT = t => t === 'coil' || t === 'lamp' || t === 'sol';
+const SOL_COL = '#00D2BE';
+const SOL_W = 84, SOL_H = 73, SOL_K = .68;   // a solenoid's box (drawn at 1/SOL_K the size, then scaled down)
 // a selector switch: a square body a little larger than a pushbutton's (room for its position numbers round the top)
 const SEL_BOX = 80;
 const WIDE = t => LOADT(t) || t === 'sel';                                // parts whose ends sit 60 either side of their centre

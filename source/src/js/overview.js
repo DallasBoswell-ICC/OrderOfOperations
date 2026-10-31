@@ -47,10 +47,11 @@ function drawOverview() {
   } else { c.strokeStyle = '#5e5e5e'; c.beginPath(); for (const w of wires) { c.moveTo(w.x1, w.y1); c.lineTo(w.x2, w.y2); } c.stroke(); }
   // the parts: buttons and selectors in their colour, coils and lights lit when in
   for (const p of parts) {
-    const h = BODYH(p.t), on = !editing && (p.t === 'coil' || p.t === 'lamp') && coilOn[p.id];
-    c.fillStyle = p.t === 'con' ? (!editing && CON[p.id] && CON[p.id].shut ? coilColour(p.L) : '#2a2a2a') : p.t === 'lamp' ? (on ? lampColour(p) : '#2a2a2a') : p.t === 'coil' ? (on ? p.color : '#2a2a2a') : (!editing && p.t === 'btn' && down[p.L] ? GREY : p.color);
+    const h = BODYH(p.t), on = !editing && LOADT(p.t) && coilOn[p.id];
+    c.fillStyle = p.t === 'con' ? (!editing && CON[p.id] && CON[p.id].shut ? coilColour(p.L) : '#2a2a2a') : p.t === 'lamp' ? (on ? lampColour(p) : '#2a2a2a') : p.t === 'coil' || p.t === 'sol' ? (on ? p.color : '#2a2a2a') : (!editing && p.t === 'btn' && down[p.L] ? GREY : p.color);
     c.strokeStyle = p.t === 'con' ? coilColour(p.L) : p.t === 'lamp' ? lampColour(p) : p.color; c.lineWidth = Math.max(3, 1 / s * dpr);
-    if (LOADT(p.t)) { c.beginPath(); c.arc(p.x, p.y, h / 2, 0, 2 * Math.PI); c.fill(); c.stroke(); }
+    if (p.t === 'sol') { c.fillRect(p.x - SOL_W / 2, p.y - SOL_H / 2, SOL_W, SOL_H); c.strokeRect(p.x - SOL_W / 2, p.y - SOL_H / 2, SOL_W, SOL_H); }
+    else if (LOADT(p.t)) { c.beginPath(); c.arc(p.x, p.y, h / 2, 0, 2 * Math.PI); c.fill(); c.stroke(); }
     else { c.fillRect(p.x - h / 2, p.y - h / 2, h, h); c.strokeRect(p.x - h / 2, p.y - h / 2, h, h); }
   }
   if (barsOn()) { c.fillStyle = '#d9c27a'; c.fillRect(0, 0, BAR, H); c.fillRect(W - BAR, 0, BAR, H); }

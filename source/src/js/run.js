@@ -62,6 +62,17 @@ function paintView(V) {
       if (v.arrow) { v.arrow.setAttribute('fill', s.shut ? v.col : BLADE_GREY); v.arrow.setAttribute('stroke', s.shut ? v.col : BLADE_GREY); }
       v.posts.setAttribute('fill', s.shut ? v.col : GREY);
     } else if (p.t === 'sel') paintSel(p, v);
+    else if (p.t === 'sol') {
+      // pulled in: its colour (fading in and out over half a second); current through it without pulling in (too little
+      // voltage): the current's own colour, as along a wire
+      const on = !!coilOn[p.id], f = p._chg == null ? 1 : clamp01((simT - p._chg) / .5), a = on ? f : 1 - f;
+      const cin = !on && COND[p.id] ? colAt(p._a, simT) || colAt(p._b, simT) : null;
+      k = a.toFixed(3) + ':' + cin;
+      if (k === v.k) continue; v.k = k;
+      v.bolt.setAttribute('color', cin || (a > .005 ? v.col : 'transparent'));
+      v.bolt.setAttribute('opacity', cin ? 1 : a.toFixed(3));
+      v.glow.setAttribute('opacity', (cin ? 0 : .5 * a).toFixed(3));
+    }
     else if (p.t === 'lamp') {
       const lit = litOf(p); k = lit.toFixed(3);
       if (k === v.k) continue; v.k = k;

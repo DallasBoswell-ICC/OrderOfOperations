@@ -41,6 +41,15 @@ function renderProps() {
     document.getElementById('l-colour-note').hidden = !p.L;
     if (!p.L) swatches(document.getElementById('l-colour'), p.color, hex => { snapshot(); p.color = hex; draw(); });
   }
+  document.getElementById('props-sol').hidden = !(p && p.t === 'sol');
+  if (p && p.t === 'sol') {
+    // its number (one no other solenoid has), and its colour
+    const ns = document.getElementById('v-num'), taken = new Set(parts.filter(q => q.t === 'sol' && q !== p).map(q => q.L));
+    ns.innerHTML = '';
+    const top = Math.max(20, ...[...taken].map(Number)) + 5;
+    for (let n = 1; n <= top; n++) if (!taken.has(String(n))) ns.add(new Option('SOL' + n, String(n), false, String(n) === p.L));
+    swatches(document.getElementById('v-colour'), p.color, hex => { snapshot(); p.color = hex; draw(); });
+  }
   document.getElementById('props-sel').hidden = !(p && p.t === 'sel');
   if (p && p.t === 'sel') renderSelProps(p);
   document.getElementById('props-con').hidden = !(p && p.t === 'con');
@@ -200,3 +209,5 @@ document.getElementById('s-main').addEventListener('click', () => {
   const p = selPart(); if (!p) return; snapshot();
   const m = mainSel(p.L); parts = parts.filter(q => q !== p); parts.splice(parts.indexOf(m), 0, p); draw();
 });
+
+document.getElementById('v-num').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'sol') return; snapshot(); p.L = e.target.value; draw(); });

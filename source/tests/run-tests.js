@@ -1549,6 +1549,32 @@ const DEF_CIRCUIT = `
     await page.evaluate(() => press('A', false)); await page.click('#tab-edit'); await page.evaluate(() => setSpeed(1));
     return out;
   });
+  await check('Solenoids: placed numbered, pull in like a coil (not in series), saved and read back, renumbered when pasted', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    await page.evaluate(() => {
+      parts.push(P('btn', 200, 120, { L: 'A', maint: true, color: '#FF0032' }), newPart('sol', 520, 120));
+      wires.push(Wr(0, 120, 160, 120), Wr(240, 120, 460, 120), Wr(580, 120, W, 120));
+      parts.push(P('btn', 200, 300, { L: 'B', maint: true, color: '#0070C0' }), P('coil', 420, 300, { L: 'X', color: '#FFDC00' }), newPart('sol', 640, 300));
+      wires.push(Wr(0, 300, 160, 300), Wr(240, 300, 360, 300), Wr(480, 300, 580, 300), Wr(700, 300, W, 300));
+      normalize(); draw();
+    });
+    const caps = await page.evaluate(() => [...svg.querySelectorAll('text.cap')].map(t => t.textContent).filter(s => /SOL/.test(s)).sort().join());
+    if (caps !== 'SOL1 Solenoid,SOL2 Solenoid') out.push('captions: ' + caps);
+    const back = await page.evaluate(() => { const d = JSON.stringify(circuitData()), c = readCircuit(JSON.parse(d)); return c.parts.filter(p => p.t === 'sol').map(p => p.L + p.color).join(); });
+    if (back !== '1#00D2BE,2#00D2BE') out.push('read back: ' + back);
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300));
+    await page.evaluate(() => { press('A', true); press('B', true); }); await page.waitForTimeout(1200);
+    const st = await page.evaluate(() => [solOn(1), solOn(2), !!COND[parts.find(p => p.t === 'sol' && p.L === '2').id]]);
+    if (JSON.stringify(st) !== '[true,false,true]') out.push('SOL1 in, SOL2 out with current through it: ' + JSON.stringify(st));
+    await page.evaluate(() => { press('A', false); press('B', false); }); await page.click('#tab-edit'); await page.evaluate(() => setSpeed(1));
+    await page.waitForTimeout(400);
+    const after = await page.evaluate(() => solOn(1));
+    if (after) out.push('SOL1 stayed in after Build');
+    const pasted = await page.evaluate(() => { sel = { parts: new Set(parts.filter(p => p.t === 'sol').map(p => p.id)), wires: new Set() }; copySel(); pasteClip(); return parts.filter(p => p.t === 'sol').map(p => p.L).join(); });
+    if (pasted !== '1,2,3,4') out.push('after pasting both: ' + pasted);
+    return out;
+  });
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

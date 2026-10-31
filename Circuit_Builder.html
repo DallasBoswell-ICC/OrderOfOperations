@@ -363,7 +363,8 @@ body.fs .wrap { padding-top: 8px; }
         <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="7" width="14" height="2.6" rx="1.3" fill="#a6a6a6"/><circle cx="10" cy="14" r="2.4" fill="#555"/><circle cx="20" cy="14" r="2.4" fill="#555"/></svg><span>Contact<br>NO</span></button><button type="button" class="tool big" data-part="con-nc" data-tip="Relay contact, normally closed: opens when its coil picks up. Choose which coil works it in its settings.">
         <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="12.7" width="14" height="2.6" rx="1.3" fill="#FFDC00"/><circle cx="10" cy="14" r="2.4" fill="#FFDC00"/><circle cx="20" cy="14" r="2.4" fill="#FFDC00"/></svg><span>Contact<br>NC</span></button></div><div class="gname">Contacts</div></div>
       <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="lamp" data-tip="Pilot light: lights while current flows through it, wired from L1 to L2 like a coil. In its settings it can be built into a pushbutton, so the button lights up with it.">
-        <svg viewBox="0 0 30 26"><g stroke="#00B050" stroke-width="1.6" stroke-linecap="round"><path d="M15 1v2.5M15 22.5V25M3 13h2.5M24.5 13H27M6.5 4.5l1.8 1.8M21.7 19.7l1.8 1.8M23.5 4.5l-1.8 1.8M8.3 19.7l-1.8 1.8"/></g><circle cx="15" cy="13" r="8" fill="#222" stroke="#00B050" stroke-width="1.6"/><circle cx="15" cy="13" r="5.2" fill="#00B050"/><path d="M12.8 10.8l4.4 4.4M17.2 10.8l-4.4 4.4" stroke="#fff" stroke-opacity=".85" stroke-width="1.3" stroke-linecap="round"/></svg><span>Pilot<br>light</span></button></div><div class="gname">Lights</div></div>
+        <svg viewBox="0 0 30 26"><g stroke="#00B050" stroke-width="1.6" stroke-linecap="round"><path d="M15 1v2.5M15 22.5V25M3 13h2.5M24.5 13H27M6.5 4.5l1.8 1.8M21.7 19.7l1.8 1.8M23.5 4.5l-1.8 1.8M8.3 19.7l-1.8 1.8"/></g><circle cx="15" cy="13" r="8" fill="#222" stroke="#00B050" stroke-width="1.6"/><circle cx="15" cy="13" r="5.2" fill="#00B050"/><path d="M12.8 10.8l4.4 4.4M17.2 10.8l-4.4 4.4" stroke="#fff" stroke-opacity=".85" stroke-width="1.3" stroke-linecap="round"/></svg><span>Pilot<br>light</span></button>
+        <button type="button" class="tool big" data-part="sol" data-tip="Solenoid: pulls in while current flows through it, wired from L1 to L2 like a coil. It works a valve or something else outside the circuit, so it has no contacts. Numbered SOL1, SOL2 and so on."><svg viewBox="0 0 30 26"><rect x="2.5" y="3" width="25" height="20" rx="3.5" fill="#222" stroke="#00D2BE" stroke-width="1.5"/><path d="M5 13H11.6L15 6.2V19.8L18.4 13H25" fill="none" stroke="#00D2BE" stroke-width="2" stroke-linejoin="round"/><circle cx="7.4" cy="13" r="2.3" fill="#00D2BE"/><circle cx="22.6" cy="13" r="2.3" fill="#00D2BE"/></svg><span>Solenoid</span></button></div><div class="gname">Outputs</div></div>
       <div class="rgrp" id="power-group"><div class="gbody">
         <div class="stack">
           <button type="button" class="tool small" data-power="bars" aria-pressed="true" data-tip="Power the circuit from the L1 and L2 bars down its sides, as a ladder diagram is drawn"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="2" width="3" height="16" rx="1" fill="currentColor"/><rect x="15" y="2" width="3" height="16" rx="1" fill="currentColor"/><path d="M5 7h10M5 13h10" stroke="currentColor" stroke-width="1.3"/></svg><span>Bars</span></button>
@@ -412,6 +413,10 @@ body.fs .wrap { padding-top: 8px; }
         <div class="tgroup"><span class="label">Built into</span><select id="l-btn" aria-label="The pushbutton this light is built into"></select></div>
         <div class="tgroup" id="l-colour-group"><span class="label">Colour</span><div class="swatches" id="l-colour" role="radiogroup" aria-label="Light colour"></div></div>
         <div class="tgroup" id="l-colour-note" hidden><span class="label">Colour</span><span class="selname">the button's colour</span></div>
+      </div>
+      <div class="props" id="props-sol" hidden>
+        <div class="tgroup"><span class="label">Number</span><select id="v-num" aria-label="Solenoid number"></select></div>
+        <div class="tgroup"><span class="label">Colour</span><div class="swatches" id="v-colour" role="radiogroup" aria-label="Solenoid colour"></div></div>
       </div>
       <div class="props" id="props-coil" hidden>
         <div class="tgroup"><span class="label">Letter</span><select id="o-letter" aria-label="Coil letter"></select></div>
@@ -558,9 +563,12 @@ const ALL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const CON_H = BOX;                   // a relay contact's box is square, the size of a button's (room for a timed contact's arrow)
 const CT = 0.2, SWING = 0.4;         // relay contacts start to move this long after their coil changes, and take this long to swing
 const OPEN_LIFT = 15, BLADE_GREY = '#a6a6a6';   // how far an open contact's bar lifts off its posts
-// loads: things current passes through to L2 (a relay coil, or a pilot light). They are the same size and are
-// passed through the same way; only a coil works contacts
-const LOADT = t => t === 'coil' || t === 'lamp';
+// loads: things current passes through to L2 (a relay coil, a pilot light or a solenoid). They take the same room and
+// are passed through the same way; only a coil works contacts. A solenoid works something outside the circuit (a
+// pneumatic or hydraulic valve): it is numbered (SOL1, SOL2 ...) rather than lettered, and solOn says if it has pulled in
+const LOADT = t => t === 'coil' || t === 'lamp' || t === 'sol';
+const SOL_COL = '#00D2BE';
+const SOL_W = 84, SOL_H = 73, SOL_K = .68;   // a solenoid's box (drawn at 1/SOL_K the size, then scaled down)
 // a selector switch: a square body a little larger than a pushbutton's (room for its position numbers round the top)
 const SEL_BOX = 80;
 const WIDE = t => LOADT(t) || t === 'sel';                                // parts whose ends sit 60 either side of their centre
@@ -981,6 +989,8 @@ function retimeTimers() {
 }
 const isTimer = p => p.t === 'coil' && p.delay > 0;
 // the contacts worked by letter L are changed over (a timer's timed ones)
+// has solenoid number n pulled in? (for whatever it works outside the circuit, such as a valve)
+const solOn = n => parts.some(p => p.t === 'sol' && p.L === String(n) && !!coilOn[p.id]);
 const coilOnL = L => parts.some(q => q.t === 'coil' && q.L === L && (isTimer(q) ? !!(TIMER[q.id] && TIMER[q.id].act) : !!coilOn[q.id]));
 // a timer's contacts are timed, or instantaneous (c.inst); is contact c's coil holding it changed over right now?
 const isTimed = c => c.t === 'con' && !c.inst && parts.some(q => isTimer(q) && q.L === c.L);
@@ -1626,7 +1636,7 @@ function screw(x, y, g, bare) {
 }
 const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
-const captionOf = p => p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -1655,7 +1665,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => (p.t === 'con' ? CON_H / 2 + 1 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => (p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_H / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 // a part, in the same style as the Order of Operations simulators
 function drawPart(p, g, x, y, chan, onStation) {
   const v = {}, T = TERM(p), half = BODYH(p.t) / 2;
@@ -1756,6 +1766,23 @@ function drawPart(p, g, x, y, chan, onStation) {
     }
     el('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: '#e2cc85', 'stroke-width': 2.2 }, g);
     for (const oy of [-7, 7]) el('path', { d: `M ${x - 13} ${y + oy - 6.5} L ${x} ${y + oy + 6.5} L ${x + 13} ${y + oy - 6.5}`, fill: 'none', stroke: '#f2e6b8', 'stroke-width': 3.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+  } else if (p.t === 'sol') {
+    // a solenoid: the lightning bolt from the print in a box, with a terminal ring at each end (drawn at full size and
+    // scaled down). The current runs along the bolt and fills the rings: in the solenoid's colour once it has pulled in
+    const k = SOL_K, W0 = SOL_W / k, H0 = SOL_H / k, col = p.color || SOL_COL, s = el('g', { transform: `translate(${x} ${y}) scale(${k})` }, g);
+    const L = -W0 / 2, R = W0 / 2, px = [L + 19, R - 19], H = (px[1] - px[0] - 8) * .42, w = H * .47;
+    const d = `M ${L + 2} 0 H ${-w} L 0 ${-H} V ${H} L ${w} 0 H ${R - 2}`, path = (a, to) => el('path', Object.assign({ d, fill: 'none', 'stroke-linejoin': 'round' }, a), to);
+    const rings = (r, a, to) => { for (const cx of px) el('circle', Object.assign({ cx, cy: 0, r }, a), to); };
+    v.glow = path({ stroke: col, 'stroke-width': 18, opacity: 0, filter: 'url(#fGlow)' }, s);
+    el('rect', { x: L, y: -H0 / 2, width: W0, height: H0, rx: 14, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 / k }, s);
+    // the channel and its coloured edge, the rings in the same layers, then the current inside both (with the same
+    // dark gap inside the edge: 2.25)
+    path({ stroke: '#1d1d1d', 'stroke-width': 22 }, s); rings(15, { fill: '#1d1d1d' }, s);
+    path({ stroke: col, 'stroke-width': 14, opacity: .9 }, s); rings(11.5, { fill: col, opacity: .9 }, s);
+    path({ stroke: '#1d1d1d', 'stroke-width': 10.5 }, s); rings(9.75, { fill: '#1d1d1d' }, s);
+    v.bolt = el('g', { color: 'transparent' }, s);
+    path({ stroke: 'currentColor', 'stroke-width': 6 }, v.bolt); rings(7.5, { fill: 'currentColor' }, v.bolt);
+    v.col = col;
   } else if (p.t === 'lamp') {
     // a pilot light: a lens with a filament, that glows when lit
     const col = lampColour(p); v.col = col;
@@ -2143,6 +2170,17 @@ function paintView(V) {
       if (v.arrow) { v.arrow.setAttribute('fill', s.shut ? v.col : BLADE_GREY); v.arrow.setAttribute('stroke', s.shut ? v.col : BLADE_GREY); }
       v.posts.setAttribute('fill', s.shut ? v.col : GREY);
     } else if (p.t === 'sel') paintSel(p, v);
+    else if (p.t === 'sol') {
+      // pulled in: its colour (fading in and out over half a second); current through it without pulling in (too little
+      // voltage): the current's own colour, as along a wire
+      const on = !!coilOn[p.id], f = p._chg == null ? 1 : clamp01((simT - p._chg) / .5), a = on ? f : 1 - f;
+      const cin = !on && COND[p.id] ? colAt(p._a, simT) || colAt(p._b, simT) : null;
+      k = a.toFixed(3) + ':' + cin;
+      if (k === v.k) continue; v.k = k;
+      v.bolt.setAttribute('color', cin || (a > .005 ? v.col : 'transparent'));
+      v.bolt.setAttribute('opacity', cin ? 1 : a.toFixed(3));
+      v.glow.setAttribute('opacity', (cin ? 0 : .5 * a).toFixed(3));
+    }
     else if (p.t === 'lamp') {
       const lit = litOf(p); k = lit.toFixed(3);
       if (k === v.k) continue; v.k = k;
@@ -2324,11 +2362,14 @@ const pt = e => { const q = svg.createSVGPoint(); q.x = e.clientX; q.y = e.clien
 const btnLetters = () => new Set(parts.filter(p => p.t === 'btn').map(p => p.L));
 const selLetters = () => new Set(parts.filter(p => p.t === 'sel').map(p => p.L));
 const opLetters = () => new Set([...btnLetters(), ...selLetters()]);   // letters taken by pushbuttons and selector switches
+const solNums = () => new Set(parts.filter(p => p.t === 'sol').map(p => p.L));
+const nextSol = (taken = solNums()) => { let n = 1; while (taken.has(String(n))) n++; return String(n); };
 const coilLetters = () => new Set(parts.filter(p => p.t === 'coil').map(p => p.L));
 function newPart(kind, x, y) {
   if (kind === 'coil') { const u = new Set([...coilLetters(), ...opLetters()]); const L = [...'XYZW' + ALL].find(c => !u.has(c)); return P('coil', x, y, { L, color: COIL_COL[L] || '#FFDC00' }); }
   if (kind.startsWith('timer')) { const u = new Set([...coilLetters(), ...opLetters()]); const L = [...'TUVRS' + ALL].find(c => !u.has(c)); const p = P('coil', x, y, { L, color: COIL_COL[L] || '#FFDC00', delay: 5 }); if (kind === 'timer-off') p.tof = true; return p; }   // a timer (on- or off-delay), set to 5 s
   if (kind === 'lamp') return P('lamp', x, y, { L: '', color: '#00B050' });
+  if (kind === 'sol') return P('sol', x, y, { L: nextSol(), color: SOL_COL });   // the next solenoid number
   if (kind === 'src-l1' || kind === 'src-l2') return P(kind.slice(4), x, y, { L: '' });   // a supply box   // a light of its own (build it into a button in its settings)
   if (kind.startsWith('con')) { const cs = [...coilLetters()]; return P('con', x, y, { L: cs[0] || 'X', nc: kind === 'con-nc' }); }   // worked by the first coil (change it in its settings)
   const u = new Set([...coilLetters(), ...opLetters()]);
@@ -2336,7 +2377,7 @@ function newPart(kind, x, y) {
   const L = [...'ABCDEFGH' + ALL].find(c => !u.has(c));
   return P('btn', x, y, { L, nc: kind === 'btn-nc', maint: true, color: BTN_COL[L] || '#FF0032' });
 }
-const kindOf = k => k === 'src-l1' || k === 'src-l2' ? k.slice(4) : k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k.startsWith('con') ? 'con' : k === 'sel' ? 'sel' : 'btn';
+const kindOf = k => k === 'src-l1' || k === 'src-l2' ? k.slice(4) : k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k === 'sol' ? 'sol' : k.startsWith('con') ? 'con' : k === 'sel' ? 'sel' : 'btn';
 // a horizontal wire running right through where a part's ends will be: the part goes into it
 function spliceTarget(x, y, t) { const h = WIDE(t) ? 60 : 40; return wires.find(w => w.y1 === y && w.y2 === y && Math.min(w.x1, w.x2) <= x - h && Math.max(w.x1, w.x2) >= x + h); }
 function placePart(kind, x, y) {
@@ -3038,10 +3079,11 @@ function drawOverview() {
   } else { c.strokeStyle = '#5e5e5e'; c.beginPath(); for (const w of wires) { c.moveTo(w.x1, w.y1); c.lineTo(w.x2, w.y2); } c.stroke(); }
   // the parts: buttons and selectors in their colour, coils and lights lit when in
   for (const p of parts) {
-    const h = BODYH(p.t), on = !editing && (p.t === 'coil' || p.t === 'lamp') && coilOn[p.id];
-    c.fillStyle = p.t === 'con' ? (!editing && CON[p.id] && CON[p.id].shut ? coilColour(p.L) : '#2a2a2a') : p.t === 'lamp' ? (on ? lampColour(p) : '#2a2a2a') : p.t === 'coil' ? (on ? p.color : '#2a2a2a') : (!editing && p.t === 'btn' && down[p.L] ? GREY : p.color);
+    const h = BODYH(p.t), on = !editing && LOADT(p.t) && coilOn[p.id];
+    c.fillStyle = p.t === 'con' ? (!editing && CON[p.id] && CON[p.id].shut ? coilColour(p.L) : '#2a2a2a') : p.t === 'lamp' ? (on ? lampColour(p) : '#2a2a2a') : p.t === 'coil' || p.t === 'sol' ? (on ? p.color : '#2a2a2a') : (!editing && p.t === 'btn' && down[p.L] ? GREY : p.color);
     c.strokeStyle = p.t === 'con' ? coilColour(p.L) : p.t === 'lamp' ? lampColour(p) : p.color; c.lineWidth = Math.max(3, 1 / s * dpr);
-    if (LOADT(p.t)) { c.beginPath(); c.arc(p.x, p.y, h / 2, 0, 2 * Math.PI); c.fill(); c.stroke(); }
+    if (p.t === 'sol') { c.fillRect(p.x - SOL_W / 2, p.y - SOL_H / 2, SOL_W, SOL_H); c.strokeRect(p.x - SOL_W / 2, p.y - SOL_H / 2, SOL_W, SOL_H); }
+    else if (LOADT(p.t)) { c.beginPath(); c.arc(p.x, p.y, h / 2, 0, 2 * Math.PI); c.fill(); c.stroke(); }
     else { c.fillRect(p.x - h / 2, p.y - h / 2, h, h); c.strokeRect(p.x - h / 2, p.y - h / 2, h, h); }
   }
   if (barsOn()) { c.fillStyle = '#d9c27a'; c.fillRect(0, 0, BAR, H); c.fillRect(W - BAR, 0, BAR, H); }
@@ -3080,7 +3122,7 @@ document.querySelectorAll('.tool[data-part]').forEach(b => {
     if (e.button !== 0 || !editing) return;
     e.preventDefault();
     const sx = e.clientX, sy = e.clientY; let moved = false, ghost = null;
-    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('timer') ? { t: 'coil', L: '?', color: '#FFDC00', delay: 5, tof: kind === 'timer-off' } : kind === 'lamp' ? { t: 'lamp', L: '', color: '#00B050' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind === 'con-nc' } : kind === 'sel' ? { t: 'sel', L: '?', n: 3, closedIn: [0], pos: 1, color: '#0070C0' } : kind.startsWith('src-') ? { t: kind.slice(4), L: '' } : { t: 'btn', L: '?', nc: kind === 'btn-nc', color: '#9a9a9a' };
+    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('timer') ? { t: 'coil', L: '?', color: '#FFDC00', delay: 5, tof: kind === 'timer-off' } : kind === 'lamp' ? { t: 'lamp', L: '', color: '#00B050' } : kind === 'sol' ? { t: 'sol', L: '?', color: SOL_COL } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind === 'con-nc' } : kind === 'sel' ? { t: 'sel', L: '?', n: 3, closedIn: [0], pos: 1, color: '#0070C0' } : kind.startsWith('src-') ? { t: kind.slice(4), L: '' } : { t: 'btn', L: '?', nc: kind === 'btn-nc', color: '#9a9a9a' };
     const mv = ev => {
       if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 5) { moved = true; closeMenus(); ghost = document.createElement('div'); ghost.className = 'ghost'; ghost.innerHTML = b.innerHTML; document.body.append(ghost); document.body.classList.add('dragging'); }
       if (!moved) return;
@@ -3242,6 +3284,7 @@ function pasteClip() {
   const bottom = Math.max(0, ...parts.map(p => p.y + 60), ...wires.map(w => Math.max(w.y1, w.y2)));
   const dy = snap(bottom + 100 - Math.min(...ys) + (LOADT(clip.parts.find(p => p.y === Math.min(...ys))?.t) ? 20 : 0));
   const fx = x => x === 0 ? 0 : x >= W ? W : x;   // (wires to the bars stay on the bars)
+  const np0 = [];
   const np = clip.parts.map(p => {
     const q = { ...p, id: nextId++, y: p.y + dy };
     if (p.t === 'btn') q.L = map['b' + p.L];
@@ -3249,6 +3292,7 @@ function pasteClip() {
     if (p.t === 'sel') { q.L = map['s' + p.L]; q.closedIn = [...(p.closedIn || [])]; if (p.names) q.names = [...p.names]; }
     if (p.t === 'con' && map['c' + p.L]) q.L = map['c' + p.L];
     if (p.t === 'lamp' && p.L && map['b' + p.L]) q.L = map['b' + p.L];
+    if (p.t === 'sol') { q.L = nextSol(new Set([...solNums(), ...np0])); np0.push(q.L); }   // (a pasted solenoid gets a number of its own)
     return q;
   });
   const nw = clip.wires.map(w => Wr(fx(w.x1), w.y1 + dy, fx(w.x2), w.y2 + dy));
@@ -3317,6 +3361,15 @@ function renderProps() {
     document.getElementById('l-colour-group').hidden = !!p.L;
     document.getElementById('l-colour-note').hidden = !p.L;
     if (!p.L) swatches(document.getElementById('l-colour'), p.color, hex => { snapshot(); p.color = hex; draw(); });
+  }
+  document.getElementById('props-sol').hidden = !(p && p.t === 'sol');
+  if (p && p.t === 'sol') {
+    // its number (one no other solenoid has), and its colour
+    const ns = document.getElementById('v-num'), taken = new Set(parts.filter(q => q.t === 'sol' && q !== p).map(q => q.L));
+    ns.innerHTML = '';
+    const top = Math.max(20, ...[...taken].map(Number)) + 5;
+    for (let n = 1; n <= top; n++) if (!taken.has(String(n))) ns.add(new Option('SOL' + n, String(n), false, String(n) === p.L));
+    swatches(document.getElementById('v-colour'), p.color, hex => { snapshot(); p.color = hex; draw(); });
   }
   document.getElementById('props-sel').hidden = !(p && p.t === 'sel');
   if (p && p.t === 'sel') renderSelProps(p);
@@ -3478,6 +3531,8 @@ document.getElementById('s-main').addEventListener('click', () => {
   const m = mainSel(p.L); parts = parts.filter(q => q !== p); parts.splice(parts.indexOf(m), 0, p); draw();
 });
 
+document.getElementById('v-num').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'sol') return; snapshot(); p.L = e.target.value; draw(); });
+
 /* ---- js/storage.js ---- */
 /* ---------------- saving and opening circuits ----------------
    A circuit is saved as a small JSON file, or as a short text code (the same JSON, compressed) that can be pasted
@@ -3513,8 +3568,8 @@ function readCircuit(d) {
   const num = v => { const n = Number(v); if (!Number.isFinite(n)) throw new Error('The circuit is damaged (a position is not a number).'); return snap(n); };
   const hex = c => /^[0-9a-f]{6}$/i.test(c || '') ? '#' + c.toUpperCase() : null;
   const ps = d.parts.slice(0, 200).map(a => {
-    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sel' ? 'sel' : a[0] === 'l1' || a[0] === 'l2' ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
-    const p = P(t, num(a[1]), num(a[2]), { L, color: hex(a[6]) || (t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : BTN_COL[L] || '#FF0032') });
+    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'sel' ? 'sel' : a[0] === 'l1' || a[0] === 'l2' ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
+    const p = P(t, num(a[1]), num(a[2]), { L: t === 'sol' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : BTN_COL[L] || '#FF0032') });
     if (t === 'btn') { p.nc = !!a[4]; p.maint = a[5] !== 0; }
     if (t === 'sel') {
       p.n = Math.max(2, Math.min(4, Math.round(Number(a[7])) || 3)); const m = Math.round(Number(a[8])) || 0;
