@@ -1575,6 +1575,17 @@ const DEF_CIRCUIT = `
     if (pasted !== '1,2,3,4') out.push('after pasting both: ' + pasted);
     return out;
   });
+  await check('A pilot light built into a pushbutton is joined to it by a dashed line; a light of its own is not', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    const n = await page.evaluate(() => {
+      parts.push(P('btn', 200, 120, { L: 'A', maint: true, color: '#FF0032' }), P('lamp', 560, 300, { L: 'A', color: '#00B050' }), P('lamp', 560, 470, { L: '', color: '#00B050' }));
+      normalize(); draw();
+      return [...svg.querySelectorAll('path[stroke-dasharray="7 5"]')].map(p => p.getAttribute('stroke'));
+    });
+    if (JSON.stringify(n) !== '["#FF0032"]') out.push('dashed lines: ' + JSON.stringify(n));
+    return out;
+  });
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

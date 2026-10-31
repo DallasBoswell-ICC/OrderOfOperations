@@ -146,9 +146,11 @@ function drawPreview() {
 function selLinks(B) {
   const by = {};
   for (const p of parts) if (isOp(p)) (by[p.t + p.L] = by[p.t + p.L] || []).push(p);
+  // (a pilot light built into a pushbutton is joined to it the same way)
+  for (const p of parts) if (p.t === 'lamp' && p.L && by['btn' + p.L]) by['btn' + p.L].push(p);
   for (const k in by) {
     const ds = by[k].sort((a, b) => a.y - b.y || a.x - b.x); if (ds.length < 2) continue;
-    const m0 = ds[0].t === 'sel' ? mainSel(ds[0].L) : mainBtn(ds[0].L), bot = p => p.y + BODYH(p.t) / 2 + (p.nc ? 7 : 4), top = p => p === m0 ? p.y - capTop(p) - 16 : p.y - BODYH(p.t) / 2 - (p.nc ? 7 : 4);
+    const m0 = ds[0].t === 'sel' ? mainSel(ds[0].L) : mainBtn(ds[0].L), bot = p => p.y + BODYH(p.t) / 2 + (p.nc ? 7 : 4), top = p => p === m0 || p.t === 'lamp' ? p.y - capTop(p) - 16 : p.y - BODYH(p.t) / 2 - (p.nc ? 7 : 4);   // (over the caption, on the drawings that have one)
     for (let i = 1; i < ds.length; i++) {
       const a = ds[i - 1], b = ds[i], y0 = bot(a), y1 = top(b), [dx, dy] = b.lk || [0, 0];
       let d;
@@ -158,7 +160,7 @@ function selLinks(B) {
       } else { const lo = Math.max(y0 + 8, Math.max(bot(a), bot(b)) + 16 + dy); d = `M${a.x} ${y0}V${lo}H${b.x}V${bot(b)}`; }
       if (B(a.y) !== B(b.y)) continue;   // (in columns, two drawings in different columns are not joined)
       const g = B(a.y).links;
-      el('path', { d, fill: 'none', stroke: a.color, 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'stroke-linejoin': 'round', opacity: .85, 'pointer-events': 'none' }, g);
+      el('path', { d, fill: 'none', stroke: m0 ? m0.color : a.color, 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'stroke-linejoin': 'round', opacity: .85, 'pointer-events': 'none' }, g);
       if (editing) {
         const h = el('path', { d, fill: 'none', stroke: 'transparent', 'stroke-width': 14, 'stroke-linejoin': 'round', class: 'link-hit' }, g);
         el('title', {}, h).textContent = 'Drag to move this dashed line out of the way (double-click to put it back)';
