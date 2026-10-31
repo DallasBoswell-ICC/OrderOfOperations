@@ -126,6 +126,8 @@ body.locked .top-right, body.locked .modeseg, body.locked #toolbar, body.locked 
 
 .link-hit { cursor: move; pointer-events: stroke; }
 .link-hit:hover { stroke: rgba(255,192,0,.22); }
+.link-end { cursor: grab; }
+.link-end:hover { stroke-width: 3; }
 
 /* ---------------- an application window: title bar, quick access toolbar and ribbon, as in Office ---------------- */
 .wrap { gap: 8px; }

@@ -1584,6 +1584,10 @@ const DEF_CIRCUIT = `
       return [...svg.querySelectorAll('path[stroke-dasharray="7 5"]')].map(p => p.getAttribute('stroke'));
     });
     if (JSON.stringify(n) !== '["#FF0032"]') out.push('dashed lines: ' + JSON.stringify(n));
+    const back = await page.evaluate(() => { const l = parts.find(p => p.t === 'lamp' && p.L === 'A'); l.ls = ['r', 'l']; draw();
+      const handles = svg.querySelectorAll('.link-end').length, c = readCircuit(JSON.parse(JSON.stringify(circuitData())));
+      return [handles, JSON.stringify(c.parts.find(p => p.t === 'lamp' && p.L === 'A').ls)]; });
+    if (back[0] !== 2 || back[1] !== '["r","l"]') out.push('ends moved to the sides (handles, read back): ' + JSON.stringify(back));
     return out;
   });
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {

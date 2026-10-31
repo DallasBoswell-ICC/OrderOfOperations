@@ -30,7 +30,7 @@ function pasteClip() {
   const fx = x => x === 0 ? 0 : x >= W ? W : x;   // (wires to the bars stay on the bars)
   const np0 = [];
   const np = clip.parts.map(p => {
-    const q = { ...p, id: nextId++, y: p.y + dy };
+    const q = { ...p, id: nextId++, y: p.y + dy }; if (p.ls) q.ls = [...p.ls];
     if (p.t === 'btn') q.L = map['b' + p.L];
     if (p.t === 'coil') q.L = map['c' + p.L];
     if (p.t === 'sel') { q.L = map['s' + p.L]; q.closedIn = [...(p.closedIn || [])]; if (p.names) q.names = [...p.names]; }

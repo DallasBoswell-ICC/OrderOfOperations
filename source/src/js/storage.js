@@ -19,7 +19,7 @@ function circuitData() {
     app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}), ...(barsOn() ? {} : { pw: 'boxes' }), ...(SRC_COL !== SRC_DEFAULT ? { sc: SRC_COL } : {}),
     parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
       if (p.t === 'sel') { while (a.length < 7) a.push(null); a.length = 7; a.push(selN(p), (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, (p.names || []).join('/'), p.pos || 0); }   // a selector switch: positions, closed-in mask, (no label), names, start
-      if (p.lk) { while (a.length < 12) a.push(null); a.push(p.lk[0], p.lk[1]); }   // (its dashed link line, moved out of the way)
+      if (p.lk || p.ls) { while (a.length < 12) a.push(null); a.push(p.lk ? p.lk[0] : 0, p.lk ? p.lk[1] : 0); if (p.ls) a.push(p.ls.join('')); }   // (its dashed link line, moved out of the way; the sides its ends join)
       return a; }),
     wires: wires.map(q => [x(q.x1), q.y1, x(q.x2), q.y2]),
   };
@@ -42,7 +42,7 @@ function readCircuit(d) {
       if (nm.some(Boolean)) p.names = nm;
       p.pos = Math.max(0, Math.min(p.n - 1, Math.round(Number(a[11])) || 0));
     }
-    if ((t === 'btn' || t === 'sel' || t === 'lamp') && a.length >= 14) { const dx = Math.round(Number(a[12])) || 0, dy = Math.round(Number(a[13])) || 0; if (dx || dy) p.lk = [Math.max(-5000, Math.min(5000, dx)), Math.max(-5000, Math.min(5000, dy))]; }
+    if ((t === 'btn' || t === 'sel' || t === 'lamp') && a.length >= 14) { const dx = Math.round(Number(a[12])) || 0, dy = Math.round(Number(a[13])) || 0; if (dx || dy) p.lk = [Math.max(-5000, Math.min(5000, dx)), Math.max(-5000, Math.min(5000, dy))]; if (/^[tblr]{2}$/.test(a[14] || '')) p.ls = [...a[14]]; }
     if (t === 'l1' || t === 'l2') delete p.color;   // (a supply box has no colour of its own)
     if (t === 'con') { p.nc = !!a[4]; delete p.color; if (a[7] === 1) p.inst = true; }   // (a timer's instantaneous contact)
     if (t === 'coil' && a[7] !== undefined) { const n = Math.round(Number(a[7])); if (n >= 1) { p.delay = Math.min(999, n); if (a[8] === 1) p.tof = true; } }   // a timer (a[8] = 1: off-delay)

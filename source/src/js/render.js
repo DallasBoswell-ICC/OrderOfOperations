@@ -91,7 +91,7 @@ function renderInto(target, V, L) {
     if (editing && selHasT(fd.t === 'L1' ? 0 : W, fd.y)) el('rect', { x: fd.t === 'L1' ? 1.5 : W - BAR - 18.5, y: fd.y - 19, width: BAR + 17, height: 38, rx: 7, fill: 'rgba(255,192,0,.16)', stroke: '#ffc000', 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'pointer-events': 'none' }, B(fd.y).top);
   }
   const issues = editing ? wiringIssues(net) : new Map();
-  for (const bd of bands) { bd.links = el('g', {}, bd.g); bd.parts = el('g', {}, bd.g); }
+  for (const bd of bands) { bd.links = el('g', {}, bd.g); bd.parts = el('g', {}, bd.g); bd.ends = el('g', {}, bd.g); }
   selLinks(B);
   V.parts = new Map();
   for (const p of parts) {
@@ -143,6 +143,37 @@ function drawPreview() {
    In Build mode a line can be dragged out of the way of names and wires: across moves its upright run sideways,
    up or down moves where it crosses over (kept on the lower drawing as p.lk = [dx, dy], from where it would be).
    A double-click puts it back. */
+/* The dashed lines joining the drawings of one pushbutton or selector switch (and a pushbutton to the pilot lights
+   built into it). Each line runs from the drawing above to the one below: by default out of the bottom of the upper
+   one and into the top of the lower one (over its caption, if it has one). Either end can be moved to another side of
+   its part (top, bottom, left or right: p.ls, the sides of the line ending at p, [upper end, lower end]) by dragging
+   the small handle at that end; and the line itself dragged sideways or up and down out of the way (p.lk). */
+const LINK_STUB = 12;
+// where a link line leaves or meets part p on side s, and which way it heads off from there
+function linkEnd(p, s, m0) {
+  const h = BODYH(p.t) / 2, w = (p.t === 'sol' ? SOL_S : WIDE(p.t) ? BODYH(p.t) : p.t === 'sel' ? SEL_BOX : BOX) / 2, edge = p.nc ? 7 : 4;
+  if (s === 't') return [[p.x, p === m0 || p.t === 'lamp' ? p.y - capTop(p) - 16 : p.y - h - edge], [0, -1]];   // (over the caption, on the drawings that have one)
+  if (s === 'b') return [[p.x, p.y + h + edge], [0, 1]];
+  // the sides: high enough to clear the rung's wire (on a round part, on its edge there)
+  const k = s === 'l' ? -1 : 1, up = Math.round(Math.max(17, h * .45)), round = p.t === 'coil' || p.t === 'lamp';
+  return [[p.x + k * ((round ? Math.sqrt(h * h - up * up) : w) + edge), p.y - up], [k, 0]];
+}
+// an orthogonal route from P0 (heading d0) to P1 (arriving from d1), its middle moved by dx, dy
+function linkRoute([P0, d0], [P1, d1], dx, dy) {
+  const S = [P0[0] + d0[0] * LINK_STUB, P0[1] + d0[1] * LINK_STUB], E = [P1[0] + d1[0] * LINK_STUB, P1[1] + d1[1] * LINK_STUB];
+  const v0 = !!d0[1], v1 = !!d1[1], pts = [P0, S];
+  if (v0 && v1) {   // up or down from both: across in between (or beyond both, if both head the same way)
+    const c = (d0[1] === d1[1] ? (d0[1] > 0 ? Math.max(S[1], E[1]) : Math.min(S[1], E[1])) : (S[1] + E[1]) / 2) + dy;
+    pts.push([S[0], c], [E[0], c]);
+  } else if (!v0 && !v1) {   // sideways from both: up or down in between (or beyond both)
+    const c = (d0[0] === d1[0] ? (d0[0] > 0 ? Math.max(S[0], E[0]) : Math.min(S[0], E[0])) : (S[0] + E[0]) / 2) + dx;
+    pts.push([c, S[1]], [c, E[1]]);
+  } else if (v0) pts.push([S[0], E[1] + dy]), pts.push([E[0], E[1] + dy]);
+  else pts.push([S[0] + dx, S[1]], [S[0] + dx, E[1]]);
+  pts.push(E, P1);
+  const q = pts.filter((p, i) => !i || p[0] !== pts[i - 1][0] || p[1] !== pts[i - 1][1]);
+  return 'M' + q.map(p => `${Math.round(p[0] * 10) / 10} ${Math.round(p[1] * 10) / 10}`).join('L');
+}
 function selLinks(B) {
   const by = {};
   for (const p of parts) if (isOp(p)) (by[p.t + p.L] = by[p.t + p.L] || []).push(p);
@@ -150,25 +181,49 @@ function selLinks(B) {
   for (const p of parts) if (p.t === 'lamp' && p.L && by['btn' + p.L]) by['btn' + p.L].push(p);
   for (const k in by) {
     const ds = by[k].sort((a, b) => a.y - b.y || a.x - b.x); if (ds.length < 2) continue;
-    const m0 = ds[0].t === 'sel' ? mainSel(ds[0].L) : mainBtn(ds[0].L), bot = p => p.y + BODYH(p.t) / 2 + (p.nc ? 7 : 4), top = p => p === m0 || p.t === 'lamp' ? p.y - capTop(p) - 16 : p.y - BODYH(p.t) / 2 - (p.nc ? 7 : 4);   // (over the caption, on the drawings that have one)
+    const m0 = ds[0].t === 'sel' ? mainSel(ds[0].L) : mainBtn(ds[0].L), bot = p => p.y + BODYH(p.t) / 2 + (p.nc ? 7 : 4), top = p => linkEnd(p, 't', m0)[0][1];
     for (let i = 1; i < ds.length; i++) {
       const a = ds[i - 1], b = ds[i], y0 = bot(a), y1 = top(b), [dx, dy] = b.lk || [0, 0];
-      let d;
-      if (y1 - y0 >= 16) {
+      let d, ends;
+      if (b.ls) { const e0 = linkEnd(a, b.ls[0], m0), e1 = linkEnd(b, b.ls[1], m0); d = linkRoute(e0, e1, dx, dy); ends = [e0[0], e1[0]]; }
+      else if (y1 - y0 >= 16) {
         const c = Math.max(y0 + 6, Math.min(y1 - 6, Math.round((y0 + y1) / 2) + dy)), X = Math.max(BAR + 10, Math.min(W - BAR - 10, a.x + dx));
         d = X === a.x ? (a.x === b.x ? `M${a.x} ${y0}V${y1}` : `M${a.x} ${y0}V${c}H${b.x}V${y1}`) : `M${a.x} ${y0}V${y0 + 8}H${X}V${c}H${b.x}V${y1}`;
-      } else { const lo = Math.max(y0 + 8, Math.max(bot(a), bot(b)) + 16 + dy); d = `M${a.x} ${y0}V${lo}H${b.x}V${bot(b)}`; }
+        ends = [[a.x, y0], [b.x, y1]];
+      } else { const lo = Math.max(y0 + 8, Math.max(bot(a), bot(b)) + 16 + dy); d = `M${a.x} ${y0}V${lo}H${b.x}V${bot(b)}`; ends = [[a.x, y0], [b.x, bot(b)]]; }
       if (B(a.y) !== B(b.y)) continue;   // (in columns, two drawings in different columns are not joined)
-      const g = B(a.y).links;
-      el('path', { d, fill: 'none', stroke: m0 ? m0.color : a.color, 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'stroke-linejoin': 'round', opacity: .85, 'pointer-events': 'none' }, g);
+      const g = B(a.y).links, col = m0 ? m0.color : a.color;
+      el('path', { d, fill: 'none', stroke: col, 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'stroke-linejoin': 'round', opacity: .85, 'pointer-events': 'none' }, g);
       if (editing) {
         const h = el('path', { d, fill: 'none', stroke: 'transparent', 'stroke-width': 14, 'stroke-linejoin': 'round', class: 'link-hit' }, g);
-        el('title', {}, h).textContent = 'Drag to move this dashed line out of the way (double-click to put it back)';
+        el('title', {}, h).textContent = 'Drag to move this dashed line out of the way; drag the dot at either end to join it to another side of its part (double-click to put it all back)';
         h.addEventListener('pointerdown', e => dragLink(e, b));
-        h.addEventListener('dblclick', e => { e.stopPropagation(); if (!b.lk) return; snapshot(); delete b.lk; draw(); });
+        h.addEventListener('dblclick', e => { e.stopPropagation(); if (!b.lk && !b.ls) return; snapshot(); delete b.lk; delete b.ls; draw(); });
+        // a handle at each end: drag it round its part to join the line to another side
+        [a, b].forEach((q, j) => {
+          const [x, y] = ends[j], hd = el('circle', { cx: x, cy: y, r: 4.5, fill: '#2b2b2b', stroke: col, 'stroke-width': 2, class: 'link-end' }, B(a.y).ends);
+          el('title', {}, hd).textContent = 'Drag round the part to join the dashed line to its top, bottom or a side';
+          hd.addEventListener('pointerdown', e => dragLinkEnd(e, b, q, j));
+        });
       }
     }
   }
+}
+// dragging one end of a link line round its part q (j: 0 the upper end, 1 the lower): it moves to the side nearest the pointer
+function dragLinkEnd(e, b, q, j) {
+  if (e.button !== 0) return;
+  e.stopPropagation(); e.preventDefault();
+  let moved = false;
+  document.body.classList.add('dragging');
+  const mv = ev => {
+    const r = pt(ev), w = (q.t === 'sol' ? SOL_S : BODYH(q.t)) / 2, rx = (r.x - q.x) / w, ry = (r.y - q.y) / (BODYH(q.t) / 2);
+    const s = Math.abs(rx) > Math.abs(ry) ? (rx < 0 ? 'l' : 'r') : (ry < 0 ? 't' : 'b'), ls = b.ls ? [...b.ls] : ['b', 't'];
+    if (ls[j] === s) return;
+    if (!moved) { snapshot(); moved = true; }
+    ls[j] = s; b.ls = ls; draw();
+  };
+  const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); document.body.classList.remove('dragging'); };
+  document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
 }
 // dragging a dashed link line (see selLinks)
 function dragLink(e, b) {
