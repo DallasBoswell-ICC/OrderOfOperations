@@ -95,8 +95,8 @@ function movedGroup1(partIds, wireIds, dx, dy, termIds) {
   return { wires: wires.filter(w => !used.has(w)).concat(add.map(q => q.id ? { id: q.id, x1: q[0], y1: q[1], x2: q[2], y2: q[3] } : Wr(...q))), hits };
 }
 function movedWires(p, nx, ny) { return movedGroup(new Set([p.id]), new Set(), nx - p.x, ny - p.y); }
-const stateOf = () => JSON.stringify({ parts, wires, W, WU: W_USER, PW: POWER }, (k, v) => k.startsWith('_') ? undefined : v);
-function restore(st) { const o = JSON.parse(st); parts = o.parts; wires = o.wires; if (o.W) W = o.W; W_USER = o.WU ?? null; POWER = o.PW || 'bars'; }
+const stateOf = () => JSON.stringify({ parts, wires, W, WU: W_USER, PW: POWER, SC: SRC_COL }, (k, v) => k.startsWith('_') ? undefined : v);
+function restore(st) { const o = JSON.parse(st); parts = o.parts; wires = o.wires; if (o.W) W = o.W; W_USER = o.WU ?? null; POWER = o.PW || 'bars'; SRC_COL = o.SC || SRC_DEFAULT; }
 
 // a wire running across a part's body (other than the run it sits in, along its own line): a part can't go there, as
 // the wire would be hidden under it and cut

@@ -40,6 +40,11 @@ const isOp = p => p.t === 'btn' || p.t === 'sel';   // operators: pushbuttons an
    or by supply boxes placed anywhere on it ('boxes'): an L1 Supply box and an L2 Return box, each with three
    connection points (left, right and bottom), every one of them L1 or L2. */
 let POWER = 'bars';
+/* The source's colour: the colour of the current straight from L1 (each circuit keeps its own). Every load takes away
+   its share of it, down to the neutral's off-white at L2, so it's never white itself; and none of these is a button colour. */
+const SRC_PAL = [['Gold', '#FFC233'], ['Sky', '#3FB8FF'], ['Lime', '#9BE03A'], ['Coral', '#FF6F59'], ['Lavender', '#B49CFF']];
+const SRC_DEFAULT = SRC_PAL[0][1];
+let SRC_COL = SRC_DEFAULT;
 const barsOn = () => POWER === 'bars';
 const isSrc = p => p.t === 'l1' || p.t === 'l2';
 const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel';   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre

@@ -16,7 +16,7 @@ let circuitName = '';
 function circuitData() {
   const w = W_USER ? W : contentRight(), x = v => barsOn() && v === W ? w : v;   // (a length set by moving the bars is kept)
   return {
-    app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}), ...(barsOn() ? {} : { pw: 'boxes' }),
+    app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}), ...(barsOn() ? {} : { pw: 'boxes' }), ...(SRC_COL !== SRC_DEFAULT ? { sc: SRC_COL } : {}),
     parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
       if (p.t === 'sel') { while (a.length < 7) a.push(null); a.length = 7; a.push(selN(p), (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, (p.names || []).join('/'), p.pos || 0); }   // a selector switch: positions, closed-in mask, (no label), names, start
       if (p.lk) { while (a.length < 12) a.push(null); a.push(p.lk[0], p.lk[1]); }   // (its dashed link line, moved out of the way)
@@ -53,11 +53,11 @@ function readCircuit(d) {
   const ws = d.wires.slice(0, 2000).map(a => [num(a[0]), num(a[1]), num(a[2]), num(a[3])])
     .filter(([x1, y1, x2, y2]) => (x1 === x2 || y1 === y2) && (x1 !== x2 || y1 !== y2))
     .map(([x1, y1, x2, y2]) => Wr(Math.min(w, Math.max(0, x1)), Math.max(0, y1), Math.min(w, Math.max(0, x2)), Math.max(0, y2)));
-  return { w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
+  return { w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', src: SRC_PAL.some(([, h]) => h === d.sc) ? d.sc : SRC_DEFAULT, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
 }
 function useCircuit(c, how) {
   snapshot();
-  parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; circuitName = c.name; normalize(); sel = null;
+  parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; circuitName = c.name; normalize(); sel = null;
   fitView(); fit(true);
   say(how);
   if (editing) draw(); else { NET = network(); draw(); startRun(); afterRunStart(); }
@@ -165,7 +165,7 @@ function scheduleAutosave() {
   autosaveTimer = setTimeout(() => { try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(circuitData())); } catch (_) {} }, 400);
 }
 function restoreAutosave() {
-  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; circuitName = c.name; normalize(); return true; }
+  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; circuitName = c.name; normalize(); return true; }
   catch (_) { return false; }
 }
 

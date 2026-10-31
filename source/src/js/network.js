@@ -61,14 +61,20 @@ function components(net, ok) {
   net.edges.forEach(e => { if (ok(e)) { const a = f(e.a), b = f(e.b); if (a !== b) par[a] = b; } });
   return f;
 }
-// build-mode check: with every button passing current, is each coil wired from L1 to L2?
+// build-mode check: with every button passing current, is each coil wired from L1 to L2? (A load in series with
+// others is fine, with a note of the voltage it gets: { note }.)
 function wiringIssues(net) {
   const f = components(net, e => e.kind === 'w' || isSw(e.part)), l1 = f(net.L1), l2 = f(net.L2), out = new Map();
   if (l1 === l2) out.set('short', true);
+  const S = l1 === l2 ? null : loadShares(f, net);
   for (const p of parts) {
     if (isSrc(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); continue; }
     const a = f(p._a), b = f(p._b);
-    if (LOADT(p.t)) { if (!((a === l1 && b === l2) || (a === l2 && b === l1))) out.set(p.id, 'Not wired from L1 to L2'); }
+    if (LOADT(p.t)) {
+      const sh = S ? S.share.get(p.id) || 0 : 1;
+      if (sh < 1e-9) out.set(p.id, 'Not wired from L1 to L2');
+      else if (sh < 1 - 1e-6) out.set(p.id, { note: `In series: ${Math.round(sh * SUPPLY_V * 10) / 10} V` });
+    }
     else if (net.adj[p._a].length < 2 || net.adj[p._b].length < 2) out.set(p.id, 'An end is not connected');
   }
   return out;

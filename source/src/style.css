@@ -178,6 +178,11 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
 .stack { display: flex; flex-direction: column; gap: 1px; }
 .tool.small { gap: 7px; padding: 3px 9px 3px 6px; background: transparent; border-color: transparent; font-size: .8rem; white-space: nowrap; }
 .tool.small svg { width: 17px; height: 17px; }
+.srcrow { display: flex; align-items: center; gap: 7px; padding: 3px 9px 3px 6px; font-size: .8rem; white-space: nowrap; }
+#src-swatches { display: flex; gap: 4px; }
+#src-swatches button { width: 15px; height: 15px; padding: 0; border-radius: 3px; border: 1px solid rgba(0,0,0,.45); cursor: pointer; }
+#src-swatches button[aria-pressed="true"] { outline: 2px solid #e2cc85; outline-offset: 1px; }
+#src-swatches button:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
 .tool.small:hover:not(:disabled) { background: #3a3b40; }
 .tool.reset { border: 1.4px dashed #9a9a9a; border-radius: 10px; font-weight: 600; color: #f2f2f2; }
 .tool.reset svg { width: 26px; height: 26px; }

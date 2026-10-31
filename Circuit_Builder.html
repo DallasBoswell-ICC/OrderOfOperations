@@ -191,6 +191,11 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
 .stack { display: flex; flex-direction: column; gap: 1px; }
 .tool.small { gap: 7px; padding: 3px 9px 3px 6px; background: transparent; border-color: transparent; font-size: .8rem; white-space: nowrap; }
 .tool.small svg { width: 17px; height: 17px; }
+.srcrow { display: flex; align-items: center; gap: 7px; padding: 3px 9px 3px 6px; font-size: .8rem; white-space: nowrap; }
+#src-swatches { display: flex; gap: 4px; }
+#src-swatches button { width: 15px; height: 15px; padding: 0; border-radius: 3px; border: 1px solid rgba(0,0,0,.45); cursor: pointer; }
+#src-swatches button[aria-pressed="true"] { outline: 2px solid #e2cc85; outline-offset: 1px; }
+#src-swatches button:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
 .tool.small:hover:not(:disabled) { background: #3a3b40; }
 .tool.reset { border: 1.4px dashed #9a9a9a; border-radius: 10px; font-weight: 600; color: #f2f2f2; }
 .tool.reset svg { width: 26px; height: 26px; }
@@ -363,6 +368,7 @@ body.fs .wrap { padding-top: 8px; }
         <div class="stack">
           <button type="button" class="tool small" data-power="bars" aria-pressed="true" data-tip="Power the circuit from the L1 and L2 bars down its sides, as a ladder diagram is drawn"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="2" width="3" height="16" rx="1" fill="currentColor"/><rect x="15" y="2" width="3" height="16" rx="1" fill="currentColor"/><path d="M5 7h10M5 13h10" stroke="currentColor" stroke-width="1.3"/></svg><span>Bars</span></button>
           <button type="button" class="tool small" data-power="boxes" aria-pressed="false" data-tip="Power the circuit from supply boxes placed anywhere instead of the bars"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="6" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="11" y="6" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span>Boxes</span></button>
+          <div class="srcrow" data-tip="Source colour: the colour of the current straight from L1. Each coil or pilot light it goes through takes away its share of it, down to the neutral's off-white at L2."><span>Source</span><span id="src-swatches" role="group" aria-label="Source colour"></span></div>
         </div>
         <button type="button" class="tool big src-tool" data-part="src-l1" hidden data-tip="L1 Supply: where the circuit gets its power. Wire to its left, right or bottom; use as many as you like."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#e2cc85" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="#f2e6b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L1<br>supply</span></button>
         <button type="button" class="tool big src-tool" data-part="src-l2" hidden data-tip="L2 Return: where the current goes back. Wire to its left, right or bottom; use as many as you like."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#e2cc85" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="#f2e6b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L2<br>return</span></button>
@@ -565,6 +571,11 @@ const isOp = p => p.t === 'btn' || p.t === 'sel';   // operators: pushbuttons an
    or by supply boxes placed anywhere on it ('boxes'): an L1 Supply box and an L2 Return box, each with three
    connection points (left, right and bottom), every one of them L1 or L2. */
 let POWER = 'bars';
+/* The source's colour: the colour of the current straight from L1 (each circuit keeps its own). Every load takes away
+   its share of it, down to the neutral's off-white at L2, so it's never white itself; and none of these is a button colour. */
+const SRC_PAL = [['Gold', '#FFC233'], ['Sky', '#3FB8FF'], ['Lime', '#9BE03A'], ['Coral', '#FF6F59'], ['Lavender', '#B49CFF']];
+const SRC_DEFAULT = SRC_PAL[0][1];
+let SRC_COL = SRC_DEFAULT;
 const barsOn = () => POWER === 'bars';
 const isSrc = p => p.t === 'l1' || p.t === 'l2';
 const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel';   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre
@@ -679,7 +690,7 @@ PRESETS.stress = () => {
 // G and S follow one another through their contacts, and each lights its own lamp
 const TRAFFIC = {"app":"order-of-operations-circuit-builder","v":1,"name":"Traffic light","w":800,"fw":1,"parts":[["btn",340,200,"A",0,0,"00B050"],["con",340,300,"R",0,1,""],["coil",640,200,"R",0,1,"FFFFFF"],["lamp",640,400,"",0,1,"FF0032"],["lamp",640,500,"",0,1,"FFDC00"],["lamp",640,600,"",0,1,"00B050"],["con",340,400,"R",0,1,""],["con",340,500,"Y",0,1,""],["con",340,600,"G",0,1,""],["con",340,1000,"R",0,1,""],["con",340,1100,"Y",0,1,""],["coil",640,1000,"Y",0,1,"FFFFFF"],["coil",640,1100,"G",0,1,"FFFFFF"],["con",140,200,"M",0,1,""],["coil",640,80,"M",0,1,"0070C0"],["btn",140,80,"B",1,0,"0070C0"],["con",140,400,"M",0,1,""],["con",140,500,"M",0,1,""],["con",140,600,"M",0,1,""],["con",140,1000,"M",0,1,""],["con",140,1100,"M",0,1,""],["lamp",640,700,"",0,1,"0070C0"],["con",140,700,"M",0,1,""],["con",340,700,"S",0,1,""],["con",140,1200,"M",0,1,""],["con",340,1200,"G",0,1,""],["coil",640,1200,"S",0,1,"FFFFFF"]],"wires":[[0,200,100,200],[180,200,300,200],[380,200,580,200],[700,200,800,200],[260,300,300,300],[380,300,420,300],[0,400,100,400],[180,400,300,400],[380,400,580,400],[700,400,800,400],[0,500,100,500],[180,500,300,500],[380,500,580,500],[700,500,800,500],[0,600,100,600],[180,600,300,600],[380,600,580,600],[700,600,800,600],[0,1000,100,1000],[180,1000,300,1000],[380,1000,580,1000],[700,1000,800,1000],[0,1100,100,1100],[180,1100,300,1100],[380,1100,580,1100],[700,1100,800,1100],[0,80,100,80],[180,80,580,80],[700,80,800,80],[0,700,100,700],[180,700,300,700],[380,700,580,700],[700,700,800,700],[0,1200,100,1200],[180,1200,300,1200],[380,1200,580,1200],[700,1200,800,1200],[420,200,420,300],[260,200,260,300]]};
 PRESETS.traffic = () => { const c = readCircuit(TRAFFIC); return [c.parts, c.wires, c.w, c.fixed]; };
-function loadPreset(k) { W = W_MIN; W_USER = null; POWER = 'bars'; const r = PRESETS[k](); [parts, wires] = r; if (r[2]) W = r[2]; if (r[3]) W_USER = W; normalize(); }
+function loadPreset(k) { W = W_MIN; W_USER = null; POWER = 'bars'; SRC_COL = SRC_DEFAULT; const r = PRESETS[k](); [parts, wires] = r; if (r[2]) W = r[2]; if (r[3]) W_USER = W; normalize(); }
 
 /* ---- js/geometry.js ---- */
 /* ---------------- geometry ---------------- */
@@ -805,14 +816,20 @@ function components(net, ok) {
   net.edges.forEach(e => { if (ok(e)) { const a = f(e.a), b = f(e.b); if (a !== b) par[a] = b; } });
   return f;
 }
-// build-mode check: with every button passing current, is each coil wired from L1 to L2?
+// build-mode check: with every button passing current, is each coil wired from L1 to L2? (A load in series with
+// others is fine, with a note of the voltage it gets: { note }.)
 function wiringIssues(net) {
   const f = components(net, e => e.kind === 'w' || isSw(e.part)), l1 = f(net.L1), l2 = f(net.L2), out = new Map();
   if (l1 === l2) out.set('short', true);
+  const S = l1 === l2 ? null : loadShares(f, net);
   for (const p of parts) {
     if (isSrc(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); continue; }
     const a = f(p._a), b = f(p._b);
-    if (LOADT(p.t)) { if (!((a === l1 && b === l2) || (a === l2 && b === l1))) out.set(p.id, 'Not wired from L1 to L2'); }
+    if (LOADT(p.t)) {
+      const sh = S ? S.share.get(p.id) || 0 : 1;
+      if (sh < 1e-9) out.set(p.id, 'Not wired from L1 to L2');
+      else if (sh < 1 - 1e-6) out.set(p.id, { note: `In series: ${Math.round(sh * SUPPLY_V * 10) / 10} V` });
+    }
     else if (net.adj[p._a].length < 2 || net.adj[p._b].length < 2) out.set(p.id, 'An end is not connected');
   }
   return out;
@@ -908,9 +925,9 @@ function setAt(n, t, c, lane) {
   if (k > 0) a.splice(0, k);
   if (t > busyUntil) busyUntil = t;
 }
-// the colour of a stream of current: plain egg from L1, a button's colour after it (shading in over a short
+// the colour of a stream of current: the source's colour straight from L1, a button's colour after it (shading in over a short
 // distance from whatever colour came into the button), or the mix of several buttons' colours where branches met
-const setCol = set => set.size === 0 ? OFF_WHITE : set.size === 1 ? flowOf(btnColour([...set][0])) : blend([...set].map(L => flowOf(btnColour(L))));
+const setCol = set => set.size === 0 ? SRC_COL : set.size === 1 ? flowOf(btnColour([...set][0])) : blend([...set].map(L => flowOf(btnColour(L))));
 const colourOf = r => r.rd < RAMP ? mixOk(r.from, setCol(r.set), r.rd / RAMP) : setCol(r.set);
 // a pushbutton passes current while pressed (NO) or until pressed (NC); a relay contact once its bar has landed on its posts
 const closed = p => p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.t === 'sel' ? selClosed(p) : p.nc ? !down[p.L] : !!down[p.L];
@@ -1057,6 +1074,41 @@ function solveOnce(allClosed, blocked) {
   unk.forEach((id, i) => V.set(id, A[i][i] ? A[i][n] / A[i][i] : 1));
   return { V, live, g };
 }
+/* =====================================================================
+   how the supply's voltage shares out among the loads
+   With whatever joins things up right now (f: wires and closed switches, each group one junction), every coil and
+   pilot light is a resistance between two junctions, L1 at full voltage and L2 at none. A load across L1 and L2 gets
+   all of it; two alike in series get half each. A coil picks up only with PULL_IN of the voltage it's made for or
+   more (so two coils in series just sit there), and a pilot light glows with its share. Every load is the same
+   resistance and made for the supply voltage for now: loadR and ratedShare are where parts rated otherwise would go.
+   ===================================================================== */
+const SUPPLY_V = 120, PULL_IN = 0.85;
+const loadR = p => 1;                                    // (each load's resistance, relative to the others)
+const ratedShare = p => (p.rv || SUPPLY_V) / SUPPLY_V;   // (the voltage it's made for, as a share of the supply)
+// V: junction group -> voltage (L1 1, L2 0); share: load id -> the share of the supply across it (0: no current)
+function loadShares(f, net = NET) {
+  const c1 = f(net.L1), c2 = f(net.L2), V = new Map(), share = new Map();
+  if (c1 === c2) return { V, share, adj: new Map(), c2 };
+  const loads = parts.filter(p => LOADT(p.t) && p._a !== undefined), adj = new Map();
+  const link = (a, b, g, id) => { if (!adj.has(a)) adj.set(a, []); adj.get(a).push([b, g, id]); };
+  for (const p of loads) { const a = f(p._a), b = f(p._b); if (a !== b) { link(a, b, 1 / loadR(p), p.id); link(b, a, 1 / loadR(p), p.id); } }
+  // only the junctions joined through loads to L1 or L2 (any others carry no current)
+  const seen = new Set([c1, c2]), st = [c1, c2];
+  while (st.length) { const u = st.pop(); for (const [w] of adj.get(u) || []) if (!seen.has(w)) { seen.add(w); st.push(w); } }
+  V.set(c1, 1); V.set(c2, 0);
+  const unk = [...seen].filter(c => c !== c1 && c !== c2), ix = new Map(unk.map((c, i) => [c, i])), n = unk.length;
+  const A = Array.from({ length: n }, () => new Float64Array(n + 1));
+  unk.forEach((u, i) => { for (const [w, g] of adj.get(u) || []) { A[i][i] += g; if (ix.has(w)) A[i][ix.get(w)] -= g; else A[i][n] += g * V.get(w); } });
+  for (let c = 0; c < n; c++) {
+    let pv = c; for (let r = c + 1; r < n; r++) if (Math.abs(A[r][c]) > Math.abs(A[pv][c])) pv = r;
+    [A[c], A[pv]] = [A[pv], A[c]];
+    const d = A[c][c]; if (Math.abs(d) < 1e-300) continue;
+    for (let r = 0; r < n; r++) if (r !== c && A[r][c] !== 0) { const k = A[r][c] / d; for (let q = c; q <= n; q++) A[r][q] -= k * A[c][q]; }
+  }
+  unk.forEach((u, i) => V.set(u, A[i][i] ? A[i][n] / A[i][i] : 0));
+  for (const p of loads) { const a = V.get(f(p._a)), b = V.get(f(p._b)); share.set(p.id, a === undefined || b === undefined ? 0 : Math.abs(a - b)); }
+  return { V, share, adj, c2 };
+}
 
 /* ---- js/engine.js ---- */
 /* ---------------- the current, junction by junction ----------------
@@ -1072,18 +1124,22 @@ function solveOnce(allClosed, blocked) {
    carries on with what the other branches are still sending, and only goes dark once the last of every stream
    feeding it has passed. */
 let DIRS = [], OUTS = new Map(), INS = new Map(), REC = new Map(), PATHS = [], ALLOW = new Map(), REACH = new Map();
-const recKey = r => !r ? '-' : r.ret ? `r${r.base}|${r.along.toFixed(1)}` : `${[...r.set].sort().join('')}|${r.from}|${isFinite(r.rd) ? r.rd.toFixed(1) : 'i'}`;
-const along = (r, s) => !r ? null : r.ret ? { ret: true, base: r.base, along: r.along + s } : { set: r.set, from: r.from, rd: r.rd + s };
-const colAtRec = r => !r ? null : r.ret ? mixOk(r.base, OFF_WHITE, clamp01(r.along / FADE)) : colourOf(r);
+const recKey = r => !r ? '-' : r.ret ? `r${r.base}|${r.l0.toFixed(3)}|${r.l1.toFixed(3)}|${r.along.toFixed(1)}` : `${[...r.set].sort().join('')}|${r.from}|${isFinite(r.rd) ? r.rd.toFixed(1) : 'i'}`;
+const along = (r, s) => !r ? null : r.ret ? { ret: true, base: r.base, along: r.along + s, l0: r.l0, l1: r.l1 } : { set: r.set, from: r.from, rd: r.rd + s };
+/* Past a load the current is on its way back to L2 (ret): it keeps the colour it came in with (base), in proportion
+   to the voltage still left: l0 where it came out of the load, shading to l1 (the voltage at the load's far end)
+   over FADE. One load across L1 and L2: from all of its colour to none (the neutral's off-white); the first of two
+   in series: from all of it to half. */
+const colAtRec = r => !r ? null : r.ret ? mixOk(r.base, OFF_WHITE, 1 - lerp(r.l0, r.l1, clamp01(r.along / FADE))) : colourOf(r);
 function mergeRecs(ins) {
   if (!ins.length) return null;
   const rs = ins.filter(r => r.ret);
-  if (rs.length) return { ret: true, base: rs.length > 1 ? blend(rs.map(r => r.base)) : rs[0].base, along: Math.min(...rs.map(r => r.along)) };
+  if (rs.length) { const m = rs.reduce((a, b) => b.along < a.along ? b : a); return { ret: true, base: rs.length > 1 ? blend(rs.map(r => r.base)) : rs[0].base, along: m.along, l0: m.l0, l1: m.l1 }; }
   const set = new Set(); ins.forEach(r => r.set.forEach(x => set.add(x)));
   const same = ins.every(r => [...r.set].sort().join() === [...ins[0].set].sort().join() && r.from === ins[0].from);
   return { set, from: ins[0].from, rd: same ? Math.min(...ins.map(r => r.rd)) : Infinity };
 }
-const EGG = () => ({ set: new Set(), from: OFF_WHITE, rd: Infinity });
+const EGG = () => ({ set: new Set(), from: SRC_COL, rd: Infinity });   // (straight from L1: the source's colour)
 const isFeed1 = id => NET.feedV.get(id) === 1;
 function addLane(e, from) {
   const d = { e, from, to: from === e.a ? e.b : e.a, delay: e.len / V, arrived: null, sent: null, sentKey: e.kind === 'part' && LOADT(e.part.t) ? '-|out' : '-' };   // (nothing sent yet: dark)
@@ -1101,10 +1157,10 @@ function addLane(e, from) {
 function startRun() {
   NET = network();
   simT = 0; queue = []; seq = 0; busyUntil = 0; autoRel = {}; down = {}; coilOn = {}; TIMER = {}; SELPOS = {}; SELTURN = {};
-  FED_AT = {}; COMP = null; needPaint = true;
+  FED_AT = {}; COMP = null; LV = null; COND = {}; needPaint = true;
   CON = {}; for (const p of parts) if (p.t === 'con') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };   // every coil starts off
   tl = NET.nodes.map(() => [[-1e9, null]]);
-  for (const p of parts) { delete p._chg; delete p._lead; }
+  for (const p of parts) { delete p._chg; delete p._lead; delete p._sh; delete p._lv; }
   // which way each button and coil is passed through (as if every button were passing current)
   findButtonDirections();
   const h = solveV(true).V, dist = new Map(), q = []; VOLT = h;
@@ -1293,7 +1349,7 @@ function allowNow() {
     for (const d of path) {
       if (d.e.kind === 'part') {
         if (isSw(d.e.part)) { if (!closed(d.e.part)) break; if (isOp(d.e.part)) label = d.e.part.L; else { if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label); } }   // a contact passes on the colour it is given
-        else if (coilOn[d.e.part.id]) label = 'ret';   // past a coil that is in: the return side, back to L2
+        else if (COND[d.e.part.id]) label = 'ret';   // past a coil with current through it: the return side, back to L2
         // (a coil that cannot pick up, because something past it is open, carries no current: the wire past it is as
         // live as the wire before it, so the colour waiting at the coil carries on up to whatever is open)
         continue;
@@ -1327,15 +1383,15 @@ function through(d, r) {
   if (d.e.part.t === 'con') return along(r, d.e.len);   // a relay contact passes the current on as it is
   // through a coil that is in: the return side, fading to egg. Through a coil that cannot pick up: the colour
   // waiting at it, on up to whatever is open past it
+  if (COND[d.e.part.id]) return { ret: true, base: r.ret ? r.base : colourOf(r), along: 0, l0: lv(d.e.part)[0], l1: lv(d.e.part)[1] };
   if (r.ret) return null;
-  if (coilOn[d.e.part.id]) return { ret: true, base: colourOf(r), along: 0 };
   return fedNow(d.from) ? along(r, d.e.len) : null;   // (the end of a broken stream stops at the coil)
 }
 // send a stream into run d starting now: the points along it change one after another as it travels
 function send(d, r, t, atOnce) {
   r = filt(d, r, t);
   if (d.draining && !(r && r.ret)) { d.draining = false; if (!closed(d.e.part)) r = null; }   // the end of the return current has gone through; the switch is open
-  const key = recKey(r) + (d.e.kind === 'part' && LOADT(d.e.part.t) ? (coilOn[d.e.part.id] ? '|in' : '|out') : '');
+  const key = recKey(r) + (d.e.kind === 'part' && LOADT(d.e.part.t) ? (COND[d.e.part.id] ? `|in${lv(d.e.part).join('|')}` : '|out') : '');
   if (d.sent !== undefined && d.sentKey === key) return;
   d.sent = r; d.sentKey = key;
   const out = through(d, r);
@@ -1388,6 +1444,18 @@ function reeval(v, t) {
 let COMP = null;
 const compNow = () => COMP || (COMP = components(NET, conducts));
 // is junction v joined to L1 right now (so what has reached it is still fed, not the end of a broken stream)?
+// the voltages right now (see loadShares in solve.js): worked out again whenever a switch moves
+let LV = null, COND = {};   // (COND: the loads with current through them)
+const sharesNow = () => LV || (LV = loadShares(compNow()));
+const lv = p => p._lv || [1, 0];   // (the voltage at a load's two ends while current goes through it)
+const shareOf = p => sharesNow().share.get(p.id) || 0;
+const levelAt = v => sharesNow().V.get(compNow()(v)) ?? 0;
+// is junction v joined on to L2 right now, through wires, closed switches and loads other than p?
+function onToL2(p, v) {
+  const S = sharesNow(), f = compNow(), seen = new Set([f(v)]), st = [f(v)];
+  while (st.length) { const u = st.pop(); if (u === S.c2) return true; for (const [w, , id] of S.adj.get(u) || []) if (id !== p.id && !seen.has(w)) { seen.add(w); st.push(w); } }
+  return false;
+}
 const fedNow = v => { const f = compNow(); return f(v) === f(NET.L1); };
 /* Which coil was first: when the path from L1 through a coil to L2 is completed (a button pressed), the time is noted.
    In a real panel current is there at once, so the coil whose path was completed first is in first, and its contacts
@@ -1411,18 +1479,24 @@ function wouldCutOff(x, f0) {
 // a coil picks up when current reaches it and it has a way through to L2; it drops out when its current is gone
 let coilIns = new Set();
 function updateCoils(t) {
-  const f = compNow(), c2 = f(NET.L2);
+  const f = compNow();
   coilIns = new Set(); let changed = false;
   for (const p of parts) if (LOADT(p.t)) { if (fedBy(f, p)) { if (FED_AT[p.id] === undefined) FED_AT[p.id] = t; } else delete FED_AT[p.id]; }
   for (const p of parts) if (LOADT(p.t)) {   // (a pilot light lights just as a coil picks up)
     const d = DIRS.find(x => x.e.part === p); if (!d) continue;
     coilIns.add(d.from);
     const r = REC.get(d.from);
-    // a coil that is in stays in until the last of its current has reached it; it picks up only with current whose
-    // path back to L1 is unbroken right now (never from the end of a stream that has been cut off), and not ahead of
-    // a coil that was first and that it would cut off
-    let want = !shortNow && !!r && !r.ret && f(d.to) === c2;
-    if (want && !coilOn[p.id] && (f(d.from) !== f(NET.L1) || (p.t === 'coil' && wouldCutOff(p, f)))) want = false;
+    // current goes through a load once it has reached it, with the circuit through it complete right now: from L1,
+    // through it (and anything in series with it) to L2. (Never from the end of a stream that has been cut off.)
+    // A coil picks up with enough of the voltage across it (see loadShares), and not ahead of a coil that was first
+    // and that it would cut off; a pilot light lights with whatever share it gets
+    // (its supply cut off on the way to it: it carries on, as it was, until the last of its current has reached it)
+    let sh = shareOf(p), cond = !shortNow && !!r && sh > 1e-9;
+    if (!cond && !shortNow && !!r && COND[p.id] && onToL2(p, d.to)) { cond = true; sh = p._sh ?? 1; }
+    else if (cond) { p._sh = sh; p._lv = [levelAt(d.from), levelAt(d.to)]; }
+    const pull = p.t === 'lamp' || sh >= PULL_IN * ratedShare(p) - 1e-9;
+    if (cond && !COND[p.id] && pull && p.t === 'coil' && wouldCutOff(p, f)) cond = false;
+    const want = cond && pull, wasC = !!COND[p.id];
     let atOnce = false; const wasOn = !!coilOn[p.id];
     if (want !== wasOn) {
       coilOn[p.id] = want; p._chg = t;
@@ -1439,12 +1513,13 @@ function updateCoils(t) {
         TIMER[p.id] = st; armTimer(p, st);
         moveAll(t);
       } else if (p.t === 'coil') for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(t + CT, () => moveContact(c, evT));   // its contacts follow
-      // current already at the coil, and its way back to L2 opening or closing: the coil drops out or picks up there
-      // and then, so the change starts at its far end at once (rather than travelling through it like new current)
-      atOnce = !!r && !r.ret && p._inKey === recKey(r);
     }
+    // current already at the load, and its way back to L2 opening or closing: the change starts at its far end at
+    // once (rather than travelling through it like new current)
+    if (cond !== wasC) atOnce = !!r && p._inKey === recKey(r);
+    COND[p.id] = cond;
     p._inKey = recKey(r || null);
-    if (want !== wasOn) changed = true;
+    if (want !== wasOn || cond !== wasC) changed = true;
     send(d, r || null, t, atOnce);   // keep what goes through it up to date
   }
   if (changed) refreshAllow(t);   // a coil picking up or dropping out changes what the wire past it may carry
@@ -1477,7 +1552,7 @@ function moveContact(c, t) {
 }
 // some pushbuttons or contacts have just opened or closed
 function switched(sw, t) {
-  COMP = null;
+  COMP = null; LV = null;
   const was = shortNow;
   checkShort();
   if (was !== shortNow) for (const [id, fv] of NET.feedV) if (fv === 1) setRec(id, shortNow ? null : EGG(), t);
@@ -1577,7 +1652,7 @@ const lampsOf = L => parts.filter(q => q.t === 'lamp' && q.L && q.L === L);
 const lampColour = p => p.L ? (parts.find(q => q.t === 'btn' && q.L === p.L) || p).color || '#00B050' : p.color || '#00B050';
 // how lit a light is right now, 0 to 1 (it comes on and goes off over a moment, as a filament does)
 const LAMP_FADE = 0.2;
-const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return on ? f : 1 - f; };
+const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
 const capTop = p => (p.t === 'con' ? CON_H / 2 + 1 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
@@ -1676,7 +1751,7 @@ function drawPart(p, g, x, y, chan, onStation) {
     for (const [[tx, ty], bx, by, i] of leads) {
       el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
       if (editing) continue;
-      if (p.t === 'l1') el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: OFF_WHITE, 'stroke-width': 8.9 }, g);
+      if (p.t === 'l1') el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: SRC_COL, 'stroke-width': 8.9 }, g);
       else if (p._t) v.src.push({ n: p._t[i], ln: el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g) });
     }
     el('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: '#e2cc85', 'stroke-width': 2.2 }, g);
@@ -1922,8 +1997,9 @@ function renderInto(target, V, L) {
         el('rect', { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 32, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44, rx: 12, fill: 'none', stroke: '#ffc000', 'stroke-opacity': .5, 'stroke-width': 1.6, 'stroke-dasharray': '3 5', 'pointer-events': 'none' }, g);
       if (selHasP(p.id)) el('rect', { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 32, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44, rx: 12, fill: 'rgba(255,192,0,.07)', stroke: '#ffc000', 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'pointer-events': 'none' }, g);
       if (issues.has(p.id)) {
-        const t = el('text', { x: p.x, y: p.y - capTop(p) - 17, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: '#ff8a7a', 'pointer-events': 'none', stroke: '#404040', 'stroke-width': 4, 'paint-order': 'stroke' }, g);
-        t.textContent = '⚠ ' + issues.get(p.id);
+        const m = issues.get(p.id), note = typeof m === 'object';   // (a note, in gold: a load in series; a warning, in red)
+        const t = el('text', { x: p.x, y: p.y - capTop(p) - 17, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': note ? 600 : 700, fill: note ? '#e2cc85' : '#ff8a7a', 'pointer-events': 'none', stroke: '#404040', 'stroke-width': 4, 'paint-order': 'stroke' }, g);
+        t.textContent = note ? m.note : '⚠ ' + m;
       }
     } else if (p.t === 'btn') bindButton(g, p);
     else if (p.t === 'sel') bindSelector(g, p);
@@ -2370,8 +2446,8 @@ function movedGroup1(partIds, wireIds, dx, dy, termIds) {
   return { wires: wires.filter(w => !used.has(w)).concat(add.map(q => q.id ? { id: q.id, x1: q[0], y1: q[1], x2: q[2], y2: q[3] } : Wr(...q))), hits };
 }
 function movedWires(p, nx, ny) { return movedGroup(new Set([p.id]), new Set(), nx - p.x, ny - p.y); }
-const stateOf = () => JSON.stringify({ parts, wires, W, WU: W_USER, PW: POWER }, (k, v) => k.startsWith('_') ? undefined : v);
-function restore(st) { const o = JSON.parse(st); parts = o.parts; wires = o.wires; if (o.W) W = o.W; W_USER = o.WU ?? null; POWER = o.PW || 'bars'; }
+const stateOf = () => JSON.stringify({ parts, wires, W, WU: W_USER, PW: POWER, SC: SRC_COL }, (k, v) => k.startsWith('_') ? undefined : v);
+function restore(st) { const o = JSON.parse(st); parts = o.parts; wires = o.wires; if (o.W) W = o.W; W_USER = o.WU ?? null; POWER = o.PW || 'bars'; SRC_COL = o.SC || SRC_DEFAULT; }
 
 // a wire running across a part's body (other than the run it sits in, along its own line): a part can't go there, as
 // the wire would be hidden under it and cut
@@ -3119,6 +3195,14 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTip(); }
 function showPower() {
   document.querySelectorAll('[data-power]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.power === POWER)));
   document.querySelectorAll('.src-tool').forEach(b => b.hidden = barsOn());
+  document.querySelectorAll('[data-src]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.src === SRC_COL)));
+}
+// the source's colour: a swatch for each (see SRC_PAL)
+for (const [name, hex] of SRC_PAL) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.dataset.src = hex; b.style.background = hex; b.setAttribute('aria-label', name + ' source'); b.title = name;
+  b.addEventListener('click', () => { if (!editing || hex === SRC_COL) return; snapshot(); SRC_COL = hex; say(`Source colour: ${name}.`); draw(); });
+  document.getElementById('src-swatches').appendChild(b);
 }
 document.querySelectorAll('[data-power]').forEach(b => b.addEventListener('click', () => {
   if (b.dataset.power === POWER || !editing) return;
@@ -3413,7 +3497,7 @@ let circuitName = '';
 function circuitData() {
   const w = W_USER ? W : contentRight(), x = v => barsOn() && v === W ? w : v;   // (a length set by moving the bars is kept)
   return {
-    app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}), ...(barsOn() ? {} : { pw: 'boxes' }),
+    app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}), ...(barsOn() ? {} : { pw: 'boxes' }), ...(SRC_COL !== SRC_DEFAULT ? { sc: SRC_COL } : {}),
     parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
       if (p.t === 'sel') { while (a.length < 7) a.push(null); a.length = 7; a.push(selN(p), (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, (p.names || []).join('/'), p.pos || 0); }   // a selector switch: positions, closed-in mask, (no label), names, start
       if (p.lk) { while (a.length < 12) a.push(null); a.push(p.lk[0], p.lk[1]); }   // (its dashed link line, moved out of the way)
@@ -3450,11 +3534,11 @@ function readCircuit(d) {
   const ws = d.wires.slice(0, 2000).map(a => [num(a[0]), num(a[1]), num(a[2]), num(a[3])])
     .filter(([x1, y1, x2, y2]) => (x1 === x2 || y1 === y2) && (x1 !== x2 || y1 !== y2))
     .map(([x1, y1, x2, y2]) => Wr(Math.min(w, Math.max(0, x1)), Math.max(0, y1), Math.min(w, Math.max(0, x2)), Math.max(0, y2)));
-  return { w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
+  return { w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', src: SRC_PAL.some(([, h]) => h === d.sc) ? d.sc : SRC_DEFAULT, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
 }
 function useCircuit(c, how) {
   snapshot();
-  parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; circuitName = c.name; normalize(); sel = null;
+  parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; circuitName = c.name; normalize(); sel = null;
   fitView(); fit(true);
   say(how);
   if (editing) draw(); else { NET = network(); draw(); startRun(); afterRunStart(); }
@@ -3562,7 +3646,7 @@ function scheduleAutosave() {
   autosaveTimer = setTimeout(() => { try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(circuitData())); } catch (_) {} }, 400);
 }
 function restoreAutosave() {
-  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; circuitName = c.name; normalize(); return true; }
+  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; circuitName = c.name; normalize(); return true; }
   catch (_) { return false; }
 }
 
@@ -3764,7 +3848,7 @@ window.addEventListener('resize', () => { if (fit(editing && !dragging())) { if 
 
 if (LOCKED) {
   // a locked simulator: its own circuit, straight into Run mode, with its name as the title
-  try { const c = readCircuit(LOCKED.circuit); parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; circuitName = c.name; normalize(); }
+  try { const c = readCircuit(LOCKED.circuit); parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; circuitName = c.name; normalize(); }
   catch (_) { loadPreset('blank'); }
   document.body.classList.add('locked');
   document.querySelector('h1 span').textContent = circuitName || 'Circuit';

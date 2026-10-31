@@ -1519,6 +1519,36 @@ const DEF_CIRCUIT = `
     await page.click('#tab-edit'); await page.evaluate(() => setSpeed(1));
     return out;
   });
+  await check('Loads in series share the voltage: coils stay out, lights dim, the colour drops; the source colour is kept with the circuit', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    await page.evaluate(() => {
+      parts.push(P('btn', 200, 120, { L: 'A', maint: true, color: '#FF0032' }), P('coil', 420, 120, { L: 'CR', color: '#FFDC00' }), P('lamp', 640, 120, {}));
+      wires.push(Wr(0, 120, 160, 120), Wr(240, 120, 380, 120), Wr(460, 120, 600, 120), Wr(680, 120, W, 120));
+      parts.push(P('lamp', 300, 280, {}), P('lamp', 500, 280, {}), P('lamp', 700, 280, {}));
+      wires.push(Wr(0, 280, 260, 280), Wr(340, 280, 460, 280), Wr(540, 280, 660, 280), Wr(740, 280, W, 280));
+      normalize(); draw();
+    });
+    const notes = await page.evaluate(() => [...svg.querySelectorAll('text')].map(t => t.textContent).filter(s => /In series|Not wired/.test(s)));
+    if (notes.filter(s => s === 'In series: 60 V').length !== 2 || notes.filter(s => s === 'In series: 40 V').length !== 3 || notes.some(s => /Not wired/.test(s))) out.push('notes: ' + notes.join(', '));
+    await page.click('[data-src="#3FB8FF"]');
+    const saved = await page.evaluate(() => JSON.stringify(circuitData()));
+    if (!saved.includes('"sc":"#3FB8FF"')) out.push('the source colour is not saved');
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300));
+    await page.waitForTimeout(800);
+    const r1 = await page.evaluate(() => {
+      const L = t => parts.filter(p => p.t === t), mid = (x, y) => { const k = NET.nodes.findIndex(n => n.x === x && n.y === y); return k < 0 ? null : colAt(k, simT); };
+      return { lamps: L('lamp').slice(1).map(p => [!!coilOn[p.id], +p._sh.toFixed(3)]), src: mid(100, 280), between: mid(600, 280) };
+    });
+    if (JSON.stringify(r1.lamps) !== '[[true,0.333],[true,0.333],[true,0.333]]') out.push('three lights in series: ' + JSON.stringify(r1.lamps));
+    if (!/^#3FB8FF$|63, ?184, ?255/i.test(r1.src || '')) out.push('straight from L1 the wire is ' + r1.src + ', not the source colour');
+    if (!r1.between || r1.between === r1.src) out.push('the colour does not drop across the lights: ' + r1.between);
+    await page.evaluate(() => press('A', true)); await page.waitForTimeout(800);
+    const r2 = await page.evaluate(() => { const c = parts.find(p => p.L === 'CR'), l = parts.find(p => p.t === 'lamp'); return [!!coilOn[c.id], !!COND[c.id], !!coilOn[l.id], +l._sh.toFixed(3)]; });
+    if (JSON.stringify(r2) !== '[false,true,true,0.5]') out.push('coil and light in series (coil in, current through, light lit, its share): ' + JSON.stringify(r2));
+    await page.evaluate(() => press('A', false)); await page.click('#tab-edit'); await page.evaluate(() => setSpeed(1));
+    return out;
+  });
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

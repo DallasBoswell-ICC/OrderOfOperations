@@ -78,3 +78,38 @@ function solveOnce(allClosed, blocked) {
   unk.forEach((id, i) => V.set(id, A[i][i] ? A[i][n] / A[i][i] : 1));
   return { V, live, g };
 }
+/* =====================================================================
+   how the supply's voltage shares out among the loads
+   With whatever joins things up right now (f: wires and closed switches, each group one junction), every coil and
+   pilot light is a resistance between two junctions, L1 at full voltage and L2 at none. A load across L1 and L2 gets
+   all of it; two alike in series get half each. A coil picks up only with PULL_IN of the voltage it's made for or
+   more (so two coils in series just sit there), and a pilot light glows with its share. Every load is the same
+   resistance and made for the supply voltage for now: loadR and ratedShare are where parts rated otherwise would go.
+   ===================================================================== */
+const SUPPLY_V = 120, PULL_IN = 0.85;
+const loadR = p => 1;                                    // (each load's resistance, relative to the others)
+const ratedShare = p => (p.rv || SUPPLY_V) / SUPPLY_V;   // (the voltage it's made for, as a share of the supply)
+// V: junction group -> voltage (L1 1, L2 0); share: load id -> the share of the supply across it (0: no current)
+function loadShares(f, net = NET) {
+  const c1 = f(net.L1), c2 = f(net.L2), V = new Map(), share = new Map();
+  if (c1 === c2) return { V, share, adj: new Map(), c2 };
+  const loads = parts.filter(p => LOADT(p.t) && p._a !== undefined), adj = new Map();
+  const link = (a, b, g, id) => { if (!adj.has(a)) adj.set(a, []); adj.get(a).push([b, g, id]); };
+  for (const p of loads) { const a = f(p._a), b = f(p._b); if (a !== b) { link(a, b, 1 / loadR(p), p.id); link(b, a, 1 / loadR(p), p.id); } }
+  // only the junctions joined through loads to L1 or L2 (any others carry no current)
+  const seen = new Set([c1, c2]), st = [c1, c2];
+  while (st.length) { const u = st.pop(); for (const [w] of adj.get(u) || []) if (!seen.has(w)) { seen.add(w); st.push(w); } }
+  V.set(c1, 1); V.set(c2, 0);
+  const unk = [...seen].filter(c => c !== c1 && c !== c2), ix = new Map(unk.map((c, i) => [c, i])), n = unk.length;
+  const A = Array.from({ length: n }, () => new Float64Array(n + 1));
+  unk.forEach((u, i) => { for (const [w, g] of adj.get(u) || []) { A[i][i] += g; if (ix.has(w)) A[i][ix.get(w)] -= g; else A[i][n] += g * V.get(w); } });
+  for (let c = 0; c < n; c++) {
+    let pv = c; for (let r = c + 1; r < n; r++) if (Math.abs(A[r][c]) > Math.abs(A[pv][c])) pv = r;
+    [A[c], A[pv]] = [A[pv], A[c]];
+    const d = A[c][c]; if (Math.abs(d) < 1e-300) continue;
+    for (let r = 0; r < n; r++) if (r !== c && A[r][c] !== 0) { const k = A[r][c] / d; for (let q = c; q <= n; q++) A[r][q] -= k * A[c][q]; }
+  }
+  unk.forEach((u, i) => V.set(u, A[i][i] ? A[i][n] / A[i][i] : 0));
+  for (const p of loads) { const a = V.get(f(p._a)), b = V.get(f(p._b)); share.set(p.id, a === undefined || b === undefined ? 0 : Math.abs(a - b)); }
+  return { V, share, adj, c2 };
+}

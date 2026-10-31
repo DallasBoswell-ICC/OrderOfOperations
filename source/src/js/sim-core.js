@@ -50,9 +50,9 @@ function setAt(n, t, c, lane) {
   if (k > 0) a.splice(0, k);
   if (t > busyUntil) busyUntil = t;
 }
-// the colour of a stream of current: plain egg from L1, a button's colour after it (shading in over a short
+// the colour of a stream of current: the source's colour straight from L1, a button's colour after it (shading in over a short
 // distance from whatever colour came into the button), or the mix of several buttons' colours where branches met
-const setCol = set => set.size === 0 ? OFF_WHITE : set.size === 1 ? flowOf(btnColour([...set][0])) : blend([...set].map(L => flowOf(btnColour(L))));
+const setCol = set => set.size === 0 ? SRC_COL : set.size === 1 ? flowOf(btnColour([...set][0])) : blend([...set].map(L => flowOf(btnColour(L))));
 const colourOf = r => r.rd < RAMP ? mixOk(r.from, setCol(r.set), r.rd / RAMP) : setCol(r.set);
 // a pushbutton passes current while pressed (NO) or until pressed (NC); a relay contact once its bar has landed on its posts
 const closed = p => p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.t === 'sel' ? selClosed(p) : p.nc ? !down[p.L] : !!down[p.L];

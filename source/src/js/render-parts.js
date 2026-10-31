@@ -69,7 +69,7 @@ const lampsOf = L => parts.filter(q => q.t === 'lamp' && q.L && q.L === L);
 const lampColour = p => p.L ? (parts.find(q => q.t === 'btn' && q.L === p.L) || p).color || '#00B050' : p.color || '#00B050';
 // how lit a light is right now, 0 to 1 (it comes on and goes off over a moment, as a filament does)
 const LAMP_FADE = 0.2;
-const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return on ? f : 1 - f; };
+const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
 const capTop = p => (p.t === 'con' ? CON_H / 2 + 1 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
@@ -168,7 +168,7 @@ function drawPart(p, g, x, y, chan, onStation) {
     for (const [[tx, ty], bx, by, i] of leads) {
       el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
       if (editing) continue;
-      if (p.t === 'l1') el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: OFF_WHITE, 'stroke-width': 8.9 }, g);
+      if (p.t === 'l1') el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: SRC_COL, 'stroke-width': 8.9 }, g);
       else if (p._t) v.src.push({ n: p._t[i], ln: el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g) });
     }
     el('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: '#e2cc85', 'stroke-width': 2.2 }, g);

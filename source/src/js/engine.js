@@ -11,18 +11,22 @@
    carries on with what the other branches are still sending, and only goes dark once the last of every stream
    feeding it has passed. */
 let DIRS = [], OUTS = new Map(), INS = new Map(), REC = new Map(), PATHS = [], ALLOW = new Map(), REACH = new Map();
-const recKey = r => !r ? '-' : r.ret ? `r${r.base}|${r.along.toFixed(1)}` : `${[...r.set].sort().join('')}|${r.from}|${isFinite(r.rd) ? r.rd.toFixed(1) : 'i'}`;
-const along = (r, s) => !r ? null : r.ret ? { ret: true, base: r.base, along: r.along + s } : { set: r.set, from: r.from, rd: r.rd + s };
-const colAtRec = r => !r ? null : r.ret ? mixOk(r.base, OFF_WHITE, clamp01(r.along / FADE)) : colourOf(r);
+const recKey = r => !r ? '-' : r.ret ? `r${r.base}|${r.l0.toFixed(3)}|${r.l1.toFixed(3)}|${r.along.toFixed(1)}` : `${[...r.set].sort().join('')}|${r.from}|${isFinite(r.rd) ? r.rd.toFixed(1) : 'i'}`;
+const along = (r, s) => !r ? null : r.ret ? { ret: true, base: r.base, along: r.along + s, l0: r.l0, l1: r.l1 } : { set: r.set, from: r.from, rd: r.rd + s };
+/* Past a load the current is on its way back to L2 (ret): it keeps the colour it came in with (base), in proportion
+   to the voltage still left: l0 where it came out of the load, shading to l1 (the voltage at the load's far end)
+   over FADE. One load across L1 and L2: from all of its colour to none (the neutral's off-white); the first of two
+   in series: from all of it to half. */
+const colAtRec = r => !r ? null : r.ret ? mixOk(r.base, OFF_WHITE, 1 - lerp(r.l0, r.l1, clamp01(r.along / FADE))) : colourOf(r);
 function mergeRecs(ins) {
   if (!ins.length) return null;
   const rs = ins.filter(r => r.ret);
-  if (rs.length) return { ret: true, base: rs.length > 1 ? blend(rs.map(r => r.base)) : rs[0].base, along: Math.min(...rs.map(r => r.along)) };
+  if (rs.length) { const m = rs.reduce((a, b) => b.along < a.along ? b : a); return { ret: true, base: rs.length > 1 ? blend(rs.map(r => r.base)) : rs[0].base, along: m.along, l0: m.l0, l1: m.l1 }; }
   const set = new Set(); ins.forEach(r => r.set.forEach(x => set.add(x)));
   const same = ins.every(r => [...r.set].sort().join() === [...ins[0].set].sort().join() && r.from === ins[0].from);
   return { set, from: ins[0].from, rd: same ? Math.min(...ins.map(r => r.rd)) : Infinity };
 }
-const EGG = () => ({ set: new Set(), from: OFF_WHITE, rd: Infinity });
+const EGG = () => ({ set: new Set(), from: SRC_COL, rd: Infinity });   // (straight from L1: the source's colour)
 const isFeed1 = id => NET.feedV.get(id) === 1;
 function addLane(e, from) {
   const d = { e, from, to: from === e.a ? e.b : e.a, delay: e.len / V, arrived: null, sent: null, sentKey: e.kind === 'part' && LOADT(e.part.t) ? '-|out' : '-' };   // (nothing sent yet: dark)
@@ -40,10 +44,10 @@ function addLane(e, from) {
 function startRun() {
   NET = network();
   simT = 0; queue = []; seq = 0; busyUntil = 0; autoRel = {}; down = {}; coilOn = {}; TIMER = {}; SELPOS = {}; SELTURN = {};
-  FED_AT = {}; COMP = null; needPaint = true;
+  FED_AT = {}; COMP = null; LV = null; COND = {}; needPaint = true;
   CON = {}; for (const p of parts) if (p.t === 'con') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };   // every coil starts off
   tl = NET.nodes.map(() => [[-1e9, null]]);
-  for (const p of parts) { delete p._chg; delete p._lead; }
+  for (const p of parts) { delete p._chg; delete p._lead; delete p._sh; delete p._lv; }
   // which way each button and coil is passed through (as if every button were passing current)
   findButtonDirections();
   const h = solveV(true).V, dist = new Map(), q = []; VOLT = h;
@@ -232,7 +236,7 @@ function allowNow() {
     for (const d of path) {
       if (d.e.kind === 'part') {
         if (isSw(d.e.part)) { if (!closed(d.e.part)) break; if (isOp(d.e.part)) label = d.e.part.L; else { if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label); } }   // a contact passes on the colour it is given
-        else if (coilOn[d.e.part.id]) label = 'ret';   // past a coil that is in: the return side, back to L2
+        else if (COND[d.e.part.id]) label = 'ret';   // past a coil with current through it: the return side, back to L2
         // (a coil that cannot pick up, because something past it is open, carries no current: the wire past it is as
         // live as the wire before it, so the colour waiting at the coil carries on up to whatever is open)
         continue;
@@ -266,15 +270,15 @@ function through(d, r) {
   if (d.e.part.t === 'con') return along(r, d.e.len);   // a relay contact passes the current on as it is
   // through a coil that is in: the return side, fading to egg. Through a coil that cannot pick up: the colour
   // waiting at it, on up to whatever is open past it
+  if (COND[d.e.part.id]) return { ret: true, base: r.ret ? r.base : colourOf(r), along: 0, l0: lv(d.e.part)[0], l1: lv(d.e.part)[1] };
   if (r.ret) return null;
-  if (coilOn[d.e.part.id]) return { ret: true, base: colourOf(r), along: 0 };
   return fedNow(d.from) ? along(r, d.e.len) : null;   // (the end of a broken stream stops at the coil)
 }
 // send a stream into run d starting now: the points along it change one after another as it travels
 function send(d, r, t, atOnce) {
   r = filt(d, r, t);
   if (d.draining && !(r && r.ret)) { d.draining = false; if (!closed(d.e.part)) r = null; }   // the end of the return current has gone through; the switch is open
-  const key = recKey(r) + (d.e.kind === 'part' && LOADT(d.e.part.t) ? (coilOn[d.e.part.id] ? '|in' : '|out') : '');
+  const key = recKey(r) + (d.e.kind === 'part' && LOADT(d.e.part.t) ? (COND[d.e.part.id] ? `|in${lv(d.e.part).join('|')}` : '|out') : '');
   if (d.sent !== undefined && d.sentKey === key) return;
   d.sent = r; d.sentKey = key;
   const out = through(d, r);
@@ -327,6 +331,18 @@ function reeval(v, t) {
 let COMP = null;
 const compNow = () => COMP || (COMP = components(NET, conducts));
 // is junction v joined to L1 right now (so what has reached it is still fed, not the end of a broken stream)?
+// the voltages right now (see loadShares in solve.js): worked out again whenever a switch moves
+let LV = null, COND = {};   // (COND: the loads with current through them)
+const sharesNow = () => LV || (LV = loadShares(compNow()));
+const lv = p => p._lv || [1, 0];   // (the voltage at a load's two ends while current goes through it)
+const shareOf = p => sharesNow().share.get(p.id) || 0;
+const levelAt = v => sharesNow().V.get(compNow()(v)) ?? 0;
+// is junction v joined on to L2 right now, through wires, closed switches and loads other than p?
+function onToL2(p, v) {
+  const S = sharesNow(), f = compNow(), seen = new Set([f(v)]), st = [f(v)];
+  while (st.length) { const u = st.pop(); if (u === S.c2) return true; for (const [w, , id] of S.adj.get(u) || []) if (id !== p.id && !seen.has(w)) { seen.add(w); st.push(w); } }
+  return false;
+}
 const fedNow = v => { const f = compNow(); return f(v) === f(NET.L1); };
 /* Which coil was first: when the path from L1 through a coil to L2 is completed (a button pressed), the time is noted.
    In a real panel current is there at once, so the coil whose path was completed first is in first, and its contacts
@@ -350,18 +366,24 @@ function wouldCutOff(x, f0) {
 // a coil picks up when current reaches it and it has a way through to L2; it drops out when its current is gone
 let coilIns = new Set();
 function updateCoils(t) {
-  const f = compNow(), c2 = f(NET.L2);
+  const f = compNow();
   coilIns = new Set(); let changed = false;
   for (const p of parts) if (LOADT(p.t)) { if (fedBy(f, p)) { if (FED_AT[p.id] === undefined) FED_AT[p.id] = t; } else delete FED_AT[p.id]; }
   for (const p of parts) if (LOADT(p.t)) {   // (a pilot light lights just as a coil picks up)
     const d = DIRS.find(x => x.e.part === p); if (!d) continue;
     coilIns.add(d.from);
     const r = REC.get(d.from);
-    // a coil that is in stays in until the last of its current has reached it; it picks up only with current whose
-    // path back to L1 is unbroken right now (never from the end of a stream that has been cut off), and not ahead of
-    // a coil that was first and that it would cut off
-    let want = !shortNow && !!r && !r.ret && f(d.to) === c2;
-    if (want && !coilOn[p.id] && (f(d.from) !== f(NET.L1) || (p.t === 'coil' && wouldCutOff(p, f)))) want = false;
+    // current goes through a load once it has reached it, with the circuit through it complete right now: from L1,
+    // through it (and anything in series with it) to L2. (Never from the end of a stream that has been cut off.)
+    // A coil picks up with enough of the voltage across it (see loadShares), and not ahead of a coil that was first
+    // and that it would cut off; a pilot light lights with whatever share it gets
+    // (its supply cut off on the way to it: it carries on, as it was, until the last of its current has reached it)
+    let sh = shareOf(p), cond = !shortNow && !!r && sh > 1e-9;
+    if (!cond && !shortNow && !!r && COND[p.id] && onToL2(p, d.to)) { cond = true; sh = p._sh ?? 1; }
+    else if (cond) { p._sh = sh; p._lv = [levelAt(d.from), levelAt(d.to)]; }
+    const pull = p.t === 'lamp' || sh >= PULL_IN * ratedShare(p) - 1e-9;
+    if (cond && !COND[p.id] && pull && p.t === 'coil' && wouldCutOff(p, f)) cond = false;
+    const want = cond && pull, wasC = !!COND[p.id];
     let atOnce = false; const wasOn = !!coilOn[p.id];
     if (want !== wasOn) {
       coilOn[p.id] = want; p._chg = t;
@@ -378,12 +400,13 @@ function updateCoils(t) {
         TIMER[p.id] = st; armTimer(p, st);
         moveAll(t);
       } else if (p.t === 'coil') for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(t + CT, () => moveContact(c, evT));   // its contacts follow
-      // current already at the coil, and its way back to L2 opening or closing: the coil drops out or picks up there
-      // and then, so the change starts at its far end at once (rather than travelling through it like new current)
-      atOnce = !!r && !r.ret && p._inKey === recKey(r);
     }
+    // current already at the load, and its way back to L2 opening or closing: the change starts at its far end at
+    // once (rather than travelling through it like new current)
+    if (cond !== wasC) atOnce = !!r && p._inKey === recKey(r);
+    COND[p.id] = cond;
     p._inKey = recKey(r || null);
-    if (want !== wasOn) changed = true;
+    if (want !== wasOn || cond !== wasC) changed = true;
     send(d, r || null, t, atOnce);   // keep what goes through it up to date
   }
   if (changed) refreshAllow(t);   // a coil picking up or dropping out changes what the wire past it may carry
@@ -416,7 +439,7 @@ function moveContact(c, t) {
 }
 // some pushbuttons or contacts have just opened or closed
 function switched(sw, t) {
-  COMP = null;
+  COMP = null; LV = null;
   const was = shortNow;
   checkShort();
   if (was !== shortNow) for (const [id, fv] of NET.feedV) if (fv === 1) setRec(id, shortNow ? null : EGG(), t);

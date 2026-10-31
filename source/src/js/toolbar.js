@@ -120,6 +120,14 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTip(); }
 function showPower() {
   document.querySelectorAll('[data-power]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.power === POWER)));
   document.querySelectorAll('.src-tool').forEach(b => b.hidden = barsOn());
+  document.querySelectorAll('[data-src]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.src === SRC_COL)));
+}
+// the source's colour: a swatch for each (see SRC_PAL)
+for (const [name, hex] of SRC_PAL) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.dataset.src = hex; b.style.background = hex; b.setAttribute('aria-label', name + ' source'); b.title = name;
+  b.addEventListener('click', () => { if (!editing || hex === SRC_COL) return; snapshot(); SRC_COL = hex; say(`Source colour: ${name}.`); draw(); });
+  document.getElementById('src-swatches').appendChild(b);
 }
 document.querySelectorAll('[data-power]').forEach(b => b.addEventListener('click', () => {
   if (b.dataset.power === POWER || !editing) return;
