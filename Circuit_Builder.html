@@ -364,7 +364,7 @@ body.fs .wrap { padding-top: 8px; }
         <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="12.7" width="14" height="2.6" rx="1.3" fill="#FFDC00"/><circle cx="10" cy="14" r="2.4" fill="#FFDC00"/><circle cx="20" cy="14" r="2.4" fill="#FFDC00"/></svg><span>Contact<br>NC</span></button></div><div class="gname">Contacts</div></div>
       <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="lamp" data-tip="Pilot light: lights while current flows through it, wired from L1 to L2 like a coil. In its settings it can be built into a pushbutton, so the button lights up with it.">
         <svg viewBox="0 0 30 26"><g stroke="#00B050" stroke-width="1.6" stroke-linecap="round"><path d="M15 1v2.5M15 22.5V25M3 13h2.5M24.5 13H27M6.5 4.5l1.8 1.8M21.7 19.7l1.8 1.8M23.5 4.5l-1.8 1.8M8.3 19.7l-1.8 1.8"/></g><circle cx="15" cy="13" r="8" fill="#222" stroke="#00B050" stroke-width="1.6"/><circle cx="15" cy="13" r="5.2" fill="#00B050"/><path d="M12.8 10.8l4.4 4.4M17.2 10.8l-4.4 4.4" stroke="#fff" stroke-opacity=".85" stroke-width="1.3" stroke-linecap="round"/></svg><span>Pilot<br>light</span></button>
-        <button type="button" class="tool big" data-part="sol" data-tip="Solenoid: pulls in while current flows through it, wired from L1 to L2 like a coil. It works a valve or something else outside the circuit, so it has no contacts. Numbered SOL1, SOL2 and so on."><svg viewBox="0 0 30 26"><rect x="2.5" y="3" width="25" height="20" rx="3.5" fill="#222" stroke="#00D2BE" stroke-width="1.5"/><path d="M5 13H11.6L15 6.2V19.8L18.4 13H25" fill="none" stroke="#00D2BE" stroke-width="2" stroke-linejoin="round"/><circle cx="7.4" cy="13" r="2.3" fill="#00D2BE"/><circle cx="22.6" cy="13" r="2.3" fill="#00D2BE"/></svg><span>Solenoid</span></button></div><div class="gname">Outputs</div></div>
+        <button type="button" class="tool big" data-part="sol" data-tip="Solenoid: pulls in while current flows through it, wired from L1 to L2 like a coil. It works a valve or something else outside the circuit, so it has no contacts. Numbered SOL1, SOL2 and so on."><svg viewBox="0 0 30 26"><rect x="6.2" y="4.2" width="17.6" height="17.6" rx="3.2" transform="rotate(45 15 13)" fill="#222" stroke="#1a1a1a" stroke-width="3.4"/><rect x="6.2" y="4.2" width="17.6" height="17.6" rx="3.2" transform="rotate(45 15 13)" fill="#222" stroke="#00D2BE" stroke-width="1.3"/><path d="M8.6 13H12.2L15 7.6V18.4L17.8 13H21.4" fill="none" stroke="#00D2BE" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8.6" cy="13" r="2.1" fill="#00D2BE"/><circle cx="21.4" cy="13" r="2.1" fill="#00D2BE"/></svg><span>Solenoid</span></button></div><div class="gname">Outputs</div></div>
       <div class="rgrp" id="power-group"><div class="gbody">
         <div class="stack">
           <button type="button" class="tool small" data-power="bars" aria-pressed="true" data-tip="Power the circuit from the L1 and L2 bars down its sides, as a ladder diagram is drawn"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="2" width="3" height="16" rx="1" fill="currentColor"/><rect x="15" y="2" width="3" height="16" rx="1" fill="currentColor"/><path d="M5 7h10M5 13h10" stroke="currentColor" stroke-width="1.3"/></svg><span>Bars</span></button>
@@ -568,12 +568,18 @@ const OPEN_LIFT = 15, BLADE_GREY = '#a6a6a6';   // how far an open contact's bar
 // pneumatic or hydraulic valve): it is numbered (SOL1, SOL2 ...) rather than lettered, and solOn says if it has pulled in
 const LOADT = t => t === 'coil' || t === 'lamp' || t === 'sol';
 const SOL_COL = '#00D2BE';
-const SOL_S = 82.296;   // a solenoid's box: square, as tall and wide as a coil
-// its bolt (centred on 0, 0): in from the left along the rung, up to a peak, straight down, and back up to the
-// rung out to the right edge; SOL_D[1] the same the other way, for current coming in from the right. SOL_LEN: its length
-// (its ends run out under the box's coloured edge, SOL_E from the middle: the edge is drawn over them)
-const SOL_BH = 22, SOL_BW = 10.4, SOL_E = SOL_S / 2 + .9, SOL_D = [1, -1].map(k => `M ${-k * SOL_E} 0 H ${-k * SOL_BW} L 0 ${-k * SOL_BH} V ${k * SOL_BH} L ${k * SOL_BW} 0 H ${k * SOL_E}`);
-const SOL_LEN = 2 * (SOL_E - SOL_BW) + 2 * Math.hypot(SOL_BW, SOL_BH) + 2 * SOL_BH;
+/* a solenoid (as on Dallas's drawing): a diamond (a rounded square on its corner) as tall and wide as a coil, with a
+   dot at each end where the rung comes in, joined by the lightning bolt: along the rung, up to a peak, straight down and
+   back up to the rung. Sizes in units, centred on 0, 0: SOL_DIAMOND the diamond's side and corner radius, SOL_DOT the
+   dots' centres and radius, SOL_BW the bolt's width, SOL_X where it leaves the rung, SOL_P its peak. */
+const SOL_S = 82.296, SOL_SIDE = SOL_S / 2 / .6325, SOL_RAD = SOL_SIDE * .18;
+const SOL_GREY = '#575757';   // (its bolt, not pulled in: the grey a coil's middle shows)
+const SOL_DOT = 25.05, SOL_DR = 6.75, SOL_BW = 6.8, SOL_X = 11.4, SOL_P = 22.6;
+// the bolt between the dots' centres (its shape), and the way the current fills it from one end (SOL_D[0] from the
+// left, [1] from the right: from the outer edge of one dot to the outer edge of the other), and that way's length
+const SOL_BOLT = `M ${-SOL_DOT} 0 H ${-SOL_X} L 0 ${-SOL_P} V ${SOL_P} L ${SOL_X} 0 H ${SOL_DOT}`;
+const SOL_D = [1, -1].map(k => `M ${-k * (SOL_DOT + SOL_DR)} 0 H ${-k * SOL_X} L 0 ${-k * SOL_P} V ${k * SOL_P} L ${k * SOL_X} 0 H ${k * (SOL_DOT + SOL_DR)}`);
+const SOL_LEN = 2 * (SOL_DOT + SOL_DR - SOL_X) + 2 * Math.hypot(SOL_X, SOL_P) + 2 * SOL_P;
 // a selector switch: a square body a little larger than a pushbutton's (room for its position numbers round the top)
 const SEL_BOX = 80;
 const WIDE = t => LOADT(t) || t === 'sel';                                // parts whose ends sit 60 either side of their centre
@@ -1676,6 +1682,7 @@ const capTop = p => (p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 +
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
 const BEZEL = 4.5, WELL = '#262626';
+let solMaskN = 0;   // (each solenoid drawing's mask has an id of its own)
 function framed(tag, a, g) { el(tag, Object.assign({}, a, { fill: 'none', stroke: WELL, 'stroke-width': (a['stroke-width'] || 1.8) + 2 * BEZEL }), g); return el(tag, a, g); }
 // a part, in the same style as the Order of Operations simulators
 function drawPart(p, g, x, y, chan, onStation) {
@@ -1778,16 +1785,22 @@ function drawPart(p, g, x, y, chan, onStation) {
     framed('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: '#e2cc85', 'stroke-width': 2.2 }, g);
     for (const oy of [-7, 7]) el('path', { d: `M ${x - 13} ${y + oy - 6.5} L ${x} ${y + oy + 6.5} L ${x + 13} ${y + oy - 6.5}`, fill: 'none', stroke: '#f2e6b8', 'stroke-width': 3.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
   } else if (p.t === 'sol') {
-    // a solenoid: the lightning bolt from the print, in a square box the size of a coil. The bolt is a channel edged in
-    // the solenoid's colour, and the current flows along it as along a wire (see paintSol); it glows in its colour once pulled in
-    const S = SOL_S, col = p.color || SOL_COL, path = (a, to) => el('path', Object.assign({ d: SOL_D[0], fill: 'none', 'stroke-linejoin': 'round' }, a), to);
-    v.glow = el('rect', { x: x - S / 2 - 4, y: y - S / 2 - 4, width: S + 8, height: S + 8, rx: S * .2, fill: col, opacity: 0, filter: 'url(#fGlow)' }, g);
-    const box = { x: x - S / 2, y: y - S / 2, width: S, height: S, rx: S * .1667 };
-    framed('rect', Object.assign({ fill: 'url(#gWell)', stroke: 'none', 'stroke-width': 1.8 }, box), g);
-    const tr = `translate(${x} ${y})`, b = el('g', { transform: tr }, g);
-    path({ stroke: '#1d1d1d', 'stroke-width': 15 }, b); path({ stroke: col, 'stroke-width': 9.5, opacity: .9 }, b); path({ stroke: '#1d1d1d', 'stroke-width': 7.1 }, b);
-    v.old = path({ stroke: 'transparent', 'stroke-width': 4.1 }, b); v.cur = path({ stroke: 'transparent', 'stroke-width': 4.1 }, b);
-    el('rect', Object.assign({ fill: 'none', stroke: col, 'stroke-width': 1.8 }, box), g);   // (its coloured edge, over the ends of the bolt)
+    // a solenoid: see SOL_S. The bolt and its dots are the grey of a coil's middle; once it pulls in, the solenoid's
+    // colour fills them from the end the current comes in at, as along a wire: one dot, the bolt, then the other (see paintSol)
+    const col = p.color || SOL_COL, h = SOL_SIDE / 2, id = 'solm' + (++solMaskN), b = el('g', { transform: `translate(${x} ${y})` }, g);
+    framed('rect', { x: -h, y: -h, width: SOL_SIDE, height: SOL_SIDE, rx: SOL_RAD, transform: 'rotate(45)', fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, b);
+    const shape = (fill, grow, to) => {
+      for (const k of [-1, 1]) el('circle', { cx: k * SOL_DOT, cy: 0, r: SOL_DR + grow, fill }, to);
+      el('path', { d: SOL_BOLT, fill: 'none', stroke: fill, 'stroke-width': SOL_BW + 2 * grow, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, to);
+    };
+    shape('#111', .9, b); shape(SOL_GREY, 0, b);
+    // the fill: along the bolt a line its own width (so the colour's front crosses it squarely, round its bends too),
+    // and across each dot a sweep as wide as the dot (kept to the dots)
+    const mk = (n, dots) => { const m = el('mask', { id: id + n, maskUnits: 'userSpaceOnUse', x: -SOL_S / 2, y: -SOL_S / 2, width: SOL_S, height: SOL_S }, b);
+      if (dots) for (const k of [-1, 1]) el('circle', { cx: k * SOL_DOT, cy: 0, r: SOL_DR, fill: '#fff' }, m); else shape('#fff', 0, m);
+      return el('g', { mask: `url(#${id + n})` }, b); };
+    const thin = mk('a', false), wide = mk('b', true), ln = (w, to) => el('path', { d: SOL_D[0], fill: 'none', stroke: 'transparent', 'stroke-width': w, 'stroke-linejoin': 'round' }, to);
+    v.old = [ln(SOL_BW, thin), ln(2 * SOL_DR + 2, wide)]; v.cur = [ln(SOL_BW, thin), ln(2 * SOL_DR + 2, wide)];
     v.col = col;
   } else if (p.t === 'lamp') {
     // a pilot light: a lens with a filament, that glows when lit
@@ -2224,21 +2237,22 @@ function paintSel(p, v) {
 }
 // a part's lead: the latest change flows along it from where it started (the part's end, or its body), at the same
 // speed as along a wire; ahead of it, the lead still shows what it had before
-/* a solenoid's bolt: the current flows along it from whichever end it comes in at, as along a wire, taking as long as
-   it would to cross the solenoid's body; the colour before it is still there ahead of it. Glows once pulled in. */
+/* a solenoid: once it has pulled in, its colour fills it from the end the current comes in at, as the current fills a
+   wire (taking as long as the current takes to cross its body), and drains away the same way once the current has
+   gone. Current through it without pulling it in (too little voltage, in series) leaves it grey. */
 function paintSol(p, v) {
   const S = p._inS || 'A', evs = p._lead && p._lead[S], Ls = TERM(p) - BODYH(p.t) / 2, at = e => e.t0 + Ls / V;
   let i = -1; if (evs) for (let k = 0; k < evs.length; k++) if (at(evs[k]) <= simT + 1e-9) i = k;
-  const cur = i >= 0 ? evs[i] : null, prev = i > 0 ? evs[i - 1].col : null;
-  const f = cur ? clamp01((simT - at(cur)) * V / BODYH(p.t)) : 0, on = !!coilOn[p.id], g = p._chg == null ? 1 : clamp01((simT - p._chg) / .5);
-  const k = `${S}|${f.toFixed(3)}|${cur && cur.col}|${prev}|${(on ? g : 1 - g).toFixed(3)}`;
+  const show = !!coilOn[p.id] || !COND[p.id], c = e => show && e && e.col ? v.col : null;
+  const cur = i >= 0 ? evs[i] : null, now = c(cur), prev = i > 0 ? c(evs[i - 1]) : null;
+  const f = cur ? clamp01((simT - at(cur)) * V / BODYH(p.t)) : 0;
+  const k = `${S}|${f.toFixed(3)}|${now}|${prev}`;
   if (k === v.k) return; v.k = k;
   const d = SOL_D[S === 'A' ? 0 : 1], n = f * SOL_LEN;
-  for (const [ln, c, dash] of [[v.cur, cur && cur.col, `${n} ${SOL_LEN + 1}`], [v.old, prev, `0 ${n} ${SOL_LEN + 1}`]]) {
+  for (const [lns, col, dash] of [[v.cur, now, `${n} ${SOL_LEN + 1}`], [v.old, prev, `0 ${n} ${SOL_LEN + 1}`]]) for (const ln of lns) {
     if (ln.getAttribute('d') !== d) ln.setAttribute('d', d);
-    ln.setAttribute('stroke', c || 'transparent'); ln.setAttribute('stroke-dasharray', dash);
+    ln.setAttribute('stroke', col || 'transparent'); ln.setAttribute('stroke-dasharray', dash);
   }
-  v.glow.setAttribute('opacity', (.45 * (on ? g : 1 - g)).toFixed(3));
 }
 function paintLead(L, evs) {
   let i = -1; if (evs) for (let k = 0; k < evs.length; k++) if (evs[k].t0 <= simT + 1e-9) i = k;

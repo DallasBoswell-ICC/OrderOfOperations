@@ -77,6 +77,7 @@ const capTop = p => (p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 +
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
 const BEZEL = 4.5, WELL = '#262626';
+let solMaskN = 0;   // (each solenoid drawing's mask has an id of its own)
 function framed(tag, a, g) { el(tag, Object.assign({}, a, { fill: 'none', stroke: WELL, 'stroke-width': (a['stroke-width'] || 1.8) + 2 * BEZEL }), g); return el(tag, a, g); }
 // a part, in the same style as the Order of Operations simulators
 function drawPart(p, g, x, y, chan, onStation) {
@@ -179,16 +180,22 @@ function drawPart(p, g, x, y, chan, onStation) {
     framed('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: '#e2cc85', 'stroke-width': 2.2 }, g);
     for (const oy of [-7, 7]) el('path', { d: `M ${x - 13} ${y + oy - 6.5} L ${x} ${y + oy + 6.5} L ${x + 13} ${y + oy - 6.5}`, fill: 'none', stroke: '#f2e6b8', 'stroke-width': 3.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
   } else if (p.t === 'sol') {
-    // a solenoid: the lightning bolt from the print, in a square box the size of a coil. The bolt is a channel edged in
-    // the solenoid's colour, and the current flows along it as along a wire (see paintSol); it glows in its colour once pulled in
-    const S = SOL_S, col = p.color || SOL_COL, path = (a, to) => el('path', Object.assign({ d: SOL_D[0], fill: 'none', 'stroke-linejoin': 'round' }, a), to);
-    v.glow = el('rect', { x: x - S / 2 - 4, y: y - S / 2 - 4, width: S + 8, height: S + 8, rx: S * .2, fill: col, opacity: 0, filter: 'url(#fGlow)' }, g);
-    const box = { x: x - S / 2, y: y - S / 2, width: S, height: S, rx: S * .1667 };
-    framed('rect', Object.assign({ fill: 'url(#gWell)', stroke: 'none', 'stroke-width': 1.8 }, box), g);
-    const tr = `translate(${x} ${y})`, b = el('g', { transform: tr }, g);
-    path({ stroke: '#1d1d1d', 'stroke-width': 15 }, b); path({ stroke: col, 'stroke-width': 9.5, opacity: .9 }, b); path({ stroke: '#1d1d1d', 'stroke-width': 7.1 }, b);
-    v.old = path({ stroke: 'transparent', 'stroke-width': 4.1 }, b); v.cur = path({ stroke: 'transparent', 'stroke-width': 4.1 }, b);
-    el('rect', Object.assign({ fill: 'none', stroke: col, 'stroke-width': 1.8 }, box), g);   // (its coloured edge, over the ends of the bolt)
+    // a solenoid: see SOL_S. The bolt and its dots are the grey of a coil's middle; once it pulls in, the solenoid's
+    // colour fills them from the end the current comes in at, as along a wire: one dot, the bolt, then the other (see paintSol)
+    const col = p.color || SOL_COL, h = SOL_SIDE / 2, id = 'solm' + (++solMaskN), b = el('g', { transform: `translate(${x} ${y})` }, g);
+    framed('rect', { x: -h, y: -h, width: SOL_SIDE, height: SOL_SIDE, rx: SOL_RAD, transform: 'rotate(45)', fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, b);
+    const shape = (fill, grow, to) => {
+      for (const k of [-1, 1]) el('circle', { cx: k * SOL_DOT, cy: 0, r: SOL_DR + grow, fill }, to);
+      el('path', { d: SOL_BOLT, fill: 'none', stroke: fill, 'stroke-width': SOL_BW + 2 * grow, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, to);
+    };
+    shape('#111', .9, b); shape(SOL_GREY, 0, b);
+    // the fill: along the bolt a line its own width (so the colour's front crosses it squarely, round its bends too),
+    // and across each dot a sweep as wide as the dot (kept to the dots)
+    const mk = (n, dots) => { const m = el('mask', { id: id + n, maskUnits: 'userSpaceOnUse', x: -SOL_S / 2, y: -SOL_S / 2, width: SOL_S, height: SOL_S }, b);
+      if (dots) for (const k of [-1, 1]) el('circle', { cx: k * SOL_DOT, cy: 0, r: SOL_DR, fill: '#fff' }, m); else shape('#fff', 0, m);
+      return el('g', { mask: `url(#${id + n})` }, b); };
+    const thin = mk('a', false), wide = mk('b', true), ln = (w, to) => el('path', { d: SOL_D[0], fill: 'none', stroke: 'transparent', 'stroke-width': w, 'stroke-linejoin': 'round' }, to);
+    v.old = [ln(SOL_BW, thin), ln(2 * SOL_DR + 2, wide)]; v.cur = [ln(SOL_BW, thin), ln(2 * SOL_DR + 2, wide)];
     v.col = col;
   } else if (p.t === 'lamp') {
     // a pilot light: a lens with a filament, that glows when lit

@@ -32,12 +32,18 @@ const OPEN_LIFT = 15, BLADE_GREY = '#a6a6a6';   // how far an open contact's bar
 // pneumatic or hydraulic valve): it is numbered (SOL1, SOL2 ...) rather than lettered, and solOn says if it has pulled in
 const LOADT = t => t === 'coil' || t === 'lamp' || t === 'sol';
 const SOL_COL = '#00D2BE';
-const SOL_S = 82.296;   // a solenoid's box: square, as tall and wide as a coil
-// its bolt (centred on 0, 0): in from the left along the rung, up to a peak, straight down, and back up to the
-// rung out to the right edge; SOL_D[1] the same the other way, for current coming in from the right. SOL_LEN: its length
-// (its ends run out under the box's coloured edge, SOL_E from the middle: the edge is drawn over them)
-const SOL_BH = 22, SOL_BW = 10.4, SOL_E = SOL_S / 2 + .9, SOL_D = [1, -1].map(k => `M ${-k * SOL_E} 0 H ${-k * SOL_BW} L 0 ${-k * SOL_BH} V ${k * SOL_BH} L ${k * SOL_BW} 0 H ${k * SOL_E}`);
-const SOL_LEN = 2 * (SOL_E - SOL_BW) + 2 * Math.hypot(SOL_BW, SOL_BH) + 2 * SOL_BH;
+/* a solenoid (as on Dallas's drawing): a diamond (a rounded square on its corner) as tall and wide as a coil, with a
+   dot at each end where the rung comes in, joined by the lightning bolt: along the rung, up to a peak, straight down and
+   back up to the rung. Sizes in units, centred on 0, 0: SOL_DIAMOND the diamond's side and corner radius, SOL_DOT the
+   dots' centres and radius, SOL_BW the bolt's width, SOL_X where it leaves the rung, SOL_P its peak. */
+const SOL_S = 82.296, SOL_SIDE = SOL_S / 2 / .6325, SOL_RAD = SOL_SIDE * .18;
+const SOL_GREY = '#575757';   // (its bolt, not pulled in: the grey a coil's middle shows)
+const SOL_DOT = 25.05, SOL_DR = 6.75, SOL_BW = 6.8, SOL_X = 11.4, SOL_P = 22.6;
+// the bolt between the dots' centres (its shape), and the way the current fills it from one end (SOL_D[0] from the
+// left, [1] from the right: from the outer edge of one dot to the outer edge of the other), and that way's length
+const SOL_BOLT = `M ${-SOL_DOT} 0 H ${-SOL_X} L 0 ${-SOL_P} V ${SOL_P} L ${SOL_X} 0 H ${SOL_DOT}`;
+const SOL_D = [1, -1].map(k => `M ${-k * (SOL_DOT + SOL_DR)} 0 H ${-k * SOL_X} L 0 ${-k * SOL_P} V ${k * SOL_P} L ${k * SOL_X} 0 H ${k * (SOL_DOT + SOL_DR)}`);
+const SOL_LEN = 2 * (SOL_DOT + SOL_DR - SOL_X) + 2 * Math.hypot(SOL_X, SOL_P) + 2 * SOL_P;
 // a selector switch: a square body a little larger than a pushbutton's (room for its position numbers round the top)
 const SEL_BOX = 80;
 const WIDE = t => LOADT(t) || t === 'sel';                                // parts whose ends sit 60 either side of their centre
