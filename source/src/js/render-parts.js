@@ -72,7 +72,12 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => (p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_H / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => (p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+/* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
+   coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
+   the body itself. */
+const BEZEL = 4.5, WELL = '#262626';
+function framed(tag, a, g) { el(tag, Object.assign({}, a, { fill: 'none', stroke: WELL, 'stroke-width': (a['stroke-width'] || 1.8) + 2 * BEZEL }), g); return el(tag, a, g); }
 // a part, in the same style as the Order of Operations simulators
 function drawPart(p, g, x, y, chan, onStation) {
   const v = {}, T = TERM(p), half = BODYH(p.t) / 2;
@@ -89,12 +94,12 @@ function drawPart(p, g, x, y, chan, onStation) {
     if (v.lit) v.halo = el('rect', { x: x - BOX / 2 - 4, y: y - BOX / 2 - 4, width: BOX + 8, height: BOX + 8, rx: BOX * .22, fill: p.color, opacity: 0, filter: 'url(#fGlow)' }, g);
     if (p.nc) {
       const RB = BOX / 2 * 1.08, RI = BTN_IN / 2 * 1.1;
-      el('path', { d: hexPath(x, y, RB, RB * .17), fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
+      framed('path', { d: hexPath(x, y, RB, RB * .17), fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
       v.press = el('g', {}, g);
       v.fill = el('path', { d: hexPath(x, y, RI, RI * .17), fill: v.sec ? v.secFill : p.color, stroke: v.sec ? p.color : '#1d2733', 'stroke-width': v.sec ? 1.8 : 1.2, filter: 'url(#fShadow)' }, v.press);
       el('path', { d: hexPath(x, y, RI, RI * .17), fill: 'url(#gGloss)' }, v.press);
     } else {
-      el('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
+      framed('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
       v.press = el('g', {}, g);
       v.fill = el('rect', { x: x - BTN_IN / 2, y: y - BTN_IN / 2, width: BTN_IN, height: BTN_IN, rx: BTN_IN * .1667, fill: v.sec ? v.secFill : p.color, stroke: v.sec ? p.color : '#1d2733', 'stroke-width': v.sec ? 1.8 : 1.2, filter: 'url(#fShadow)' }, v.press);
       el('rect', { x: x - BTN_IN / 2, y: y - BTN_IN / 2, width: BTN_IN, height: BTN_IN, rx: BTN_IN * .1667, fill: 'url(#gGloss)' }, v.press);
@@ -119,7 +124,7 @@ function drawPart(p, g, x, y, chan, onStation) {
   } else if (p.t === 'con') {
     // a relay contact, as in the Order of Operations simulators: two contact points, and a bar that drops onto them to close
     const B = BOX, H = CON_H, col = coilColour(p.L);
-    el('rect', { x: x - B / 2, y: y - H / 2, width: B, height: H, rx: H * .1667, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
+    framed('rect', { x: x - B / 2, y: y - H / 2, width: B, height: H, rx: H * .1667, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
     v.posts = el('g', { fill: p.nc ? col : GREY }, g);
     const sy = B * .045, r = B * .105, L = x - B / 2, inset = 4.5;
     el('rect', { x: L + inset, y: y - sy, width: B * .25 - inset, height: 2 * sy }, v.posts);
@@ -171,35 +176,30 @@ function drawPart(p, g, x, y, chan, onStation) {
       if (p.t === 'l1') el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: SRC_COL, 'stroke-width': 8.9 }, g);
       else if (p._t) v.src.push({ n: p._t[i], ln: el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g) });
     }
-    el('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: '#e2cc85', 'stroke-width': 2.2 }, g);
+    framed('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: '#e2cc85', 'stroke-width': 2.2 }, g);
     for (const oy of [-7, 7]) el('path', { d: `M ${x - 13} ${y + oy - 6.5} L ${x} ${y + oy + 6.5} L ${x + 13} ${y + oy - 6.5}`, fill: 'none', stroke: '#f2e6b8', 'stroke-width': 3.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
   } else if (p.t === 'sol') {
-    // a solenoid: the lightning bolt from the print in a box, with a terminal ring at each end (drawn at full size and
-    // scaled down). The current runs along the bolt and fills the rings: in the solenoid's colour once it has pulled in
-    const k = SOL_K, W0 = SOL_W / k, H0 = SOL_H / k, col = p.color || SOL_COL, s = el('g', { transform: `translate(${x} ${y}) scale(${k})` }, g);
-    const L = -W0 / 2, R = W0 / 2, px = [L + 19, R - 19], H = (px[1] - px[0] - 8) * .42, w = H * .47;
-    const d = `M ${L + 2} 0 H ${-w} L 0 ${-H} V ${H} L ${w} 0 H ${R - 2}`, path = (a, to) => el('path', Object.assign({ d, fill: 'none', 'stroke-linejoin': 'round' }, a), to);
-    const rings = (r, a, to) => { for (const cx of px) el('circle', Object.assign({ cx, cy: 0, r }, a), to); };
-    v.glow = path({ stroke: col, 'stroke-width': 18, opacity: 0, filter: 'url(#fGlow)' }, s);
-    el('rect', { x: L, y: -H0 / 2, width: W0, height: H0, rx: 14, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 / k }, s);
-    // the channel and its coloured edge, the rings in the same layers, then the current inside both (with the same
-    // dark gap inside the edge: 2.25)
-    path({ stroke: '#1d1d1d', 'stroke-width': 22 }, s); rings(15, { fill: '#1d1d1d' }, s);
-    path({ stroke: col, 'stroke-width': 14, opacity: .9 }, s); rings(11.5, { fill: col, opacity: .9 }, s);
-    path({ stroke: '#1d1d1d', 'stroke-width': 10.5 }, s); rings(9.75, { fill: '#1d1d1d' }, s);
-    v.bolt = el('g', { color: 'transparent' }, s);
-    path({ stroke: 'currentColor', 'stroke-width': 6 }, v.bolt); rings(7.5, { fill: 'currentColor' }, v.bolt);
+    // a solenoid: the lightning bolt from the print, in a square box the size of a coil. The bolt is a channel edged in
+    // the solenoid's colour, and the current flows along it as along a wire (see paintSol); it glows in its colour once pulled in
+    const S = SOL_S, col = p.color || SOL_COL, path = (a, to) => el('path', Object.assign({ d: SOL_D[0], fill: 'none', 'stroke-linejoin': 'round' }, a), to);
+    v.glow = el('rect', { x: x - S / 2 - 4, y: y - S / 2 - 4, width: S + 8, height: S + 8, rx: S * .2, fill: col, opacity: 0, filter: 'url(#fGlow)' }, g);
+    const box = { x: x - S / 2, y: y - S / 2, width: S, height: S, rx: S * .1667 };
+    framed('rect', Object.assign({ fill: 'url(#gWell)', stroke: 'none', 'stroke-width': 1.8 }, box), g);
+    const tr = `translate(${x} ${y})`, b = el('g', { transform: tr }, g);
+    path({ stroke: '#1d1d1d', 'stroke-width': 15 }, b); path({ stroke: col, 'stroke-width': 9.5, opacity: .9 }, b); path({ stroke: '#1d1d1d', 'stroke-width': 7.1 }, b);
+    v.old = path({ stroke: 'transparent', 'stroke-width': 4.1 }, b); v.cur = path({ stroke: 'transparent', 'stroke-width': 4.1 }, b);
+    el('rect', Object.assign({ fill: 'none', stroke: col, 'stroke-width': 1.8 }, box), g);   // (its coloured edge, over the ends of the bolt)
     v.col = col;
   } else if (p.t === 'lamp') {
     // a pilot light: a lens with a filament, that glows when lit
     const col = lampColour(p); v.col = col;
     v.glow = el('circle', { cx: x, cy: y, r: COIL / 2 + 6, fill: col, opacity: 0, filter: 'url(#fGlow)' }, g);
-    el('circle', { cx: x, cy: y, r: COIL / 2, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
+    framed('circle', { cx: x, cy: y, r: COIL / 2, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
     v.fill = el('circle', { cx: x, cy: y, r: COIL_IN / 2, fill: GREY, stroke: '#1d2733', 'stroke-width': 1.2 }, g);
     el('circle', { cx: x, cy: y, r: COIL_IN / 2, fill: 'url(#gDome)' }, g);
     v.fil = filament(x, y, COIL_IN * .22, g, 2.4);
   } else {
-    el('circle', { cx: x, cy: y, r: COIL / 2, fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
+    framed('circle', { cx: x, cy: y, r: COIL / 2, fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
     v.fill = el('circle', { cx: x, cy: y, r: COIL_IN / 2, fill: GREY, stroke: '#1d2733', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, g);
     el('circle', { cx: x, cy: y, r: COIL_IN / 2, fill: 'url(#gDome)' }, g);
     if (!isTimer(p)) { v.text = el('text', { x, y: y + 7.5, 'text-anchor': 'middle', class: 'devtext', 'font-size': 21, fill: LIGHT_TEXT }, g); capText(v.text, nameOf(p), 52, 21, y + 7.5); }
@@ -261,7 +261,7 @@ const SEL_KNOB = 12, SEL_R = 33;   // the knob sits a little below the middle; t
 function drawSelector(p, g, x, y, v) {
   const S = SEL_BOX, kx = x, ky = y + SEL_KNOB;
   v.sec = mainSel(p.L) !== p && parts.includes(p);
-  el('rect', { x: x - S / 2, y: y - S / 2, width: S, height: S, rx: S * .1667, fill: v.sec ? '#1c1c1c' : 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
+  framed('rect', { x: x - S / 2, y: y - S / 2, width: S, height: S, rx: S * .1667, fill: v.sec ? '#1c1c1c' : 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
   v.marks = el('g', {}, g); v.kx = kx; v.ky = ky;
   if (v.sec) {
     // another contact block of the switch: no knob of its own, just a hollow outline of the handle, showing where the switch is turned

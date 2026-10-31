@@ -62,17 +62,7 @@ function paintView(V) {
       if (v.arrow) { v.arrow.setAttribute('fill', s.shut ? v.col : BLADE_GREY); v.arrow.setAttribute('stroke', s.shut ? v.col : BLADE_GREY); }
       v.posts.setAttribute('fill', s.shut ? v.col : GREY);
     } else if (p.t === 'sel') paintSel(p, v);
-    else if (p.t === 'sol') {
-      // pulled in: its colour (fading in and out over half a second); current through it without pulling in (too little
-      // voltage): the current's own colour, as along a wire
-      const on = !!coilOn[p.id], f = p._chg == null ? 1 : clamp01((simT - p._chg) / .5), a = on ? f : 1 - f;
-      const cin = !on && COND[p.id] ? colAt(p._a, simT) || colAt(p._b, simT) : null;
-      k = a.toFixed(3) + ':' + cin;
-      if (k === v.k) continue; v.k = k;
-      v.bolt.setAttribute('color', cin || (a > .005 ? v.col : 'transparent'));
-      v.bolt.setAttribute('opacity', cin ? 1 : a.toFixed(3));
-      v.glow.setAttribute('opacity', (cin ? 0 : .5 * a).toFixed(3));
-    }
+    else if (p.t === 'sol') paintSol(p, v);
     else if (p.t === 'lamp') {
       const lit = litOf(p); k = lit.toFixed(3);
       if (k === v.k) continue; v.k = k;
@@ -120,6 +110,22 @@ function paintSel(p, v) {
 }
 // a part's lead: the latest change flows along it from where it started (the part's end, or its body), at the same
 // speed as along a wire; ahead of it, the lead still shows what it had before
+/* a solenoid's bolt: the current flows along it from whichever end it comes in at, as along a wire, taking as long as
+   it would to cross the solenoid's body; the colour before it is still there ahead of it. Glows once pulled in. */
+function paintSol(p, v) {
+  const S = p._inS || 'A', evs = p._lead && p._lead[S], Ls = TERM(p) - BODYH(p.t) / 2, at = e => e.t0 + Ls / V;
+  let i = -1; if (evs) for (let k = 0; k < evs.length; k++) if (at(evs[k]) <= simT + 1e-9) i = k;
+  const cur = i >= 0 ? evs[i] : null, prev = i > 0 ? evs[i - 1].col : null;
+  const f = cur ? clamp01((simT - at(cur)) * V / BODYH(p.t)) : 0, on = !!coilOn[p.id], g = p._chg == null ? 1 : clamp01((simT - p._chg) / .5);
+  const k = `${S}|${f.toFixed(3)}|${cur && cur.col}|${prev}|${(on ? g : 1 - g).toFixed(3)}`;
+  if (k === v.k) return; v.k = k;
+  const d = SOL_D[S === 'A' ? 0 : 1], n = f * SOL_LEN;
+  for (const [ln, c, dash] of [[v.cur, cur && cur.col, `${n} ${SOL_LEN + 1}`], [v.old, prev, `0 ${n} ${SOL_LEN + 1}`]]) {
+    if (ln.getAttribute('d') !== d) ln.setAttribute('d', d);
+    ln.setAttribute('stroke', c || 'transparent'); ln.setAttribute('stroke-dasharray', dash);
+  }
+  v.glow.setAttribute('opacity', (.45 * (on ? g : 1 - g)).toFixed(3));
+}
 function paintLead(L, evs) {
   let i = -1; if (evs) for (let k = 0; k < evs.length; k++) if (evs[k].t0 <= simT + 1e-9) i = k;
   const cur = i >= 0 ? evs[i] : null, prev = i > 0 ? evs[i - 1].col : null;

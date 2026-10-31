@@ -372,6 +372,7 @@ function updateCoils(t) {
   for (const p of parts) if (LOADT(p.t)) {   // (a pilot light lights just as a coil picks up)
     const d = DIRS.find(x => x.e.part === p); if (!d) continue;
     coilIns.add(d.from);
+    p._inS = d.from === p._a ? 'A' : 'B';   // (the end its current comes in at)
     const r = REC.get(d.from);
     // current goes through a load once it has reached it, with the circuit through it complete right now: from L1,
     // through it (and anything in series with it) to L2. (Never from the end of a stream that has been cut off.)

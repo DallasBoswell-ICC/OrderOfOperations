@@ -32,7 +32,12 @@ const OPEN_LIFT = 15, BLADE_GREY = '#a6a6a6';   // how far an open contact's bar
 // pneumatic or hydraulic valve): it is numbered (SOL1, SOL2 ...) rather than lettered, and solOn says if it has pulled in
 const LOADT = t => t === 'coil' || t === 'lamp' || t === 'sol';
 const SOL_COL = '#00D2BE';
-const SOL_W = 84, SOL_H = 73, SOL_K = .68;   // a solenoid's box (drawn at 1/SOL_K the size, then scaled down)
+const SOL_S = 82.296;   // a solenoid's box: square, as tall and wide as a coil
+// its bolt (centred on 0, 0): in from the left along the rung, up to a peak, straight down, and back up to the
+// rung out to the right edge; SOL_D[1] the same the other way, for current coming in from the right. SOL_LEN: its length
+// (its ends run out under the box's coloured edge, SOL_E from the middle: the edge is drawn over them)
+const SOL_BH = 22, SOL_BW = 10.4, SOL_E = SOL_S / 2 + .9, SOL_D = [1, -1].map(k => `M ${-k * SOL_E} 0 H ${-k * SOL_BW} L 0 ${-k * SOL_BH} V ${k * SOL_BH} L ${k * SOL_BW} 0 H ${k * SOL_E}`);
+const SOL_LEN = 2 * (SOL_E - SOL_BW) + 2 * Math.hypot(SOL_BW, SOL_BH) + 2 * SOL_BH;
 // a selector switch: a square body a little larger than a pushbutton's (room for its position numbers round the top)
 const SEL_BOX = 80;
 const WIDE = t => LOADT(t) || t === 'sel';                                // parts whose ends sit 60 either side of their centre
