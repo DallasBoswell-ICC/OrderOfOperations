@@ -1793,7 +1793,7 @@ function drawPart(p, g, x, y, chan, onStation) {
       for (const k of [-1, 1]) el('circle', { cx: k * SOL_DOT, cy: 0, r: SOL_DR + grow, fill }, to);
       el('path', { d: SOL_BOLT, fill: 'none', stroke: fill, 'stroke-width': SOL_BW + 2 * grow, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, to);
     };
-    shape('#111', .9, b); shape(SOL_GREY, 0, b);
+    shape('#111', .9, el('g', { filter: 'url(#fShadow)' }, b)); shape(SOL_GREY, 0, b);   // (raised off the well, casting a shadow, like a coil's middle)
     // the fill: along the bolt a line its own width (so the colour's front crosses it squarely, round its bends too),
     // and across each dot a sweep as wide as the dot (kept to the dots)
     const mk = (n, dots) => { const m = el('mask', { id: id + n, maskUnits: 'userSpaceOnUse', x: -SOL_S / 2, y: -SOL_S / 2, width: SOL_S, height: SOL_S }, b);
@@ -1801,6 +1801,12 @@ function drawPart(p, g, x, y, chan, onStation) {
       return el('g', { mask: `url(#${id + n})` }, b); };
     const thin = mk('a', false), wide = mk('b', true), ln = (w, to) => el('path', { d: SOL_D[0], fill: 'none', stroke: 'transparent', 'stroke-width': w, 'stroke-linejoin': 'round' }, to);
     v.old = [ln(SOL_BW, thin), ln(2 * SOL_DR + 2, wide)]; v.cur = [ln(SOL_BW, thin), ln(2 * SOL_DR + 2, wide)];
+    // over it, grey or filled, the shading that makes it look rounded: lit from above (a shine along the top of the
+    // bolt and on each dot, toward the upper left) and darker underneath, as the dome on a coil
+    const sh = mk('c', false);
+    el('rect', { x: -SOL_S / 2, y: -SOL_P - SOL_BW, width: SOL_S, height: 2 * (SOL_P + SOL_BW), fill: 'url(#gGloss)', opacity: .7 }, sh);
+    el('path', { d: SOL_BOLT, transform: 'translate(-.7 -1.1)', fill: 'none', stroke: '#fff', 'stroke-opacity': .22, 'stroke-width': SOL_BW * .38, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, sh);
+    for (const k of [-1, 1]) el('circle', { cx: k * SOL_DOT, cy: 0, r: SOL_DR, fill: 'url(#gDome)' }, sh);
     v.col = col;
   } else if (p.t === 'lamp') {
     // a pilot light: a lens with a filament, that glows when lit
