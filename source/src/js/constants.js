@@ -61,4 +61,8 @@ const SRC_DEFAULT = SRC_PAL[0][1];
 let SRC_COL = SRC_DEFAULT;
 const barsOn = () => POWER === 'bars';
 const isSrc = p => p.t === 'l1' || p.t === 'l2';
+/* A continuation: a box like a supply box, wired from its left, right or bottom, that carries the current on to
+   every other continuation with the same number, as if a wire ran between them (so a long run can be left out) */
+const isJmp = p => p.t === 'jmp', isBox = p => isSrc(p) || isJmp(p);
+const JMP_EDGE = '#b8c2cf';
 const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel';   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre

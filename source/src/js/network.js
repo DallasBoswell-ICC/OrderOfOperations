@@ -25,11 +25,23 @@ function network() {
     }
   }
   for (const p of parts) {
-    if (isSrc(p)) continue;   // (supply boxes are not a way through: their connection points are L1 or L2, below)
+    if (isBox(p)) continue;   // (supply boxes are not a way through: their connection points are L1 or L2, below; continuations: further down)
     const [[ax, ay], [bx, by]] = terms(p);
     p._a = node(ax, ay, key(ax, ay)); p._b = node(bx, by, key(bx, by));
     edges.push({ a: p._a, b: p._b, w: 2 * TERM(p), kind: 'part', part: p });
     jedges.push({ kind: 'part', a: p._a, b: p._b, len: 2 * TERM(p), part: p });
+  }
+  // continuations: each box's connection points join at its middle, and the middles of all the boxes with the same
+  // number join one another (a very short run, so the current is through at once)
+  const jmps = {};
+  for (const p of parts) if (isJmp(p)) {
+    p._c = node(p.x, p.y, 'jmp' + p.id);
+    p._t = terms(p).map(([x, y]) => { const i = node(x, y, key(x, y)); edges.push({ a: i, b: p._c, w: TERM(p), kind: 'w' }); jedges.push({ kind: 'seg', a: i, b: p._c, len: TERM(p), chain: [i, p._c] }); return i; });
+    (jmps[p.L] = jmps[p.L] || []).push(p);
+  }
+  for (const k in jmps) for (let i = 1; i < jmps[k].length; i++) {
+    const a = jmps[k][i - 1]._c, b = jmps[k][i]._c;
+    edges.push({ a, b, w: 1, kind: 'w' }); jedges.push({ kind: 'seg', a, b, len: 1, chain: [a, b], jump: true });
   }
   const jadj = new Map(), feedV = new Map();
   jedges.forEach((e, i) => { e.i = i; for (const v of [e.a, e.b]) { if (!jadj.has(v)) jadj.set(v, []); jadj.get(v).push(e); } });
@@ -69,6 +81,7 @@ function wiringIssues(net) {
   const S = l1 === l2 ? null : loadShares(f, net);
   for (const p of parts) {
     if (isSrc(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); continue; }
+    if (isJmp(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); else if (!parts.some(q => q !== p && isJmp(q) && q.L === p.L)) out.set(p.id, `No other continuation ${p.L}`); continue; }
     const a = f(p._a), b = f(p._b);
     if (LOADT(p.t)) {
       const sh = S ? S.share.get(p.id) || 0 : 1;

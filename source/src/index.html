@@ -82,6 +82,7 @@
         <svg viewBox="0 0 30 26"><path d="M9 3l13 10-6 1 3 7-3 1-3-7-4 4z" fill="#cfcfcf"/></svg><span>Select</span></button>
         <button type="button" class="tool big" data-tool="wire" aria-pressed="false" data-tip="Wire: press anywhere and drag. The wire bends once, at a right angle.">
         <svg viewBox="0 0 30 26"><path d="M3 20h12V6h12" stroke="#cfcfcf" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Wire</span></button>
+        <button type="button" class="tool big" data-part="jmp" data-tip="Continuation: carries the current on to every other continuation with the same number, as if a wire ran between them. Place two with the same number (the second one placed takes the first one's number), and wire to their left, right or bottom."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#b8c2cf" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="#c9d2dd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Contin-<br>uation</span></button>
       </div><div class="gname">Tools</div></div>
       <!-- parts, by kind: drag one onto the panel (or onto a wire to put it in that wire), or click it and then the panel.
            A new kind of component is one more button here. -->
@@ -147,6 +148,10 @@
         <div class="tgroup"><span class="label">Built into</span><select id="l-btn" aria-label="The pushbutton this light is built into"></select></div>
         <div class="tgroup" id="l-colour-group"><span class="label">Colour</span><div class="swatches" id="l-colour" role="radiogroup" aria-label="Light colour"></div></div>
         <div class="tgroup" id="l-colour-note" hidden><span class="label">Colour</span><span class="selname">the button's colour</span></div>
+      </div>
+      <div class="props" id="props-jmp" hidden>
+        <div class="tgroup"><span class="label">Number</span><select id="j-num" aria-label="Continuation number" data-tip="Every continuation with the same number is joined to this one: current goes in at one and on out of the others"></select></div>
+        <div class="tgroup"><button type="button" class="tool small" id="j-rot" data-tip="Turn it a quarter turn clockwise, so its connection points face other ways (or press R)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 10a5.5 5.5 0 1 1-1.8-4.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M14.2 2.6v3.8h-3.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Rotate</span></button></div>
       </div>
       <div class="props" id="props-sol" hidden>
         <div class="tgroup"><span class="label">Number</span><select id="v-num" aria-label="Solenoid number"></select></div>

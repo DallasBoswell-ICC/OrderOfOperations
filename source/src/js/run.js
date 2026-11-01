@@ -47,6 +47,11 @@ function paintView(V) {
   // parts: each one is only touched when how it looks has changed (redrawing a part, with its shadow, is costly)
   for (const p of parts) {
     const v = V.parts.get(p.id); if (!v) continue;
+    if (isJmp(p)) {
+      for (const q of v.src || []) { const c = colAt(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
+      const c = (p._c !== undefined && colAt(p._c, simT)) || '#8a8a8a'; if (c !== v.cc) { v.cc = c; for (const ch of v.chev) ch.setAttribute('stroke', c); }
+      continue;
+    }
     if (isSrc(p)) { if (v.src) for (const q of v.src) { const c = colAt(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } continue; }
     for (const S of ['A', 'B']) paintLead(v.lead[S], p._lead && p._lead[S]);
     let k;

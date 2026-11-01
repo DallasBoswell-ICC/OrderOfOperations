@@ -127,6 +127,8 @@ body.locked .top-right, body.locked .modeseg, body.locked #toolbar, body.locked 
 .link-hit { cursor: move; pointer-events: stroke; }
 .link-hit:hover { stroke: rgba(255,192,0,.22); }
 .link-end { cursor: grab; }
+.rot-handle { cursor: grab; }
+.rot-handle:hover circle { fill: #3a3320; }
 .link-end:hover { stroke-width: 3; }
 
 /* ---------------- an application window: title bar, quick access toolbar and ribbon, as in Office ---------------- */
@@ -267,3 +269,4 @@ body.fs .wrap { padding-top: 8px; }
 
 /* supply boxes */
 .cap.srccap { fill: #e2cc85; font-weight: 700; }
+.cap.jmpcap { fill: #c9d2dd; font-weight: 700; }

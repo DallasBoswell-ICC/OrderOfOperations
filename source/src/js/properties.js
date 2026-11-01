@@ -41,6 +41,15 @@ function renderProps() {
     document.getElementById('l-colour-note').hidden = !p.L;
     if (!p.L) swatches(document.getElementById('l-colour'), p.color, hex => { snapshot(); p.color = hex; draw(); });
   }
+  document.getElementById('props-jmp').hidden = !(p && p.t === 'jmp');
+  if (p && p.t === 'jmp') {
+    // its number: every continuation with the same number is joined to it
+    const ns = document.getElementById('j-num'), cnt = {};
+    for (const q of parts) if (isJmp(q) && q !== p) cnt[q.L] = (cnt[q.L] || 0) + 1;
+    ns.innerHTML = '';
+    const top = Math.max(10, ...Object.keys(cnt).map(Number)) + 3;
+    for (let n = 1; n <= top; n++) { const c = cnt[String(n)] || 0; ns.add(new Option(`${n}` + (c ? ` (joins ${c} other${c > 1 ? 's' : ''})` : ''), String(n), false, String(n) === p.L)); }
+  }
   document.getElementById('props-sol').hidden = !(p && p.t === 'sol');
   if (p && p.t === 'sol') {
     // its number (one no other solenoid has), and its colour
@@ -211,3 +220,7 @@ document.getElementById('s-main').addEventListener('click', () => {
 });
 
 document.getElementById('v-num').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'sol') return; snapshot(); p.L = e.target.value; draw(); });
+document.getElementById('j-num').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'jmp') return; snapshot(); p.L = e.target.value; draw(); });
+// turn a continuation a quarter turn clockwise (the R key, or Rotate on its tab)
+function rotateJmp(p) { snapshot(); p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; normalize(); draw(); }
+document.getElementById('j-rot').addEventListener('click', () => { const p = selPart(); if (p && isJmp(p)) rotateJmp(p); });

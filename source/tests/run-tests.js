@@ -1604,6 +1604,36 @@ const DEF_CIRCUIT = `
     await page.evaluate(() => { press('D', false); press('B', false); }); await page.click('#tab-edit'); await page.evaluate(() => setSpeed(1));
     return out;
   });
+  await check('Continuations: the second placed pairs with the first; current goes in at one and out of the other; a lone one is flagged; saved, read back, renumbered as a pair when pasted', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    const nums = await page.evaluate(() => {
+      parts.push(P('btn', 200, 120, { L: 'A', maint: true, color: '#FF0032' }), newPart('jmp', 460, 120));
+      wires.push(Wr(0, 120, 160, 120), Wr(240, 120, 420, 120));
+      parts.push(newPart('jmp', 200, 340), P('coil', 560, 300, { L: 'X', color: '#FFDC00' }));
+      wires.push(Wr(240, 340, 300, 340), Wr(300, 340, 300, 300), Wr(300, 300, 500, 300), Wr(620, 300, W, 300));
+      normalize(); draw();
+      return parts.filter(isJmp).map(p => p.L).join() + '|' + [...wiringIssues(network()).values()].filter(v => typeof v === 'string').join();
+    });
+    if (nums !== '1,1|') out.push('numbers and warnings: ' + nums);
+    const back = await page.evaluate(() => readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.filter(p => p.t === 'jmp').map(p => p.L).join());
+    if (back !== '1,1') out.push('read back: ' + back);
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300));
+    await page.evaluate(() => press('A', true)); await page.waitForTimeout(1200);
+    if (!(await page.evaluate(() => !!coilOn[parts.find(p => p.L === 'X').id]))) out.push('X did not pick up through the continuation');
+    await page.evaluate(() => press('A', false)); await page.waitForTimeout(1200);
+    if (await page.evaluate(() => !!coilOn[parts.find(p => p.L === 'X').id])) out.push('X stayed in after A was let go');
+    await page.click('#tab-edit'); await page.evaluate(() => setSpeed(1));
+    const lone = await page.evaluate(() => { parts.push(newPart('jmp', 800, 500)); wires.push(Wr(800, 540, 800, 600)); normalize(); return [parts[parts.length - 1].L, wiringIssues(network()).get(parts[parts.length - 1].id)]; });
+    if (lone[0] !== '2' || lone[1] !== 'No other continuation 2') out.push('a third one: ' + JSON.stringify(lone));
+    const pasted = await page.evaluate(() => { sel = { parts: new Set(parts.filter(p => isJmp(p) && p.L === '1').map(p => p.id)), wires: new Set() }; copySel(); pasteClip(); return parts.filter(isJmp).map(p => p.L).join(); });
+    if (pasted !== '1,1,2,3,3') out.push('after pasting the pair: ' + pasted);
+    const rot = await page.evaluate(() => { const p = parts.find(q => isJmp(q) && q.L === '2'); sel = { parts: new Set([p.id]), wires: new Set() }; draw();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' })); const t1 = terms(p).map(t => t.join(',')).join(' ');
+      return [p.rot, t1, readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.find(q => q.t === 'jmp' && q.L === '2').rot]; });
+    if (JSON.stringify(rot) !== '[1,"800,460 800,540 760,500",1]') out.push('turned with R (rot, connection points, read back): ' + JSON.stringify(rot));
+    return out;
+  });
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

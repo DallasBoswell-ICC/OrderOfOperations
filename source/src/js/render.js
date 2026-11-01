@@ -104,6 +104,8 @@ function renderInto(target, V, L) {
       if (!selHasP(p.id) && isOp(p) && sel && sel.parts.size === 1 && parts.some(q => q !== p && q.t === p.t && q.L === p.L && selHasP(q.id)))
         el('rect', { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 32, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44, rx: 12, fill: 'none', stroke: '#ffc000', 'stroke-opacity': .5, 'stroke-width': 1.6, 'stroke-dasharray': '3 5', 'pointer-events': 'none' }, g);
       if (selHasP(p.id)) el('rect', { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 32, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44, rx: 12, fill: 'rgba(255,192,0,.07)', stroke: '#ffc000', 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'pointer-events': 'none' }, g);
+      // a continuation on its own selected: a rotate handle at the corner of the selection, to turn it either way
+      if (isJmp(p) && selHasP(p.id) && sel.parts.size === 1 && V === view) rotHandle(p, p.x + TERM(p) + 18, p.y - BODYH(p.t) / 2 - 38, B(p.y).ends);
       if (issues.has(p.id)) {
         const m = issues.get(p.id), note = typeof m === 'object';   // (a note, in gold: a load in series; a warning, in red)
         const t = el('text', { x: p.x, y: p.y - capTop(p) - 17, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': note ? 600 : 700, fill: note ? '#e2cc85' : '#ff8a7a', 'pointer-events': 'none', stroke: '#404040', 'stroke-width': 4, 'paint-order': 'stroke' }, g);
@@ -208,6 +210,33 @@ function selLinks(B) {
       }
     }
   }
+}
+/* The rotate handle: drag it round the part to turn it, a quarter turn at a time, clockwise or anticlockwise (or
+   click it for a quarter turn clockwise). */
+function rotHandle(p, x, y, g) {
+  const h = el('g', { class: 'rot-handle', transform: `translate(${x} ${y})` }, g);
+  el('circle', { r: 12, fill: '#2b2b2b', stroke: '#ffc000', 'stroke-width': 2 }, h);
+  el('path', { d: 'M5.5 0A5.5 5.5 0 1 1 3.9 -3.9', fill: 'none', stroke: '#ffc000', 'stroke-width': 2, 'stroke-linecap': 'round' }, h);
+  el('path', { d: 'M4.6 -7.6V-3.2H0.2', fill: 'none', stroke: '#ffc000', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, h);
+  el('title', {}, h).textContent = 'Drag round to turn it (or click for a quarter turn clockwise; R does the same)';
+  h.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    e.stopPropagation(); e.preventDefault();
+    const ang = ev => { const q = pt(ev); return Math.atan2(q.y - p.y, q.x - p.x); }, a0 = ang(e), r0 = p.rot || 0;
+    let moved = false, turned = false;
+    document.body.classList.add('dragging');
+    const mv = ev => {
+      if (!moved && Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY) < 4) return;
+      let d = ang(ev) - a0; d = Math.atan2(Math.sin(d), Math.cos(d)); moved = true;
+      const r = ((r0 + Math.round(d / (Math.PI / 2))) % 4 + 4) % 4;
+      if (r === (p.rot || 0)) return;
+      if (!turned) { snapshot(); turned = true; }
+      if (r) p.rot = r; else delete p.rot;
+      normalize(); draw();
+    };
+    const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); document.body.classList.remove('dragging'); if (!turned && !moved) rotateJmp(p); };
+    document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+  });
 }
 // dragging one end of a link line round its part q (j: 0 the upper end, 1 the lower): it moves to the side nearest the pointer
 function dragLinkEnd(e, b, q, j) {

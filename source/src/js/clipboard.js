@@ -28,7 +28,7 @@ function pasteClip() {
   const bottom = Math.max(0, ...parts.map(p => p.y + 60), ...wires.map(w => Math.max(w.y1, w.y2)));
   const dy = snap(bottom + 100 - Math.min(...ys) + (LOADT(clip.parts.find(p => p.y === Math.min(...ys))?.t) ? 20 : 0));
   const fx = x => x === 0 ? 0 : x >= W ? W : x;   // (wires to the bars stay on the bars)
-  const np0 = [];
+  const np0 = [], jm = {};
   const np = clip.parts.map(p => {
     const q = { ...p, id: nextId++, y: p.y + dy }; if (p.ls) q.ls = [...p.ls];
     if (p.t === 'btn') q.L = map['b' + p.L];
@@ -36,6 +36,7 @@ function pasteClip() {
     if (p.t === 'sel') { q.L = map['s' + p.L]; q.closedIn = [...(p.closedIn || [])]; if (p.names) q.names = [...p.names]; }
     if (p.t === 'con' && map['c' + p.L]) q.L = map['c' + p.L];
     if (p.t === 'lamp' && p.L && map['b' + p.L]) q.L = map['b' + p.L];
+    if (p.t === 'jmp') { if (!jm[p.L]) jm[p.L] = nextNum(new Set([...parts.filter(isJmp).map(q => q.L), ...Object.values(jm)])); q.L = jm[p.L]; }   // (pasted continuations pair among themselves)
     if (p.t === 'sol') { q.L = nextSol(new Set([...solNums(), ...np0])); np0.push(q.L); }   // (a pasted solenoid gets a number of its own)
     return q;
   });
