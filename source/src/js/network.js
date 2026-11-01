@@ -64,6 +64,13 @@ function network() {
     if (barsOn() && n.x === 0) { edges.push({ a: L1, b: i, w: 0, kind: 'w' }); feeds.push({ x: 0, y: n.y, t: 'L1', bar: true }); feedV.set(i, 1); }
     if (barsOn() && n.x === W) { edges.push({ a: L2, b: i, w: 0, kind: 'w' }); feeds.push({ x: W, y: n.y, t: 'L2', bar: true }); feedV.set(i, 0); }
   }
+  // the phase boxes: every connection point of one is its phase (PH: a node for each phase in use, joined to all of them;
+  // three-phase power is kept apart from L1 and L2, see phasesNow)
+  const PH = {};
+  for (const p of parts) if (isPh(p)) {
+    const h = PH[p.L] ?? (PH[p.L] = node(-10 - +p.L, 0, 'PH' + p.L));
+    p._t = terms(p).map(([x, y]) => { const i = node(x, y, key(x, y)); edges.push({ a: h, b: i, w: 0, kind: 'w' }); return i; });
+  }
   // the supply boxes: every connection point of an L1 box is L1, of an L2 box L2
   for (const p of parts) if (isSrc(p)) {
     const one = p.t === 'l1';
@@ -77,7 +84,7 @@ function network() {
     const x = v.x1, y = h.y1;
     if (x > Math.min(h.x1, h.x2) && x < Math.max(h.x1, h.x2) && y > Math.min(v.y1, v.y2) && y < Math.max(v.y1, v.y2) && !shared.has(key(x, y))) hops.push([x, y]);
   }
-  return { nodes, edges, adj, subs, L1, L2, feeds, hops, jedges, jadj, feedV };
+  return { nodes, edges, adj, subs, L1, L2, feeds, hops, jedges, jadj, feedV, PH };
 }
 function components(net, ok) {
   const par = net.nodes.map((_, i) => i);
@@ -93,14 +100,30 @@ function wiringIssues(net) {
   const S = l1 === l2 ? null : loadShares(f, net);
   for (const p of parts) {
     if (isSrc(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); continue; }
+    if (isPh(p)) {
+      const c = f(net.PH[p.L]), o = Object.keys(net.PH).filter(k => k !== p.L && f(net.PH[k]) === c);
+      if (o.length) { out.set(p.id, `Shorted to L${o[0]}`); out.set('phshort', `L${p.L} connects straight to L${o[0]}`); }
+      else if (c === l1 || c === l2) { out.set(p.id, 'Joined to the control circuit'); out.set('phshort', `L${p.L} connects straight to the control circuit's ${c === l1 ? 'L1' : 'L2'}`); }
+      else if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything');
+      continue;
+    }
     if (isJmp(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); else if (!parts.some(q => q !== p && isJmp(q) && q.L === p.L)) out.set(p.id, `No other continuation ${p.L}`); continue; }
     const a = f(p._a), b = f(p._b);
+    if (p.t === 'xfm' && phaseFed(net, f, p)) continue;   // (its primary across two phases)
     if (LOADT(p.t)) {
       const sh = S ? S.share.get(p.id) || 0 : 1;
-      if (sh < 1e-9) out.set(p.id, 'Not wired from L1 to L2');
+      if (sh < 1e-9) out.set(p.id, p.t === 'xfm' && (phaseAt(net, f, p._a) || phaseAt(net, f, p._b)) ? 'Not wired across two phases' : 'Not wired from L1 to L2');
       else if (sh < 1 - 1e-6) out.set(p.id, { note: `In series: ${Math.round(sh * SUPPLY_V * 10) / 10} V` });
     }
     else if (net.adj[p._a].length < 2 || net.adj[p._b].length < 2) out.set(p.id, 'An end is not connected');
   }
   return out;
 }
+// the phase that junction n is joined to through f (0: none; -1: more than one, or a phase and the control circuit)
+function phaseAt(net, f, n) {
+  let k = 0; const c = f(n);
+  for (const L in net.PH) if (f(net.PH[L]) === c) { if (k) return -1; k = +L; }
+  return k && (c === f(net.L1) || c === f(net.L2)) ? -1 : k;
+}
+// a transformer whose primary is across two different phases
+const phaseFed = (net, f, p) => { const a = phaseAt(net, f, p._a), b = phaseAt(net, f, p._b); return a > 0 && b > 0 && a !== b; };

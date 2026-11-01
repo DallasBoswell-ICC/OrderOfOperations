@@ -106,7 +106,7 @@ function renderInto(target, V, L) {
         el('rect', { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 32, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44, rx: 12, fill: 'none', stroke: '#ffc000', 'stroke-opacity': .5, 'stroke-width': 1.6, 'stroke-dasharray': '3 5', 'pointer-events': 'none' }, g);
       if (selHasP(p.id)) el('rect', { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 32, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44, rx: 12, fill: 'rgba(255,192,0,.07)', stroke: '#ffc000', 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'pointer-events': 'none' }, g);
       // a continuation on its own selected: a rotate handle at the corner of the selection, to turn it either way
-      if (isJmp(p) && selHasP(p.id) && sel.parts.size === 1 && V === view) rotHandle(p, p.x + TERM(p) + 18, p.y - BODYH(p.t) / 2 - 38, B(p.y).ends);
+      if (isBox(p) && selHasP(p.id) && sel.parts.size === 1 && V === view) rotHandle(p, p.x + TERM(p) + 18, p.y - BODYH(p.t) / 2 - 38, B(p.y).ends);
       if (issues.has(p.id)) {
         const m = issues.get(p.id), note = typeof m === 'object';   // (a note, in gold: a load in series; a warning, in red)
         const t = el('text', { x: p.x, y: p.y - capTop(p) - 17, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': note ? 600 : 700, fill: note ? '#e2cc85' : '#ff8a7a', 'pointer-events': 'none', stroke: '#404040', 'stroke-width': 4, 'paint-order': 'stroke' }, g);
@@ -118,8 +118,9 @@ function renderInto(target, V, L) {
   if (SHOW.rungs) drawRefs(V, B, net);
   if (editing && V === view) {
     const f = document.getElementById('fault');
-    f.hidden = !issues.has('short');
-    f.textContent = 'Warning: with every button passing current, L1 connects straight to L2 with no coil in between. That is a short circuit.';
+    f.hidden = !issues.has('short') && !issues.has('phshort');
+    f.textContent = issues.has('short') ? 'Warning: with every button passing current, L1 connects straight to L2 with no coil in between. That is a short circuit.'
+      : `Warning: with every switch closed, ${issues.get('phshort')}. That is a short circuit.`;
   }
   if (V === view) { V.overlay = el('g', { 'pointer-events': 'none' }); if (preview) drawPreview(); }
 }

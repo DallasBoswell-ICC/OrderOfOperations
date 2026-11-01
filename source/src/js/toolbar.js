@@ -5,7 +5,7 @@ document.querySelectorAll('.tool[data-part]').forEach(b => {
     if (e.button !== 0 || !editing) return;
     e.preventDefault();
     const sx = e.clientX, sy = e.clientY; let moved = false, ghost = null;
-    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('timer') ? { t: 'coil', L: '?', color: '#FFDC00', delay: 5, tof: kind === 'timer-off' } : kind === 'lamp' ? { t: 'lamp', L: '', color: '#00B050' } : kind === 'sol' ? { t: 'sol', L: '?', color: SOL_COL } : kind === 'jmp' ? { t: 'jmp', L: '?' } : kind === 'xfm' ? { t: 'xfm', L: '?' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind === 'con-nc' } : kind === 'sel' ? { t: 'sel', L: '?', n: 3, closedIn: [0], pos: 1, color: '#0070C0' } : kind.startsWith('src-') ? { t: kind.slice(4), L: '' } : { t: 'btn', L: '?', nc: kind === 'btn-nc', color: '#9a9a9a' };
+    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('timer') ? { t: 'coil', L: '?', color: '#FFDC00', delay: 5, tof: kind === 'timer-off' } : kind === 'lamp' ? { t: 'lamp', L: '', color: '#00B050' } : kind === 'sol' ? { t: 'sol', L: '?', color: SOL_COL } : kind === 'jmp' ? { t: 'jmp', L: '?' } : kind === 'xfm' ? { t: 'xfm', L: '?' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind === 'con-nc' } : kind === 'sel' ? { t: 'sel', L: '?', n: 3, closedIn: [0], pos: 1, color: '#0070C0' } : kind.startsWith('src-') ? { t: kind.slice(4), L: '' } : kind.startsWith('ph-') ? { t: 'ph', L: kind.slice(3) } : { t: 'btn', L: '?', nc: kind === 'btn-nc', color: '#9a9a9a' };
     const mv = ev => {
       if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 5) { moved = true; closeMenus(); ghost = document.createElement('div'); ghost.className = 'ghost'; ghost.innerHTML = b.innerHTML; document.body.append(ghost); document.body.classList.add('dragging'); }
       if (!moved) return;
@@ -52,7 +52,7 @@ document.addEventListener('keydown', e => {
   else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || e.shiftKey && e.key.toLowerCase() === 'z')) { e.preventDefault(); redo(); }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
   else if (e.key === 'Escape') { setTool('select'); sel = null; draw(); }
-  else if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey && !e.altKey) { const G = selGroup(); if (G.length && G.every(isJmp)) { e.preventDefault(); each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); } }
+  else if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey && !e.altKey) { const G = selGroup(); if (G.length && G.every(isBox)) { e.preventDefault(); each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); } }
 });
 
 /* ---------------- the ribbon ----------------
@@ -60,16 +60,18 @@ document.addEventListener('keydown', e => {
    show: pressing one opens the ribbon over the panel until you press somewhere else. */
 function closeMenus() { document.body.classList.remove('ribbon-peek'); }
 function showRibbon() {
-  const run = !editing, part = !run && selGroup().length > 0, tab = run ? 'run' : part && ribbonTab === 'part' ? 'part' : 'home';
+  const run = !editing, part = !run && selGroup().length > 0, tab = run ? 'run' : part && ribbonTab === 'part' ? 'part' : mainTab;
   const set = (id, shown, on) => { const b = document.getElementById(id); b.hidden = !shown; b.setAttribute('aria-pressed', String(on)); };
-  set('rt-home', !run, tab === 'home'); set('rt-part', part, tab === 'part'); set('rt-run', run, tab === 'run');
+  set('rt-home', !run, tab === 'home'); set('rt-3ph', !run, tab === 'three'); set('rt-part', part, tab === 'part'); set('rt-run', run, tab === 'run');
   document.getElementById('toolbar').hidden = tab !== 'home';
+  document.getElementById('toolbar3').hidden = tab !== 'three';
   document.getElementById('editpanel').hidden = tab !== 'part';
   document.getElementById('runbar').hidden = tab !== 'run';
 }
-for (const [id, t] of [['rt-home', 'home'], ['rt-part', 'part'], ['rt-run', 'run']])
+for (const [id, t] of [['rt-home', 'home'], ['rt-3ph', 'three'], ['rt-part', 'part'], ['rt-run', 'run']])
   document.getElementById(id).addEventListener('click', () => {
     if (t !== 'run') ribbonTab = t;
+    if (t === 'home' || t === 'three') mainTab = t;
     if (document.body.classList.contains('ribbon-min') || document.body.classList.contains('fs')) document.body.classList.add('ribbon-peek');
     showRibbon();
   });
@@ -122,6 +124,7 @@ function showPower() {
   document.querySelectorAll('[data-power]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.power === POWER)));
   document.querySelectorAll('.src-tool').forEach(b => b.hidden = barsOn());
   document.querySelectorAll('[data-src]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.src === SRC_COL)));
+  PH_COL.forEach((c, i) => { document.documentElement.style.setProperty(`--ph${i + 1}`, c); document.documentElement.style.setProperty(`--ph${i + 1}l`, lighten(c, .45)); });
 }
 // the source's colour: a swatch for each (see SRC_PAL)
 for (const [name, hex] of SRC_PAL) {

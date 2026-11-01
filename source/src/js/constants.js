@@ -69,7 +69,16 @@ const barsOn = () => POWER === 'bars';
 const isSrc = p => p.t === 'l1' || p.t === 'l2';
 /* A continuation: a box like a supply box, wired from its left, right or bottom, that carries the current on to
    every other continuation with the same number, as if a wire ran between them (so a long run can be left out) */
-const isJmp = p => p.t === 'jmp', isBox = p => isSrc(p) || isJmp(p);
+const isJmp = p => p.t === 'jmp', isBox = p => isSrc(p) || isJmp(p) || isPh(p);
+/* Three-phase power: an L1, L2 or L3 phase box (p.L '1', '2' or '3'), built like a supply box, every connection point
+   of it that phase. Each phase has its own colour (each circuit keeps its own; brown, orange and yellow, as on 480 V).
+   Every box turns, a quarter turn at a time (p.rot), as a continuation does. */
+const isPh = p => p.t === 'ph';
+const PH_PAL = [['Brown', '#B5793F'], ['Orange', '#FF8A1F'], ['Yellow', '#F2D21B'], ['Red', '#E8413C'], ['Blue', '#3F7FFF'], ['Violet', '#A66BFF'], ['Grey', '#9AA0A6'], ['White', '#E8E8E8']];
+const PH_DEFAULT = ['#B5793F', '#FF8A1F', '#F2D21B'];
+let PH_COL = [...PH_DEFAULT];
+const phCol = p => PH_COL[(+p.L || 1) - 1];
+const lighten = (c, f) => { const n = parseInt(c.slice(1), 16), m = k => Math.round(((n >> k) & 255) + (255 - ((n >> k) & 255)) * f); return '#' + ((1 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)).toString(16).slice(1).toUpperCase(); };
 const JMP_EDGE = '#b8c2cf';
 const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel' || p.t === 'xsw';
 const isCon = p => p.t === 'con' || p.t === 'xsw';   // (a relay contact, or a transformer's switch inside it: passes on what it is given)   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre

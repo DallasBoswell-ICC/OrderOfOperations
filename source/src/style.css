@@ -119,7 +119,7 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 
 
 /* a locked simulator: nothing for building or saving */
-body.locked .top-right, body.locked .modeseg, body.locked #toolbar, body.locked #editpanel, body.locked #rt-home, body.locked #rt-part { display: none !important; }
+body.locked .top-right, body.locked .modeseg, body.locked #toolbar, body.locked #toolbar3, body.locked #editpanel, body.locked #rt-home, body.locked #rt-3ph, body.locked #rt-part { display: none !important; }
 
 /* a part's label */
 .labelbox { width: 7.2em; font: inherit; font-size: .9rem; color: var(--ink); background: #1f2022; border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
@@ -272,3 +272,7 @@ body.fs .wrap { padding-top: 8px; }
 /* supply boxes */
 .cap.srccap { fill: #e2cc85; font-weight: 700; }
 .cap.jmpcap { fill: #c9d2dd; font-weight: 700; }
+
+/* a phase's colour: its swatches (eight, in two rows of four) and any other colour */
+.rpanel .swatches.phsw { grid-template-columns: repeat(4, 20px); gap: 3px; }
+#ph-custom { width: 30px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }

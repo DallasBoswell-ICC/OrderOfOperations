@@ -17,7 +17,7 @@ const selGroup = () => {
   return ps.every(q => q.t === ps[0].t) ? ps : [];
 };
 const each = f => { const g = selGroup(); if (!g.length) return false; snapshot(); g.forEach(f); normalize(); draw(); return true; };
-const KIND_NAME = { xfm: 'transformers', btn: 'pushbuttons', coil: 'coils', con: 'contacts', lamp: 'pilot lights', sel: 'selector switches', sol: 'solenoids', jmp: 'continuations', l1: 'L1 supplies', l2: 'L2 returns' };
+const KIND_NAME = { xfm: 'transformers', btn: 'pushbuttons', coil: 'coils', con: 'contacts', lamp: 'pilot lights', sel: 'selector switches', sol: 'solenoids', jmp: 'continuations', l1: 'L1 supplies', l2: 'L2 returns', ph: 'phases' };
 const blocksOf = L => parts.filter(p => p.t === 'btn' && p.L === L);
 function renderProps() {
   const G = selGroup(), p = G[0] || null, multi = G.length > 1;
@@ -38,7 +38,7 @@ function renderProps() {
   document.getElementById('redo').disabled = !future.length;
   // the gold tab for one selected part, named after it (a part picked on the panel opens it; one just placed from
   // the ribbon leaves Home open, to place more)
-  if (!p && ribbonTab === 'part') ribbonTab = 'home';
+  if (!p && ribbonTab === 'part') ribbonTab = mainTab;
   document.getElementById('rt-part').textContent = multi ? `${G.length} ${G.every(isTimer) ? 'timers' : KIND_NAME[p.t] || 'parts'}` : p ? captionOf(p) : 'Part';
   showRibbon();
   document.getElementById('props-btn').hidden = !(p && p.t === 'btn');
@@ -62,6 +62,21 @@ function renderProps() {
     ns.innerHTML = '';
     const top = Math.max(10, ...Object.keys(cnt).map(Number)) + 3;
     for (let n = 1; n <= top; n++) { const c = cnt[String(n)] || 0; ns.add(new Option(`${n}` + (c ? ` (joins ${c} other${c > 1 ? 's' : ''})` : ''), String(n), false, String(n) === p.L)); }
+  }
+  document.getElementById('props-box').hidden = !(p && (isSrc(p) || isPh(p)));
+  document.getElementById('props-ph').hidden = !(p && isPh(p));
+  if (p && isPh(p)) {
+    // which phase it is, and that phase's colour (the colour of every box and wire of that phase)
+    document.getElementById('ph-num').value = p.L;
+    const box = document.getElementById('ph-colour'), cur = phCol(p);
+    box.innerHTML = '';
+    for (const [name, hex] of PH_PAL) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'sw'; b.style.background = hex; b.title = name;
+      b.setAttribute('role', 'radio'); b.setAttribute('aria-label', name); b.setAttribute('aria-checked', String(hex === cur));
+      b.addEventListener('click', () => setPhaseCol(p.L, hex)); box.append(b);
+    }
+    document.getElementById('ph-custom').value = cur.toLowerCase();
+    document.getElementById('ph-colour-label').textContent = `L${p.L} colour`;
   }
   document.getElementById('props-xfm').hidden = !(p && p.t === 'xfm');
   if (p && p.t === 'xfm') {
@@ -244,3 +259,8 @@ document.getElementById('j-num').addEventListener('change', e => { if (selGroup(
 function rotateJmp(p) { snapshot(); p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; normalize(); draw(); }
 document.getElementById('j-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(isJmp)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
 document.getElementById('x-num').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'xfm') return; snapshot(); p.L = e.target.value; draw(); });
+// a phase box: which phase, and each phase's colour (shared by all of that phase's boxes and wires)
+function setPhaseCol(L, hex) { hex = hex.toUpperCase(); if (PH_COL[L - 1] === hex) return; snapshot(); PH_COL = PH_COL.map((c, i) => i === L - 1 ? hex : c); say(`L${L} colour changed.`); draw(); }
+document.getElementById('ph-num').addEventListener('change', e => { if (selGroup().every(isPh)) each(p => p.L = e.target.value); });
+document.getElementById('ph-custom').addEventListener('change', e => { const p = selGroup()[0]; if (p && isPh(p)) setPhaseCol(p.L, e.target.value); });
+document.getElementById('box-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(isBox)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });

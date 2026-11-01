@@ -43,7 +43,7 @@ function screw(x, y, g, bare) {
 }
 const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
-const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -179,12 +179,15 @@ function drawPart(p, g, x, y, chan, onStation) {
     framed('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: JMP_EDGE, 'stroke-width': 2.2 }, g);
     const cg = el('g', p.rot ? { transform: `rotate(${p.rot * 90} ${x} ${y})` } : {}, g);
     v.chev = [-7, 7].map(oy => el('path', { d: `M ${x - 13} ${y + oy - 6.5} L ${x} ${y + oy + 6.5} L ${x + 13} ${y + oy - 6.5}`, fill: 'none', stroke: '#8a8a8a', 'stroke-width': 3.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, cg));
-  } else if (isSrc(p)) {
-    // a supply box: L1 or L2, wired from its left, its right or its bottom (a double chevron, as on a print)
-    // (its leads: while building, all three; while running, only those wired, with L1 live in them)
+  } else if (isSrc(p) || isPh(p)) {
+    // a supply box: L1 or L2, wired from its left, its right or its bottom (a double chevron, as on a print), turned
+    // with its chevrons; or a phase box, the same in its phase's colour, with the phase on a badge on its top left
+    // (its leads: while building, all three; while running, only those wired, with L1 live in them, and a phase's
+    // lit in its colour)
     v.lead = null;
     const used = ([tx, ty]) => editing || !parts.includes(p) || connects(pointInfo(tx, ty, new Set(), p));
-    const [l, r, b] = terms(p), leads = [[l, x - half, y, 0], [r, x + half, y, 1], [b, x, y + half, 2]].filter(([t]) => used(t));
+    const ph = isPh(p), edge = ph ? phCol(p) : '#e2cc85', chev = ph ? lighten(phCol(p), .45) : '#f2e6b8';
+    const leads = terms(p).map((t, i) => [t, x + (t[0] - x) / TERM(p) * half, y + (t[1] - y) / TERM(p) * half, i]).filter(([t]) => used(t));
     // (L2's leads light up with the return current as it arrives at them, so it runs right into the box)
     v.src = [];
     for (const [[tx, ty], bx, by, i] of leads) {
@@ -193,8 +196,14 @@ function drawPart(p, g, x, y, chan, onStation) {
       if (p.t === 'l1') el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: SRC_COL, 'stroke-width': 8.9 }, g);
       else if (p._t) v.src.push({ n: p._t[i], ln: el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g) });
     }
-    framed('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: '#e2cc85', 'stroke-width': 2.2 }, g);
-    for (const oy of [-7, 7]) el('path', { d: `M ${x - 13} ${y + oy - 6.5} L ${x} ${y + oy + 6.5} L ${x + 13} ${y + oy - 6.5}`, fill: 'none', stroke: '#f2e6b8', 'stroke-width': 3.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+    framed('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: edge, 'stroke-width': 2.2 }, g);
+    const cg = el('g', p.rot ? { transform: `rotate(${p.rot * 90} ${x} ${y})` } : {}, g);
+    for (const oy of [-7, 7]) el('path', { d: `M ${x - 13} ${y + oy - 6.5} L ${x} ${y + oy + 6.5} L ${x + 13} ${y + oy - 6.5}`, fill: 'none', stroke: chev, 'stroke-width': 3.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, cg);
+    if (ph) {
+      const bx = x - BOX / 2 + 2, by = y - BOX / 2 + 2;
+      el('rect', { x: bx - 15, y: by - 11, width: 30, height: 22, rx: 6, fill: '#1f1f1f', stroke: edge, 'stroke-width': 1.6 }, g);
+      el('text', { x: bx, y: by + 4.4, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 800, fill: chev }, g).textContent = 'L' + p.L;
+    }
   } else if (p.t === 'sol') {
     // a solenoid: see SOL_S. The bolt and its dots are the grey of a coil's middle; once it pulls in, the solenoid's
     // colour fills them from the end the current comes in at, as along a wire: one dot, the bolt, then the other (see paintSol)
@@ -235,7 +244,12 @@ function drawPart(p, g, x, y, chan, onStation) {
     else drawTimer(p, g, x, y, v);
   }
   // its name, above it (the other contact blocks of a pushbutton or selector switch go without: the dashed line joins them to it)
-  if (!v.sec && !onStation && !isJmp(p) && p.t !== 'xfm') (v.cap = el('text', { x, y: y - capTop(p), 'text-anchor': 'middle', class: isSrc(p) ? 'cap srccap' : isJmp(p) ? 'cap jmpcap' : 'cap' }, g)).textContent = captionOf(p);
+  if (!v.sec && !onStation && !isJmp(p) && !isPh(p) && p.t !== 'xfm') {
+    // (a supply box turned: its caption goes to the side that has no lead, beside or below it)
+    const [fx, fy] = isSrc(p) && p.rot ? rotQ(p, 0, -1).map((c, i) => Math.sign(c - [x, y][i])) : [0, -1];
+    const at = fy < 0 ? { x, y: y - capTop(p), 'text-anchor': 'middle' } : fy > 0 ? { x, y: y + BOX / 2 + 21, 'text-anchor': 'middle' } : { x: x + fx * (BOX / 2 + 12), y: y + 4.5, 'text-anchor': fx > 0 ? 'start' : 'end' };
+    (v.cap = el('text', { ...at, class: isSrc(p) ? 'cap srccap' : 'cap' }, g)).textContent = captionOf(p);
+  }
   // (a continuation has no caption: it is wired on all four sides. Its number is on a round silver badge on its top
   // right corner; with the rung numbers shown, the rungs of the others with that number are on a tag on its top left: see refs.js)
   if (isJmp(p)) {

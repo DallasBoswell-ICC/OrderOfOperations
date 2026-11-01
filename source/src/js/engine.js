@@ -44,10 +44,10 @@ function addLane(e, from) {
 function startRun() {
   NET = network();
   simT = 0; queue = []; seq = 0; busyUntil = 0; autoRel = {}; down = {}; coilOn = {}; TIMER = {}; SELPOS = {}; SELTURN = {};
-  FED_AT = {}; COMP = null; LV = null; COND = {}; needPaint = true;
+  FED_AT = {}; COMP = null; LV = null; COND = {}; needPaint = true; PTL = new Map(); PARR = new Map(); phFault = '';
   CON = {}; for (const p of parts) if (p.t === 'con') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };   // every coil starts off
   tl = NET.nodes.map(() => [[-1e9, null]]);
-  for (const p of parts) { delete p._chg; delete p._lead; delete p._sh; delete p._lv; }
+  for (const p of parts) { delete p._chg; delete p._lead; delete p._sh; delete p._lv; delete p._ph; }
   // which way each button and coil is passed through (as if every button were passing current)
   findButtonDirections();
   const h = solveV(true).V, dist = new Map(), q = []; VOLT = h;
@@ -73,6 +73,7 @@ function startRun() {
   checkShort();
   ALLOW = allowNow();
   for (const [id, v] of NET.feedV) if (v === 1) setRec(id, shortNow ? null : EGG(), 0);
+  phasesNow(0);
   updateCoils(0);
 }
 /* Long plain stretches of wire (no junctions or parts along them, only corners) carry the current faster in the
@@ -383,12 +384,15 @@ function updateCoils(t) {
     let sh = shareOf(p), cond = !shortNow && !!r && sh > 1e-9;
     if (!cond && !shortNow && !!r && COND[p.id] && onToL2(p, d.to)) { cond = true; sh = p._sh ?? 1; }
     else if (cond) { p._sh = sh; p._lv = [levelAt(d.from), levelAt(d.to)]; }
+    const pf = p.t === 'xfm' && phFedAt(p, t);
+    if (pf) { cond = true; sh = 1; }
     const pull = p.t === 'lamp' || p.t === 'xfm' || sh >= PULL_IN * ratedShare(p) - 1e-9;   // (a light lights, and a transformer works, on whatever it gets)
     if (cond && !COND[p.id] && pull && p.t === 'coil' && wouldCutOff(p, f)) cond = false;
     const want = cond && pull, wasC = !!COND[p.id];
     let atOnce = false; const wasOn = !!coilOn[p.id];
     if (want !== wasOn) {
       coilOn[p.id] = want; p._chg = t;
+      if (p.t === 'xfm') { if (want && pf) p._ph = { a: PH_COL[PARR.get(p._a).k - 1], b: PH_COL[PARR.get(p._b).k - 1], t0: t }; else if (want) delete p._ph; else if (p._ph) p._ph.off = t; }
       const moveAll = at => { for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(at + CT, () => moveContact(c, evT)); };
       if (isTimer(p)) {
         // its instantaneous contacts follow it at once; its timed ones as its type says (see sim-core). Every contact of
@@ -456,6 +460,7 @@ function switched(sw, t) {
   }
   // coils first: a contact closing behind a coil lets the coil pick up, and then only its return current (not the
   // colour that was waiting in front of the contact) goes on past the contact
+  phasesNow(t);
   updateCoils(t);
   refreshAllow(t);
 }
@@ -469,4 +474,61 @@ function refreshAllow(t) {
     if (a) for (const x of a) if (!b || !b.has(x)) (d.drain || (d.drain = {}))[x] = t + ((REACH.get(d) || {})[x] || 0) + 0.3;
     if (b && [...b].some(x => !a || !a.has(x))) send(d, REC.get(d.from) || null, t);
   }
+}
+
+/* ---------------- three-phase power ----------------
+   Kept apart from the current between L1 and L2: each phase box's phase spreads out from it along the wires and
+   through closed switches (not through loads), at the current's speed (and speeding up along long stretches in the
+   same way), lighting them in the phase's colour. Where a switch closes it carries on from there; where one opens,
+   what is cut off goes dark from the break outwards. Two phases joined together, or a phase joined to the control
+   circuit, is a short: what they reach stays dark. A transformer whose primary is across two phases works. */
+let PARR = new Map(), phFault = '';   // (PARR: each junction a phase has reached: { k: the phase, t: when })
+function phasesNow(t) {
+  const PH = NET.PH; if (!PH || !Object.keys(PH).length) return;
+  const f = compNow(), cph = new Map(), l1 = f(NET.L1), l2 = f(NET.L2);
+  // which phase each joined-up piece carries (-1: two phases, or a phase and L1 or L2)
+  for (const L in PH) { const c = f(PH[L]); cph.set(c, cph.has(c) || c === l1 || c === l2 ? -1 : +L); }
+  phFault = '';
+  for (const L in PH) { const c = f(PH[L]); if (cph.get(c) === -1) { const o = Object.keys(PH).find(k => k !== L && f(PH[k]) === c); phFault = o ? `Short circuit! L${L} is connected straight to L${o}.` : `Short circuit! L${L} is connected straight to the control circuit.`; break; } }
+  const want = n => { const k = cph.get(f(n)); return k > 0 ? k : 0; };
+  const N = NET.nodes.length, lost = [], gain = new Set();
+  for (let n = 0; n < N; n++) { const o = PARR.get(n), k = want(n); if (o && o.k !== k) lost.push(n); if (k && (!o || o.k !== k)) gain.add(n); }
+  const put = (n, at, c) => { let a = PTL.get(n); if (!a) PTL.set(n, a = [[-1e9, null]]); while (a.length > 1 && a[a.length - 1][0] >= at - 1e-9) a.pop(); a.push([at, c]); if (at > busyUntil) busyUntil = at; };
+  // what has been cut off goes dark from where it was cut, outwards
+  if (lost.length) {
+    const L = new Set(lost), d = new Map(), h = heap();
+    for (const n of lost) for (const i of NET.adj[n]) { const e = NET.edges[i], w = e.a === n ? e.b : e.a; if (!L.has(w)) { d.set(n, t); h.push(t, n); break; } }
+    walk(h, d, n => L.has(n));
+    for (const n of lost) { put(n, Math.max(t, d.get(n) ?? t), null); PARR.delete(n); }
+  }
+  // what a phase can now reach lights up, spreading out from where it already is (or from its box)
+  if (gain.size) {
+    const d = new Map(), h = heap();
+    for (const L in PH) if (cph.get(f(PH[L])) === +L) { const s = PARR.get(PH[L]); if (s) { d.set(PH[L], Math.max(s.t, t)); h.push(Math.max(s.t, t), PH[L]); } }
+    for (const [n, s] of PARR) if (!d.has(n)) { d.set(n, Math.max(s.t, t)); h.push(Math.max(s.t, t), n); }
+    for (const n of gain) if (n === PH[(NET.nodes[n].k || '').slice(2)]) { d.set(n, t); h.push(t, n); }
+    walk(h, d, n => gain.has(n));
+    for (const n of gain) if (d.has(n)) { const k = want(n), at = d.get(n); PARR.set(n, { k, t: at }); put(n, at, PH_COL[k - 1]); }
+  }
+  // a transformer fed from the phases: look at it again as each phase reaches its primary
+  for (const p of parts) if (p.t === 'xfm') for (const n of [p._a, p._b]) { const s = PARR.get(n); if (s && s.t > t) schedule(s.t, () => updateCoils(evT)); }
+  needPaint = true;
+}
+// spread out from what is in h (times in d), through wires and closed switches, into the junctions ok allows
+function walk(h, d, ok) {
+  while (h.size()) {
+    const [tu, u] = h.pop(); if (tu > d.get(u) + 1e-12) continue;
+    for (const i of NET.adj[u]) { const e = NET.edges[i]; if (!conducts(e)) continue;
+      const w = e.a === u ? e.b : e.a; if (!ok(w)) continue;
+      const tw = tu + stepTime(e); if (!d.has(w) || tw < d.get(w) - 1e-12) { d.set(w, tw); h.push(tw, w); } }
+  }
+}
+// a transformer's primary fed across two phases at time t (each phase there by then)
+function phFedAt(p, t) { const a = PARR.get(p._a), b = PARR.get(p._b); return !!a && !!b && a.k !== b.k && a.t <= t + 1e-9 && b.t <= t + 1e-9; }
+// a small binary heap of [time, junction]
+function heap() {
+  const a = [];
+  const up = i => { while (i) { const j = (i - 1) >> 1; if (a[j][0] <= a[i][0]) break; [a[i], a[j]] = [a[j], a[i]]; i = j; } };
+  const down = i => { for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < a.length && a[l][0] < a[m][0]) m = l; if (r < a.length && a[r][0] < a[m][0]) m = r; if (m === i) return; [a[i], a[m]] = [a[m], a[i]]; i = m; } };
+  return { size: () => a.length, push: (t, n) => { a.push([t, n]); up(a.length - 1); }, pop: () => { const top = a[0], last = a.pop(); if (a.length) { a[0] = last; down(0); } return top; } };
 }

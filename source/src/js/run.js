@@ -21,10 +21,9 @@ function paint() {
   for (const V of VIEWS) paintView(V);
   paintStation(); overviewTick();
   const fl = document.getElementById('fault');
-  if (fl.hidden !== !shortNow) {
-    fl.hidden = !shortNow;
-    fl.textContent = 'Short circuit! L1 is connected straight to L2 with no coil in between. In a real panel the fuse or breaker would open. Release the button or change the wiring to clear it.';
-  }
+  const msg = shortNow ? 'Short circuit! L1 is connected straight to L2 with no coil in between. In a real panel the fuse or breaker would open. Release the button or change the wiring to clear it.'
+    : phFault ? phFault + ' In a real panel the fuses or breaker would open. Change the wiring to clear it.' : '';
+  if (fl.hidden !== !msg || fl.textContent !== msg) { fl.hidden = !msg; fl.textContent = msg; }
 }
 // one drawing of the circuit (the main view, or the second pane in split view): the wires and the parts
 function paintView(V) {
@@ -53,7 +52,7 @@ function paintView(V) {
       const c = (p._c !== undefined && colAt(p._c, simT)) || '#8a8a8a'; if (c !== v.cc) { v.cc = c; for (const ch of v.chev) ch.setAttribute('stroke', c); }
       continue;
     }
-    if (isSrc(p)) { if (v.src) for (const q of v.src) { const c = colAt(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } continue; }
+    if (isSrc(p) || isPh(p)) { if (v.src) for (const q of v.src) { const c = colAt(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } continue; }
     for (const S of ['A', 'B']) paintLead(v.lead[S], p._lead && p._lead[S]);
     let k;
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
@@ -142,7 +141,8 @@ function paintXfm(p, v) {
   let i = -1; if (evs) for (let k = 0; k < evs.length; k++) if (evs[k].t0 <= simT + 1e-9) i = k;
   const cur = i >= 0 ? evs[i] : null, f = cur ? clamp01((simT - cur.t0) * V / body) : 0;
   const on = !!coilOn[p.id], g = p._chg == null ? 1 : clamp01((simT - p._chg) * V / body);
-  const pri = [S === 'A' ? 0 : 1, f, cur && cur.col, i > 0 ? evs[i - 1].col : null], sec = [0, g, on ? SRC_COL : null, on || p._chg == null ? null : SRC_COL];
+  const P = p._ph, h = P ? (P.off == null ? clamp01((simT - P.t0) * V / (body / 2)) : 1 - clamp01((simT - P.off) * V / (body / 2))) : 0;
+  const pri = P ? ['ph', h.toFixed(3), P.a, P.b] : [S === 'A' ? 0 : 1, f, cur && cur.col, i > 0 ? evs[i - 1].col : null], sec = [0, g, on ? SRC_COL : null, on || p._chg == null ? null : SRC_COL];
   const k = pri.join('|') + '/' + sec.join('|');
   if (k === v.k) return; v.k = k;
   const fillW = (W, dir, f, now, before) => {
@@ -152,7 +152,13 @@ function paintXfm(p, v) {
     W.old.setAttribute('stroke', f >= 1 ? 'transparent' : before || 'transparent'); W.old.setAttribute('stroke-dasharray', `0 ${n} ${XFM_LEN + 2}`);
     W.dots[dir].setAttribute('fill', (f > 0 ? now : before) || 'transparent'); W.dots[1 - dir].setAttribute('fill', (f >= 1 ? now : before) || 'transparent');
   };
-  fillW(v.pri, ...pri); fillW(v.sec, ...sec);
+  if (P) {   // (old: the far half, from H2, in H2's phase)
+    const W = v.pri, n = h * XFM_LEN / 2 + (h >= 1 ? 1 : 0);
+    W.cur.setAttribute('d', W.d[0]); W.old.setAttribute('d', W.d[1]);
+    for (const [ln, c] of [[W.cur, P.a], [W.old, P.b]]) { ln.setAttribute('stroke', h > 0 ? c : 'transparent'); ln.setAttribute('stroke-dasharray', `${n} ${XFM_LEN + 2}`); }
+    W.dots[0].setAttribute('fill', h > 0 ? P.a : 'transparent'); W.dots[1].setAttribute('fill', h > 0 ? P.b : 'transparent');
+  } else fillW(v.pri, ...pri);
+  fillW(v.sec, ...sec);
 }
 function paintLead(L, evs) {
   let i = -1; if (evs) for (let k = 0; k < evs.length; k++) if (evs[k].t0 <= simT + 1e-9) i = k;

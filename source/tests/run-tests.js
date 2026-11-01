@@ -1731,6 +1731,53 @@ const DEF_CIRCUIT = `
     if (pasted !== '1,2') out.push('after pasting: ' + pasted);
     return out;
   });
+  await check('Three-phase: phases feed a transformer across two of them, shorts warn, turned boxes and phase colours saved', async page => {
+    const out = [];
+    const setup = sh => page.evaluate(s => {
+      loadPreset('blank'); W = 900; W_USER = 900;
+      for (const [k, y] of [['1', 80], ['2', 200], ['3', 320]]) { const p = newPart('ph-' + k, 120, y); p.rot = 3; parts.push(p); wires.push(Wr(160, y, 700, y)); }
+      parts.push(newPart('xfm', 400, 500), P('btn', 420, 700, { L: 'A', maint: true, color: '#FF0032' }), P('coil', 600, 700, { L: 'X', color: '#FFDC00' }));
+      wires.push(Wr(340, 80, 340, 420), Wr(460, 200, 460, 420));
+      wires.push(Wr(340, 580, 340, 700), Wr(340, 700, 380, 700), Wr(460, 700, 540, 700), Wr(660, 700, 760, 700), Wr(760, 700, 760, 600), Wr(760, 600, 460, 600), Wr(460, 600, 460, 580));
+      if (s) wires.push(Wr(640, 80, 640, 200));
+      normalize(); draw();
+      return [...wiringIssues(network())].map(([k, v]) => ((parts.find(p => p.id === k) || {}).t || k) + ':' + (typeof v === 'string' ? v : '')).sort().join();
+    }, sh);
+    const state = () => page.evaluate(() => [!!coilOn[parts.find(p => p.t === 'xfm').id], !!coilOn[parts.find(p => p.L === 'X').id]].join());
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    const iss = await setup(false);
+    if (iss) out.push('fed: issues ' + iss);
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    // each phase lights its own line in its colour
+    const lines = await page.evaluate(() => [80, 200, 320].map(y => { const n = NET.nodes.findIndex(q => q.x === 600 && q.y === y); return colAt(n, simT); }).join());
+    if (lines !== await page.evaluate(() => PH_DEFAULT.join())) out.push('line colours: ' + lines);
+    await page.evaluate(() => press('A', true)); await page.waitForTimeout(1200);
+    let st = await state();
+    if (st !== 'true,true') out.push('fed: transformer, X = ' + st);
+    await page.evaluate(() => press('A', false)); await page.click('#tab-edit'); await page.evaluate(() => setSpeed(1));
+    const iss2 = await setup(true);
+    if (!/phshort/.test(iss2) || !/ph:Shorted to L2/.test(iss2)) out.push('shorted: issues ' + iss2);
+    await page.click('#tab-run'); await page.evaluate(() => { setSpeed(300); press('A', true); }); await page.waitForTimeout(1200);
+    st = await state();
+    const fault = await page.evaluate(() => !document.getElementById('fault').hidden && /L1 is connected straight to L2/.test(document.getElementById('fault').textContent));
+    if (st !== 'false,false' || !fault) out.push('shorted: transformer, X = ' + st + ', fault shown ' + fault);
+    await page.evaluate(() => press('A', false)); await page.click('#tab-edit'); await page.evaluate(() => setSpeed(1));
+    const back = await page.evaluate(() => {
+      PH_COL = ['#E8413C', '#FF8A1F', '#3F7FFF']; const s = parts.find(p => p.t === 'ph' && p.L === '2'); s.rot = 1;
+      const l1 = newPart('src-l1', 600, 900); l1.rot = 2; parts.push(l1);
+      const c = readCircuit(JSON.parse(JSON.stringify(circuitData())));
+      return JSON.stringify([c.ph, c.parts.filter(p => isBox(p)).map(p => p.t + p.L + ':' + (p.rot || 0))]);
+    });
+    if (back !== '[["#E8413C","#FF8A1F","#3F7FFF"],["ph1:3","ph2:1","ph3:3","l1:2"]]') out.push('read back: ' + back);
+    // the R key turns a selected phase box; the Three-phase tab places phases and stays open
+    const turned = await page.evaluate(() => { const p = parts.find(q => q.t === 'ph' && q.L === '3'); sel = selOne('p', p.id); draw(); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' })); return p.rot || 0; });
+    if (turned !== 0) out.push('R turned L3 to ' + turned);
+    await page.evaluate(() => { sel = null; draw(); });
+    await page.click('#rt-3ph');
+    if (await page.evaluate(() => document.getElementById('toolbar3').hidden)) out.push('Three-phase tab did not open');
+    await page.evaluate(() => { mainTab = 'home'; ribbonTab = 'home'; showRibbon(); });
+    return out;
+  });
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');
