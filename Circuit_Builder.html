@@ -353,7 +353,7 @@ body.fs .wrap { padding-top: 8px; }
         <svg viewBox="0 0 30 26"><path d="M9 3l13 10-6 1 3 7-3 1-3-7-4 4z" fill="#cfcfcf"/></svg><span>Select</span></button>
         <button type="button" class="tool big" data-tool="wire" aria-pressed="false" data-tip="Wire: press anywhere and drag. The wire bends once, at a right angle.">
         <svg viewBox="0 0 30 26"><path d="M3 20h12V6h12" stroke="#cfcfcf" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Wire</span></button>
-        <button type="button" class="tool big" data-part="jmp" data-tip="Continuation: carries the current on to every other continuation with the same number, as if a wire ran between them. Place two with the same number (the second one placed takes the first one's number), and wire to their left, right or bottom."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#b8c2cf" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="#c9d2dd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Contin-<br>uation</span></button>
+        <button type="button" class="tool big" data-part="jmp" data-tip="Continuation: carries the current on to every other continuation with the same number, as if a wire ran between them. Place two with the same number (the second one placed takes the first one's number), and wire to any side."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#b8c2cf" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="#c9d2dd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Contin-<br>uation</span></button>
       </div><div class="gname">Tools</div></div>
       <!-- parts, by kind: drag one onto the panel (or onto a wire to put it in that wire), or click it and then the panel.
            A new kind of component is one more button here. -->
@@ -731,7 +731,8 @@ const snap = v => Math.round(v / G) * G;
 const key = (x, y) => x + ',' + y;
 // (a continuation can be turned, p.rot quarter turns clockwise: its connection points turn with it)
 const rotQ = (p, dx, dy) => { for (let k = 0; k < (p.rot || 0); k++) [dx, dy] = [-dy, dx]; return [p.x + dx, p.y + dy]; };
-const terms = p => isBox(p) ? [[-TERM(p), 0], [TERM(p), 0], [0, TERM(p)]].map(([dx, dy]) => rotQ(p, dx, dy)) : [[p.x - TERM(p), p.y], [p.x + TERM(p), p.y]];   // (a supply box: left, right and bottom)
+// (a supply box: left, right and bottom; a continuation its top too)
+const terms = p => isBox(p) ? [[-TERM(p), 0], [TERM(p), 0], [0, TERM(p)], ...(isJmp(p) ? [[0, -TERM(p)]] : [])].map(([dx, dy]) => rotQ(p, dx, dy)) : [[p.x - TERM(p), p.y], [p.x + TERM(p), p.y]];   // (a supply box: left, right and bottom)
 /* The sheet is as wide as it needs to be to fill the panel with the whole circuit in view: on a wide screen, or for a
    tall circuit, the L2 bar moves out to the right edge and the wires fastened to it stretch to meet it. (It is never
    narrower than W_MIN, nor so narrow that a part would end up past L2.) Once the L1 or L2 bar has been moved by hand,
@@ -1873,8 +1874,8 @@ function drawPart(p, g, x, y, chan, onStation) {
   }
   // its name, above it (the other contact blocks of a pushbutton or selector switch go without: the dashed line joins them to it)
   if (!v.sec && !onStation) (v.cap = el('text', { x, y: y - capTop(p), 'text-anchor': 'middle', class: isSrc(p) ? 'cap srccap' : isJmp(p) ? 'cap jmpcap' : 'cap' }, g)).textContent = captionOf(p);
-  // (a turned continuation: its caption on the side with no connection point)
-  if (v.cap && isJmp(p) && p.rot) { const h = BOX / 2, [cx, cy, a] = [null, [x + h + 12, y + 5, 'start'], [x, y + h + 22, 'middle'], [x - h - 12, y + 5, 'end']][p.rot]; v.cap.setAttribute('x', cx); v.cap.setAttribute('y', cy); v.cap.setAttribute('text-anchor', a); }
+  // (a continuation is wired on all four sides: its caption sits above it, beside a wire leaving its top)
+  if (v.cap && isJmp(p)) { v.cap.setAttribute('x', x + 17); v.cap.setAttribute('y', y - BOX / 2 - 9); v.cap.setAttribute('text-anchor', 'start'); }
   return v;
 }
 // a horizontal run from lo to hi at height y, hopping over every crossing in hops

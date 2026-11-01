@@ -234,8 +234,8 @@ function drawPart(p, g, x, y, chan, onStation) {
   }
   // its name, above it (the other contact blocks of a pushbutton or selector switch go without: the dashed line joins them to it)
   if (!v.sec && !onStation) (v.cap = el('text', { x, y: y - capTop(p), 'text-anchor': 'middle', class: isSrc(p) ? 'cap srccap' : isJmp(p) ? 'cap jmpcap' : 'cap' }, g)).textContent = captionOf(p);
-  // (a turned continuation: its caption on the side with no connection point)
-  if (v.cap && isJmp(p) && p.rot) { const h = BOX / 2, [cx, cy, a] = [null, [x + h + 12, y + 5, 'start'], [x, y + h + 22, 'middle'], [x - h - 12, y + 5, 'end']][p.rot]; v.cap.setAttribute('x', cx); v.cap.setAttribute('y', cy); v.cap.setAttribute('text-anchor', a); }
+  // (a continuation is wired on all four sides: its caption sits above it, beside a wire leaving its top)
+  if (v.cap && isJmp(p)) { v.cap.setAttribute('x', x + 17); v.cap.setAttribute('y', y - BOX / 2 - 9); v.cap.setAttribute('text-anchor', 'start'); }
   return v;
 }
 // a horizontal run from lo to hi at height y, hopping over every crossing in hops

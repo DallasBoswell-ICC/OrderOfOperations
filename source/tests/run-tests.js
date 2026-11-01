@@ -1631,7 +1631,7 @@ const DEF_CIRCUIT = `
     const rot = await page.evaluate(() => { const p = parts.find(q => isJmp(q) && q.L === '2'); sel = { parts: new Set([p.id]), wires: new Set() }; draw();
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' })); const t1 = terms(p).map(t => t.join(',')).join(' ');
       return [p.rot, t1, readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.find(q => q.t === 'jmp' && q.L === '2').rot]; });
-    if (JSON.stringify(rot) !== '[1,"800,460 800,540 760,500",1]') out.push('turned with R (rot, connection points, read back): ' + JSON.stringify(rot));
+    if (JSON.stringify(rot) !== '[1,"800,460 800,540 760,500 840,500",1]') out.push('turned with R (rot, connection points, read back): ' + JSON.stringify(rot));
     return out;
   });
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
