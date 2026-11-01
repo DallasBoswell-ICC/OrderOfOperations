@@ -233,9 +233,15 @@ function drawPart(p, g, x, y, chan, onStation) {
     else drawTimer(p, g, x, y, v);
   }
   // its name, above it (the other contact blocks of a pushbutton or selector switch go without: the dashed line joins them to it)
-  if (!v.sec && !onStation) (v.cap = el('text', { x, y: y - capTop(p), 'text-anchor': 'middle', class: isSrc(p) ? 'cap srccap' : isJmp(p) ? 'cap jmpcap' : 'cap' }, g)).textContent = captionOf(p);
-  // (a continuation is wired on all four sides: its caption sits above it, beside a wire leaving its top)
-  if (v.cap && isJmp(p)) { v.cap.setAttribute('x', x + 17); v.cap.setAttribute('y', y - BOX / 2 - 9); v.cap.setAttribute('text-anchor', 'start'); }
+  if (!v.sec && !onStation && !isJmp(p)) (v.cap = el('text', { x, y: y - capTop(p), 'text-anchor': 'middle', class: isSrc(p) ? 'cap srccap' : isJmp(p) ? 'cap jmpcap' : 'cap' }, g)).textContent = captionOf(p);
+  // (a continuation has no caption: it is wired on all four sides. Its number is on a round silver badge on its top
+  // right corner; with the rung numbers shown, the rungs of the others with that number are on a tag on its top left: see refs.js)
+  if (isJmp(p)) {
+    const t = String(p.L), w = t.length > 1 ? 8 + 6.5 * t.length : 19, bx = x + BOX / 2 - 3, by = y - BOX / 2 + 3, b = el('g', { class: 'jmpno' }, g);
+    el('rect', { x: bx - w / 2, y: by - 9.5, width: w, height: 19, rx: 9.5, fill: '#c9d2dd', stroke: '#1f1f1f', 'stroke-width': 1.6 }, b);
+    el('text', { x: bx, y: by + 4.2, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 800, fill: '#1f2630' }, b).textContent = t;
+    v.jmpTag = g;
+  }
   return v;
 }
 // a horizontal run from lo to hi at height y, hopping over every crossing in hops

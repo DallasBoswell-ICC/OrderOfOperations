@@ -25,7 +25,18 @@ function drawRefs(V, B, net) {
   });
   const go = (t, y) => { t.setAttribute('class', 'xref'); t.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); jumpToRung(y); }); };
   for (const p of parts) {
-    const v = V.parts.get(p.id); if (!v || !v.cap) continue;
+    const v = V.parts.get(p.id); if (!v) continue;
+    if (isJmp(p)) {
+      // a continuation: the rungs of the others with its number, on a tag on its top left corner (press it to go to the first)
+      const ns = [...new Set(parts.filter(q => q !== p && isJmp(q) && q.L === p.L).map(q => rungAt(ys, q.y)))].sort((a, b) => a - b);
+      if (!ns.length || !v.jmpTag) continue;
+      const s = ns.join(','), g = el('g', {}, v.jmpTag), w = 10 + 6.5 * s.length, x = p.x - BOX / 2 + 3, y = p.y - BOX / 2 + 3;
+      el('rect', { x: x - w / 2, y: y - 8, width: w, height: 16, rx: 4, fill: '#1f1f1f', stroke: '#e2cc85', 'stroke-width': 1.2 }, g);
+      const t = el('text', { x, y: y + 4, 'text-anchor': 'middle', 'font-size': 11 }, g); t.textContent = s; go(t, ys[ns[0] - 1]); go(g, ys[ns[0] - 1]);
+      g.dataset.tip = `Continuation ${p.L} carries on at rung ${s}: press to go there`;
+      continue;
+    }
+    if (!v.cap) continue;
     if (p.t === 'coil') {
       // the rungs its contacts are in (each rung once for its normally open ones and once for its normally closed)
       const seen = new Set(), refs = [];

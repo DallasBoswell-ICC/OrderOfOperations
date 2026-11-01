@@ -175,7 +175,7 @@ body.ribbon-min .rbody { display: none; }
 body.ribbon-min .rtabs { border-bottom: 0; border-radius: 10px; }
 body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1px; right: -1px; top: 100%; z-index: 30; background: var(--chip); border: 1px solid var(--line); border-radius: 0 0 10px 10px; box-shadow: 0 16px 34px rgba(0,0,0,.55); }
 .rpanel { display: flex; align-items: stretch; flex: 1; min-width: 0; height: 100%; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
-.rgrp, .rpanel .tgroup, .rpanel .row { display: flex; flex-direction: column; flex: none; padding: 0 9px; border-right: 1px solid #3e3f44; height: 100%; }
+.rgrp, .rpanel .tgroup, .rpanel .row { display: flex; flex-direction: column; flex: none; padding: 0 6px; border-right: 1px solid #3e3f44; height: 100%; }
 .rgrp .gbody { display: flex; gap: 2px; align-items: flex-start; flex: 1; }
 .gname, .rpanel .label { font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--faint); text-align: center; padding: 2px 0 6px; white-space: nowrap; }
 /* settings and run controls: the controls along the top of each group, its name along the bottom */
@@ -353,7 +353,7 @@ body.fs .wrap { padding-top: 8px; }
         <svg viewBox="0 0 30 26"><path d="M9 3l13 10-6 1 3 7-3 1-3-7-4 4z" fill="#cfcfcf"/></svg><span>Select</span></button>
         <button type="button" class="tool big" data-tool="wire" aria-pressed="false" data-tip="Wire: press anywhere and drag. The wire bends once, at a right angle.">
         <svg viewBox="0 0 30 26"><path d="M3 20h12V6h12" stroke="#cfcfcf" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Wire</span></button>
-        <button type="button" class="tool big" data-part="jmp" data-tip="Continuation: carries the current on to every other continuation with the same number, as if a wire ran between them. Place two with the same number (the second one placed takes the first one's number), and wire to any side."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#b8c2cf" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="#c9d2dd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Contin-<br>uation</span></button>
+        <button type="button" class="tool big" data-part="jmp" data-tip="Continuation: carries the current on to every other continuation with the same number, as if a wire ran between them. Place two with the same number (the second one placed takes the first one's number), and wire to any side."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#b8c2cf" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="#c9d2dd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Continuation</span></button>
       </div><div class="gname">Tools</div></div>
       <!-- parts, by kind: drag one onto the panel (or onto a wire to put it in that wire), or click it and then the panel.
            A new kind of component is one more button here. -->
@@ -1873,9 +1873,15 @@ function drawPart(p, g, x, y, chan, onStation) {
     else drawTimer(p, g, x, y, v);
   }
   // its name, above it (the other contact blocks of a pushbutton or selector switch go without: the dashed line joins them to it)
-  if (!v.sec && !onStation) (v.cap = el('text', { x, y: y - capTop(p), 'text-anchor': 'middle', class: isSrc(p) ? 'cap srccap' : isJmp(p) ? 'cap jmpcap' : 'cap' }, g)).textContent = captionOf(p);
-  // (a continuation is wired on all four sides: its caption sits above it, beside a wire leaving its top)
-  if (v.cap && isJmp(p)) { v.cap.setAttribute('x', x + 17); v.cap.setAttribute('y', y - BOX / 2 - 9); v.cap.setAttribute('text-anchor', 'start'); }
+  if (!v.sec && !onStation && !isJmp(p)) (v.cap = el('text', { x, y: y - capTop(p), 'text-anchor': 'middle', class: isSrc(p) ? 'cap srccap' : isJmp(p) ? 'cap jmpcap' : 'cap' }, g)).textContent = captionOf(p);
+  // (a continuation has no caption: it is wired on all four sides. Its number is on a round silver badge on its top
+  // right corner; with the rung numbers shown, the rungs of the others with that number are on a tag on its top left: see refs.js)
+  if (isJmp(p)) {
+    const t = String(p.L), w = t.length > 1 ? 8 + 6.5 * t.length : 19, bx = x + BOX / 2 - 3, by = y - BOX / 2 + 3, b = el('g', { class: 'jmpno' }, g);
+    el('rect', { x: bx - w / 2, y: by - 9.5, width: w, height: 19, rx: 9.5, fill: '#c9d2dd', stroke: '#1f1f1f', 'stroke-width': 1.6 }, b);
+    el('text', { x: bx, y: by + 4.2, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 800, fill: '#1f2630' }, b).textContent = t;
+    v.jmpTag = g;
+  }
   return v;
 }
 // a horizontal run from lo to hi at height y, hopping over every crossing in hops
@@ -3155,7 +3161,18 @@ function drawRefs(V, B, net) {
   });
   const go = (t, y) => { t.setAttribute('class', 'xref'); t.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); jumpToRung(y); }); };
   for (const p of parts) {
-    const v = V.parts.get(p.id); if (!v || !v.cap) continue;
+    const v = V.parts.get(p.id); if (!v) continue;
+    if (isJmp(p)) {
+      // a continuation: the rungs of the others with its number, on a tag on its top left corner (press it to go to the first)
+      const ns = [...new Set(parts.filter(q => q !== p && isJmp(q) && q.L === p.L).map(q => rungAt(ys, q.y)))].sort((a, b) => a - b);
+      if (!ns.length || !v.jmpTag) continue;
+      const s = ns.join(','), g = el('g', {}, v.jmpTag), w = 10 + 6.5 * s.length, x = p.x - BOX / 2 + 3, y = p.y - BOX / 2 + 3;
+      el('rect', { x: x - w / 2, y: y - 8, width: w, height: 16, rx: 4, fill: '#1f1f1f', stroke: '#e2cc85', 'stroke-width': 1.2 }, g);
+      const t = el('text', { x, y: y + 4, 'text-anchor': 'middle', 'font-size': 11 }, g); t.textContent = s; go(t, ys[ns[0] - 1]); go(g, ys[ns[0] - 1]);
+      g.dataset.tip = `Continuation ${p.L} carries on at rung ${s}: press to go there`;
+      continue;
+    }
+    if (!v.cap) continue;
     if (p.t === 'coil') {
       // the rungs its contacts are in (each rung once for its normally open ones and once for its normally closed)
       const seen = new Set(), refs = [];
