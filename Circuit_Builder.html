@@ -2741,14 +2741,20 @@ function hitEnd(p) {
   for (const w of wires) for (const [x, y] of [[w.x1, w.y1], [w.x2, w.y2]]) if (Math.hypot(p.x - x, p.y - y) < 11 && (!best || w.id > best.w.id)) best = { w, x, y };
   return best;
 }
-// a drag that redraws the circuit live: apply(r) changes things from the saved starting state; letting go keeps it
+// a drag that redraws the circuit live: apply(r) changes things from the saved starting state; letting go keeps it.
+// Where it cannot go (apply returns false: a part or a wire in the way), what is being dragged waits at the last place
+// it could go, and carries on from there as soon as the pointer is somewhere it can go again
 let dragNow = false;
+const blocked = msg => { say(msg); return false; };
 const dragging = () => dragNow;
 function liveDrag(e, apply, onClick) {
   e.preventDefault(); dragNow = true;
-  const start = stateOf(), sx = pt(e).x, sy = pt(e).y; let moved = false;
+  const start = stateOf(), sx = pt(e).x, sy = pt(e).y; let moved = false, good = start, goodHits = [];
   const mv = ev => { const r = pt(ev); if (!moved && Math.hypot(r.x - sx, r.y - sy) > 6) moved = true;
-    if (!moved) return; restore(start); preview = { hits: apply(r) || [] }; draw(); };
+    if (!moved) return; restore(start);
+    const hits = apply(r);
+    if (hits === false) { restore(good); preview = { hits: goodHits }; } else { good = stateOf(); goodHits = hits || []; preview = { hits: goodHits }; }
+    draw(); };
   const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
     preview = null; dragNow = false;
     if (!moved) { restore(start); onClick && onClick(); draw(); return; }
@@ -2819,12 +2825,12 @@ function groupDrag(e, p0) {
     for (let pass = 0; pass < 2; pass++) for (const q of P0) { const [cx, cy] = clampPart(q.x + dx, q.y + dy, q.t); dx = cx - q.x; dy = cy - q.y; }
     for (const y of T0) if (y + dy < 40) dy = 40 - y;   // (terminals stay on the panel too)
     const moving = parts.filter(q => pIds.has(q.id));
-    if (P0.some(q => parts.some(o => !pIds.has(o.id) && Math.abs(o.x - (q.x + dx)) < (WIDE(q.t) ? 60 : 40) + TERM(o) && Math.abs(o.y - (q.y + dy)) < 80))) { say('There is already a part there.'); return []; }
+    if (P0.some(q => parts.some(o => !pIds.has(o.id) && Math.abs(o.x - (q.x + dx)) < (WIDE(q.t) ? 60 : 40) + TERM(o) && Math.abs(o.y - (q.y + dy)) < 80))) return blocked('There is already a part there.');
     say('');
     const m = movedGroup(pIds, wIds, dx, dy, tIds); wires = m.wires;
     for (const q of moving) { const o = P0.find(z => z.id === q.id); q.x = o.x + dx; q.y = o.y + dy; }
     normalize();
-    if (parts.some(q => pIds.has(q.id) && wireInTheWay(q))) { restore(st0); say('There is a wire in the way.'); return []; }
+    if (parts.some(q => pIds.has(q.id) && wireInTheWay(q))) return blocked('There is a wire in the way.');
     sel = { parts: pIds, wires: new Set(wires.filter(w => wIds.has(w.id)).map(w => w.id)), terms: new Set([...tIds].map(k => k.split(':')[0] + ':' + (+k.split(':')[1] + dy))) }; return m.hits;
   });
 }
@@ -2897,10 +2903,10 @@ svg.addEventListener('pointerdown', e => {
     return liveDrag(e, r => {
       const qq = parts.find(z => z.id === id);
       const [x, y] = clampPart(ox + r.x - sx, oy + r.y - sy, qq.t);
-      if (overlaps(qq, x, y, qq.t)) { say('There is already a part there.'); return []; }
+      if (overlaps(qq, x, y, qq.t)) return blocked('There is already a part there.');
       say('');
       const m = movedWires(qq, x, y); wires = m.wires; qq.x = x; qq.y = y; normalize();
-      if (wireInTheWay(qq)) { restore(st0); say('There is a wire in the way.'); return []; }
+      if (wireInTheWay(qq)) return blocked('There is a wire in the way.');
       return m.hits;
     });
   }

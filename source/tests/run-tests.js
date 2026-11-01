@@ -1680,6 +1680,26 @@ const DEF_CIRCUIT = `
     if (!prof.every((v, i) => !i || v >= prof[i - 1])) out.push('speed along a 3000-unit stretch: ' + JSON.stringify(prof.map(v => +v.toFixed(2))));
     return out;
   });
+  await check('Dragging a part across another: it waits at the last free spot, carries on past, and is kept where it last could go if let go over the other', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    await page.evaluate(() => { parts.push(P('coil', 200, 300, { L: 'X', color: '#FFDC00' }), P('coil', 440, 300, { L: 'Y', color: '#FFDC00' })); normalize(); fitView(); fit(true); draw(); });
+    const scr = (x, y) => page.evaluate(([x, y]) => { const q = svg.createSVGPoint(); q.x = x; q.y = y; const r = q.matrixTransform(svg.getScreenCTM()); return [r.x, r.y]; }, [x, y]);
+    const X = () => page.evaluate(() => { const p = parts.find(q => q.L === 'X'); return [p.x, p.y]; });
+    // across Y and on to a free spot beyond it
+    await page.mouse.move(...await scr(200, 300)); await page.mouse.down();
+    for (const x of [260, 320, 380, 440, 500, 560, 620, 680]) await page.mouse.move(...await scr(x, 300), { steps: 2 });
+    const mid = await X(); await page.mouse.up();
+    const end = await X();
+    if (end[0] !== 680 || end[1] !== 300) out.push('dragged across Y to x 680, it ended at ' + end);
+    // let go right over Y: it stays at the last free spot (not back where it started)
+    await page.mouse.move(...await scr(680, 300)); await page.mouse.down();
+    for (const x of [640, 600, 560, 500, 440]) await page.mouse.move(...await scr(x, 300), { steps: 2 });
+    await page.mouse.up();
+    const over = await X();
+    if (over[0] === 680 || over[0] < 540) out.push('let go over Y, it went to ' + over + ' (it should wait just clear of Y)');
+    return out;
+  });
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');
