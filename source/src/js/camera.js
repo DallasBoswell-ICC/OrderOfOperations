@@ -17,8 +17,16 @@ function applyCam() {
   const H = sheetH(), SW = sheetW(), vw = viewW(), vh = viewH();
   // (zoomed out past the sheet: centred on it; but building on supply boxes, kept at the left, the room to its right
   // being free to build in: see workW)
-  cam.x = vw >= SW ? (editing && !barsOn() && !LAYOUT ? 0 : (SW - vw) / 2) : Math.min(Math.max(0, cam.x), SW - vw);
-  cam.y = vh >= H ? (editing && !LAYOUT ? 0 : (H - vh) / 2) : Math.min(Math.max(0, cam.y), H - vh);   // (building: from the top, the room below to build in)
+  // Zoomed out past the sheet, the view can still be moved about (the scroll wheel, Shift + wheel, the middle
+  // button): anywhere the whole sheet stays in view; or, building on supply boxes, on out to the right (the room there
+  // is free to build in). Building, the room below is free to build in too, so the view can move on down.
+  const room = editing && !LAYOUT, roomR = room && !barsOn(), clampTo = (v, lo, hi) => Math.min(Math.max(lo, v), hi);
+  if (vw < SW) cam.x = clampTo(cam.x, 0, SW - vw);
+  else if (cam.fit) cam.x = roomR ? 0 : (SW - vw) / 2;
+  else cam.x = roomR ? clampTo(cam.x, 0, 20000) : clampTo(cam.x, SW - vw, 0);
+  if (vh < H) cam.y = clampTo(cam.y, 0, H - vh);
+  else if (cam.fit) cam.y = room ? 0 : (H - vh) / 2;
+  else cam.y = room ? Math.max(0, cam.y) : clampTo(cam.y, H - vh, 0);
   svg.setAttribute('viewBox', `${cam.x} ${cam.y} ${vw} ${vh}`);
   // building, zoomed out past what was drawn: draw again, so the sheet and its grid fill the view (room to build in)
   if (editing && view.drawn && !needRedraw && (canvasH() > view.drawn[1] + 1 || workW() > view.drawn[0] + 1)) { needRedraw = true; requestAnimationFrame(() => { needRedraw = false; draw(); }); }
@@ -35,7 +43,7 @@ const zoomCentre = f => zoomAt(f, cam.x + viewW() / 2, cam.y + viewH() / 2);
 svg.addEventListener('wheel', e => {
   const k = e.deltaMode === 1 ? 30 : e.deltaMode === 2 ? 300 : 1, dy = e.deltaY * k, dx = e.deltaX * k;
   if (e.ctrlKey || e.metaKey) { e.preventDefault(); const p = pt(e); zoomAt(Math.exp(-dy * 0.0015), p.x, p.y); return; }
-  if (viewW() >= sheetW() - 1e-6 && viewH() >= sheetH() - 1e-6) return;   // everything is in view: let the page scroll as normal
+  if (cam.fit && viewW() >= sheetW() - 1e-6 && viewH() >= sheetH() - 1e-6) return;   // fitted, everything in view: let the page scroll as normal
   e.preventDefault(); cam.fit = false;
   const s = viewW() / svg.getBoundingClientRect().width;
   if (e.shiftKey) cam.x += (dy || dx) * s; else { cam.y += dy * s; cam.x += dx * s; }

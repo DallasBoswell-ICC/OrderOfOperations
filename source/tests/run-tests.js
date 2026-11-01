@@ -1640,6 +1640,8 @@ const DEF_CIRCUIT = `
     // zoom right out: well past the old 25%, and the grid grows to fill the view
     const z = await page.evaluate(() => { for (let i = 0; i < 40; i++) zoomCentre(0.8); draw(); const g = svg.querySelector('rect[fill="url(#gridMajor)"]'); return [cam.z, +g.getAttribute('height'), viewH()]; });
     if (!(z[0] <= 0.06) || z[1] < z[2] - 1) out.push('zoomed out (zoom, grid height, view height): ' + JSON.stringify(z));
+    const pan = await page.evaluate(() => { const x0 = cam.x; svg.dispatchEvent(new WheelEvent('wheel', { deltaY: 300, shiftKey: true, bubbles: true, cancelable: true })); const x1 = cam.x; svg.dispatchEvent(new WheelEvent('wheel', { deltaY: -900, shiftKey: true, bubbles: true, cancelable: true })); return [x0, x1, cam.x]; });
+    if (!(pan[1] > pan[0] && pan[2] < pan[1])) out.push('Shift + wheel when zoomed out (x before, after right, after left): ' + JSON.stringify(pan.map(Math.round)));
     // pressing outside the L1 bar, beside the sheet: a selection box, not a wire
     const nw0 = await page.evaluate(() => wires.length);
     const box = await page.evaluate(() => { const m = svg.getScreenCTM(), q = (x, y) => { const p = svg.createSVGPoint(); p.x = x; p.y = y; const r = p.matrixTransform(m); return [r.x, r.y]; }; return [q(-200, 20), q(W + 100, canvasH())]; });
