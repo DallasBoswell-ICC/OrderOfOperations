@@ -174,7 +174,7 @@
         <button type="button" data-speed="0.25" data-tip="Quarter speed: follow the current step by step">¼×</button><button type="button" data-speed="0.5" data-tip="Half speed">½×</button><button type="button" data-speed="1" aria-pressed="true" data-tip="Normal speed">1×</button><button type="button" data-speed="2" data-tip="Double speed">2×</button>
       </div>
       <input type="range" id="speed-slider" min="0" max="100" step="1" value="29" aria-label="Speed, from a tenth of normal to three hundred times normal" data-tip="Any speed from 0.1× up to 300×. Turned all the way up, the circuit acts almost at once, as a real one does.">
-      <output id="speed-out" for="speed-slider">1×</output>
+      <input type="text" id="speed-out" value="1×" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Speed (type one in, such as 3 or 0.4)" data-tip="Type a speed and press Enter: any from 0.1× to 300×, such as 3 or 0.4">
     </div>
     <div class="row" id="timer-group"><span class="label">Timers</span>
       <div class="seg" role="group" aria-label="How timers count">

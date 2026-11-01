@@ -5,9 +5,9 @@
 /* The panel fills the width of the page, like a diagram viewer, and the circuit sits on it like a sheet. A circuit
    opens fitted: the whole sheet in view, as large as the panel allows (at 100% the sheet's width, L1 bar to L2 bar,
    fills the panel). It stays fitted as the window changes size until you zoom or move the view yourself. */
-let cam = { x: 0, y: 0, z: 1, fit: true };
+let cam = { x: 0, y: 0, z: 1, fit: true }, needRedraw = false;
 const fitView = () => { cam = { x: 0, y: 0, z: 1, fit: true }; };
-const ZMAX = 4;
+const ZMAX = 4, ZFAR = 0.05;   // (zoomed right out: a twentieth of full size, for room to build in)
 // (the sheet: the circuit, or in columns view its columns side by side: sheetW, sheetH in views.js)
 const viewW = () => sheetW() / cam.z, viewH = () => VIS_H1 / cam.z;
 const zMin = () => Math.max(0.25, Math.min(1, VIS_H1 / sheetH()));
@@ -15,14 +15,18 @@ function applyCam() {
   if (typeof dragging === 'function' && dragging()) return;   // the view holds still under a drag in progress
   if (cam.fit) cam.z = barsOn() || LAYOUT ? zMin() : 1;   // (a circuit on supply boxes opens at its full width, and scrolls)
   const H = sheetH(), SW = sheetW(), vw = viewW(), vh = viewH();
-  cam.x = vw >= SW ? (SW - vw) / 2 : Math.min(Math.max(0, cam.x), SW - vw);
-  cam.y = vh >= H ? (H - vh) / 2 : Math.min(Math.max(0, cam.y), H - vh);
+  // (zoomed out past the sheet: centred on it; but building on supply boxes, kept at the left, the room to its right
+  // being free to build in: see workW)
+  cam.x = vw >= SW ? (editing && !barsOn() && !LAYOUT ? 0 : (SW - vw) / 2) : Math.min(Math.max(0, cam.x), SW - vw);
+  cam.y = vh >= H ? (editing && !LAYOUT ? 0 : (H - vh) / 2) : Math.min(Math.max(0, cam.y), H - vh);   // (building: from the top, the room below to build in)
   svg.setAttribute('viewBox', `${cam.x} ${cam.y} ${vw} ${vh}`);
+  // building, zoomed out past what was drawn: draw again, so the sheet and its grid fill the view (room to build in)
+  if (editing && view.drawn && !needRedraw && (canvasH() > view.drawn[1] + 1 || workW() > view.drawn[0] + 1)) { needRedraw = true; requestAnimationFrame(() => { needRedraw = false; draw(); }); }
   const lab = document.getElementById('zoom-pct'); if (lab) lab.textContent = Math.round(cam.z * 100) + '%';
   if (typeof ovView === 'function') ovView();
 }
 function zoomAt(f, px, py) {
-  const z = Math.min(ZMAX, Math.max(zMin(), cam.z * f)); if (Math.abs(z - cam.z) < 1e-6) return;
+  const z = Math.min(ZMAX, Math.max(Math.min(zMin(), ZFAR), cam.z * f)); if (Math.abs(z - cam.z) < 1e-6) return;
   cam.fit = false;
   const fx = (px - cam.x) / viewW(), fy = (py - cam.y) / viewH();
   cam.z = z; cam.x = px - fx * viewW(); cam.y = py - fy * viewH(); applyCam();

@@ -705,11 +705,11 @@ const DEF_CIRCUIT = `
   await check('Speed slider: any speed from 0.1× to 300×; turned right up the circuit acts at once and the page keeps up', async page => {
     const out = [];
     await page.selectOption('#preset', 'seal'); await page.click('#tab-run'); await page.waitForTimeout(200);
-    await page.locator('#speed-slider').fill('0'); if ((await page.evaluate(() => speed)) !== 0.1 || (await page.textContent('#speed-out')) !== '0.1×') out.push('slider at the left is not 0.1×');
+    await page.locator('#speed-slider').fill('0'); if ((await page.evaluate(() => speed)) !== 0.1 || (await page.inputValue('#speed-out')) !== '0.1×') out.push('slider at the left is not 0.1×');
     await page.click('[data-speed="2"]');
     if (Math.abs((await page.locator('#speed-slider').inputValue()) - 37.4) > 1) out.push('a preset did not move the slider');
     await page.locator('#speed-slider').fill('100');
-    if ((await page.evaluate(() => speed)) !== 300 || (await page.textContent('#speed-out')) !== '300×') out.push('slider at the right is not 300×');
+    if ((await page.evaluate(() => speed)) !== 300 || (await page.inputValue('#speed-out')) !== '300×') out.push('slider at the right is not 300×');
     if (await page.evaluate(() => [...document.querySelectorAll('[data-speed]')].some(b => b.getAttribute('aria-pressed') === 'true'))) out.push('a preset still shows as chosen');
     // a click on START: X picks up and seals in within a moment of real time
     const t0 = await page.evaluate(() => { press('A', true); autoRel.A = true; return performance.now(); });
@@ -1632,6 +1632,46 @@ const DEF_CIRCUIT = `
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' })); const t1 = terms(p).map(t => t.join(',')).join(' ');
       return [p.rot, t1, readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.find(q => q.t === 'jmp' && q.L === '2').rot]; });
     if (JSON.stringify(rot) !== '[1,"800,460 800,540 760,500 840,500",1]') out.push('turned with R (rot, connection points, read back): ' + JSON.stringify(rot));
+    return out;
+  });
+  await check('Quality of life: zoom far out with room to build; Ctrl+click adds to the selection; paste lands where you are looking; a typed speed; pressing outside a bar starts a selection box; one change to several parts alike', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'seal'); await page.waitForTimeout(100);
+    // zoom right out: well past the old 25%, and the grid grows to fill the view
+    const z = await page.evaluate(() => { for (let i = 0; i < 40; i++) zoomCentre(0.8); draw(); const g = svg.querySelector('rect[fill="url(#gridMajor)"]'); return [cam.z, +g.getAttribute('height'), viewH()]; });
+    if (!(z[0] <= 0.06) || z[1] < z[2] - 1) out.push('zoomed out (zoom, grid height, view height): ' + JSON.stringify(z));
+    // pressing outside the L1 bar, beside the sheet: a selection box, not a wire
+    const nw0 = await page.evaluate(() => wires.length);
+    const box = await page.evaluate(() => { const m = svg.getScreenCTM(), q = (x, y) => { const p = svg.createSVGPoint(); p.x = x; p.y = y; const r = p.matrixTransform(m); return [r.x, r.y]; }; return [q(-200, 20), q(W + 100, canvasH())]; });
+    await page.mouse.move(...box[0]); await page.mouse.down(); await page.mouse.move(...box[1], { steps: 5 }); await page.mouse.up();
+    const after = await page.evaluate(() => [wires.length, sel ? sel.parts.size : 0]);
+    if (after[0] !== nw0 || after[1] !== await page.evaluate(() => parts.length)) out.push('dragging from outside L1 (wires before/after, parts selected): ' + JSON.stringify([nw0, ...after]));
+    await page.evaluate(() => { fitView(); fit(true); sel = null; draw(); });
+    // Ctrl+click: two parts selected; then a change made to both
+    const cons = await page.evaluate(() => { const m = svg.getScreenCTM(); return parts.filter(p => p.t === 'btn').slice(0, 2).map(p => { const q = svg.createSVGPoint(); q.x = p.x; q.y = p.y; const r = q.matrixTransform(m); return [r.x, r.y, p.id]; }); });
+    await page.mouse.click(cons[0][0], cons[0][1]); await page.keyboard.down('Control'); await page.mouse.click(cons[1][0], cons[1][1]); await page.keyboard.up('Control');
+    const n2 = await page.evaluate(() => sel ? [...sel.parts] : []);
+    if (n2.length !== 2) out.push('Ctrl+click selected ' + JSON.stringify(n2));
+    await page.click('#rt-part'); await page.waitForTimeout(50);
+    await page.evaluate(() => document.querySelector('#p-colour .sw[title="Violet"]').click());
+    const cols = await page.evaluate(() => parts.filter(p => sel.parts.has(p.id)).map(p => p.color));
+    if (!cols.every(c => c === '#7030A0')) out.push('colour set on both: ' + JSON.stringify(cols));
+    if (!(await page.isHidden('#p-letter'))) out.push('the letter box shows for several buttons');
+    // paste: near where you are looking, not below everything
+    const pz = await page.evaluate(() => { copySel(); parts.push(P('coil', 500, 1600, { L: 'Q', color: '#FFDC00' })); const bottom = Math.max(...parts.map(p => p.y)); pastePt = { x: 300, y: 800 }; pasteClip(); const ys = parts.filter(p => sel.parts.has(p.id)).map(p => p.y); return [Math.min(...ys), bottom]; });
+    if (!(pz[0] >= 760 && pz[0] < 1000)) out.push('paste aimed at y 800 landed at ' + pz[0] + ' (bottom of the circuit ' + pz[1] + ')');
+    const clash = await page.evaluate(() => { const mine = parts.filter(p => sel.parts.has(p.id)); return mine.some(p => parts.some(o => !sel.parts.has(o.id) && Math.abs(o.x - p.x) < 80 && Math.abs(o.y - p.y) < 80)); });
+    if (clash) out.push('the paste landed on top of other parts');
+    // a typed speed
+    await page.click('#tab-run'); await page.fill('#speed-out', '7.5'); await page.press('#speed-out', 'Enter');
+    const sp = await page.evaluate(() => [speed, document.getElementById('speed-out').value]);
+    if (sp[0] !== 7.5 || sp[1] !== '7.5×') out.push('typed 7.5: ' + JSON.stringify(sp));
+    await page.fill('#speed-out', '5000'); await page.press('#speed-out', 'Enter');
+    if ((await page.evaluate(() => speed)) !== 300) out.push('typed 5000 should give the top speed, 300×');
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    // a long stretch never slows down before its far end
+    const prof = await page.evaluate(() => { const st = stretch(3000), r = [0, 500, 1500, 2900, 2999].map(s => st.rel(s)); return r; });
+    if (!prof.every((v, i) => !i || v >= prof[i - 1])) out.push('speed along a 3000-unit stretch: ' + JSON.stringify(prof.map(v => +v.toFixed(2))));
     return out;
   });
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {

@@ -46,13 +46,15 @@ function shiftL1(dx) {
 // the panel's height in panel units: room for everything on it, and at least as tall as the window shows
 let VIS_H1 = 400;   // how many panel units tall the view is at normal zoom (set by layoutStage)
 function canvasH() {
-  let m = 0;
+  let m = editing && typeof cam !== 'undefined' && !cam.fit ? cam.y + VIS_H1 / cam.z : 0;   // (zoomed out while building: down to the bottom of the view, room to build in)
   for (const p of parts) m = Math.max(m, p.y + 60);
   for (const w of wires) m = Math.max(m, w.y1, w.y2);
   return Math.max(400, VIS_H1, snap(m + 120));
 }
 // how far right things can go: to the L2 bar, or with supply boxes, on past the sheet's edge (which then moves out)
-const rightEdge = () => barsOn() ? W : W + 400;
+const rightEdge = () => barsOn() ? W : Math.max(W + 400, workW());
+// how wide the sheet is drawn: building on supply boxes, out to the right of the view, so there is room to build in
+const workW = () => editing && !barsOn() && typeof cam !== 'undefined' ? Math.max(W, Math.ceil((cam.x + sheetW() / cam.z) / G) * G) : W;
 function overlaps(p, x, y, t) {
   const hw = WIDE(t) ? 60 : 40;
   return parts.some(q => q !== p && Math.abs(q.x - x) < hw + TERM(q) && Math.abs(q.y - y) < 80);

@@ -21,6 +21,7 @@ function draw() {
 // draw the whole panel into target (an svg), keeping what paint needs in V (L: the columns layout, if any)
 function renderInto(target, V, L) {
   const H = canvasH(), T = V.tag;
+  V.drawn = [L ? W : workW(), H];   // (how much of the sheet was drawn: see applyCam)
   target.innerHTML = ''; WORLD = null;
   el('defs', {}, target).innerHTML = DEFS;
   WORLD = V.world = el('g', { class: 'world' }, target);
@@ -28,15 +29,15 @@ function renderInto(target, V, L) {
   const bands = (L ? L.bands : [{ y0: 0, y1: H, dx: 0, dy: 0 }]).map((b, n) => ({ ...b, n, g: el('g', b.dx || b.dy ? { transform: `translate(${b.dx} ${b.dy})` } : {}) }));
   const B = V.B = y => bands.find(b => y < b.y1) || bands[bands.length - 1];
   for (const b of bands) {
-    el('rect', { x: 0, y: b.y0, width: W, height: b.y1 - b.y0, fill: '#404040' }, b.g);   // the sheet the circuit is drawn on
-    if (editing) el('rect', { x: 0, y: 0, width: W, height: H, fill: 'url(#gridMajor)' }, b.g);   // positioning grid while building
+    el('rect', { x: 0, y: b.y0, width: L ? W : workW(), height: b.y1 - b.y0, fill: '#404040' }, b.g);   // the sheet the circuit is drawn on
+    if (editing) el('rect', { x: 0, y: 0, width: workW(), height: H, fill: 'url(#gridMajor)' }, b.g);   // positioning grid while building
   }
   const net = network(); if (editing) NET = net;
   // one dark channel under all the wiring, so wires that meet join into one seamless conduit; then vertical
   // cores, then horizontal ones (which hop over any vertical wire they cross without joining)
   // wires are trimmed at the edges of the sheet (their rounded ends would otherwise poke past the L1 and L2 bars)
   for (const b of bands) {
-    el('rect', { x: 0, y: b.y0, width: W, height: b.y1 - b.y0 }, el('clipPath', { id: `sheetClip${T}${b.n}` }, target.querySelector('defs')));
+    el('rect', { x: 0, y: b.y0, width: L ? W : workW(), height: b.y1 - b.y0 }, el('clipPath', { id: `sheetClip${T}${b.n}` }, target.querySelector('defs')));
     const clip = { 'clip-path': `url(#sheetClip${T}${b.n})` };
     Object.assign(b, { chan: el('g', clip, b.g), wlV: el('g', clip, b.g), backs: el('g', clip, b.g), wlH: el('g', clip, b.g), hits: el('g', {}, b.g) });
   }

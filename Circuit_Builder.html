@@ -121,7 +121,9 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 
 /* the speed slider beside the preset speed buttons */
 #speed-slider { width: 190px; accent-color: #ffc000; cursor: pointer; }
-#speed-out { min-width: 3.6em; font-variant-numeric: tabular-nums; color: #ffc000; font-weight: 600; }
+#speed-out { width: 4.4em; font: inherit; font-variant-numeric: tabular-nums; color: #ffc000; font-weight: 600; background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 1px 4px; text-align: center; }
+#speed-out:hover { border-color: #55565c; }
+#speed-out:focus { outline: none; border-color: #ffc000; background: #1e1f22; }
 
 /* a timer's delay */
 #o-delay { width: 4.6em; font: inherit; font-size: .9rem; color: var(--ink); background: #1f2022; border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
@@ -445,7 +447,7 @@ body.fs .wrap { padding-top: 8px; }
         <button type="button" data-speed="0.25" data-tip="Quarter speed: follow the current step by step">¼×</button><button type="button" data-speed="0.5" data-tip="Half speed">½×</button><button type="button" data-speed="1" aria-pressed="true" data-tip="Normal speed">1×</button><button type="button" data-speed="2" data-tip="Double speed">2×</button>
       </div>
       <input type="range" id="speed-slider" min="0" max="100" step="1" value="29" aria-label="Speed, from a tenth of normal to three hundred times normal" data-tip="Any speed from 0.1× up to 300×. Turned all the way up, the circuit acts almost at once, as a real one does.">
-      <output id="speed-out" for="speed-slider">1×</output>
+      <input type="text" id="speed-out" value="1×" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Speed (type one in, such as 3 or 0.4)" data-tip="Type a speed and press Enter: any from 0.1× to 300×, such as 3 or 0.4">
     </div>
     <div class="row" id="timer-group"><span class="label">Timers</span>
       <div class="seg" role="group" aria-label="How timers count">
@@ -774,13 +776,15 @@ function shiftL1(dx) {
 // the panel's height in panel units: room for everything on it, and at least as tall as the window shows
 let VIS_H1 = 400;   // how many panel units tall the view is at normal zoom (set by layoutStage)
 function canvasH() {
-  let m = 0;
+  let m = editing && typeof cam !== 'undefined' && !cam.fit ? cam.y + VIS_H1 / cam.z : 0;   // (zoomed out while building: down to the bottom of the view, room to build in)
   for (const p of parts) m = Math.max(m, p.y + 60);
   for (const w of wires) m = Math.max(m, w.y1, w.y2);
   return Math.max(400, VIS_H1, snap(m + 120));
 }
 // how far right things can go: to the L2 bar, or with supply boxes, on past the sheet's edge (which then moves out)
-const rightEdge = () => barsOn() ? W : W + 400;
+const rightEdge = () => barsOn() ? W : Math.max(W + 400, workW());
+// how wide the sheet is drawn: building on supply boxes, out to the right of the view, so there is room to build in
+const workW = () => editing && !barsOn() && typeof cam !== 'undefined' ? Math.max(W, Math.ceil((cam.x + sheetW() / cam.z) / G) * G) : W;
 function overlaps(p, x, y, t) {
   const hw = WIDE(t) ? 60 : 40;
   return parts.some(q => q !== p && Math.abs(q.x - x) < hw + TERM(q) && Math.abs(q.y - y) < 80);
@@ -1247,29 +1251,29 @@ function startRun() {
    middle. In a real panel a change reaches the far end of any wire almost at once, so the coil whose button was
    pressed first is in first however long its wire; here the current is slowed right down so it can be watched, so a
    long wire would otherwise keep its coil waiting for seconds and let a coil on a short wire, pressed later, get in
-   first. So the current leaves a junction at normal speed, speeds up smoothly the longer the stretch, and slows back
-   down before the next junction, part or bar. Stretches up to 400 units keep normal speed throughout; past that the
+   first. So the current leaves a junction at normal speed, speeds up smoothly the longer the stretch, and keeps
+   that speed right up to the next junction, part or bar (it never slows down before it gets there). Stretches up to 400 units keep normal speed throughout; past that the
    time hardly grows (a 3000-unit stretch takes about 1.2 s, against 6 s at normal speed). Each run of wire gets, for every point along it, the time the stream takes to get there. */
-/* One plain stretch of length S. The speed rises and falls smoothly (no sudden changes): normal for V_LEAD units
-   from either end, then speeding up steadily to its top in the middle and back down. Tf(s): time to travel
+/* One plain stretch of length S. The speed rises smoothly: normal for the first V_LEAD units, then speeding up
+   steadily all the way to the far end. Tf(s): time to travel
    s units from the start (past the far end it carries on at normal speed); Ti: the reverse. Streams on a stretch
    travel together like cars of a train: one that follows close behind another (a colour arriving a moment after
    another, as the branches of a mix do) keeps the same spacing behind it (see send), so a mix never pulls apart as
    the stretch speeds up. lead/out (one for each way along it): when the train's first stream set off, and when its
    last one gets out the far end. */
 function stretch(S) {
-  const half = Math.max(0, S - 2 * V_LEAD) / 2;
+  // (from V_LEAD on, the speed grows steadily with the distance travelled, 1x more every K units, a steady, gentle
+  // acceleration, all the way to the far end: it never slows down before the next part. K is chosen so the stretch
+  // takes the time wanted)
+  const run = Math.max(0, S - V_LEAD);
   // how long it should take: as long as at normal speed up to V_SHORT, then only slowly longer, so a longer stretch
   // never gets there sooner than a shorter one, and a very long one hardly later
   const want = S <= V_SHORT ? S / V : V_SHORT / V + V_TAU * Math.log(1 + (S - V_SHORT) / (V * V_TAU));
-  // past V_LEAD the speed grows steadily with the distance travelled (1× more every K units), which over time is a
-  // steady, gentle acceleration (it doubles, then doubles again, each in the same short time), up to the middle,
-  // then falls back the same way. K is chosen so the stretch takes the time wanted.
-  const timeFor = K => 2 * V_LEAD / V + 2 * (K / V) * Math.log(1 + half / K);
+  const timeFor = K => Math.min(S, V_LEAD) / V + (K / V) * Math.log(1 + run / K);
   let K = Infinity;
-  if (S > V_SHORT) { let lo = Math.max(1e-3, half / (V_TOP - 1)), hi = 1e7; for (let k = 0; k < 60; k++) { const m = Math.sqrt(lo * hi); if (timeFor(m) > want) hi = m; else lo = m; } K = lo; }
-  const top = 1 + half / K;
-  const rel = s => 1 + Math.max(0, Math.min(s, S - s) - V_LEAD) / K;   // speed at s, as a multiple of normal
+  if (S > V_SHORT) { let lo = Math.max(1e-3, run / (V_TOP - 1)), hi = 1e7; for (let k = 0; k < 60; k++) { const m = Math.sqrt(lo * hi); if (timeFor(m) > want) hi = m; else lo = m; } K = lo; }
+  const top = 1 + run / K;
+  const rel = s => 1 + Math.max(0, Math.min(s, S) - V_LEAD) / K;   // speed at s, as a multiple of normal
   const n = Math.ceil(S), T = new Float64Array(n + 1);
   for (let i = 1; i <= n; i++) T[i] = T[i - 1] + 1 / (V * rel(i - 0.5));
   const Tf = s => { if (s <= 0) return s / V; if (s >= n) return T[n] + (s - n) / V; const i = Math.floor(s); return T[i] + (T[i + 1] - T[i]) * (s - i); };
@@ -2022,6 +2026,7 @@ function draw() {
 // draw the whole panel into target (an svg), keeping what paint needs in V (L: the columns layout, if any)
 function renderInto(target, V, L) {
   const H = canvasH(), T = V.tag;
+  V.drawn = [L ? W : workW(), H];   // (how much of the sheet was drawn: see applyCam)
   target.innerHTML = ''; WORLD = null;
   el('defs', {}, target).innerHTML = DEFS;
   WORLD = V.world = el('g', { class: 'world' }, target);
@@ -2029,15 +2034,15 @@ function renderInto(target, V, L) {
   const bands = (L ? L.bands : [{ y0: 0, y1: H, dx: 0, dy: 0 }]).map((b, n) => ({ ...b, n, g: el('g', b.dx || b.dy ? { transform: `translate(${b.dx} ${b.dy})` } : {}) }));
   const B = V.B = y => bands.find(b => y < b.y1) || bands[bands.length - 1];
   for (const b of bands) {
-    el('rect', { x: 0, y: b.y0, width: W, height: b.y1 - b.y0, fill: '#404040' }, b.g);   // the sheet the circuit is drawn on
-    if (editing) el('rect', { x: 0, y: 0, width: W, height: H, fill: 'url(#gridMajor)' }, b.g);   // positioning grid while building
+    el('rect', { x: 0, y: b.y0, width: L ? W : workW(), height: b.y1 - b.y0, fill: '#404040' }, b.g);   // the sheet the circuit is drawn on
+    if (editing) el('rect', { x: 0, y: 0, width: workW(), height: H, fill: 'url(#gridMajor)' }, b.g);   // positioning grid while building
   }
   const net = network(); if (editing) NET = net;
   // one dark channel under all the wiring, so wires that meet join into one seamless conduit; then vertical
   // cores, then horizontal ones (which hop over any vertical wire they cross without joining)
   // wires are trimmed at the edges of the sheet (their rounded ends would otherwise poke past the L1 and L2 bars)
   for (const b of bands) {
-    el('rect', { x: 0, y: b.y0, width: W, height: b.y1 - b.y0 }, el('clipPath', { id: `sheetClip${T}${b.n}` }, target.querySelector('defs')));
+    el('rect', { x: 0, y: b.y0, width: L ? W : workW(), height: b.y1 - b.y0 }, el('clipPath', { id: `sheetClip${T}${b.n}` }, target.querySelector('defs')));
     const clip = { 'clip-path': `url(#sheetClip${T}${b.n})` };
     Object.assign(b, { chan: el('g', clip, b.g), wlV: el('g', clip, b.g), backs: el('g', clip, b.g), wlH: el('g', clip, b.g), hits: el('g', {}, b.g) });
   }
@@ -2845,7 +2850,8 @@ svg.addEventListener('pointerdown', e => {
   // a terminal on a bar (where a wire ends on it)
   const tb = !barsOn() ? null : p.x < BAR + 6 ? 0 : p.x > W - BAR - 6 ? W : null;
   const ht = tb === null ? null : [...barTerms().values()].find(([x, y]) => x === tb && Math.abs(p.y - y) < 14);
-  if (e.shiftKey && ht) {   // shift-click a terminal: add it to the selection, or take it out
+  const add = e.shiftKey || e.ctrlKey || e.metaKey;   // (Shift or Ctrl held: add to the selection, or take out)
+  if (add && ht) {   // shift-click a terminal: add it to the selection, or take it out
     if (!sel) sel = { parts: new Set(), wires: new Set() };
     if (!sel.terms) sel.terms = new Set();
     const k = termKey(...ht); sel.terms.has(k) ? sel.terms.delete(k) : sel.terms.add(k);
@@ -2853,8 +2859,8 @@ svg.addEventListener('pointerdown', e => {
     return draw();
   }
   if (ht && selHasT(...ht) && selCount() > 1) return groupDrag(e, { x: p.x, y: p.y });   // a selected terminal grabbed: move the group
-  // shift-click adds a part or wire to the selection, or takes it out
-  if (e.shiftKey && (q || w)) {
+  // shift- or ctrl-click adds a part or wire to the selection, or takes it out
+  if (add && (q || w)) {
     if (!sel) sel = { parts: new Set(), wires: new Set() };
     if (q) sel.parts.has(q.id) ? sel.parts.delete(q.id) : sel.parts.add(q.id);
     else sel.wires.has(w.id) ? sel.wires.delete(w.id) : sel.wires.add(w.id);
@@ -2881,8 +2887,9 @@ svg.addEventListener('pointerdown', e => {
   if (onHandle(W - BAR / 2)) return barDrag(e, 'L2');
   // the end of a part with nothing on it, or a bar: draw a new wire from it
   for (const qq of parts) for (const [x, y] of terms(qq)) if (Math.hypot(p.x - x, p.y - y) < 13) return startWire([x, y]);
-  if (barsOn() && p.x < BAR + 6) return startWire([0, clampY(p.y)]);
-  if (barsOn() && p.x > W - BAR - 6) return startWire([W, clampY(p.y)]);
+  // (on the bar itself; pressing outside it, beside the sheet, starts a selection box instead)
+  if (barsOn() && p.x >= 0 && p.x < BAR + 6) return startWire([0, clampY(p.y)]);
+  if (barsOn() && p.x <= W && p.x > W - BAR - 6) return startWire([W, clampY(p.y)]);
   // a part: drag it, and its wires follow
   if (q) {
     sel = selOne('p', q.id); ribbonTab = 'part'; say(''); draw();   // (a part picked on the panel opens its tab on the ribbon)
@@ -2924,7 +2931,7 @@ svg.addEventListener('pointerdown', e => {
 });
 function boxSelect(e, p0) {
   e.preventDefault();
-  const keep = e.shiftKey && sel ? { parts: new Set(sel.parts), wires: new Set(sel.wires) } : null;
+  const keep = (e.shiftKey || e.ctrlKey || e.metaKey) && sel ? { parts: new Set(sel.parts), wires: new Set(sel.wires) } : null;
   let moved = false;
   const mv = ev => {
     const r = pt(ev); if (!moved && Math.hypot(r.x - p0.x, r.y - p0.y) > 4) moved = true; if (!moved) return;
@@ -2956,9 +2963,9 @@ function boxSelect(e, p0) {
 /* The panel fills the width of the page, like a diagram viewer, and the circuit sits on it like a sheet. A circuit
    opens fitted: the whole sheet in view, as large as the panel allows (at 100% the sheet's width, L1 bar to L2 bar,
    fills the panel). It stays fitted as the window changes size until you zoom or move the view yourself. */
-let cam = { x: 0, y: 0, z: 1, fit: true };
+let cam = { x: 0, y: 0, z: 1, fit: true }, needRedraw = false;
 const fitView = () => { cam = { x: 0, y: 0, z: 1, fit: true }; };
-const ZMAX = 4;
+const ZMAX = 4, ZFAR = 0.05;   // (zoomed right out: a twentieth of full size, for room to build in)
 // (the sheet: the circuit, or in columns view its columns side by side: sheetW, sheetH in views.js)
 const viewW = () => sheetW() / cam.z, viewH = () => VIS_H1 / cam.z;
 const zMin = () => Math.max(0.25, Math.min(1, VIS_H1 / sheetH()));
@@ -2966,14 +2973,18 @@ function applyCam() {
   if (typeof dragging === 'function' && dragging()) return;   // the view holds still under a drag in progress
   if (cam.fit) cam.z = barsOn() || LAYOUT ? zMin() : 1;   // (a circuit on supply boxes opens at its full width, and scrolls)
   const H = sheetH(), SW = sheetW(), vw = viewW(), vh = viewH();
-  cam.x = vw >= SW ? (SW - vw) / 2 : Math.min(Math.max(0, cam.x), SW - vw);
-  cam.y = vh >= H ? (H - vh) / 2 : Math.min(Math.max(0, cam.y), H - vh);
+  // (zoomed out past the sheet: centred on it; but building on supply boxes, kept at the left, the room to its right
+  // being free to build in: see workW)
+  cam.x = vw >= SW ? (editing && !barsOn() && !LAYOUT ? 0 : (SW - vw) / 2) : Math.min(Math.max(0, cam.x), SW - vw);
+  cam.y = vh >= H ? (editing && !LAYOUT ? 0 : (H - vh) / 2) : Math.min(Math.max(0, cam.y), H - vh);   // (building: from the top, the room below to build in)
   svg.setAttribute('viewBox', `${cam.x} ${cam.y} ${vw} ${vh}`);
+  // building, zoomed out past what was drawn: draw again, so the sheet and its grid fill the view (room to build in)
+  if (editing && view.drawn && !needRedraw && (canvasH() > view.drawn[1] + 1 || workW() > view.drawn[0] + 1)) { needRedraw = true; requestAnimationFrame(() => { needRedraw = false; draw(); }); }
   const lab = document.getElementById('zoom-pct'); if (lab) lab.textContent = Math.round(cam.z * 100) + '%';
   if (typeof ovView === 'function') ovView();
 }
 function zoomAt(f, px, py) {
-  const z = Math.min(ZMAX, Math.max(zMin(), cam.z * f)); if (Math.abs(z - cam.z) < 1e-6) return;
+  const z = Math.min(ZMAX, Math.max(Math.min(zMin(), ZFAR), cam.z * f)); if (Math.abs(z - cam.z) < 1e-6) return;
   cam.fit = false;
   const fx = (px - cam.x) / viewW(), fy = (py - cam.y) / viewH();
   cam.z = z; cam.x = px - fx * viewW(); cam.y = py - fy * viewH(); applyCam();
@@ -3364,7 +3375,7 @@ document.addEventListener('keydown', e => {
   else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || e.shiftKey && e.key.toLowerCase() === 'z')) { e.preventDefault(); redo(); }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
   else if (e.key === 'Escape') { setTool('select'); sel = null; draw(); }
-  else if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey && !e.altKey) { const p = selPart(); if (p && isJmp(p)) { e.preventDefault(); rotateJmp(p); } }
+  else if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey && !e.altKey) { const G = selGroup(); if (G.length && G.every(isJmp)) { e.preventDefault(); each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); } }
 });
 
 /* ---------------- the ribbon ----------------
@@ -3372,7 +3383,7 @@ document.addEventListener('keydown', e => {
    show: pressing one opens the ribbon over the panel until you press somewhere else. */
 function closeMenus() { document.body.classList.remove('ribbon-peek'); }
 function showRibbon() {
-  const run = !editing, part = !run && !!selPart(), tab = run ? 'run' : part && ribbonTab === 'part' ? 'part' : 'home';
+  const run = !editing, part = !run && selGroup().length > 0, tab = run ? 'run' : part && ribbonTab === 'part' ? 'part' : 'home';
   const set = (id, shown, on) => { const b = document.getElementById(id); b.hidden = !shown; b.setAttribute('aria-pressed', String(on)); };
   set('rt-home', !run, tab === 'home'); set('rt-part', part, tab === 'part'); set('rt-run', run, tab === 'run');
   document.getElementById('toolbar').hidden = tab !== 'home';
@@ -3452,12 +3463,17 @@ document.querySelectorAll('[data-power]').forEach(b => b.addEventListener('click
 /* ---- js/clipboard.js ---- */
 /* ---------------- copy, cut and paste ----------------
    Ctrl+C copies the selected parts and wires, Ctrl+X cuts them, Ctrl+V pastes (or the Copy and Paste buttons).
-   The copy goes in below everything on the panel, so it never joins up with what is there by accident (wires that
-   ran to L1 or L2 still do: a copied rung is a new rung), and it is left selected, ready to drag where it is wanted.
+   The copy goes in where the pointer is (or near the top of the view), moved down past anything already there so it
+   never joins up with what is there by accident (wires that ran to L1 or L2 still do: a copied rung is a new rung),
+   and it is left selected, ready to drag where it is wanted.
    Pasted buttons and coils get letters of their own, so the copy works on its own: a contact copied with its coil
    goes with the new coil, and a light built into a copied button goes with the new button. A contact or light
    copied without its coil or button stays with the original. */
 let clip = null;
+// where the pointer last was over the panel (null when it is off it): where a paste goes
+let pastePt = null;
+svg.addEventListener('pointermove', e => { pastePt = pt(e); });
+svg.addEventListener('pointerleave', () => { pastePt = null; });
 function copySel() {
   if (!sel || !selCount()) { say('Select something to copy first.'); return false; }
   const ps = parts.filter(p => sel.parts.has(p.id)), ws = wires.filter(w => sel.wires.has(w.id));
@@ -3475,10 +3491,18 @@ function pasteClip() {
   for (const p of clip.parts) if (p.t === 'btn' && !map['b' + p.L]) map['b' + p.L] = fresh('ABCDEFGH');
   for (const p of clip.parts) if (p.t === 'sel' && !map['s' + p.L]) map['s' + p.L] = fresh('SJKMN');
   for (const p of clip.parts) if (p.t === 'coil' && !map['c' + p.L]) map['c' + p.L] = fresh('XYZW');
-  // below everything on the panel, lined up with where it came from
-  const ys = [...clip.parts.map(p => p.y), ...clip.wires.flatMap(w => [w.y1, w.y2])];
-  const bottom = Math.max(0, ...parts.map(p => p.y + 60), ...wires.map(w => Math.max(w.y1, w.y2)));
-  const dy = snap(bottom + 100 - Math.min(...ys) + (LOADT(clip.parts.find(p => p.y === Math.min(...ys))?.t) ? 20 : 0));
+  // where you are looking: its top at the pointer (or a third of the way down the view, if the pointer is not over
+  // the panel), lined up with where it came from; then moved down past anything already there, so it never joins
+  // up with what is on the panel by accident
+  const ys = [...clip.parts.map(p => p.y - BODYH(p.t) / 2), ...clip.wires.flatMap(w => [w.y1, w.y2])], top0 = Math.min(...ys);
+  const xs = [...clip.parts.flatMap(p => [p.x - TERM(p), p.x + TERM(p)]), ...clip.wires.flatMap(w => [w.x1, w.x2])], x1 = Math.min(...xs), x2 = Math.max(...xs);
+  const h = Math.max(...clip.parts.map(p => p.y + BODYH(p.t) / 2), ...clip.wires.flatMap(w => [w.y1, w.y2])) - top0;
+  const aim = pastePt ? pastePt.y : cam.y + viewH() / 3;
+  const busy = y0 => parts.some(p => p.x + TERM(p) >= x1 - 20 && p.x - TERM(p) <= x2 + 20 && p.y + BODYH(p.t) / 2 + 40 >= y0 && p.y - BODYH(p.t) / 2 - 40 <= y0 + h)
+    || wires.some(w => Math.max(w.x1, w.x2) >= x1 - 20 && Math.min(w.x1, w.x2) <= x2 + 20 && Math.max(w.y1, w.y2) + 40 >= y0 && Math.min(w.y1, w.y2) - 40 <= y0 + h && !(barsOn() && w.x1 === w.x2 && (w.x1 === 0 || w.x1 === W)));
+  let y0 = Math.max(60, snap(aim));
+  for (let k = 0; k < 2000 && busy(y0); k++) y0 += G;
+  const dy = snap(y0 - top0);
   const fx = x => x === 0 ? 0 : x >= W ? W : x;   // (wires to the bars stay on the bars)
   const np0 = [], jm = {};
   const np = clip.parts.map(p => {
@@ -3499,8 +3523,8 @@ function pasteClip() {
   sel = { parts: new Set(np.map(p => p.id)), wires: new Set(wires.filter(w => ids.has(w.id)).map(w => w.id)) };
   if (!selCount()) sel = null;
   const renamed = Object.keys(map).length;
-  say(`Pasted below the circuit` + (renamed ? ', with letters of its own' : '') + '. Drag it where you want it.');
-  if (!cam.fit) cam.y = Math.min(...ys) + dy - 80;   // bring it into view
+  say(`Pasted` + (renamed ? ', with letters of its own' : '') + '. Drag it where you want it.');
+  if (!cam.fit && (y0 < cam.y || y0 > cam.y + viewH() - 80)) cam.y = y0 - 80;   // (bring it into view, if it went below)
   draw();
 }
 function updateClipButtons() { const b = document.getElementById('paste'); if (b) b.disabled = !clip; const c = document.getElementById('copy'); if (c) c.disabled = !selCount(); const x = document.getElementById('cut'); if (x) x.disabled = !selCount(); }
@@ -3526,25 +3550,38 @@ function swatches(box, current, onPick) {
   }
 }
 const selPart = () => sel && sel.parts.size === 1 && !sel.wires.size ? parts.find(p => sel.parts.has(p.id)) : null;
+/* Several parts of the same kind selected (and nothing else): their tab shows the first one's settings, and a change
+   made there is made to them all. (Settings each must have its own, such as a letter or a solenoid's number, are
+   left out.) selGroup: the parts whose settings the tab shows (one, or several alike); none otherwise. */
+const selGroup = () => {
+  if (!sel || !sel.parts.size || sel.wires.size || (sel.terms && sel.terms.size)) return [];
+  const ps = parts.filter(p => sel.parts.has(p.id));
+  return ps.every(q => q.t === ps[0].t) ? ps : [];
+};
+const each = f => { const g = selGroup(); if (!g.length) return false; snapshot(); g.forEach(f); normalize(); draw(); return true; };
+const KIND_NAME = { btn: 'pushbuttons', coil: 'coils', con: 'contacts', lamp: 'pilot lights', sel: 'selector switches', sol: 'solenoids', jmp: 'continuations', l1: 'L1 supplies', l2: 'L2 returns' };
 const blocksOf = L => parts.filter(p => p.t === 'btn' && p.L === L);
 function renderProps() {
-  const p = selPart();
+  const G = selGroup(), p = G[0] || null, multi = G.length > 1;
+  const groupOf = id => document.getElementById(id).closest('.tgroup');
+  for (const id of ['p-letter', 'o-letter', 's-letter', 'v-num', 'p-label', 'o-label', 's-names']) { const g = groupOf(id); if (g) g.hidden = multi; }
   const nP = sel ? sel.parts.size : 0, nW = sel ? sel.wires.size : 0, nT = sel && sel.terms ? sel.terms.size : 0;
   document.getElementById('selname').textContent = !sel ? 'Nothing'
+    : multi ? `${G.length} ${G.every(isTimer) ? 'timers' : KIND_NAME[p.t] || 'parts'} (a setting changed here changes them all)`
     : p ? captionOf(p) + (p.t === 'sel' && selsOf(p.L).length > 1 ? (mainSel(p.L) === p ? ` · the main one of ${selsOf(p.L).length}` : ` · an extra contact block`) + ' (turning one turns all)' : '') + (p.t === 'btn' && blocksOf(p.L).length > 1 ? (mainBtn(p.L) === p ? ` · the main one of ${blocksOf(p.L).length}` : ` · an extra contact block`) + ' (pressing one presses all)' : '')
     : nP + nW + nT === 1 ? (nW ? 'A wire' : 'A terminal on ' + [...sel.terms][0].split(':')[0])
     : [nP ? `${nP} part${nP > 1 ? 's' : ''}` : '', nW ? `${nW} wire${nW > 1 ? 's' : ''}` : '', nT ? `${nT} terminal${nT > 1 ? 's' : ''}` : ''].filter(Boolean).join(', ').replace(/, ([^,]*)$/, ' and $1') + ' (drag any of them to move them together' + (nT ? '; terminals slide along their bar' : '') + ', Delete to remove)';
   document.getElementById('del').disabled = !sel;
   if (typeof updateClipButtons === 'function') updateClipButtons();
-  document.getElementById('p-main').hidden = !(p && p.t === 'btn' && mainBtn(p.L) !== p);
-  document.getElementById('s-main').hidden = !(p && p.t === 'sel' && mainSel(p.L) !== p);
+  document.getElementById('p-main').hidden = !(p && !multi && p.t === 'btn' && mainBtn(p.L) !== p);
+  document.getElementById('s-main').hidden = !(p && !multi && p.t === 'sel' && mainSel(p.L) !== p);
   showPower();
   document.getElementById('undo').disabled = !history.length;
   document.getElementById('redo').disabled = !future.length;
   // the gold tab for one selected part, named after it (a part picked on the panel opens it; one just placed from
   // the ribbon leaves Home open, to place more)
   if (!p && ribbonTab === 'part') ribbonTab = 'home';
-  document.getElementById('rt-part').textContent = p ? captionOf(p) : 'Part';
+  document.getElementById('rt-part').textContent = multi ? `${G.length} ${G.every(isTimer) ? 'timers' : KIND_NAME[p.t] || 'parts'}` : p ? captionOf(p) : 'Part';
   showRibbon();
   document.getElementById('props-btn').hidden = !(p && p.t === 'btn');
   document.getElementById('props-coil').hidden = !(p && p.t === 'coil');
@@ -3557,13 +3594,13 @@ function renderProps() {
     for (const c of new Set([...btns, ...(p.L ? [p.L] : [])])) ls.add(new Option(`${c} Button` + (btns.includes(c) ? '' : ' (not on the panel)'), c, false, c === p.L));
     document.getElementById('l-colour-group').hidden = !!p.L;
     document.getElementById('l-colour-note').hidden = !p.L;
-    if (!p.L) swatches(document.getElementById('l-colour'), p.color, hex => { snapshot(); p.color = hex; draw(); });
+    if (!p.L) swatches(document.getElementById('l-colour'), p.color, hex => each(q => { if (!q.L) q.color = hex; }));
   }
   document.getElementById('props-jmp').hidden = !(p && p.t === 'jmp');
   if (p && p.t === 'jmp') {
     // its number: every continuation with the same number is joined to it
     const ns = document.getElementById('j-num'), cnt = {};
-    for (const q of parts) if (isJmp(q) && q !== p) cnt[q.L] = (cnt[q.L] || 0) + 1;
+    for (const q of parts) if (isJmp(q) && !G.includes(q)) cnt[q.L] = (cnt[q.L] || 0) + 1;
     ns.innerHTML = '';
     const top = Math.max(10, ...Object.keys(cnt).map(Number)) + 3;
     for (let n = 1; n <= top; n++) { const c = cnt[String(n)] || 0; ns.add(new Option(`${n}` + (c ? ` (joins ${c} other${c > 1 ? 's' : ''})` : ''), String(n), false, String(n) === p.L)); }
@@ -3575,10 +3612,10 @@ function renderProps() {
     ns.innerHTML = '';
     const top = Math.max(20, ...[...taken].map(Number)) + 5;
     for (let n = 1; n <= top; n++) if (!taken.has(String(n))) ns.add(new Option('SOL' + n, String(n), false, String(n) === p.L));
-    swatches(document.getElementById('v-colour'), p.color, hex => { snapshot(); p.color = hex; draw(); });
+    swatches(document.getElementById('v-colour'), p.color, hex => each(q => q.color = hex));
   }
   document.getElementById('props-sel').hidden = !(p && p.t === 'sel');
-  if (p && p.t === 'sel') renderSelProps(p);
+  if (p && p.t === 'sel') renderSelProps(p, multi);
   document.getElementById('props-con').hidden = !(p && p.t === 'con');
   if (p && p.t === 'con') {
     const cs = document.getElementById('c-of'), coils = [...coilLetters()];
@@ -3586,7 +3623,7 @@ function renderProps() {
     for (const c of new Set([...coils, p.L])) cs.add(new Option(`${c} ${parts.some(q => isTimer(q) && q.L === c) ? 'Timer' : 'Coil'}` + (coils.includes(c) ? '' : ' (not on the panel)'), c, false, c === p.L));
     document.querySelectorAll('[data-cnc]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.cnc === +p.nc)));
     // a timer's contact: timed or instantaneous
-    document.getElementById('c-inst-group').hidden = !parts.some(q => isTimer(q) && q.L === p.L);
+    document.getElementById('c-inst-group').hidden = !G.every(c => parts.some(q => isTimer(q) && q.L === c.L));
     document.querySelectorAll('[data-cinst]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.cinst === +!!p.inst)));
   }
   if (p && p.t === 'btn') {
@@ -3595,17 +3632,17 @@ function renderProps() {
     for (const c of ALL) if (!coils.has(c)) ls.add(new Option(others.has(c) && c !== p.L ? `${c} (same button as the other ${c})` : c, c, false, c === p.L));
     document.querySelectorAll('[data-nc]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.nc === +p.nc)));
     document.querySelectorAll('[data-maint]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.maint === +p.maint)));
-    swatches(document.getElementById('p-colour'), p.color, hex => { snapshot(); blocksOf(p.L).forEach(k => k.color = hex); draw(); });
+    swatches(document.getElementById('p-colour'), p.color, hex => each(q => blocksOf(q.L).forEach(k => k.color = hex)));
     showLabel(document.getElementById('p-label'), p);
   }
   if (p && p.t === 'coil') {
     const os = document.getElementById('o-letter'), used = new Set([...opLetters(), ...coilLetters()]);
     os.innerHTML = '';
     for (const c of ALL) if (c === p.L || !used.has(c)) os.add(new Option(c, c, false, c === p.L));
-    swatches(document.getElementById('o-colour'), p.color, hex => { snapshot(); p.color = hex; draw(); });
+    swatches(document.getElementById('o-colour'), p.color, hex => each(q => q.color = hex));
     showLabel(document.getElementById('o-label'), p);
-    document.getElementById('o-delay-group').hidden = !isTimer(p);
-    document.getElementById('o-type-group').hidden = !isTimer(p);
+    document.getElementById('o-delay-group').hidden = !G.every(isTimer);
+    document.getElementById('o-type-group').hidden = !G.every(isTimer);
     document.querySelectorAll('[data-ttype]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.ttype === 'off') === !!p.tof)));
     if (isTimer(p) && document.activeElement !== document.getElementById('o-delay')) document.getElementById('o-delay').value = p.delay;
   }
@@ -3641,16 +3678,16 @@ document.getElementById('p-main').addEventListener('click', () => {
   const p = selPart(); if (!p) return; snapshot();
   const m = mainBtn(p.L); parts = parts.filter(q => q !== p); parts.splice(parts.indexOf(m), 0, p); draw();
 });
-document.querySelectorAll('[data-nc]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); p.nc = x.dataset.nc === '1'; draw(); }));
-document.querySelectorAll('[data-maint]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); blocksOf(p.L).forEach(k => k.maint = x.dataset.maint === '1'); draw(); }));
+document.querySelectorAll('[data-nc]').forEach(x => x.addEventListener('click', () => each(p => p.nc = x.dataset.nc === '1')));
+document.querySelectorAll('[data-maint]').forEach(x => x.addEventListener('click', () => each(p => blocksOf(p.L).forEach(k => k.maint = x.dataset.maint === '1'))));
 // a timer's type: on-delay or off-delay
-document.querySelectorAll('[data-ttype]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p || !isTimer(p)) return; snapshot(); if (x.dataset.ttype === 'off') p.tof = true; else delete p.tof; draw(); }));
+document.querySelectorAll('[data-ttype]').forEach(x => x.addEventListener('click', () => { if (!selGroup().every(isTimer)) return; each(p => { if (x.dataset.ttype === 'off') p.tof = true; else delete p.tof; }); }));
 // a timer's delay: whole seconds, 1 to 999
 document.getElementById('o-delay').addEventListener('change', e => {
-  const p = selPart(); if (!p || !isTimer(p)) return;
-  const n = Math.min(999, Math.max(1, Math.round(+e.target.value || p.delay)));
-  e.target.value = n; if (n === p.delay) return;
-  snapshot(); p.delay = n; draw();
+  const G = selGroup(); if (!G.length || !G.every(isTimer)) return;
+  const n = Math.min(999, Math.max(1, Math.round(+e.target.value || G[0].delay)));
+  e.target.value = n; if (G.every(p => p.delay === n)) return;
+  each(p => p.delay = n);
 });
 document.getElementById('o-letter').addEventListener('change', e => {
   const p = selPart(); if (!p) return; snapshot();
@@ -3661,12 +3698,12 @@ document.getElementById('o-letter').addEventListener('change', e => {
   say(n ? `Its ${n} contact${n > 1 ? 's' : ''} now belong${n > 1 ? '' : 's'} to ${p.L}.` : ''); draw();
 });
 document.getElementById('l-btn').addEventListener('change', e => {
-  const p = selPart(); if (!p) return; snapshot(); p.L = e.target.value;
-  say(p.L ? `The ${p.L} button lights up with this light.` : ''); draw();
+  const L = e.target.value; if (!each(p => p.L = L)) return;
+  say(L ? `The ${L} button lights up with ${selGroup().length > 1 ? 'these lights' : 'this light'}.` : '');
 });
-document.getElementById('c-of').addEventListener('change', e => { const p = selPart(); if (!p) return; snapshot(); p.L = e.target.value; draw(); });
-document.querySelectorAll('[data-cinst]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); p.inst = x.dataset.cinst === '1'; if (!p.inst) delete p.inst; draw(); }));
-document.querySelectorAll('[data-cnc]').forEach(x => x.addEventListener('click', () => { const p = selPart(); if (!p) return; snapshot(); p.nc = x.dataset.cnc === '1'; draw(); }));
+document.getElementById('c-of').addEventListener('change', e => each(p => p.L = e.target.value));
+document.querySelectorAll('[data-cinst]').forEach(x => x.addEventListener('click', () => each(p => { p.inst = x.dataset.cinst === '1'; if (!p.inst) delete p.inst; })));
+document.querySelectorAll('[data-cnc]').forEach(x => x.addEventListener('click', () => each(p => p.nc = x.dataset.cnc === '1')));
 document.getElementById('preset').addEventListener('change', e => {
   const k = e.target.value; if (!k) return;
   const label = e.target.selectedOptions[0].textContent; e.target.value = '';
@@ -3678,7 +3715,7 @@ document.getElementById('preset').addEventListener('change', e => {
    shared by every drawing with its letter; what each drawing has of its own is the positions it is closed in. */
 const selsOf = L => parts.filter(p => p.t === 'sel' && p.L === L);
 const SEL_NAME_MAX = 5;
-function renderSelProps(p) {
+function renderSelProps(p, multi) {
   const ls = document.getElementById('s-letter'), mine = selsOf(p.L).length, others = new Set(parts.filter(q => q.t === 'sel' && q !== p).map(q => q.L)), taken = new Set([...coilLetters(), ...btnLetters()]);
   ls.innerHTML = '';
   for (const c of ALL) if (!taken.has(c)) ls.add(new Option(others.has(c) && c !== p.L ? `${c} (same switch as the other ${c})` : c, c, false, c === p.L));
@@ -3695,21 +3732,20 @@ function renderSelProps(p) {
   }
   const nb = document.getElementById('s-names');
   if (document.activeElement !== nb || nb.dataset.pid !== String(p.id)) { nb.dataset.pid = p.id; nb.dataset.snapped = ''; nb.value = names.slice(0, n).join(' / '); }
-  swatches(document.getElementById('s-colour'), p.color, hex => { snapshot(); selsOf(p.L).forEach(k => k.color = hex); draw(); });
+  swatches(document.getElementById('s-colour'), p.color, hex => each(q => selsOf(q.L).forEach(k => k.color = hex)));
 }
-const selShared = (p, f) => { snapshot(); selsOf(p.L).forEach(f); draw(); };
+const selShared = (p, f) => each(q => selsOf(q.L).forEach(f));   // (for every switch selected)
 document.querySelectorAll('[data-sn]').forEach(x => x.addEventListener('click', () => {
-  const p = selPart(); if (!p || p.t !== 'sel') return; const n = +x.dataset.sn;
+  const p = selGroup()[0]; if (!p || p.t !== 'sel') return; const n = +x.dataset.sn;
   selShared(p, k => { k.n = n; k.pos = Math.min(n - 1, k.pos || 0); k.closedIn = (k.closedIn || []).filter(i => i < n); if (k.names) { k.names = k.names.slice(0, n); if (!k.names.some(Boolean)) delete k.names; } });
 }));
 document.getElementById('s-closed').addEventListener('click', e => {
-  const b = e.target.closest('[data-sci]'), p = selPart(); if (!b || !p || p.t !== 'sel') return;
-  const i = +b.dataset.sci; snapshot();
-  const c = new Set(p.closedIn || []); if (c.has(i)) c.delete(i); else c.add(i);
-  p.closedIn = [...c].sort((a, b) => a - b); draw();
+  const b = e.target.closest('[data-sci]'), p = selGroup()[0]; if (!b || !p || p.t !== 'sel') return;
+  const i = +b.dataset.sci, on = !(p.closedIn || []).includes(i);   // (every drawing selected: closed in it, or not, as the first one now is)
+  each(q => { const c = new Set(q.closedIn || []); if (on) c.add(i); else c.delete(i); q.closedIn = [...c].sort((a, b) => a - b); });
 });
 document.getElementById('s-start').addEventListener('click', e => {
-  const b = e.target.closest('[data-spos]'), p = selPart(); if (!b || !p || p.t !== 'sel') return;
+  const b = e.target.closest('[data-spos]'), p = selGroup()[0]; if (!b || !p || p.t !== 'sel') return;
   selShared(p, k => k.pos = +b.dataset.spos);
 });
 // names for the positions, such as HAND / OFF / AUTO (5 characters each at most; empty for numbers)
@@ -3738,10 +3774,10 @@ document.getElementById('s-main').addEventListener('click', () => {
 });
 
 document.getElementById('v-num').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'sol') return; snapshot(); p.L = e.target.value; draw(); });
-document.getElementById('j-num').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'jmp') return; snapshot(); p.L = e.target.value; draw(); });
+document.getElementById('j-num').addEventListener('change', e => { if (selGroup().every(isJmp)) each(p => p.L = e.target.value); });
 // turn a continuation a quarter turn clockwise (the R key, or Rotate on its tab)
 function rotateJmp(p) { snapshot(); p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; normalize(); draw(); }
-document.getElementById('j-rot').addEventListener('click', () => { const p = selPart(); if (p && isJmp(p)) rotateJmp(p); });
+document.getElementById('j-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(isJmp)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
 
 /* ---- js/storage.js ---- */
 /* ---------------- saving and opening circuits ----------------
@@ -4060,7 +4096,7 @@ function setSpeed(s, fromSlider) {
   speed = s;
   const sl = document.getElementById('speed-slider');
   if (!fromSlider) sl.value = sliderOf(s);
-  document.getElementById('speed-out').textContent = fmtSpeed(s);
+  const o = document.getElementById('speed-out'); if (document.activeElement !== o) o.value = fmtSpeed(s);
   document.querySelectorAll('[data-speed]').forEach(x => x.setAttribute('aria-pressed', String(Math.abs(+x.dataset.speed - s) < 1e-9)));
 }
 document.querySelectorAll('[data-speed]').forEach(b => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
@@ -4072,6 +4108,15 @@ function setTimersReal(v) {
 }
 document.querySelectorAll('[data-treal]').forEach(b => b.addEventListener('click', () => setTimersReal(b.dataset.treal === '1')));
 try { if (localStorage.getItem('oo-circuit-builder:timers-real') === '1') setTimersReal(true); } catch (_) {}
+// a speed typed in (Enter, or leaving the box): any from SPEED_MIN to SPEED_MAX; anything else puts the box back
+const speedBox = document.getElementById('speed-out');
+speedBox.addEventListener('focus', () => { speedBox.value = String(+speed.toFixed(3)); speedBox.select(); });
+speedBox.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') speedBox.blur(); else if (e.key === 'Escape') { speedBox.value = fmtSpeed(speed); speedBox.dataset.cancel = '1'; speedBox.blur(); } });
+speedBox.addEventListener('blur', () => {
+  const v = parseFloat(speedBox.value.replace(',', '.').replace(/[x×]/gi, ''));
+  if (!speedBox.dataset.cancel && isFinite(v) && v > 0) setSpeed(Math.min(SPEED_MAX, Math.max(SPEED_MIN, v)));
+  delete speedBox.dataset.cancel; speedBox.value = fmtSpeed(speed);
+});
 document.getElementById('speed-slider').addEventListener('input', e => {
   let s = SPEED_MIN * Math.pow(SPEED_MAX / SPEED_MIN, +e.target.value / 100);
   // it snaps to the round speeds when close to one (within about 13%: from 9× it lands on 10×)

@@ -113,7 +113,8 @@ svg.addEventListener('pointerdown', e => {
   // a terminal on a bar (where a wire ends on it)
   const tb = !barsOn() ? null : p.x < BAR + 6 ? 0 : p.x > W - BAR - 6 ? W : null;
   const ht = tb === null ? null : [...barTerms().values()].find(([x, y]) => x === tb && Math.abs(p.y - y) < 14);
-  if (e.shiftKey && ht) {   // shift-click a terminal: add it to the selection, or take it out
+  const add = e.shiftKey || e.ctrlKey || e.metaKey;   // (Shift or Ctrl held: add to the selection, or take out)
+  if (add && ht) {   // shift-click a terminal: add it to the selection, or take it out
     if (!sel) sel = { parts: new Set(), wires: new Set() };
     if (!sel.terms) sel.terms = new Set();
     const k = termKey(...ht); sel.terms.has(k) ? sel.terms.delete(k) : sel.terms.add(k);
@@ -121,8 +122,8 @@ svg.addEventListener('pointerdown', e => {
     return draw();
   }
   if (ht && selHasT(...ht) && selCount() > 1) return groupDrag(e, { x: p.x, y: p.y });   // a selected terminal grabbed: move the group
-  // shift-click adds a part or wire to the selection, or takes it out
-  if (e.shiftKey && (q || w)) {
+  // shift- or ctrl-click adds a part or wire to the selection, or takes it out
+  if (add && (q || w)) {
     if (!sel) sel = { parts: new Set(), wires: new Set() };
     if (q) sel.parts.has(q.id) ? sel.parts.delete(q.id) : sel.parts.add(q.id);
     else sel.wires.has(w.id) ? sel.wires.delete(w.id) : sel.wires.add(w.id);
@@ -149,8 +150,9 @@ svg.addEventListener('pointerdown', e => {
   if (onHandle(W - BAR / 2)) return barDrag(e, 'L2');
   // the end of a part with nothing on it, or a bar: draw a new wire from it
   for (const qq of parts) for (const [x, y] of terms(qq)) if (Math.hypot(p.x - x, p.y - y) < 13) return startWire([x, y]);
-  if (barsOn() && p.x < BAR + 6) return startWire([0, clampY(p.y)]);
-  if (barsOn() && p.x > W - BAR - 6) return startWire([W, clampY(p.y)]);
+  // (on the bar itself; pressing outside it, beside the sheet, starts a selection box instead)
+  if (barsOn() && p.x >= 0 && p.x < BAR + 6) return startWire([0, clampY(p.y)]);
+  if (barsOn() && p.x <= W && p.x > W - BAR - 6) return startWire([W, clampY(p.y)]);
   // a part: drag it, and its wires follow
   if (q) {
     sel = selOne('p', q.id); ribbonTab = 'part'; say(''); draw();   // (a part picked on the panel opens its tab on the ribbon)
@@ -192,7 +194,7 @@ svg.addEventListener('pointerdown', e => {
 });
 function boxSelect(e, p0) {
   e.preventDefault();
-  const keep = e.shiftKey && sel ? { parts: new Set(sel.parts), wires: new Set(sel.wires) } : null;
+  const keep = (e.shiftKey || e.ctrlKey || e.metaKey) && sel ? { parts: new Set(sel.parts), wires: new Set(sel.wires) } : null;
   let moved = false;
   const mv = ev => {
     const r = pt(ev); if (!moved && Math.hypot(r.x - p0.x, r.y - p0.y) > 4) moved = true; if (!moved) return;

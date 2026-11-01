@@ -24,7 +24,7 @@ function setSpeed(s, fromSlider) {
   speed = s;
   const sl = document.getElementById('speed-slider');
   if (!fromSlider) sl.value = sliderOf(s);
-  document.getElementById('speed-out').textContent = fmtSpeed(s);
+  const o = document.getElementById('speed-out'); if (document.activeElement !== o) o.value = fmtSpeed(s);
   document.querySelectorAll('[data-speed]').forEach(x => x.setAttribute('aria-pressed', String(Math.abs(+x.dataset.speed - s) < 1e-9)));
 }
 document.querySelectorAll('[data-speed]').forEach(b => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
@@ -36,6 +36,15 @@ function setTimersReal(v) {
 }
 document.querySelectorAll('[data-treal]').forEach(b => b.addEventListener('click', () => setTimersReal(b.dataset.treal === '1')));
 try { if (localStorage.getItem('oo-circuit-builder:timers-real') === '1') setTimersReal(true); } catch (_) {}
+// a speed typed in (Enter, or leaving the box): any from SPEED_MIN to SPEED_MAX; anything else puts the box back
+const speedBox = document.getElementById('speed-out');
+speedBox.addEventListener('focus', () => { speedBox.value = String(+speed.toFixed(3)); speedBox.select(); });
+speedBox.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') speedBox.blur(); else if (e.key === 'Escape') { speedBox.value = fmtSpeed(speed); speedBox.dataset.cancel = '1'; speedBox.blur(); } });
+speedBox.addEventListener('blur', () => {
+  const v = parseFloat(speedBox.value.replace(',', '.').replace(/[x×]/gi, ''));
+  if (!speedBox.dataset.cancel && isFinite(v) && v > 0) setSpeed(Math.min(SPEED_MAX, Math.max(SPEED_MIN, v)));
+  delete speedBox.dataset.cancel; speedBox.value = fmtSpeed(speed);
+});
 document.getElementById('speed-slider').addEventListener('input', e => {
   let s = SPEED_MIN * Math.pow(SPEED_MAX / SPEED_MIN, +e.target.value / 100);
   // it snaps to the round speeds when close to one (within about 13%: from 9× it lands on 10×)

@@ -52,7 +52,7 @@ document.addEventListener('keydown', e => {
   else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || e.shiftKey && e.key.toLowerCase() === 'z')) { e.preventDefault(); redo(); }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
   else if (e.key === 'Escape') { setTool('select'); sel = null; draw(); }
-  else if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey && !e.altKey) { const p = selPart(); if (p && isJmp(p)) { e.preventDefault(); rotateJmp(p); } }
+  else if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey && !e.altKey) { const G = selGroup(); if (G.length && G.every(isJmp)) { e.preventDefault(); each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); } }
 });
 
 /* ---------------- the ribbon ----------------
@@ -60,7 +60,7 @@ document.addEventListener('keydown', e => {
    show: pressing one opens the ribbon over the panel until you press somewhere else. */
 function closeMenus() { document.body.classList.remove('ribbon-peek'); }
 function showRibbon() {
-  const run = !editing, part = !run && !!selPart(), tab = run ? 'run' : part && ribbonTab === 'part' ? 'part' : 'home';
+  const run = !editing, part = !run && selGroup().length > 0, tab = run ? 'run' : part && ribbonTab === 'part' ? 'part' : 'home';
   const set = (id, shown, on) => { const b = document.getElementById(id); b.hidden = !shown; b.setAttribute('aria-pressed', String(on)); };
   set('rt-home', !run, tab === 'home'); set('rt-part', part, tab === 'part'); set('rt-run', run, tab === 'run');
   document.getElementById('toolbar').hidden = tab !== 'home';
