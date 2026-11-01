@@ -23,10 +23,11 @@ function applyCam() {
   const room = editing && !LAYOUT, roomR = room && !barsOn(), clampTo = (v, lo, hi) => Math.min(Math.max(lo, v), hi);
   if (vw < SW) cam.x = clampTo(cam.x, X0, X0 + SW - vw);
   else if (cam.fit) cam.x = roomR ? X0 : X0 + (SW - vw) / 2;
-  else cam.x = roomR ? clampTo(cam.x, X0, 20000) : clampTo(cam.x, X0 + SW - vw, X0);
-  if (vh < H) cam.y = clampTo(cam.y, 0, H - vh);
+  else cam.x = clampTo(cam.x, X0 + SW - vw, roomR ? 20000 : X0);   // (anywhere the sheet stays in view, so zooming keeps the point under the pointer still)
+  const Hc = room ? Math.max(400, contentH()) : H;   // (building, the circuit itself: the room below it is free to build in)
+  if (vh < H && !(room && !cam.fit)) cam.y = clampTo(cam.y, 0, H - vh);
   else if (cam.fit) cam.y = room ? 0 : (H - vh) / 2;
-  else cam.y = room ? Math.max(0, cam.y) : clampTo(cam.y, H - vh, 0);
+  else cam.y = room ? Math.max(Math.min(0, Hc - vh), cam.y) : clampTo(cam.y, H - vh, 0);
   svg.setAttribute('viewBox', `${cam.x} ${cam.y} ${vw} ${vh}`);
   // building, zoomed out past what was drawn: draw again, so the sheet and its grid fill the view (room to build in)
   if (editing && view.drawn && !needRedraw && (canvasH() > view.drawn[1] + 1 || workW() > view.drawn[0] + 1)) { needRedraw = true; requestAnimationFrame(() => { needRedraw = false; draw(); }); }

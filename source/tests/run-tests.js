@@ -1638,8 +1638,12 @@ const DEF_CIRCUIT = `
     const out = [];
     await page.selectOption('#preset', 'seal'); await page.waitForTimeout(100);
     // zoom right out: well past the old 25%, and the grid grows to fill the view
-    const z = await page.evaluate(() => { for (let i = 0; i < 40; i++) zoomCentre(0.8); draw(); const g = svg.querySelector('rect[fill="url(#gridMajor)"]'); return [cam.z, +g.getAttribute('height'), viewH()]; });
-    if (!(z[0] <= 0.06) || z[1] < z[2] - 1) out.push('zoomed out (zoom, grid height, view height): ' + JSON.stringify(z));
+    const z = await page.evaluate(() => { for (let i = 0; i < 40; i++) zoomCentre(0.8); draw(); const g = svg.querySelector('rect[fill="url(#gridMajor)"]'); return [cam.z, +g.getAttribute('y') + +g.getAttribute('height'), cam.y + viewH()]; });
+    if (!(z[0] <= 0.06) || z[1] < z[2] - 1) out.push('zoomed out (zoom, grid bottom, view bottom): ' + JSON.stringify(z));
+    // zooming out at the pointer keeps the point under it where it is (no drifting to one side)
+    const drift = await page.evaluate(() => { fitView(); fit(true); draw(); const px = 300, py = 200; for (let i = 0; i < 12; i++) zoomAt(0.8, px, py); const a = [cam.x, cam.z]; zoomAt(0.8, px, py); const fx0 = (px - a[0]) / (camW() / a[1]), fx1 = (px - cam.x) / viewW(); return Math.abs(fx1 - fx0); });
+    if (drift > 0.01) out.push('zooming out drifts sideways: ' + drift.toFixed(3));
+    for (let i = 0; i < 40; i++) await page.evaluate(() => zoomCentre(0.8));
     const pan = await page.evaluate(() => { const x0 = cam.x; svg.dispatchEvent(new WheelEvent('wheel', { deltaY: 300, shiftKey: true, bubbles: true, cancelable: true })); const x1 = cam.x; svg.dispatchEvent(new WheelEvent('wheel', { deltaY: -900, shiftKey: true, bubbles: true, cancelable: true })); return [x0, x1, cam.x]; });
     if (!(pan[1] > pan[0] && pan[2] < pan[1])) out.push('Shift + wheel when zoomed out (x before, after right, after left): ' + JSON.stringify(pan.map(Math.round)));
     // pressing outside the L1 bar, beside the sheet: a selection box, not a wire
