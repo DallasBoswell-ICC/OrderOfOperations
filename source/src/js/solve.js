@@ -10,6 +10,8 @@
    backward from a lower rung up into the rung above, but a button wired with power coming in on its right still works.
    (Solved by treating each button as a one-way valve: solve, block any button that would carry current the wrong way,
    and solve again until nothing changes.) */
+// (the ways current can come from L1: along wires and through switches, not through a load)
+const viaL1 = e => !(e.kind === 'part' && LOADT(e.part.t));
 let BTN_DIR = new Map();   // button -> the end current comes in at
 const btnIn = p => BTN_DIR.get(p.id) ?? p._a;
 function findButtonDirections() {
@@ -20,7 +22,9 @@ function findButtonDirections() {
     const dist = new Map(), q = [];
     for (const [id, v] of NET.feedV) if (v === 1) { dist.set(id, 0); q.push([0, id]); }
     while (q.length) { q.sort((a, b) => a[0] - b[0]); const [d, u] = q.shift(); if (d > dist.get(u)) continue;
-      for (const e of NET.jadj.get(u) || []) { if (e.part === p) continue; const w = e.a === u ? e.b : e.a, nd = d + e.len; if (!dist.has(w) || nd < dist.get(w)) { dist.set(w, nd); q.push([nd, w]); } } }
+      if (NET.feedV.get(u) === 0) continue;   // (never on from L2, nor through a coil or light: with supply boxes the return
+      // wire joins every output, and a way round through one of them would make a switch look as if it were wired backward)
+      for (const e of NET.jadj.get(u) || []) { if (e.part === p || !viaL1(e)) continue; const w = e.a === u ? e.b : e.a, nd = d + e.len; if (!dist.has(w) || nd < dist.get(w)) { dist.set(w, nd); q.push([nd, w]); } } }
     return dist;
   };
   for (const p of parts) if (isSw(p)) {

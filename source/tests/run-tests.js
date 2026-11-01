@@ -1590,6 +1590,20 @@ const DEF_CIRCUIT = `
     if (back[0] !== 2 || back[1] !== '["r","l"]') out.push('ends moved to the sides (handles, read back): ' + JSON.stringify(back));
     return out;
   });
+  await check('Supply boxes: no switch is taken as wired backward by a way round through the outputs and the shared return wire (Proto Drill Station)', async page => {
+    const out = [];
+    const txt = require('fs').readFileSync(require('path').join(__dirname, 'proto-drill-station.json'), 'utf8');
+    await page.evaluate(t => { useCircuit(readCircuit(JSON.parse(t))); draw(); }, txt);
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300));
+    await page.evaluate(() => press('B', true)); await page.waitForTimeout(1500);
+    const lit = await page.evaluate(() => { const n = NET.nodes.findIndex(q => q.x === 200 && q.y === 1300); return colAt(n, simT); });
+    if (!lit) out.push('the left wire is dark down at the MAN section');
+    await page.evaluate(() => press('D', true)); await page.waitForTimeout(1500);
+    const st = await page.evaluate(() => { const on = L => parts.filter(p => (p.t === 'coil' || p.t === 'lamp') && p.L === L).map(p => !!coilOn[p.id]); return { E: on('E'), D: on('D') }; });
+    if (!st.E.every(Boolean) || !st.D.length || !st.D.every(Boolean)) out.push('pressing MAN: ' + JSON.stringify(st));
+    await page.evaluate(() => { press('D', false); press('B', false); }); await page.click('#tab-edit'); await page.evaluate(() => setSpeed(1));
+    return out;
+  });
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

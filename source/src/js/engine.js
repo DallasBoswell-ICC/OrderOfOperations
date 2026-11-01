@@ -53,7 +53,8 @@ function startRun() {
   const h = solveV(true).V, dist = new Map(), q = []; VOLT = h;
   for (const [id, v] of NET.feedV) if (v === 1) { dist.set(id, 0); q.push([0, id]); }
   while (q.length) { q.sort((a, b) => a[0] - b[0]); const [d, u] = q.shift(); if (d > dist.get(u)) continue;
-    for (const e of NET.jadj.get(u) || []) { const w = e.a === u ? e.b : e.a, nd = d + e.len; if (!dist.has(w) || nd < dist.get(w)) { dist.set(w, nd); q.push([nd, w]); } } }
+    if (NET.feedV.get(u) === 0) continue;
+    for (const e of NET.jadj.get(u) || []) { if (!viaL1(e)) continue; const w = e.a === u ? e.b : e.a, nd = d + e.len; if (!dist.has(w) || nd < dist.get(w)) { dist.set(w, nd); q.push([nd, w]); } } }
   DIRS = []; OUTS = new Map(); INS = new Map(); REC = new Map();
   stretchTimes();
   for (const e of NET.jedges) {
