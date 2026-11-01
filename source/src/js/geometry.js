@@ -4,7 +4,7 @@ const key = (x, y) => x + ',' + y;
 // (a continuation can be turned, p.rot quarter turns clockwise: its connection points turn with it)
 const rotQ = (p, dx, dy) => { for (let k = 0; k < (p.rot || 0); k++) [dx, dy] = [-dy, dx]; return [p.x + dx, p.y + dy]; };
 // (a supply box: left, right and bottom; a continuation its top too)
-const terms = p => p.t === 'xfm' ? [[-XFM_TX, -XFM_TY], [XFM_TX, -XFM_TY], [-XFM_TX, XFM_TY], [XFM_TX, XFM_TY]].map(([dx, dy]) => [p.x + dx, p.y + dy]) : isBox(p) ? [[-TERM(p), 0], [TERM(p), 0], [0, TERM(p)], ...(isJmp(p) ? [[0, -TERM(p)]] : [])].map(([dx, dy]) => rotQ(p, dx, dy)) : [[p.x - TERM(p), p.y], [p.x + TERM(p), p.y]];   // (a supply box: left, right and bottom)
+const terms = p => isPwr3(p) ? [-PWR_DY, 0, PWR_DY].flatMap(dy => [[p.x - 40, p.y + dy], [p.x + 40, p.y + dy]]) : p.t === 'mtr' ? [-PWR_DY, 0, PWR_DY].map(dy => [p.x - TERM(p), p.y + dy]) : p.t === 'xfm' ? [[-XFM_TX, -XFM_TY], [XFM_TX, -XFM_TY], [-XFM_TX, XFM_TY], [XFM_TX, XFM_TY]].map(([dx, dy]) => [p.x + dx, p.y + dy]) : isBox(p) ? [[-TERM(p), 0], [TERM(p), 0], [0, TERM(p)], ...(isJmp(p) ? [[0, -TERM(p)]] : [])].map(([dx, dy]) => rotQ(p, dx, dy)) : [[p.x - TERM(p), p.y], [p.x + TERM(p), p.y]];   // (a supply box: left, right and bottom)
 /* The sheet is as wide as it needs to be to fill the panel with the whole circuit in view: on a wide screen, or for a
    tall circuit, the L2 bar moves out to the right edge and the wires fastened to it stretch to meet it. (It is never
    narrower than W_MIN, nor so narrow that a part would end up past L2.) Once the L1 or L2 bar has been moved by hand,

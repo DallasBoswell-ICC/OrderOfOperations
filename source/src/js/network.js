@@ -25,7 +25,7 @@ function network() {
     }
   }
   for (const p of parts) {
-    if (isBox(p)) continue;   // (supply boxes are not a way through: their connection points are L1 or L2, below; continuations: further down)
+    if (isBox(p) || isPwr3(p) || p.t === 'mtr') continue;   // (supply boxes are not a way through: their connection points are L1 or L2, below; continuations: further down)
     const [[ax, ay], [bx, by]] = terms(p);
     p._a = node(ax, ay, key(ax, ay)); p._b = node(bx, by, key(bx, by));
     edges.push({ a: p._a, b: p._b, w: 2 * TERM(p), kind: 'part', part: p });
@@ -54,6 +54,14 @@ function network() {
     Object.assign(p._sw[0], { x: p, _a: f1, _b: p._t[2] }); Object.assign(p._sw[1], { x: p, _a: p._t[3], _b: f2 });
     for (const k of p._sw) { edges.push({ a: k._a, b: k._b, w: 2, kind: 'part', part: k }); jedges.push({ kind: 'part', a: k._a, b: k._b, len: 2, part: k }); }
   }
+  // three-phase parts: each pole of one is a switch inside it (p._poles: the same three objects from one drawing to the
+  // next, like a transformer's), between its two ends on that line; a motor's terminals lead nowhere (see motorsNow)
+  for (const p of parts) if (isPwr3(p)) {
+    p._t = terms(p).map(([x, y]) => node(x, y, key(x, y)));
+    p._poles = p._poles || [0, 1, 2].map(i => ({ t: 'pp', id: p.id + '.' + i, i }));
+    p._poles.forEach((k, i) => { Object.assign(k, { x: p, _a: p._t[2 * i], _b: p._t[2 * i + 1] }); edges.push({ a: k._a, b: k._b, w: 80, kind: 'part', part: k }); jedges.push({ kind: 'part', a: k._a, b: k._b, len: 80, part: k }); });
+  }
+  for (const p of parts) if (p.t === 'mtr') p._t = terms(p).map(([x, y]) => node(x, y, key(x, y)));
   const jadj = new Map(), feedV = new Map();
   for (const [i, v] of xfmFeeds) feedV.set(i, v);
   jedges.forEach((e, i) => { e.i = i; for (const v of [e.a, e.b]) { if (!jadj.has(v)) jadj.set(v, []); jadj.get(v).push(e); } });
@@ -100,6 +108,17 @@ function wiringIssues(net) {
   const S = l1 === l2 ? null : loadShares(f, net);
   for (const p of parts) {
     if (isSrc(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); continue; }
+    if (isPwr3(p)) {
+      if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything');
+      else if (p.t === 'mst' && !parts.some(q => q.t === 'coil' && q.L === p.L)) out.set(p.id, `No ${p.L} coil`);
+      continue;
+    }
+    if (p.t === 'mtr') {
+      const ks = p._t.map(i => phaseAt(net, f, i));
+      if (!p._t.some(i => net.adj[i].length > 0)) out.set(p.id, 'Not wired to anything');
+      else if (new Set(ks.filter(k => k > 0)).size < 3) out.set(p.id, 'Not fed all three phases');
+      continue;
+    }
     if (isPh(p)) {
       const c = f(net.PH[p.L]), o = Object.keys(net.PH).filter(k => k !== p.L && f(net.PH[k]) === c);
       if (o.length) { out.set(p.id, `Shorted to L${o[0]}`); out.set('phshort', `L${p.L} connects straight to L${o[0]}`); }

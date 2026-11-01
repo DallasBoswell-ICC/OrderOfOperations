@@ -57,7 +57,7 @@ function setAt(n, t, c, lane) {
 const setCol = set => set.size === 0 ? SRC_COL : set.size === 1 ? flowOf(btnColour([...set][0])) : blend([...set].map(L => flowOf(btnColour(L))));
 const colourOf = r => r.rd < RAMP ? mixOk(r.from, setCol(r.set), r.rd / RAMP) : setCol(r.set);
 // a pushbutton passes current while pressed (NO) or until pressed (NC); a relay contact once its bar has landed on its posts
-const closed = p => p.t === 'xsw' ? !!coilOn[p.x.id] : p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.t === 'sel' ? selClosed(p) : p.nc ? !down[p.L] : !!down[p.L];
+const closed = p => p.t === 'pp' ? poleClosed(p) : p.t === 'olc' ? !OLTRIP[p.L] : p.t === 'xsw' ? !!coilOn[p.x.id] : p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.t === 'sel' ? selClosed(p) : p.nc ? !down[p.L] : !!down[p.L];
 /* Selector switches. One switch can be drawn in several rungs (the same letter, as a pushbutton with several contact
    blocks): turning any drawing turns them all. Each drawing is closed in the positions it is set to (p.closedIn).
    The switch has 2 to 4 positions (selN), can name them (p.names, such as HAND / OFF / AUTO), and starts in p.pos.
@@ -121,3 +121,8 @@ const timerLit = p => !!coilOn[p.id] || !!running(p);
 const timerLeft = p => { const s = TIMER[p.id]; if (s && s.timing) return Math.max(0, Math.ceil(p.delay - timerCounted(s) - 1e-9)); if (s && !p.tof && s.act && coilOn[p.id]) return 0; return p.delay; };
 const anyTiming = () => parts.some(p => !!running(p));
 const coilColour = L => (parts.find(q => q.t === 'coil' && q.L === L) || {}).color || '#9a9a9a';
+/* Three-phase parts while running: a disconnect is on until clicked off (DSC: those turned off, when); a fuse pole
+   whole until it blows (BLOWN); a starter's poles shut once its contacts have (CON, as a relay contact's); an
+   overload's heaters always pass power (OLTRIP: the overloads tripped, by number). */
+let DSC = {}, BLOWN = {}, OLTRIP = {}, MOT = {};
+const poleClosed = k => { const p = k.x; return p.t === 'dsc' ? !DSC[p.id] : p.t === 'fus' ? !BLOWN[k.id] : p.t === 'mst' ? !!(CON[p.id] && CON[p.id].shut) : true; };

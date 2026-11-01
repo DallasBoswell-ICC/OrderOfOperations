@@ -36,7 +36,13 @@ const LOADT = t => t === 'coil' || t === 'lamp' || t === 'sol' || t === 'xfm';
    to them through two switches inside it that close when the primary is fed (see network.js). The box: XFM_W by XFM_H;
    the terminals XFM_TX either side and XFM_TY above and below its middle. */
 const XFM_W = 210, XFM_H = 148, XFM_TX = 60, XFM_TY = 80, XFM_EDGE = '#9aa7b5';
-const halfW = t => t === 'xfm' ? XFM_W / 2 : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : 40;   // (the room a part takes)
+/* Three-phase power parts: a disconnect (dsc), fuses (fus), a starter's main contacts (mst, worked by the coil with its
+   letter), overload heaters (olh), each one tall part with a pole on each of three lines PWR_DY apart; the overload's
+   contact for the control circuit (olc, normally closed: it opens when the overload with its number trips); and a
+   motor (mtr), with T1, T2 and T3 down its left side. */
+const isPwr3 = p => p.t === 'dsc' || p.t === 'fus' || p.t === 'mst' || p.t === 'olh', isPwrT = t => t === 'dsc' || t === 'fus' || t === 'mst' || t === 'olh';
+const PWR_DY = 120, PWR_H = 2 * PWR_DY + 66, MTR_W = 200, MTR_COL = '#9aa7b5', OL_COL = '#FF6F59', DSC_COL = '#c9d2dd', FUS_COL = '#9aa0a6';
+const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : isPwrT(t) || t === 'mtr' ? PWR_H / 2 : 40;   // (the room a part takes)
 const SOL_COL = '#00D2BE';
 /* a solenoid (as on Dallas's drawing): a diamond (a rounded square on its corner) as tall and wide as a coil, with a
    dot at each end where the rung comes in, joined by the lightning bolt: along the rung, up to a peak, straight down and
@@ -53,8 +59,8 @@ const SOL_LEN = 2 * (SOL_DOT + SOL_DR - SOL_X) + 2 * Math.hypot(SOL_X, SOL_P) + 
 // a selector switch: a square body a little larger than a pushbutton's (room for its position numbers round the top)
 const SEL_BOX = 80;
 const WIDE = t => LOADT(t) || t === 'sel';                                // parts whose ends sit 60 either side of their centre
-const BODYH = t => t === 'xfm' ? XFM_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
-const TERM = p => WIDE(p.t) ? 60 : 40;
+const BODYH = t => t === 'xfm' ? XFM_H : isPwrT(t) || t === 'mtr' ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
+const TERM = p => p.t === 'mtr' ? MTR_W / 2 + 20 : WIDE(p.t) ? 60 : 40;
 const isOp = p => p.t === 'btn' || p.t === 'sel';   // operators: pushbuttons and selector switches (they tint the current with their colour)
 /* Power: each circuit is fed either by the L1 and L2 bars down its sides (POWER 'bars', as a ladder diagram is drawn),
    or by supply boxes placed anywhere on it ('boxes'): an L1 Supply box and an L2 Return box, each with three
@@ -80,5 +86,5 @@ let PH_COL = [...PH_DEFAULT];
 const phCol = p => PH_COL[(+p.L || 1) - 1];
 const lighten = (c, f) => { const n = parseInt(c.slice(1), 16), m = k => Math.round(((n >> k) & 255) + (255 - ((n >> k) & 255)) * f); return '#' + ((1 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)).toString(16).slice(1).toUpperCase(); };
 const JMP_EDGE = '#b8c2cf';
-const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel' || p.t === 'xsw';
-const isCon = p => p.t === 'con' || p.t === 'xsw';   // (a relay contact, or a transformer's switch inside it: passes on what it is given)   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre
+const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc';
+const isCon = p => p.t === 'con' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc';   // (a relay contact, or a transformer's switch inside it: passes on what it is given)   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre

@@ -47,6 +47,8 @@ function paintView(V) {
   for (const p of parts) {
     const v = V.parts.get(p.id); if (!v) continue;
     if (p.t === 'xfm') { paintXfm(p, v); continue; }
+    if (isPwr3(p)) { paintPwr(p, v); continue; }
+    if (p.t === 'mtr') { paintMtr(p, v); continue; }
     if (isJmp(p)) {
       for (const q of v.src || []) { const c = colAt(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
       const c = (p._c !== undefined && colAt(p._c, simT)) || '#8a8a8a'; if (c !== v.cc) { v.cc = c; for (const ch of v.chev) ch.setAttribute('stroke', c); }
@@ -56,8 +58,8 @@ function paintView(V) {
     for (const S of ['A', 'B']) paintLead(v.lead[S], p._lead && p._lead[S]);
     let k;
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
-    else if (p.t === 'con') {
-      const s = CON[p.id]; if (!s) continue;
+    else if (p.t === 'con' || p.t === 'olc') {
+      const s = p.t === 'olc' ? olState(p.L) : CON[p.id]; if (!s) continue;
       const f = clamp01((simT - s.t0) / SWING), e = f * f * (3 - 2 * f);   // ease in and out
       const lift = (s.closing ? lerp(OPEN_LIFT, 0, e) : lerp(0, OPEN_LIFT, e)).toFixed(2);
       k = lift + (s.shut ? 's' : 'o');
@@ -199,4 +201,58 @@ function bindSelector(g, p) {
   g.setAttribute('class', 'dev'); g.setAttribute('tabindex', '0'); g.setAttribute('role', 'slider'); g.setAttribute('aria-label', captionOf(p) + ': turn left or right');
   g.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); const at = e.target.closest && e.target.closest('[data-pos]'); if (at) return turn(p.L, +at.dataset.pos); const r = g.getBoundingClientRect(); turn(p.L, selPos(p.L) + (e.clientX < r.left + r.width / 2 ? -1 : 1)); });
   g.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); turn(p.L, selPos(p.L) + (e.key === 'ArrowLeft' ? -1 : 1)); } });
+}
+
+// an overload's contacts: shut until it trips, lifting off over a moment (as a relay contact's bar)
+const olState = L => { const o = OLTRIP[L], r = OLRESET[L]; return o ? { t0: o.t, closing: false, shut: false } : { t0: r ?? -1e9, closing: true, shut: true }; };
+// a three-phase part: what reaches each of its ends lights its leads; each pole shows its state, lit where the
+// phase goes through it
+function paintPwr(p, v) {
+  for (const q of v.src) { const c = colAt(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
+  if (!p._poles) return;
+  const ease = t0 => { const f = clamp01((simT - t0) / SWING); return f * f * (3 - 2 * f); };
+  let lev = null;
+  if (p.t === 'dsc') { const t0 = DSC_T[p.id] ?? -1e9, e = ease(t0), off = !!DSC[p.id]; lev = off ? lerp(0, 1, e) : lerp(1, 0, e); }
+  p._poles.forEach((k, i) => {
+    const q = v.poles[i], a = colAt(k._a, simT), b = colAt(k._b, simT), cl = closed(k), c = a || b;
+    let key;
+    if (p.t === 'dsc') {
+      key = `${a}|${b}|${cl}|${lev.toFixed(3)}`; if (key === q.k) return; q.k = key;
+      q.bg.setAttribute('transform', `rotate(${(-32 * lev).toFixed(2)} ${q.px} ${q.py})`);
+      q.blade.setAttribute('stroke', cl && c ? c : BLADE_GREY); q.a.setAttribute('fill', a || GREY); q.b.setAttribute('fill', b || GREY);
+    } else if (p.t === 'fus') {
+      key = `${a}|${b}|${cl}`; if (key === q.k) return; q.k = key;
+      q.l.setAttribute('stroke', (cl ? c : a) || GREY); q.r.setAttribute('stroke', (cl ? c : b) || GREY); q.m.setAttribute('stroke', c || GREY);
+      q.mg.setAttribute('display', cl ? '' : 'none'); q.mark.setAttribute('display', cl ? 'none' : '');
+    } else if (p.t === 'mst') {
+      const s = CON[p.id] || { t0: -1e9, closing: false, shut: false }, e = ease(s.t0), lift = (s.closing ? lerp(OPEN_LIFT, 0, e) : lerp(0, OPEN_LIFT, e)).toFixed(2);
+      key = `${a}|${b}|${lift}|${s.shut}`; if (key === q.k) return; q.k = key;
+      q.bg.setAttribute('transform', `translate(0 ${-lift})`); q.bar.setAttribute('fill', s.shut ? coilColour(p.L) : BLADE_GREY);
+      q.a.setAttribute('fill', a || GREY); q.b.setAttribute('fill', b || GREY);
+    } else {
+      key = `${c}`; if (key === q.k) return; q.k = key;
+      q.e.setAttribute('stroke', c || GREY);
+    }
+  });
+  if (v.lever) v.lever.setAttribute('transform', `rotate(${(-35 + 70 * lev).toFixed(2)} ${v.hx} ${v.hy})`);
+  if (v.trip) v.trip.setAttribute('display', OLTRIP[p.L] ? '' : 'none');
+}
+// a motor: each third of its ring in the phase at its terminal; its fan turning, or shaking, as it runs or hums
+function paintMtr(p, v) {
+  for (const q of v.src) { const c = colAt(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
+  const cols = (p._t || []).map(n => colAt(n, simT) || GREY), m = MOT[p.id] || { st: 'off', dir: 0 };
+  const key = cols.join('|') + m.st + m.dir; if (key === v.k) return; v.k = key;
+  cols.forEach((c, i) => v.arcs[i].setAttribute('stroke', c));
+  v.rotor.setAttribute('class', 'rotor' + (m.st === 'run' ? ' spin' + (m.dir < 0 ? ' rev' : '') : m.st === 'hum' ? ' hum' : ''));
+  v.arrow.setAttribute('display', m.st === 'run' ? '' : 'none');
+  v.arrowPath.setAttribute('transform', m.dir < 0 ? `translate(${2 * v.cx} 0) scale(-1 1)` : '');
+  v.dir.textContent = m.dir < 0 ? 'REVERSE' : 'FORWARD';
+  v.hum.setAttribute('display', m.st === 'hum' ? '' : 'none');
+}
+// a three-phase part clicked while running (see workPower): the pole nearest where it was clicked
+function bindPower(g, p) {
+  g.setAttribute('class', 'dev'); g.setAttribute('tabindex', '0'); g.setAttribute('role', 'button');
+  g.setAttribute('aria-label', captionOf(p) + (p.t === 'dsc' ? ': turn on or off' : p.t === 'fus' ? ': blow a fuse, or put it back' : p.t === 'olh' ? ': trip it, or reset it' : ': reset its overload'));
+  g.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); const q = pt(e); workPower(p, Math.max(0, Math.min(2, Math.round((q.y - p.y) / PWR_DY) + 1))); });
+  g.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); workPower(p, 1); } });
 }

@@ -17,7 +17,7 @@ const selGroup = () => {
   return ps.every(q => q.t === ps[0].t) ? ps : [];
 };
 const each = f => { const g = selGroup(); if (!g.length) return false; snapshot(); g.forEach(f); normalize(); draw(); return true; };
-const KIND_NAME = { xfm: 'transformers', btn: 'pushbuttons', coil: 'coils', con: 'contacts', lamp: 'pilot lights', sel: 'selector switches', sol: 'solenoids', jmp: 'continuations', l1: 'L1 supplies', l2: 'L2 returns', ph: 'phases' };
+const KIND_NAME = { xfm: 'transformers', btn: 'pushbuttons', coil: 'coils', con: 'contacts', lamp: 'pilot lights', sel: 'selector switches', sol: 'solenoids', jmp: 'continuations', l1: 'L1 supplies', l2: 'L2 returns', ph: 'phases', dsc: 'disconnects', fus: 'fuse blocks', mst: 'starters', olh: 'overloads', olc: 'overload contacts', mtr: 'motors' };
 const blocksOf = L => parts.filter(p => p.t === 'btn' && p.L === L);
 function renderProps() {
   const G = selGroup(), p = G[0] || null, multi = G.length > 1;
@@ -77,6 +77,28 @@ function renderProps() {
     }
     document.getElementById('ph-custom').value = cur.toLowerCase();
     document.getElementById('ph-colour-label').textContent = `L${p.L} colour`;
+  }
+  const pw = p && (isPwr3(p) || p.t === 'olc' || p.t === 'mtr');
+  document.getElementById('props-pwr').hidden = !pw;
+  if (pw) {
+    // a number of its own (a disconnect, fuses, an overload, a motor); the overload an OL contact belongs to; the coil
+    // that works a starter
+    const ns = document.getElementById('pw-num'), lab = document.getElementById('pw-label'), uniq = p.t !== 'mst' && p.t !== 'olc';
+    groupOf('pw-num').hidden = multi && uniq;
+    ns.innerHTML = '';
+    if (p.t === 'mst') {
+      lab.textContent = 'Worked by';
+      for (const c of new Set([...coilLetters(), p.L, 'M'].sort())) ns.add(new Option(`${c} Coil` + (coilLetters().has(c) ? '' : ' (not placed)'), c, false, c === p.L));
+    } else if (p.t === 'olc') {
+      lab.textContent = 'Overload';
+      const ols = new Set(parts.filter(q => q.t === 'olh').map(q => q.L));
+      for (let n = 1; n <= Math.max(5, ...[...ols].map(Number)); n++) ns.add(new Option('OL' + n + (ols.has(String(n)) ? '' : ' (not placed)'), String(n), false, String(n) === p.L));
+    } else {
+      lab.textContent = 'Number';
+      const pre = { dsc: 'DS', fus: 'FU', olh: 'OL', mtr: 'MTR' }[p.t], taken = new Set(parts.filter(q => q.t === p.t && q !== p).map(q => q.L));
+      for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n))) ns.add(new Option(pre + n, String(n), false, String(n) === p.L));
+    }
+    document.getElementById('pw-how').textContent = { dsc: 'In Run: click it to turn it off or on', fus: 'In Run: click a fuse to blow it, or to put a new one in', mst: 'Its contacts close while its coil is in', olh: 'In Run: click it to trip it, or to reset it', olc: 'Opens while its overload is tripped (click it in Run to reset)', mtr: 'Runs on three phases; two swapped, it runs backward' }[p.t];
   }
   document.getElementById('props-xfm').hidden = !(p && p.t === 'xfm');
   if (p && p.t === 'xfm') {
@@ -264,3 +286,4 @@ function setPhaseCol(L, hex) { hex = hex.toUpperCase(); if (PH_COL[L - 1] === he
 document.getElementById('ph-num').addEventListener('change', e => { if (selGroup().every(isPh)) each(p => p.L = e.target.value); });
 document.getElementById('ph-custom').addEventListener('change', e => { const p = selGroup()[0]; if (p && isPh(p)) setPhaseCol(p.L, e.target.value); });
 document.getElementById('box-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(isBox)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
+document.getElementById('pw-num').addEventListener('change', e => { const G = selGroup(); if (G.length && G.every(p => isPwr3(p) || p.t === 'olc' || p.t === 'mtr')) each(p => p.L = e.target.value); });

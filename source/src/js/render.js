@@ -113,6 +113,7 @@ function renderInto(target, V, L) {
         t.textContent = note ? m.note : '⚠ ' + m;
       }
     } else if (p.t === 'btn') bindButton(g, p);
+    else if ((isPwr3(p) && p.t !== 'mst') || p.t === 'olc') bindPower(g, p);
     else if (p.t === 'sel') bindSelector(g, p);
   }
   if (SHOW.rungs) drawRefs(V, B, net);

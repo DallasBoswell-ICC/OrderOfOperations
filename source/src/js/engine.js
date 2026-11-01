@@ -45,7 +45,8 @@ function startRun() {
   NET = network();
   simT = 0; queue = []; seq = 0; busyUntil = 0; autoRel = {}; down = {}; coilOn = {}; TIMER = {}; SELPOS = {}; SELTURN = {};
   FED_AT = {}; COMP = null; LV = null; COND = {}; needPaint = true; PTL = new Map(); PARR = new Map(); phFault = '';
-  CON = {}; for (const p of parts) if (p.t === 'con') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };   // every coil starts off
+  CON = {}; for (const p of parts) if (p.t === 'con' || p.t === 'mst') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };
+  DSC = {}; BLOWN = {}; OLTRIP = {}; MOT = {}; DSC_T = {}; OLRESET = {};   // every coil starts off
   tl = NET.nodes.map(() => [[-1e9, null]]);
   for (const p of parts) { delete p._chg; delete p._lead; delete p._sh; delete p._lv; delete p._ph; }
   // which way each button and coil is passed through (as if every button were passing current)
@@ -393,7 +394,7 @@ function updateCoils(t) {
     if (want !== wasOn) {
       coilOn[p.id] = want; p._chg = t;
       if (p.t === 'xfm') { if (want && pf) p._ph = { a: PH_COL[PARR.get(p._a).k - 1], b: PH_COL[PARR.get(p._b).k - 1], t0: t }; else if (want) delete p._ph; else if (p._ph) p._ph.off = t; }
-      const moveAll = at => { for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(at + CT, () => moveContact(c, evT)); };
+      const moveAll = at => { for (const c of parts) if ((c.t === 'con' || c.t === 'mst') && c.L === p.L) schedule(at + CT, () => moveContact(c, evT)); };
       if (isTimer(p)) {
         // its instantaneous contacts follow it at once; its timed ones as its type says (see sim-core). Every contact of
         // its letter is looked at whenever anything changes, and works out for itself whether it has anything to do
@@ -405,7 +406,7 @@ function updateCoils(t) {
         st.onOut = at => { st.act = !p.tof; moveAll(at); };
         TIMER[p.id] = st; armTimer(p, st);
         moveAll(t);
-      } else if (p.t === 'coil') for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(t + CT, () => moveContact(c, evT));
+      } else if (p.t === 'coil') for (const c of parts) if ((c.t === 'con' || c.t === 'mst') && c.L === p.L) schedule(t + CT, () => moveContact(c, evT));
       // a transformer: its secondary comes alive (or goes dead) with its primary
       if (p.t === 'xfm' && p._sw) { const sw = p._sw; schedule(t, () => switched(sw, evT)); }   // its contacts follow
     }
@@ -442,8 +443,9 @@ function moveContact(c, t) {
   if (!s || s.closing === want) return;
   CON[c.id] = { t0: t, closing: want, shut: s.shut };
   if (t + SWING > busyUntil) busyUntil = t + SWING;
-  if (want) schedule(t + SWING, () => { const k = CON[c.id]; if (k.closing && !k.shut) { k.shut = true; switched([c], evT); } });
-  else if (s.shut) { CON[c.id].shut = false; switched([c], t); }
+  const sw = c.t === 'mst' ? c._poles : [c];   // (a starter: its three poles)
+  if (want) schedule(t + SWING, () => { const k = CON[c.id]; if (k.closing && !k.shut) { k.shut = true; switched(sw, evT); } });
+  else if (s.shut) { CON[c.id].shut = false; switched(sw, t); }
 }
 // some pushbuttons or contacts have just opened or closed
 function switched(sw, t) {
@@ -512,8 +514,61 @@ function phasesNow(t) {
   }
   // a transformer fed from the phases: look at it again as each phase reaches its primary
   for (const p of parts) if (p.t === 'xfm') for (const n of [p._a, p._b]) { const s = PARR.get(n); if (s && s.t > t) schedule(s.t, () => updateCoils(evT)); }
+  for (const p of parts) if (p.t === 'mtr') for (const n of p._t) { const s = PARR.get(n); if (s && s.t > t) schedule(s.t, () => motorsNow(evT)); }
+  motorsNow(t);
+  // two phases joined: the fuses on the way between them blow (just after, so they are seen to)
+  if (phFault) { const fs = faultFuses(); if (fs.length) schedule(t + .05, () => { const now = fs.filter(k => !BLOWN[k.id]); if (!now.length) return; for (const k of now) BLOWN[k.id] = { t: evT }; switched(now, evT); }); }
   needPaint = true;
 }
+/* A motor runs with three different phases at T1, T2 and T3 (forward with them in order, L1-L2-L3 or a turn of it;
+   backward with any two swapped); with only two it hums without turning, and a few seconds later the overloads
+   feeding it trip. MOT: each motor's state, and since when. */
+const HUM_TRIP = 3;
+function motorsNow(t) {
+  for (const p of parts) if (p.t === 'mtr' && p._t) {
+    const ks = p._t.map(n => { const s = PARR.get(n); return s && s.t <= t + 1e-9 ? s.k : 0; }), got = new Set(ks.filter(Boolean));
+    const st = got.size === 3 ? 'run' : got.size === 2 ? 'hum' : 'off', dir = st !== 'run' ? 0 : ['123', '231', '312'].includes(ks.join('')) ? 1 : -1;
+    const m = MOT[p.id];
+    if (m && m.st === st && m.dir === dir) continue;
+    const now = MOT[p.id] = { st, dir, t0: t }; needPaint = true;
+    if (st === 'hum') schedule(t + HUM_TRIP, () => { if (MOT[p.id] === now) tripFeeding(p, evT); });
+  }
+}
+// trip (or reset) overload L: its contacts in the control circuit open (or close again)
+function setTrip(L, on, t) {
+  if (!!OLTRIP[L] === on) return;
+  if (on) OLTRIP[L] = { t }; else { delete OLTRIP[L]; OLRESET[L] = t; }
+  if (t + SWING > busyUntil) busyUntil = t + SWING;
+  needPaint = true; switched(parts.filter(q => q.t === 'olc' && q.L === L), t);
+}
+// the overloads whose heaters a motor is wired through
+function tripFeeding(m, t) { const f = compNow(), cs = new Set(m._t.map(n => f(n))); for (const o of parts) if (o.t === 'olh' && o._t && o._t.some(n => cs.has(f(n)))) setTrip(o.L, true, t); }
+// the fuse poles between two phases that are joined: taking one out would part them (one side still on one phase,
+// the other on another)
+function faultFuses() {
+  const out = [], PH = NET.PH;
+  for (const p of parts) if (p.t === 'fus' && p._poles) for (const k of p._poles) {
+    if (BLOWN[k.id]) continue;
+    const f = components(NET, e => conducts(e) && e.part !== k), a = f(k._a), b = f(k._b);
+    if (a === b) continue;
+    const side = c => { const ks = Object.keys(PH).filter(L => f(PH[L]) === c); return ks.length ? ks : c === f(NET.L1) || c === f(NET.L2) ? ['c'] : []; };
+    const A = side(a), B = side(b);
+    if (A.length && B.length && (A.some(x => !B.includes(x)) || B.some(x => !A.includes(x)))) out.push(k);
+  }
+  return out;
+}
+// clicked while running: a disconnect's handle (all of it), a fuse (the pole clicked: blown, or put back), an overload
+// (trip it, or reset it once tripped), an overload contact (reset)
+function workPower(p, i) {
+  const t = simT;
+  if (p.t === 'dsc') { if (DSC[p.id]) delete DSC[p.id]; else DSC[p.id] = { t }; DSC_T[p.id] = t; if (t + SWING > busyUntil) busyUntil = t + SWING; switched(p._poles, t); }
+  else if (p.t === 'fus') { const k = p._poles[i]; if (BLOWN[k.id]) delete BLOWN[k.id]; else BLOWN[k.id] = { t }; switched([k], t); }
+  else if (p.t === 'olh') setTrip(p.L, !OLTRIP[p.L], t);
+  else if (p.t === 'olc') setTrip(p.L, false, t);
+  needPaint = true;
+}
+let DSC_T = {}, OLRESET = {};
+
 // spread out from what is in h (times in d), through wires and closed switches, into the junctions ok allows
 function walk(h, d, ok) {
   while (h.size()) {

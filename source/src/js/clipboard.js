@@ -50,7 +50,8 @@ function pasteClip() {
     if (p.t === 'con' && map['c' + p.L]) q.L = map['c' + p.L];
     if (p.t === 'lamp' && p.L && map['b' + p.L]) q.L = map['b' + p.L];
     if (p.t === 'jmp') { if (!jm[p.L]) jm[p.L] = nextNum(new Set([...parts.filter(isJmp).map(q => q.L), ...Object.values(jm)])); q.L = jm[p.L]; }   // (pasted continuations pair among themselves)
-    if (p.t === 'xfm') { q.L = nextNum(new Set([...parts.filter(z => z.t === 'xfm').map(z => z.L), ...xf])); xf.push(q.L); }   // (a pasted transformer gets a number of its own)
+    if (p.t === 'dsc' || p.t === 'fus' || p.t === 'mtr') { q.L = nextNum(new Set([...parts.filter(z => z.t === p.t).map(z => z.L), ...xf.filter(([t]) => t === p.t).map(([, L]) => L)])); xf.push([p.t, q.L]); }
+    if (p.t === 'xfm') { q.L = nextNum(new Set([...parts.filter(z => z.t === 'xfm').map(z => z.L), ...xf.filter(([t]) => t === 'xfm').map(([, L]) => L)])); xf.push(['xfm', q.L]); }   // (a pasted transformer gets a number of its own)
     if (p.t === 'sol') { q.L = nextSol(new Set([...solNums(), ...np0])); np0.push(q.L); }   // (a pasted solenoid gets a number of its own)
     return q;
   });
