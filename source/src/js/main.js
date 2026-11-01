@@ -77,7 +77,7 @@ function fit(widen) {
   // (the main view: the whole panel, or in split view its first pane)
   const w = svg.clientWidth || st.clientWidth || 1, hh = svg.clientHeight || h;
   const widened = !!widen && (editing || viewMode === 'normal') && setWidth(fitWidth(w, hh));
-  const vis = sheetW() * hh / w;
+  const vis = camW() * hh / w;
   if (widened) { VIS_H1 = vis; return true; }
   if (Math.abs(vis - VIS_H1) < 0.5) return false;
   VIS_H1 = vis; return true;

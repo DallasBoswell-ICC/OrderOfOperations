@@ -16,6 +16,9 @@ try { const m = localStorage.getItem(VIEW_KEY); if (m === 'columns' || m === 'sp
 const svg2 = document.getElementById('svg2'), pane2 = document.getElementById('pane2');
 // the sheet the main view looks at: the circuit, or in columns the columns side by side
 const sheetW = () => LAYOUT ? LAYOUT.w : W, sheetH = () => LAYOUT ? LAYOUT.h : canvasH();
+// the sheet has a margin either side (SHEET_M), so nothing on it (the bars, the rung numbers) sits on the panel's edge:
+// the view takes in the sheet and its margins, from x = -SHEET_M
+const SHEET_M = 40, camW = () => sheetW() + 2 * SHEET_M;
 const COL_GAP = 60;
 function layoutColumns() {
   const H = canvasH(), pw = svg.clientWidth || 1, ph = svg.clientHeight || 1;
@@ -48,14 +51,15 @@ function layoutColumns() {
 
 // ---- the second pane (split view): its own camera, like the main one
 let cam2 = { x: 0, y: 0, z: 1 };
-const VIS2 = () => W * (svg2.clientHeight || 1) / (svg2.clientWidth || 1);
-const viewW2 = () => W / cam2.z, viewH2 = () => VIS2() / cam2.z;
+const VIS2 = () => (W + 2 * SHEET_M) * (svg2.clientHeight || 1) / (svg2.clientWidth || 1);
+const viewW2 = () => (W + 2 * SHEET_M) / cam2.z, viewH2 = () => VIS2() / cam2.z;
 const zMin2 = () => Math.max(0.25, Math.min(1, VIS2() / canvasH()));
 function applyCam2() {
   if (pane2.hidden) return;
   const H = canvasH(); cam2.z = Math.min(ZMAX, Math.max(zMin2(), cam2.z));
   const vw = viewW2(), vh = viewH2();
-  cam2.x = vw >= W ? (W - vw) / 2 : Math.min(Math.max(0, cam2.x), W - vw);
+  const W2 = W + 2 * SHEET_M;
+  cam2.x = vw >= W2 ? (W2 - vw) / 2 - SHEET_M : Math.min(Math.max(-SHEET_M, cam2.x), W2 - vw - SHEET_M);
   cam2.y = vh >= H ? (H - vh) / 2 : Math.min(Math.max(0, cam2.y), H - vh);
   svg2.setAttribute('viewBox', `${cam2.x} ${cam2.y} ${vw} ${vh}`);
   document.getElementById('zoom-pct2').textContent = Math.round(cam2.z * 100) + '%';

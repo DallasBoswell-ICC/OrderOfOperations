@@ -29,8 +29,8 @@ function renderInto(target, V, L) {
   const bands = (L ? L.bands : [{ y0: 0, y1: H, dx: 0, dy: 0 }]).map((b, n) => ({ ...b, n, g: el('g', b.dx || b.dy ? { transform: `translate(${b.dx} ${b.dy})` } : {}) }));
   const B = V.B = y => bands.find(b => y < b.y1) || bands[bands.length - 1];
   for (const b of bands) {
-    el('rect', { x: 0, y: b.y0, width: L ? W : workW(), height: b.y1 - b.y0, fill: '#404040' }, b.g);   // the sheet the circuit is drawn on
-    if (editing) el('rect', { x: 0, y: 0, width: workW(), height: H, fill: 'url(#gridMajor)' }, b.g);   // positioning grid while building
+    el('rect', { x: -SHEET_M, y: b.y0, width: (L ? W : workW()) + 2 * SHEET_M, height: b.y1 - b.y0, fill: '#404040' }, b.g);   // the sheet the circuit is drawn on (and its margins)
+    if (editing) el('rect', { x: -SHEET_M, y: 0, width: workW() + 2 * SHEET_M, height: H, fill: 'url(#gridMajor)' }, b.g);   // positioning grid while building
   }
   const net = network(); if (editing) NET = net;
   // one dark channel under all the wiring, so wires that meet join into one seamless conduit; then vertical

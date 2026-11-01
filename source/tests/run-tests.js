@@ -1733,12 +1733,12 @@ const DEF_CIRCUIT = `
     return out;
   });
 
-  await check('A tall circuit on a wide screen fills the panel edge to edge: L2 moves out, its wires stretch, files stay the same', async page => {
+  await check('A tall circuit on a wide screen fills the panel edge to edge (with the sheet\'s margins): L2 moves out, its wires stretch, files stay the same', async page => {
     const out = [];
     await page.setViewportSize({ width: 1600, height: 900 });
     await page.selectOption('#preset', 'three'); await page.waitForTimeout(150);
     const look = () => page.evaluate(() => { const st = document.getElementById('stage').getBoundingClientRect(), m = svg.getScreenCTM();
-      return { left: m.e + 0 * m.a, right: m.e + W * m.a, sl: st.left, sr: st.right, top: m.f, bottom: m.f + canvasH() * m.d, sb: st.bottom, W, issues: wiringIssues(network()).size, data: JSON.stringify(circuitData()) }; });
+      return { left: m.e - SHEET_M * m.a, right: m.e + (W + SHEET_M) * m.a, sl: st.left, sr: st.right, top: m.f, bottom: m.f + canvasH() * m.d, sb: st.bottom, W, issues: wiringIssues(network()).size, data: JSON.stringify(circuitData()) }; });
     let v = await look();
     if (v.W <= 880) out.push('the sheet did not widen (W ' + v.W + ')');
     if (Math.abs(v.left - v.sl) > 4 || Math.abs(v.right - v.sr) > 4) out.push('the sheet does not reach both edges of the panel: ' + [v.left, v.right, v.sl, v.sr].map(Math.round).join(' '));

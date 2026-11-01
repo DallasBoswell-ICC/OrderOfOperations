@@ -26,7 +26,7 @@ function setWidth(nw) {
 }
 // the width that fills a panel of the given size (in screen pixels) with the whole circuit
 // (with supply boxes there's no L2 bar to stretch out: the sheet is just as wide as the circuit, viewed at 100%)
-function fitWidth(pw, ph) { return !barsOn() ? contentRight() + 120 : W_USER ? Math.max(contentRight(BAR_MIN), W_USER) : Math.max(contentRight(), Math.ceil(contentH() * pw / Math.max(ph, 1) / G) * G); }
+function fitWidth(pw, ph) { return !barsOn() ? contentRight() + 120 : W_USER ? Math.max(contentRight(BAR_MIN), W_USER) : Math.max(contentRight(), Math.ceil((contentH() * pw / Math.max(ph, 1) - 2 * SHEET_M) / G) * G); }   // (less the margins either side)
 const BAR_MIN = 240;   // the shortest a circuit can be made by moving the bars
 // how far right the L1 bar can move: up to 40 units short of the first part or wire corner
 function leftRoom() {
@@ -54,7 +54,7 @@ function canvasH() {
 // how far right things can go: to the L2 bar, or with supply boxes, on past the sheet's edge (which then moves out)
 const rightEdge = () => barsOn() ? W : Math.max(W + 400, workW());
 // how wide the sheet is drawn: building on supply boxes, out to the right of the view, so there is room to build in
-const workW = () => editing && !barsOn() && typeof cam !== 'undefined' ? Math.max(W, Math.ceil((cam.x + sheetW() / cam.z) / G) * G) : W;
+const workW = () => editing && !barsOn() && typeof cam !== 'undefined' ? Math.max(W, Math.ceil((cam.x + camW() / cam.z) / G) * G) : W;
 function overlaps(p, x, y, t) {
   const hw = WIDE(t) ? 60 : 40;
   return parts.some(q => q !== p && Math.abs(q.x - x) < hw + TERM(q) && Math.abs(q.y - y) < 80);
