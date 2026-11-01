@@ -2161,6 +2161,9 @@ function drawXfm(p, g, x, y, v, chan) {
     return { d, old, cur, dots };
   };
   v.pri = winding(yp, false); v.sec = winding(ys, true);
+  // (across two phases, the primary shades from H1's phase's colour into H2's along its turns: see paintXfm)
+  const gid = 'xfg' + (++solMaskN), gr = el('linearGradient', { id: gid, gradientUnits: 'userSpaceOnUse', x1: x - w, y1: 0, x2: x + w, y2: 0 }, g);
+  v.pri.grad = { id: gid, stops: [.12, .88].map(o => el('stop', { offset: o, 'stop-color': 'transparent' }, gr)) };
   // the core: two raised steel bars, evenly spaced between the windings
   for (const dy of [-6.5, 6.5]) el('rect', { x: x - w - 6, y: y + dy - 2.5, width: 2 * w + 12, height: 5, rx: 2.5, fill: 'url(#gTerm)', filter: 'url(#fShadow)' }, g);
   // the terminals' names, on rounded squares beside the windings' ends
@@ -2638,7 +2641,8 @@ function paintXfm(p, v) {
   if (P) {   // (old: the far half, from H2, in H2's phase)
     const W = v.pri, n = h * XFM_LEN / 2 + (h >= 1 ? 1 : 0);
     W.cur.setAttribute('d', W.d[0]); W.old.setAttribute('d', W.d[1]);
-    for (const [ln, c] of [[W.cur, P.a], [W.old, P.b]]) { ln.setAttribute('stroke', h > 0 ? c : 'transparent'); ln.setAttribute('stroke-dasharray', `${n} ${XFM_LEN + 2}`); }
+    W.grad.stops[0].setAttribute('stop-color', P.a); W.grad.stops[1].setAttribute('stop-color', P.b);
+    for (const ln of [W.cur, W.old]) { ln.setAttribute('stroke', h > 0 ? `url(#${W.grad.id})` : 'transparent'); ln.setAttribute('stroke-dasharray', `${n} ${XFM_LEN + 2}`); }
     W.dots[0].setAttribute('fill', h > 0 ? P.a : 'transparent'); W.dots[1].setAttribute('fill', h > 0 ? P.b : 'transparent');
   } else fillW(v.pri, ...pri);
   fillW(v.sec, ...sec);

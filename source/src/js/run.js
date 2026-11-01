@@ -155,7 +155,8 @@ function paintXfm(p, v) {
   if (P) {   // (old: the far half, from H2, in H2's phase)
     const W = v.pri, n = h * XFM_LEN / 2 + (h >= 1 ? 1 : 0);
     W.cur.setAttribute('d', W.d[0]); W.old.setAttribute('d', W.d[1]);
-    for (const [ln, c] of [[W.cur, P.a], [W.old, P.b]]) { ln.setAttribute('stroke', h > 0 ? c : 'transparent'); ln.setAttribute('stroke-dasharray', `${n} ${XFM_LEN + 2}`); }
+    W.grad.stops[0].setAttribute('stop-color', P.a); W.grad.stops[1].setAttribute('stop-color', P.b);
+    for (const ln of [W.cur, W.old]) { ln.setAttribute('stroke', h > 0 ? `url(#${W.grad.id})` : 'transparent'); ln.setAttribute('stroke-dasharray', `${n} ${XFM_LEN + 2}`); }
     W.dots[0].setAttribute('fill', h > 0 ? P.a : 'transparent'); W.dots[1].setAttribute('fill', h > 0 ? P.b : 'transparent');
   } else fillW(v.pri, ...pri);
   fillW(v.sec, ...sec);

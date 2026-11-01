@@ -381,6 +381,9 @@ function drawXfm(p, g, x, y, v, chan) {
     return { d, old, cur, dots };
   };
   v.pri = winding(yp, false); v.sec = winding(ys, true);
+  // (across two phases, the primary shades from H1's phase's colour into H2's along its turns: see paintXfm)
+  const gid = 'xfg' + (++solMaskN), gr = el('linearGradient', { id: gid, gradientUnits: 'userSpaceOnUse', x1: x - w, y1: 0, x2: x + w, y2: 0 }, g);
+  v.pri.grad = { id: gid, stops: [.12, .88].map(o => el('stop', { offset: o, 'stop-color': 'transparent' }, gr)) };
   // the core: two raised steel bars, evenly spaced between the windings
   for (const dy of [-6.5, 6.5]) el('rect', { x: x - w - 6, y: y + dy - 2.5, width: 2 * w + 12, height: 5, rx: 2.5, fill: 'url(#gTerm)', filter: 'url(#fShadow)' }, g);
   // the terminals' names, on rounded squares beside the windings' ends
