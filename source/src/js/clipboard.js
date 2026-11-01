@@ -41,7 +41,7 @@ function pasteClip() {
   for (let k = 0; k < 2000 && busy(y0); k++) y0 += G;
   const dy = snap(y0 - top0);
   const fx = x => x === 0 ? 0 : x >= W ? W : x;   // (wires to the bars stay on the bars)
-  const np0 = [], jm = {};
+  const np0 = [], jm = {}, xf = [];
   const np = clip.parts.map(p => {
     const q = { ...p, id: nextId++, y: p.y + dy }; if (p.ls) q.ls = [...p.ls];
     if (p.t === 'btn') q.L = map['b' + p.L];
@@ -50,6 +50,7 @@ function pasteClip() {
     if (p.t === 'con' && map['c' + p.L]) q.L = map['c' + p.L];
     if (p.t === 'lamp' && p.L && map['b' + p.L]) q.L = map['b' + p.L];
     if (p.t === 'jmp') { if (!jm[p.L]) jm[p.L] = nextNum(new Set([...parts.filter(isJmp).map(q => q.L), ...Object.values(jm)])); q.L = jm[p.L]; }   // (pasted continuations pair among themselves)
+    if (p.t === 'xfm') { q.L = nextNum(new Set([...parts.filter(z => z.t === 'xfm').map(z => z.L), ...xf])); xf.push(q.L); }   // (a pasted transformer gets a number of its own)
     if (p.t === 'sol') { q.L = nextSol(new Set([...solNums(), ...np0])); np0.push(q.L); }   // (a pasted solenoid gets a number of its own)
     return q;
   });

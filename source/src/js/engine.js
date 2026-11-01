@@ -175,7 +175,7 @@ function findNoway() {
   for (const coilsIn of [false, true]) for (const path of PATHS) {
     let label = '';
     for (const d of path) {
-      if (d.e.kind === 'part') { if (isOp(d.e.part)) label = d.e.part.L; else if (d.e.part.t === 'con') add(d, label); else if (LOADT(d.e.part.t) && coilsIn) label = 'ret'; continue; }
+      if (d.e.kind === 'part') { if (isOp(d.e.part)) label = d.e.part.L; else if (isCon(d.e.part)) add(d, label); else if (LOADT(d.e.part.t) && coilsIn) label = 'ret'; continue; }
       add(d, label);
     }
   }
@@ -223,13 +223,13 @@ function findReach() {
     let label = '', s = 0;   // (s: how long the current takes to get there, in seconds)
     for (const d of path) {
       s += d.e.kind === 'seg' ? d.delay : d.e.len / V;
-      if (d.e.kind === 'part' && d.e.part.t !== 'con') { if (isOp(d.e.part)) label = d.e.part.L; else if (LOADT(d.e.part.t)) label = 'ret'; continue; }
+      if (d.e.kind === 'part' && !isCon(d.e.part)) { if (isOp(d.e.part)) label = d.e.part.L; else if (LOADT(d.e.part.t)) label = 'ret'; continue; }
       if (!onward(d, label)) break;   // (the colour cannot go this way: this path carries none of it on from here)
       const m = REACH.get(d) || {}; m[label] = Math.max(m[label] || 0, s); REACH.set(d, m);
     }
   }
 }
-const filtered = d => d.e.kind === 'seg' || d.e.part.t === 'con';   // lanes that only carry the colours with a path along them
+const filtered = d => d.e.kind === 'seg' || isCon(d.e.part);   // lanes that only carry the colours with a path along them
 function allowNow() {
   const A = new Map();
   for (const path of PATHS) {
@@ -268,7 +268,7 @@ function through(d, r) {
   if (!r) return null;
   if (d.e.kind === 'seg') return along(r, d.e.len);
   if (isOp(d.e.part)) return { set: new Set([d.e.part.L]), from: colourOf(r), rd: 0 };
-  if (d.e.part.t === 'con') return along(r, d.e.len);   // a relay contact passes the current on as it is
+  if (isCon(d.e.part)) return along(r, d.e.len);   // a relay contact passes the current on as it is
   // through a coil that is in: the return side, fading to egg. Through a coil that cannot pick up: the colour
   // waiting at it, on up to whatever is open past it
   if (COND[d.e.part.id]) return { ret: true, base: r.ret ? r.base : colourOf(r), along: 0, l0: lv(d.e.part)[0], l1: lv(d.e.part)[1] };
@@ -383,7 +383,7 @@ function updateCoils(t) {
     let sh = shareOf(p), cond = !shortNow && !!r && sh > 1e-9;
     if (!cond && !shortNow && !!r && COND[p.id] && onToL2(p, d.to)) { cond = true; sh = p._sh ?? 1; }
     else if (cond) { p._sh = sh; p._lv = [levelAt(d.from), levelAt(d.to)]; }
-    const pull = p.t === 'lamp' || sh >= PULL_IN * ratedShare(p) - 1e-9;
+    const pull = p.t === 'lamp' || p.t === 'xfm' || sh >= PULL_IN * ratedShare(p) - 1e-9;   // (a light lights, and a transformer works, on whatever it gets)
     if (cond && !COND[p.id] && pull && p.t === 'coil' && wouldCutOff(p, f)) cond = false;
     const want = cond && pull, wasC = !!COND[p.id];
     let atOnce = false; const wasOn = !!coilOn[p.id];
@@ -401,7 +401,9 @@ function updateCoils(t) {
         st.onOut = at => { st.act = !p.tof; moveAll(at); };
         TIMER[p.id] = st; armTimer(p, st);
         moveAll(t);
-      } else if (p.t === 'coil') for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(t + CT, () => moveContact(c, evT));   // its contacts follow
+      } else if (p.t === 'coil') for (const c of parts) if (c.t === 'con' && c.L === p.L) schedule(t + CT, () => moveContact(c, evT));
+      // a transformer: its secondary comes alive (or goes dead) with its primary
+      if (p.t === 'xfm' && p._sw) { const sw = p._sw; schedule(t, () => switched(sw, evT)); }   // its contacts follow
     }
     // current already at the load, and its way back to L2 opening or closing: the change starts at its far end at
     // once (rather than travelling through it like new current)

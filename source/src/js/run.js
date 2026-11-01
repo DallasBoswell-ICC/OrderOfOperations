@@ -47,6 +47,7 @@ function paintView(V) {
   // parts: each one is only touched when how it looks has changed (redrawing a part, with its shadow, is costly)
   for (const p of parts) {
     const v = V.parts.get(p.id); if (!v) continue;
+    if (p.t === 'xfm') { paintXfm(p, v); continue; }
     if (isJmp(p)) {
       for (const q of v.src || []) { const c = colAt(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
       const c = (p._c !== undefined && colAt(p._c, simT)) || '#8a8a8a'; if (c !== v.cc) { v.cc = c; for (const ch of v.chev) ch.setAttribute('stroke', c); }
@@ -131,6 +132,27 @@ function paintSol(p, v) {
     if (ln.getAttribute('d') !== d) ln.setAttribute('d', d);
     ln.setAttribute('stroke', col || 'transparent'); ln.setAttribute('stroke-dasharray', dash);
   }
+}
+/* a transformer: what reaches its terminals lights their leads; the primary fills as the solenoid's bolt does, in the
+   colour of the current coming in, from the end it comes in at, and drains the same way; once the primary is fed the
+   secondary fills from X1 in the source's colour (the supply it now is), and drains back toward X1 when it is not */
+function paintXfm(p, v) {
+  for (const q of v.src || []) { const c = colAt(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
+  const S = p._inS || 'A', evs = p._lead && p._lead[S], body = 2 * TERM(p);
+  let i = -1; if (evs) for (let k = 0; k < evs.length; k++) if (evs[k].t0 <= simT + 1e-9) i = k;
+  const cur = i >= 0 ? evs[i] : null, f = cur ? clamp01((simT - cur.t0) * V / body) : 0;
+  const on = !!coilOn[p.id], g = p._chg == null ? 1 : clamp01((simT - p._chg) * V / body);
+  const pri = [S === 'A' ? 0 : 1, f, cur && cur.col, i > 0 ? evs[i - 1].col : null], sec = [0, g, on ? SRC_COL : null, on || p._chg == null ? null : SRC_COL];
+  const k = pri.join('|') + '/' + sec.join('|');
+  if (k === v.k) return; v.k = k;
+  const fillW = (W, dir, f, now, before) => {
+    const d = W.d[dir], n = f * XFM_LEN;
+    for (const ln of [W.old, W.cur]) if (ln.getAttribute('d') !== d) ln.setAttribute('d', d);
+    W.cur.setAttribute('stroke', now || 'transparent'); W.cur.setAttribute('stroke-dasharray', f >= 1 ? 'none' : `${n} ${XFM_LEN + 2}`);   // (filled: no dashes, round where the turns meet)
+    W.old.setAttribute('stroke', f >= 1 ? 'transparent' : before || 'transparent'); W.old.setAttribute('stroke-dasharray', `0 ${n} ${XFM_LEN + 2}`);
+    W.dots[dir].setAttribute('fill', (f > 0 ? now : before) || 'transparent'); W.dots[1 - dir].setAttribute('fill', (f >= 1 ? now : before) || 'transparent');
+  };
+  fillW(v.pri, ...pri); fillW(v.sec, ...sec);
 }
 function paintLead(L, evs) {
   let i = -1; if (evs) for (let k = 0; k < evs.length; k++) if (evs[k].t0 <= simT + 1e-9) i = k;

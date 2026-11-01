@@ -30,7 +30,13 @@ const OPEN_LIFT = 15, BLADE_GREY = '#a6a6a6';   // how far an open contact's bar
 // loads: things current passes through to L2 (a relay coil, a pilot light or a solenoid). They take the same room and
 // are passed through the same way; only a coil works contacts. A solenoid works something outside the circuit (a
 // pneumatic or hydraulic valve): it is numbered (SOL1, SOL2 ...) rather than lettered, and solOn says if it has pulled in
-const LOADT = t => t === 'coil' || t === 'lamp' || t === 'sol';
+const LOADT = t => t === 'coil' || t === 'lamp' || t === 'sol' || t === 'xfm';
+/* A control transformer (T1, T2 ...): its primary (H1, H2, on top) is a load across the supply; while current goes
+   through it, its secondary (X1, X2, below) is a supply of its own for a control circuit: X1 like L1, X2 like L2, joined
+   to them through two switches inside it that close when the primary is fed (see network.js). The box: XFM_W by XFM_H;
+   the terminals XFM_TX either side and XFM_TY above and below its middle. */
+const XFM_W = 210, XFM_H = 148, XFM_TX = 60, XFM_TY = 80, XFM_EDGE = '#9aa7b5';
+const halfW = t => t === 'xfm' ? XFM_W / 2 : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : 40;   // (the room a part takes)
 const SOL_COL = '#00D2BE';
 /* a solenoid (as on Dallas's drawing): a diamond (a rounded square on its corner) as tall and wide as a coil, with a
    dot at each end where the rung comes in, joined by the lightning bolt: along the rung, up to a peak, straight down and
@@ -47,7 +53,7 @@ const SOL_LEN = 2 * (SOL_DOT + SOL_DR - SOL_X) + 2 * Math.hypot(SOL_X, SOL_P) + 
 // a selector switch: a square body a little larger than a pushbutton's (room for its position numbers round the top)
 const SEL_BOX = 80;
 const WIDE = t => LOADT(t) || t === 'sel';                                // parts whose ends sit 60 either side of their centre
-const BODYH = t => LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
+const BODYH = t => t === 'xfm' ? XFM_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
 const TERM = p => WIDE(p.t) ? 60 : 40;
 const isOp = p => p.t === 'btn' || p.t === 'sel';   // operators: pushbuttons and selector switches (they tint the current with their colour)
 /* Power: each circuit is fed either by the L1 and L2 bars down its sides (POWER 'bars', as a ladder diagram is drawn),
@@ -65,4 +71,5 @@ const isSrc = p => p.t === 'l1' || p.t === 'l2';
    every other continuation with the same number, as if a wire ran between them (so a long run can be left out) */
 const isJmp = p => p.t === 'jmp', isBox = p => isSrc(p) || isJmp(p);
 const JMP_EDGE = '#b8c2cf';
-const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel';   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre
+const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel' || p.t === 'xsw';
+const isCon = p => p.t === 'con' || p.t === 'xsw';   // (a relay contact, or a transformer's switch inside it: passes on what it is given)   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre

@@ -17,12 +17,12 @@ const selGroup = () => {
   return ps.every(q => q.t === ps[0].t) ? ps : [];
 };
 const each = f => { const g = selGroup(); if (!g.length) return false; snapshot(); g.forEach(f); normalize(); draw(); return true; };
-const KIND_NAME = { btn: 'pushbuttons', coil: 'coils', con: 'contacts', lamp: 'pilot lights', sel: 'selector switches', sol: 'solenoids', jmp: 'continuations', l1: 'L1 supplies', l2: 'L2 returns' };
+const KIND_NAME = { xfm: 'transformers', btn: 'pushbuttons', coil: 'coils', con: 'contacts', lamp: 'pilot lights', sel: 'selector switches', sol: 'solenoids', jmp: 'continuations', l1: 'L1 supplies', l2: 'L2 returns' };
 const blocksOf = L => parts.filter(p => p.t === 'btn' && p.L === L);
 function renderProps() {
   const G = selGroup(), p = G[0] || null, multi = G.length > 1;
   const groupOf = id => document.getElementById(id).closest('.tgroup');
-  for (const id of ['p-letter', 'o-letter', 's-letter', 'v-num', 'p-label', 'o-label', 's-names']) { const g = groupOf(id); if (g) g.hidden = multi; }
+  for (const id of ['p-letter', 'o-letter', 's-letter', 'v-num', 'x-num', 'p-label', 'o-label', 's-names']) { const g = groupOf(id); if (g) g.hidden = multi; }
   const nP = sel ? sel.parts.size : 0, nW = sel ? sel.wires.size : 0, nT = sel && sel.terms ? sel.terms.size : 0;
   document.getElementById('selname').textContent = !sel ? 'Nothing'
     : multi ? `${G.length} ${G.every(isTimer) ? 'timers' : KIND_NAME[p.t] || 'parts'} (a setting changed here changes them all)`
@@ -62,6 +62,13 @@ function renderProps() {
     ns.innerHTML = '';
     const top = Math.max(10, ...Object.keys(cnt).map(Number)) + 3;
     for (let n = 1; n <= top; n++) { const c = cnt[String(n)] || 0; ns.add(new Option(`${n}` + (c ? ` (joins ${c} other${c > 1 ? 's' : ''})` : ''), String(n), false, String(n) === p.L)); }
+  }
+  document.getElementById('props-xfm').hidden = !(p && p.t === 'xfm');
+  if (p && p.t === 'xfm') {
+    // its number (one no other transformer has)
+    const ns = document.getElementById('x-num'), taken = new Set(parts.filter(q => q.t === 'xfm' && q !== p).map(q => q.L));
+    ns.innerHTML = '';
+    for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n))) ns.add(new Option('T' + n, String(n), false, String(n) === p.L));
   }
   document.getElementById('props-sol').hidden = !(p && p.t === 'sol');
   if (p && p.t === 'sol') {
@@ -236,3 +243,4 @@ document.getElementById('j-num').addEventListener('change', e => { if (selGroup(
 // turn a continuation a quarter turn clockwise (the R key, or Rotate on its tab)
 function rotateJmp(p) { snapshot(); p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; normalize(); draw(); }
 document.getElementById('j-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(isJmp)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
+document.getElementById('x-num').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'xfm') return; snapshot(); p.L = e.target.value; draw(); });

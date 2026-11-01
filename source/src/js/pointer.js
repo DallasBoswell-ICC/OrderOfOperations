@@ -88,7 +88,7 @@ function groupDrag(e, p0) {
     for (let pass = 0; pass < 2; pass++) for (const q of P0) { const [cx, cy] = clampPart(q.x + dx, q.y + dy, q.t); dx = cx - q.x; dy = cy - q.y; }
     for (const y of T0) if (y + dy < 40) dy = 40 - y;   // (terminals stay on the panel too)
     const moving = parts.filter(q => pIds.has(q.id));
-    if (P0.some(q => parts.some(o => !pIds.has(o.id) && Math.abs(o.x - (q.x + dx)) < (WIDE(q.t) ? 60 : 40) + TERM(o) && Math.abs(o.y - (q.y + dy)) < 80))) return blocked('There is already a part there.');
+    if (P0.some(q => parts.some(o => !pIds.has(o.id) && Math.abs(o.x - (q.x + dx)) < halfW(q.t) + halfW(o.t) && Math.abs(o.y - (q.y + dy)) < halfH(q.t) + halfH(o.t)))) return blocked('There is already a part there.');
     say('');
     const m = movedGroup(pIds, wIds, dx, dy, tIds); wires = m.wires;
     for (const q of moving) { const o = P0.find(z => z.id === q.id); q.x = o.x + dx; q.y = o.y + dy; }

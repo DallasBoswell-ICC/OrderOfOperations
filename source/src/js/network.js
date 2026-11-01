@@ -43,7 +43,19 @@ function network() {
     const a = jmps[k][i - 1]._c, b = jmps[k][i]._c;
     edges.push({ a, b, w: 1, kind: 'w' }); jedges.push({ kind: 'seg', a, b, len: 1, chain: [a, b], jump: true });
   }
+  // a transformer's secondary: X1 joins L1 and X2 joins L2 through two switches inside it (p._sw: the same two objects
+  // from one drawing to the next, so the simulation can work them), closed while its primary is fed (see closed)
+  const xfmFeeds = [];
+  for (const p of parts) if (p.t === 'xfm') {
+    p._t = terms(p).map(([x, y]) => node(x, y, key(x, y)));
+    const f1 = node(p.x, p.y - 1, 'xf1-' + p.id), f2 = node(p.x, p.y + 1, 'xf2-' + p.id);
+    edges.push({ a: L1, b: f1, w: 0, kind: 'w' }, { a: L2, b: f2, w: 0, kind: 'w' }); xfmFeeds.push([f1, 1], [f2, 0]);
+    p._sw = p._sw || [{ t: 'xsw', id: 'xa' + p.id }, { t: 'xsw', id: 'xb' + p.id }];
+    Object.assign(p._sw[0], { x: p, _a: f1, _b: p._t[2] }); Object.assign(p._sw[1], { x: p, _a: p._t[3], _b: f2 });
+    for (const k of p._sw) { edges.push({ a: k._a, b: k._b, w: 2, kind: 'part', part: k }); jedges.push({ kind: 'part', a: k._a, b: k._b, len: 2, part: k }); }
+  }
   const jadj = new Map(), feedV = new Map();
+  for (const [i, v] of xfmFeeds) feedV.set(i, v);
   jedges.forEach((e, i) => { e.i = i; for (const v of [e.a, e.b]) { if (!jadj.has(v)) jadj.set(v, []); jadj.get(v).push(e); } });
   const feeds = [];
   for (const [k, i] of index) {

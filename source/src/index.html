@@ -106,6 +106,7 @@
           <button type="button" class="tool small" data-power="boxes" aria-pressed="false" data-tip="Power the circuit from supply boxes placed anywhere instead of the bars"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="6" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="11" y="6" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span>Boxes</span></button>
           <div class="srcrow" data-tip="Source colour: the colour of the current straight from L1. Each coil or pilot light it goes through takes away its share of it, down to the neutral's off-white at L2."><span>Source</span><span id="src-swatches" role="group" aria-label="Source colour"></span></div>
         </div>
+        <button type="button" class="tool big" data-part="xfm" data-tip="Control transformer: wire its primary, H1 and H2 on top, across the supply (480 V); while it is fed, its secondary, X1 and X2 below, powers a control circuit (120 V): X1 like L1, X2 like L2."><svg viewBox="0 0 30 26"><rect x="3" y="3" width="24" height="20" rx="4" fill="#222" stroke="#9aa7b5" stroke-width="1.4"/><path d="M8 7v2.6a2.33 2.33 0 0 0 4.66 0a2.33 2.33 0 0 0 4.67 0a2.33 2.33 0 0 0 4.67 0V7M8 19v-2.6a2.33 2.33 0 0 1 4.66 0a2.33 2.33 0 0 1 4.67 0a2.33 2.33 0 0 1 4.67 0V19" fill="none" stroke="#ff9d6b" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.5 12.2h15M7.5 13.8h15" stroke="#c0c6cc" stroke-width="1"/></svg><span>Transformer</span></button>
         <button type="button" class="tool big src-tool" data-part="src-l1" hidden data-tip="L1 Supply: where the circuit gets its power. Wire to its left, right or bottom; use as many as you like."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#e2cc85" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="#f2e6b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L1<br>supply</span></button>
         <button type="button" class="tool big src-tool" data-part="src-l2" hidden data-tip="L2 Return: where the current goes back. Wire to its left, right or bottom; use as many as you like."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#e2cc85" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="#f2e6b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L2<br>return</span></button>
       </div><div class="gname">Power</div></div>
@@ -148,6 +149,10 @@
         <div class="tgroup"><span class="label">Built into</span><select id="l-btn" aria-label="The pushbutton this light is built into"></select></div>
         <div class="tgroup" id="l-colour-group"><span class="label">Colour</span><div class="swatches" id="l-colour" role="radiogroup" aria-label="Light colour"></div></div>
         <div class="tgroup" id="l-colour-note" hidden><span class="label">Colour</span><span class="selname">the button's colour</span></div>
+      </div>
+      <div class="props" id="props-xfm" hidden>
+        <div class="tgroup"><span class="label">Number</span><select id="x-num" aria-label="Transformer number"></select></div>
+        <div class="tgroup"><span class="label">Voltages</span><span class="selname">480 V primary, 120 V secondary</span></div>
       </div>
       <div class="props" id="props-jmp" hidden>
         <div class="tgroup"><span class="label">Number</span><select id="j-num" aria-label="Continuation number" data-tip="Every continuation with the same number is joined to this one: current goes in at one and on out of the others"></select></div>

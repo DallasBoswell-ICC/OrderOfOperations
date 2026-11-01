@@ -164,7 +164,7 @@ body.ribbon-min .rbody { display: none; }
 body.ribbon-min .rtabs { border-bottom: 0; border-radius: 10px; }
 body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1px; right: -1px; top: 100%; z-index: 30; background: var(--chip); border: 1px solid var(--line); border-radius: 0 0 10px 10px; box-shadow: 0 16px 34px rgba(0,0,0,.55); }
 .rpanel { display: flex; align-items: stretch; flex: 1; min-width: 0; height: 100%; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
-.rgrp, .rpanel .tgroup, .rpanel .row { display: flex; flex-direction: column; flex: none; padding: 0 6px; border-right: 1px solid #3e3f44; height: 100%; }
+.rgrp, .rpanel .tgroup, .rpanel .row { display: flex; flex-direction: column; flex: none; padding: 0 4px; border-right: 1px solid #3e3f44; height: 100%; }
 .rgrp .gbody { display: flex; gap: 2px; align-items: flex-start; flex: 1; }
 .gname, .rpanel .label { font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--faint); text-align: center; padding: 2px 0 6px; white-space: nowrap; }
 /* settings and run controls: the controls along the top of each group, its name along the bottom */
@@ -177,7 +177,7 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
 .rpanel .seg button { padding: 4px 10px; }
 .rpanel select { padding: 4px 8px; width: auto; max-width: 13em; }
 /* ribbon buttons: big (icon over its name) and small (in stacks of three) */
-.tool.big { flex-direction: column; justify-content: flex-start; gap: 3px; min-width: 52px; padding: 5px 4px 4px; background: transparent; border-color: transparent; font-size: .76rem; line-height: 1.12; text-align: center; height: auto; }
+.tool.big { flex-direction: column; justify-content: flex-start; gap: 3px; min-width: 50px; padding: 5px 2px 4px; background: transparent; border-color: transparent; font-size: .76rem; line-height: 1.12; text-align: center; height: auto; }
 .tool.big svg { width: 32px; height: 28px; }
 .tool.big:hover:not(:disabled) { background: #3a3b40; }
 .tool.big[aria-pressed="true"] { background: #4d462e; border-color: var(--gold); }

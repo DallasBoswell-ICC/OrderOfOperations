@@ -43,7 +43,7 @@ function screw(x, y, g, bare) {
 }
 const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
-const captionOf = p => p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -72,7 +72,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => (p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => (p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -82,7 +82,7 @@ function framed(tag, a, g) { el(tag, Object.assign({}, a, { fill: 'none', stroke
 // a part, in the same style as the Order of Operations simulators
 function drawPart(p, g, x, y, chan, onStation) {
   const v = {}, T = TERM(p), half = BODYH(p.t) / 2;
-  if (!isBox(p)) el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
+  if (!isBox(p) && p.t !== 'xfm') el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
   // the short leads between the part's ends and its body: each drawn in two pieces, so the current can flow along
   // them (the new colour, and what was there before it)
   const lead = () => el('line', { x1: x, y1: y, x2: x, y2: y, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g);
@@ -163,6 +163,8 @@ function drawPart(p, g, x, y, chan, onStation) {
     }
   } else if (p.t === 'sel') {
     drawSelector(p, g, x, y, v);
+  } else if (p.t === 'xfm') {
+    drawXfm(p, g, x, y, v, chan);
   } else if (isJmp(p)) {
     // a continuation: the supply boxes' double chevron in a silver-edged box. While running, the current lights the
     // leads that are wired and fills the chevrons (see run.js)
@@ -233,7 +235,7 @@ function drawPart(p, g, x, y, chan, onStation) {
     else drawTimer(p, g, x, y, v);
   }
   // its name, above it (the other contact blocks of a pushbutton or selector switch go without: the dashed line joins them to it)
-  if (!v.sec && !onStation && !isJmp(p)) (v.cap = el('text', { x, y: y - capTop(p), 'text-anchor': 'middle', class: isSrc(p) ? 'cap srccap' : isJmp(p) ? 'cap jmpcap' : 'cap' }, g)).textContent = captionOf(p);
+  if (!v.sec && !onStation && !isJmp(p) && p.t !== 'xfm') (v.cap = el('text', { x, y: y - capTop(p), 'text-anchor': 'middle', class: isSrc(p) ? 'cap srccap' : isJmp(p) ? 'cap jmpcap' : 'cap' }, g)).textContent = captionOf(p);
   // (a continuation has no caption: it is wired on all four sides. Its number is on a round silver badge on its top
   // right corner; with the rung numbers shown, the rungs of the others with that number are on a tag on its top left: see refs.js)
   if (isJmp(p)) {
@@ -329,4 +331,53 @@ function setSelector(v, p, pos, ang) {
     el('rect', { x: mx - w / 2 - 4, y: my - fs * .5 - 3, width: w + 8, height: fs + 6, fill: 'transparent', 'data-pos': i, style: editing ? '' : 'cursor:pointer' }, v.marks);   // (pressing a position's name turns the switch straight to it)
     if (on) { const hw = named ? w / 2 : 3.6, uy = my + fs * .36 + 3; el('line', { x1: mx - hw, y1: uy, x2: mx + hw, y2: uy, stroke: '#dcdcdc', 'stroke-width': 1.5, 'stroke-linecap': 'round' }, v.marks); }
   });
+}
+
+/* A control transformer (see XFM_W): a box with a dark bezel and a coloured edge, and inside it the two windings facing
+   each other across the core, each between two round contact points just inside the box's top (H1, H2) or bottom (X1,
+   X2) edge, its ends running in toward the core and its four turns bowing toward it. Raised and grey, like a solenoid's
+   bolt, until current flows: then the primary fills in the colour of the current coming in, from the end it comes in at,
+   and once the primary is fed the secondary fills from X1 in the colour of the supply it now is (see paintXfm). Its
+   name and voltages sit beside it, as on a nameplate. */
+const XFM_LEG = 20, XFM_R = XFM_TX / 4, XFM_LEN = 2 * XFM_LEG + 4 * Math.PI * XFM_R;
+function drawXfm(p, g, x, y, v, chan) {
+  v.lead = null; v.src = [];
+  const W = XFM_W, H = XFM_H, w = XFM_TX, yp = y - H / 2 + 15, ys = y + H / 2 - 15;
+  // the leads from the terminals to the box's edge (lit by what reaches the terminals, while running)
+  terms(p).forEach(([tx, ty], i) => {
+    const by = ty < y ? y - H / 2 : y + H / 2;
+    el('line', { x1: tx, y1: ty, x2: tx, y2: by, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
+    if (!editing && p._t) v.src.push({ n: p._t[i], ln: el('line', { x1: tx, y1: ty, x2: tx, y2: by, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g) });
+  });
+  framed('rect', { x: x - W / 2, y: y - H / 2, width: W, height: H, rx: 20, fill: 'url(#gWell)', stroke: XFM_EDGE, 'stroke-width': 1.8 }, g);
+  // a winding along row yr, its turns bowing down (the primary) or up (the secondary): its path from the left and from the right
+  const winding = (yr, up) => {
+    const yb = yr + (up ? -XFM_LEG : XFM_LEG), path = k => { let d = `M${x - k * w} ${yr}V${yb}`; for (let i = 0; i < 4; i++) d += ` a${XFM_R} ${XFM_R} 0 0 ${(up ? 1 : 0) ^ (k < 0 ? 1 : 0)} ${k * 2 * XFM_R} 0`; return d + `V${yr}`; };
+    const d = [path(1), path(-1)], round = { fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
+    const sh = el('g', { filter: 'url(#fShadow)' }, g);
+    for (const k of [-1, 1]) el('circle', { cx: x + k * w, cy: yr, r: SOL_DR + .9, fill: '#111' }, sh);
+    el('path', Object.assign({ d: d[0], stroke: '#111', 'stroke-width': SOL_BW + 1.8 }, round), sh);
+    for (const k of [-1, 1]) el('circle', { cx: x + k * w, cy: yr, r: SOL_DR, fill: SOL_GREY }, g);
+    el('path', Object.assign({ d: d[0], stroke: SOL_GREY, 'stroke-width': SOL_BW }, round), g);
+    const old = el('path', Object.assign({ d: d[0], stroke: 'transparent', 'stroke-width': SOL_BW }, round), g);
+    const cur = el('path', Object.assign({ d: d[0], stroke: 'transparent', 'stroke-width': SOL_BW }, round), g);
+    const dots = [-1, 1].map(k => el('circle', { cx: x + k * w, cy: yr, r: SOL_DR, fill: 'transparent' }, g));
+    el('path', Object.assign({ d: d[0], transform: 'translate(-.6 -1.1)', stroke: '#fff', 'stroke-opacity': .22, 'stroke-width': 2.4 }, round), g);
+    for (const k of [-1, 1]) el('circle', { cx: x + k * w, cy: yr, r: SOL_DR, fill: 'url(#gDome)' }, g);
+    return { d, old, cur, dots };
+  };
+  v.pri = winding(yp, false); v.sec = winding(ys, true);
+  // the core: two raised steel bars, evenly spaced between the windings
+  for (const dy of [-6.5, 6.5]) el('rect', { x: x - w - 6, y: y + dy - 2.5, width: 2 * w + 12, height: 5, rx: 2.5, fill: 'url(#gTerm)', filter: 'url(#fShadow)' }, g);
+  // the terminals' names, on rounded squares beside the windings' ends
+  for (const [k, ky, s] of [[-1, -1, 'H1'], [1, -1, 'H2'], [-1, 1, 'X1'], [1, 1, 'X2']]) {
+    const tx = x + k * (w + 22), ty = y + ky * 33;
+    el('rect', { x: tx - 12, y: ty - 12, width: 24, height: 24, rx: 6, fill: '#1f1f1f', stroke: '#e2cc85', 'stroke-width': 1.2 }, g);
+    el('text', { x: tx, y: ty + 4.3, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 700, fill: '#f2e6b8' }, g).textContent = s;
+  }
+  // the nameplate
+  const nx = x - W / 2 - 14, t = (dy, s, a) => el('text', Object.assign({ x: nx, y: y + dy, 'text-anchor': 'end' }, a), g).textContent = s;
+  t(-6, 'T' + p.L, { 'font-size': 16, 'font-weight': 800, fill: '#e8e8e8' });
+  t(12, '480 V', { 'font-size': 12.5, 'font-weight': 600, fill: '#ff9d6b' });
+  t(28, '120 V', { 'font-size': 12.5, 'font-weight': 600, fill: '#e2cc85' });
 }

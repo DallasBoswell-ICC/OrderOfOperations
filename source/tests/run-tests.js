@@ -1700,6 +1700,37 @@ const DEF_CIRCUIT = `
     if (over[0] === 680 || over[0] < 540) out.push('let go over Y, it went to ' + over + ' (it should wait just clear of Y)');
     return out;
   });
+  await check('Control transformer: fed primary powers the secondary, unfed primary warns and stays dead, saved and renumbered', async page => {
+    const out = [];
+    const setup = fed => page.evaluate(f => {
+      loadPreset('blank');
+      parts.push(newPart('xfm', 400, 200), P('btn', 420, 420, { L: 'A', maint: true, color: '#FF0032' }), P('coil', 600, 420, { L: 'X', color: '#FFDC00' }));
+      if (f) wires.push(Wr(0, 80, 340, 80), Wr(340, 80, 340, 120), Wr(460, 120, 460, 80), Wr(460, 80, W, 80));
+      wires.push(Wr(340, 280, 340, 420), Wr(340, 420, 380, 420), Wr(460, 420, 540, 420), Wr(660, 420, 700, 420), Wr(700, 420, 700, 320), Wr(700, 320, 460, 320), Wr(460, 320, 460, 280));
+      normalize(); draw();
+      return [...wiringIssues(network())].map(([k, v]) => (parts.find(p => p.id === k) || {}).t + ':' + v).join();
+    }, fed);
+    const state = () => page.evaluate(() => [!!coilOn[parts.find(p => p.t === 'xfm').id], !!coilOn[parts.find(p => p.L === 'X').id]].join());
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    const iss = await setup(true);
+    if (iss) out.push('fed: issues ' + iss);
+    const back = await page.evaluate(() => { const c = readCircuit(JSON.parse(JSON.stringify(circuitData()))); return c.parts.filter(p => p.t === 'xfm').map(p => p.t + p.L).join(); });
+    if (back !== 'xfm1') out.push('read back: ' + back);
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300));
+    await page.evaluate(() => press('A', true)); await page.waitForTimeout(1200);
+    let st = await state();
+    if (st !== 'true,true') out.push('fed: transformer, X = ' + st);
+    await page.evaluate(() => press('A', false)); await page.click('#tab-edit'); await page.evaluate(() => setSpeed(1));
+    const iss2 = await setup(false);
+    if (!/xfm:Not wired from L1 to L2/.test(iss2)) out.push('unfed: issues ' + iss2);
+    await page.click('#tab-run'); await page.evaluate(() => { setSpeed(300); press('A', true); }); await page.waitForTimeout(1200);
+    st = await state();
+    if (st !== 'false,false') out.push('unfed: transformer, X = ' + st);
+    await page.evaluate(() => press('A', false)); await page.click('#tab-edit'); await page.evaluate(() => setSpeed(1));
+    const pasted = await page.evaluate(() => { sel = { parts: new Set(parts.filter(p => p.t === 'xfm').map(p => p.id)), wires: new Set() }; copySel(); pasteClip(); return parts.filter(p => p.t === 'xfm').map(p => p.L).join(); });
+    if (pasted !== '1,2') out.push('after pasting: ' + pasted);
+    return out;
+  });
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');
