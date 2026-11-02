@@ -616,8 +616,8 @@ const XFM_W = 210, XFM_H = 148, XFM_TX = 60, XFM_TY = 80, XFM_EDGE = '#9aa7b5';
    contact for the control circuit (olc, normally closed: it opens when the overload with its number trips); and a
    motor (mtr), with T1, T2 and T3 down its left side. */
 const isPwr3 = p => p.t === 'dsc' || p.t === 'fus' || p.t === 'mst' || p.t === 'olh', isPwrT = t => t === 'dsc' || t === 'fus' || t === 'mst' || t === 'olh';
-const PWR_DY = 120, PWR_H = 2 * PWR_DY + 66, MTR_W = 200, MTR_COL = '#9aa7b5', OL_COL = '#FF6F59', DSC_COL = '#c9d2dd', FUS_COL = '#9aa0a6';
-const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : isPwrT(t) || t === 'mtr' ? PWR_H / 2 : 40;   // (the room a part takes)
+const PWR_DY = 120, PWR_H = 2 * PWR_DY + 66, MTR_W = 280, MTR_H = 280, MTR_COL = '#9aa7b5', OL_COL = '#FF6F59', DSC_COL = '#c9d2dd', FUS_COL = '#9aa0a6';
+const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : t === 'mtr' ? MTR_H / 2 : isPwrT(t) ? PWR_H / 2 : 40;   // (the room a part takes)
 const SOL_COL = '#00D2BE';
 /* a solenoid (as on Dallas's drawing): a diamond (a rounded square on its corner) as tall and wide as a coil, with a
    dot at each end where the rung comes in, joined by the lightning bolt: along the rung, up to a peak, straight down and
@@ -634,7 +634,7 @@ const SOL_LEN = 2 * (SOL_DOT + SOL_DR - SOL_X) + 2 * Math.hypot(SOL_X, SOL_P) + 
 // a selector switch: a square body a little larger than a pushbutton's (room for its position numbers round the top)
 const SEL_BOX = 80;
 const WIDE = t => LOADT(t) || t === 'sel';                                // parts whose ends sit 60 either side of their centre
-const BODYH = t => t === 'xfm' ? XFM_H : isPwrT(t) || t === 'mtr' ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
+const BODYH = t => t === 'xfm' ? XFM_H : t === 'mtr' ? MTR_H : isPwrT(t) ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
 const TERM = p => p.t === 'mtr' ? MTR_W / 2 + 20 : WIDE(p.t) ? 60 : 40;
 const isOp = p => p.t === 'btn' || p.t === 'sel';   // operators: pushbuttons and selector switches (they tint the current with their colour)
 /* Power: each circuit is fed either by the L1 and L2 bars down its sides (POWER 'bars', as a ladder diagram is drawn),
@@ -1363,7 +1363,7 @@ function startRun() {
   checkShort();
   ALLOW = allowNow();
   for (const [id, v] of NET.feedV) if (v === 1) setRec(id, shortNow ? null : EGG(), 0);
-  phasesNow(0);
+  phaseWays(); phasesNow(0);
   updateCoils(0);
 }
 /* Long plain stretches of wire (no junctions or parts along them, only corners) carry the current faster in the
@@ -1781,14 +1781,21 @@ function phasesNow(t) {
   for (const L in PH) { const c = f(PH[L]); cph.set(c, cph.has(c) || c === l1 || c === l2 ? -1 : +L); }
   phFault = '';
   for (const L in PH) { const c = f(PH[L]); if (cph.get(c) === -1) { const o = Object.keys(PH).find(k => k !== L && f(PH[k]) === c); phFault = o ? `Short circuit! L${L} is connected straight to L${o}.` : `Short circuit! L${L} is connected straight to the control circuit.`; break; } }
-  const want = n => { const k = cph.get(f(n)); return k > 0 ? k : 0; };
+  // where each phase goes: out from its box, along the ways that lead on to a load, through closed poles from their
+  // line side (so never back into another starter's load side)
+  const reach = new Map();
+  for (const L in PH) if (cph.get(f(PH[L])) === +L) {
+    reach.set(PH[L], +L); const st = [PH[L]];
+    while (st.length) { const u = st.pop(); for (const i of NET.adj[u]) { const e = NET.edges[i], w = e.a === u ? e.b : e.a; if (!reach.has(w) && phStep(e, u)) { reach.set(w, +L); st.push(w); } } }
+  }
+  const want = n => reach.get(n) || 0;
   const N = NET.nodes.length, lost = [], gain = new Set();
   for (let n = 0; n < N; n++) { const o = PARR.get(n), k = want(n); if (o && o.k !== k) lost.push(n); if (k && (!o || o.k !== k)) gain.add(n); }
   const put = (n, at, c) => { let a = PTL.get(n); if (!a) PTL.set(n, a = [[-1e9, null]]); while (a.length > 1 && a[a.length - 1][0] >= at - 1e-9) a.pop(); a.push([at, c]); if (at > busyUntil) busyUntil = at; };
   // what has been cut off goes dark from where it was cut, outwards
   if (lost.length) {
     const L = new Set(lost), d = new Map(), h = heap();
-    for (const n of lost) for (const i of NET.adj[n]) { const e = NET.edges[i], w = e.a === n ? e.b : e.a; if (!L.has(w)) { d.set(n, t); h.push(t, n); break; } }
+    for (const n of lost) for (const i of NET.adj[n]) { const e = NET.edges[i], w = e.a === n ? e.b : e.a; if (!L.has(w) && want(w)) { d.set(n, t); h.push(t, n); break; } }   // (from where it is still lit)
     walk(h, d, n => L.has(n));
     for (const n of lost) { const off = Math.max(t, d.get(n) ?? t), o = PARR.get(n); put(n, off, null); PDARK.set(n, { k: o.k, t: o.t, off }); PARR.delete(n); }
   }
@@ -1798,7 +1805,7 @@ function phasesNow(t) {
     for (const L in PH) if (cph.get(f(PH[L])) === +L) { const s = PARR.get(PH[L]); if (s) { d.set(PH[L], Math.max(s.t, t)); h.push(Math.max(s.t, t), PH[L]); } }
     for (const [n, s] of PARR) if (!d.has(n)) { d.set(n, Math.max(s.t, t)); h.push(Math.max(s.t, t), n); }
     for (const n of gain) if (n === PH[(NET.nodes[n].k || '').slice(2)]) { d.set(n, t); h.push(t, n); }
-    walk(h, d, n => gain.has(n));
+    walk(h, d, n => gain.has(n), phStep);
     for (const n of gain) if (d.has(n)) { const k = want(n), at = d.get(n); PARR.set(n, { k, t: at }); put(n, at, PH_COL[k - 1]); }
   }
   // a transformer fed from the phases: look at it again as each phase reaches its primary
@@ -1861,10 +1868,10 @@ function workPower(p, i) {
 let DSC_T = {}, OLRESET = {};
 
 // spread out from what is in h (times in d), through wires and closed switches, into the junctions ok allows
-function walk(h, d, ok) {
+function walk(h, d, ok, step = e => conducts(e)) {
   while (h.size()) {
     const [tu, u] = h.pop(); if (tu > d.get(u) + 1e-12) continue;
-    for (const i of NET.adj[u]) { const e = NET.edges[i]; if (!conducts(e)) continue;
+    for (const i of NET.adj[u]) { const e = NET.edges[i]; if (!step(e, u)) continue;
       const w = e.a === u ? e.b : e.a; if (!ok(w)) continue;
       const tw = tu + stepTime(e); if (!d.has(w) || tw < d.get(w) - 1e-12) { d.set(w, tw); h.push(tw, w); } }
   }
@@ -1880,6 +1887,50 @@ function heap() {
   const up = i => { while (i) { const j = (i - 1) >> 1; if (a[j][0] <= a[i][0]) break; [a[i], a[j]] = [a[j], a[i]]; i = j; } };
   const down = i => { for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < a.length && a[l][0] < a[m][0]) m = l; if (r < a.length && a[r][0] < a[m][0]) m = r; if (m === i) return; [a[i], a[m]] = [a[m], a[i]]; i = m; } };
   return { size: () => a.length, push: (t, n) => { a.push([t, n]); up(a.length - 1); }, pop: () => { const top = a[0], last = a.pop(); if (a.length) { a[0] = last; down(0); } return top; } };
+}
+
+/* Which way three-phase power goes. Each pole of a disconnect, fuse block or starter passes it only from its line side
+   (PLINE: the end a phase box reaches through fewer other poles, then by the shorter way), as current would. And like
+   the current in the control circuit, a phase only goes along a way that leads on to a load (a motor's terminal, a
+   transformer's primary) without coming back on itself (PUSE: those ways, by jedge and the end they leave from). So a
+   wire to an open starter waits, lit, but a starter's load side is never fed back from another starter's. */
+let PLINE = new Map(), PUSE = new Set(), PSUB = new Map(), PJE = new Map();
+function phaseWays() {
+  PLINE = new Map(); PUSE = new Set(); PSUB = new Map(); PJE = new Map();
+  if (!NET.PH || !Object.keys(NET.PH).length) return;
+  const J = NET.jadj, srcs = [], isP = e => e.kind === 'part' && e.part.t === 'pp', passable = e => e.kind === 'seg' || (e.part && !LOADT(e.part.t));
+  for (const p of parts) if (isPh(p) && p._t) srcs.push(...p._t);
+  for (const pe of NET.jedges) if (isP(pe)) {
+    PJE.set(pe.part, pe);
+    const d = new Map(), h = heap();
+    for (const s of srcs) { d.set(s, 0); h.push(0, s); }
+    while (h.size()) { const [du, u] = h.pop(); if (du > d.get(u)) continue;
+      for (const e of J.get(u) || []) { if (e === pe || !passable(e)) continue; const w = e.a === u ? e.b : e.a, nd = du + (isP(e) ? 1e6 : e.len || 1);
+        if (!d.has(w) || nd < d.get(w)) { d.set(w, nd); h.push(nd, w); } } }
+    PLINE.set(pe.part, (d.get(pe.b) ?? Infinity) < (d.get(pe.a) ?? Infinity) ? pe.b : pe.a);
+  }
+  const T = new Set();
+  for (const p of parts) { if (p.t === 'mtr' && p._t) p._t.forEach(n => T.add(n)); if (p.t === 'xfm' && p._a !== undefined) { T.add(p._a); T.add(p._b); } }
+  const can = (e, u) => passable(e) && !(isP(e) && PLINE.get(e.part) !== u);
+  for (const e of NET.jedges) for (const u of [e.a, e.b]) {
+    if (!can(e, u)) continue;
+    const w = e.a === u ? e.b : e.a; let ok = T.has(w);
+    if (!ok) { const seen = new Set([u, w]), st = [w];
+      while (st.length && !ok) { const x = st.pop(); for (const e2 of J.get(x) || []) { if (!can(e2, x)) continue; const y = e2.a === x ? e2.b : e2.a; if (seen.has(y)) continue; if (T.has(y)) { ok = true; break; } seen.add(y); st.push(y); } } }
+    if (ok) PUSE.add(e.i + (u === e.a ? 'a' : 'b'));
+  }
+  // each small step of wire: the run it is part of, and which of its ends is the one nearer the run's start
+  for (const e of NET.jedges) if (e.kind === 'seg') for (let k = 1; k < e.chain.length; k++) { const a = e.chain[k - 1], b = e.chain[k]; PSUB.set(Math.min(a, b) + ',' + Math.max(a, b), { e, first: a }); }
+}
+// may a phase step along edge e (a small step of wire, or a part) from junction u?
+function phStep(e, u) {
+  if (!conducts(e)) return false;
+  if (e.kind === 'part') {
+    if (e.part.t !== 'pp') return true;
+    const je = PJE.get(e.part); return PLINE.get(e.part) === u && !!je && PUSE.has(je.i + (u === je.a ? 'a' : 'b'));
+  }
+  const m = PSUB.get(Math.min(e.a, e.b) + ',' + Math.max(e.a, e.b)); if (!m) return true;
+  return PUSE.has(m.e.i + (u === m.first ? 'a' : 'b'));
 }
 
 /* ---- js/render-parts.js ---- */
@@ -2352,36 +2403,41 @@ function drawPwr(p, g, x, y, v, chan) {
   }
   if (p.t === 'olh') { v.trip = el('text', { x, y: y + H / 2 + 22, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 800, fill: '#ff8a7a', display: 'none', stroke: '#404040', 'stroke-width': 4, 'paint-order': 'stroke' }, g); v.trip.textContent = 'TRIPPED'; }
 }
-/* A motor: T1, T2 and T3 down its left side; a ring that takes on the colour of the phase at each terminal (a third of
-   it each), round a fan that turns while it runs (an arrow shows which way) and shakes while it hums */
+/* A motor: a square box, T1, T2 and T3 down its left side; a ring that takes on the colour of the phase at each terminal
+   (a third of it each), round a fan that turns while it runs (an arrow beside it shows which way: clockwise forward)
+   and shakes while it hums */
 function drawMtr(p, g, x, y, v, chan) {
   v.lead = null; v.src = [];
-  const H = PWR_H, x0 = x - MTR_W / 2, cx = x + 15, R = 70;
+  const H = MTR_H, x0 = x - MTR_W / 2, cx = x + 22, R = 92;
   terms(p).forEach(([tx, ty], i) => {
     el('line', { x1: tx, y1: ty, x2: x0, y2: ty, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
     if (!editing && p._t) v.src.push({ n: p._t[i], ln: el('line', { x1: tx, y1: ty, x2: x0, y2: ty, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g) });
   });
-  framed('rect', { x: x0, y: y - H / 2, width: MTR_W, height: H, rx: 18, fill: 'url(#gWell)', stroke: MTR_COL, 'stroke-width': 2.2 }, g);
-  [-1, 0, 1].forEach((k, i) => { const ty = y + k * PWR_DY, tx = x0 + 22;
+  framed('rect', { x: x0, y: y - H / 2, width: MTR_W, height: H, rx: 22, fill: 'url(#gWell)', stroke: MTR_COL, 'stroke-width': 2.2 }, g);
+  [-1, 0, 1].forEach((k, i) => { const ty = y + k * PWR_DY, tx = x0 + 24;
     el('rect', { x: tx - 13, y: ty - 12, width: 26, height: 24, rx: 6, fill: '#1f1f1f', stroke: '#e2cc85', 'stroke-width': 1.2 }, g);
     el('text', { x: tx, y: ty + 4.3, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 700, fill: '#f2e6b8' }, g).textContent = 'T' + (i + 1); });
   el('circle', { cx, cy: y, r: R + 5, fill: '#111', filter: 'url(#fShadow)' }, g);
   v.arcs = [0, 1, 2].map(i => { const a0 = (i * 120 - 150) * Math.PI / 180, a1 = ((i + 1) * 120 - 150) * Math.PI / 180;
-    return el('path', { d: `M${cx + R * Math.cos(a0)} ${y + R * Math.sin(a0)}A${R} ${R} 0 0 1 ${cx + R * Math.cos(a1)} ${y + R * Math.sin(a1)}`, fill: 'none', stroke: GREY, 'stroke-width': 8 }, g); });
-  el('circle', { cx, cy: y, r: R - 6, fill: '#262626', stroke: '#111', 'stroke-width': 1.5 }, g);
+    return el('path', { d: `M${cx + R * Math.cos(a0)} ${y + R * Math.sin(a0)}A${R} ${R} 0 0 1 ${cx + R * Math.cos(a1)} ${y + R * Math.sin(a1)}`, fill: 'none', stroke: GREY, 'stroke-width': 9 }, g); });
+  el('circle', { cx, cy: y, r: R - 7, fill: '#262626', stroke: '#111', 'stroke-width': 1.5 }, g);
   const at = el('g', { transform: `translate(${cx} ${y})` }, g);
   v.rotor = el('g', {}, at);   // (it turns about its hub, see paintMtr)
-  for (let i = 0; i < 6; i++) el('path', { d: 'M0 -12C22 -30 30 -48 12 -56L-6 -48C8 -38 6 -26 0 -12Z', transform: `rotate(${i * 60})`, fill: '#6a7077', stroke: '#1c1c1c', 'stroke-width': 1.2 }, v.rotor);
-  rdot(v.rotor, 0, 0, 13).setAttribute('fill', '#7a8087');
-  el('text', { x: 0, y: 5, 'text-anchor': 'middle', 'font-size': 14, 'font-weight': 800, fill: '#1c1c1c' }, at).textContent = 'M';
-  // which way it turns (shown while it runs)
+  const fan = el('g', { transform: `scale(${(R / 70).toFixed(3)})` }, v.rotor);
+  for (let i = 0; i < 6; i++) el('path', { d: 'M0 -12C22 -30 30 -48 12 -56L-6 -48C8 -38 6 -26 0 -12Z', transform: `rotate(${i * 60})`, fill: '#6a7077', stroke: '#1c1c1c', 'stroke-width': 1.2 }, fan);
+  rdot(fan, 0, 0, 13).setAttribute('fill', '#7a8087');
+  el('text', { x: 0, y: 6, 'text-anchor': 'middle', 'font-size': 17, 'font-weight': 800, fill: '#1c1c1c' }, at).textContent = 'M';
+  // which way it turns (shown while it runs): an arc just outside the ring at its lower right, its head the way the fan
+  // goes (clockwise, so down that side, forward; turned over, up it, backward)
+  const ra = R + 13, pt = a => [cx + ra * Math.cos(a * Math.PI / 180), y + ra * Math.sin(a * Math.PI / 180)];
+  const [sx, sy] = pt(8), [tx, ty] = pt(52), tg = [-Math.sin(52 * Math.PI / 180), Math.cos(52 * Math.PI / 180)], bk = [-tg[0], -tg[1]], pp = [-bk[1], bk[0]];
   v.arrow = el('g', { display: 'none' }, g);
   v.arrowPath = el('g', {}, v.arrow);
-  el('path', { d: `M${cx + 46} ${y + 64}A80 80 0 0 0 ${cx + 76} ${y + 20}`, fill: 'none', stroke: '#9be03a', 'stroke-width': 3, 'stroke-linecap': 'round' }, v.arrowPath);
-  el('path', { d: `M${cx + 68} ${y + 24}l8 -6 3 10`, fill: 'none', stroke: '#9be03a', 'stroke-width': 3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, v.arrowPath);
-  v.dir = el('text', { x: cx + 30, y: y + 96, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 800, fill: '#9be03a' }, v.arrow);
-  v.hum = el('text', { x: cx - 5, y: y + R + 30, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: '#ff8a7a', display: 'none' }, g); v.hum.textContent = 'Humming: a phase is missing';
-  v.cx = cx;
+  el('path', { d: `M${sx} ${sy}A${ra} ${ra} 0 0 1 ${tx} ${ty}`, fill: 'none', stroke: '#9be03a', 'stroke-width': 3, 'stroke-linecap': 'round' }, v.arrowPath);
+  el('path', { d: `M${tx + 9 * bk[0] + 5.5 * pp[0]} ${ty + 9 * bk[1] + 5.5 * pp[1]}L${tx} ${ty}L${tx + 9 * bk[0] - 5.5 * pp[0]} ${ty + 9 * bk[1] - 5.5 * pp[1]}`, fill: 'none', stroke: '#9be03a', 'stroke-width': 3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, v.arrowPath);
+  v.dir = el('text', { x: x + MTR_W / 2 - 14, y: y + H / 2 - 12, 'text-anchor': 'end', 'font-size': 12, 'font-weight': 800, fill: '#9be03a' }, v.arrow);
+  v.hum = el('text', { x: cx, y: y + H / 2 - 14, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: '#ff8a7a', display: 'none' }, g); v.hum.textContent = 'Humming: a phase is missing';
+  v.cx = cx; v.cy = y;
 }
 
 // a relay contact's two posts (as drawPart draws them): a short stub in from each side, and a round post at its end,
@@ -2950,7 +3006,7 @@ function paintMtr(p, v) {
   cols.forEach((c, i) => v.arcs[i].setAttribute('stroke', c));
   spinFan(v, m.st === 'run' ? (m.dir < 0 ? 'rev' : 'fwd') : m.st === 'hum' ? 'hum' : '');
   v.arrow.setAttribute('display', m.st === 'run' ? '' : 'none');
-  v.arrowPath.setAttribute('transform', m.dir < 0 ? `translate(${2 * v.cx} 0) scale(-1 1)` : '');
+  v.arrowPath.setAttribute('transform', m.dir < 0 ? `translate(0 ${2 * v.cy}) scale(1 -1)` : '');   // (backward: turned over, pointing up the right side)
   v.dir.textContent = m.dir < 0 ? 'REVERSE' : 'FORWARD';
   v.hum.setAttribute('display', m.st === 'hum' ? '' : 'none');
 }

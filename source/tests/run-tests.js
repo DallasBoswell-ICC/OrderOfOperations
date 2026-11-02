@@ -1749,8 +1749,9 @@ const DEF_CIRCUIT = `
     if (iss) out.push('fed: issues ' + iss);
     await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
     // each phase lights its own line in its colour
-    const lines = await page.evaluate(() => [80, 200, 320].map(y => { const n = NET.nodes.findIndex(q => q.x === 600 && q.y === y); return colAt(n, simT); }).join());
-    if (lines !== await page.evaluate(() => PH_DEFAULT.join())) out.push('line colours: ' + lines);
+    // (L1 and L2 lit in their colours as far as the transformer's taps; L3, leading to no load, and L1 past its tap, dark)
+    const lines = await page.evaluate(() => [[200, 80], [200, 200], [200, 320], [600, 80]].map(([x, y]) => { const n = NET.nodes.findIndex(q => q.x === x && q.y === y); return colAt(n, simT) || '-'; }).join());
+    if (lines !== await page.evaluate(() => [PH_DEFAULT[0], PH_DEFAULT[1], '-', '-'].join())) out.push('line colours: ' + lines);
     await page.evaluate(() => press('A', true)); await page.waitForTimeout(1200);
     let st = await state();
     if (st !== 'true,true') out.push('fed: transformer, X = ' + st);
@@ -1783,7 +1784,7 @@ const DEF_CIRCUIT = `
     const setup = x => page.evaluate(x => { loadPreset('blank'); POWER = 'boxes'; W = 1300; W_USER = 1300;
       [100, 220, 340].forEach((y, i) => { const p = newPart('ph-' + (i + 1), 120, y); p.rot = 3; parts.push(p); wires.push(Wr(160, y, 220, y), Wr(300, y, 400, y), Wr(480, y, 600, y), Wr(680, y, 780, y)); if (x !== 'swap' || i === 0) wires.push(Wr(860, y, 960, y)); });
       if (x === 'swap') wires.push(Wr(860, 220, 900, 220), Wr(900, 220, 900, 300), Wr(900, 300, 940, 300), Wr(940, 300, 940, 340), Wr(940, 340, 960, 340), Wr(860, 340, 880, 340), Wr(880, 340, 880, 260), Wr(880, 260, 920, 260), Wr(920, 260, 920, 220), Wr(920, 220, 960, 220));
-      parts.push(newPart('dsc', 260, 220), newPart('fus', 440, 220), newPart('mst', 640, 220), newPart('olh', 820, 220), newPart('mtr', 1080, 220), newPart('xfm', 700, 560));
+      parts.push(newPart('dsc', 260, 220), newPart('fus', 440, 220), newPart('mst', 640, 220), newPart('olh', 820, 220), newPart('mtr', 1120, 220), newPart('xfm', 700, 560));
       wires.push(Wr(520, 100, 520, 440), Wr(520, 440, 640, 440), Wr(640, 440, 640, 480), Wr(560, 220, 560, 400), Wr(560, 400, 760, 400), Wr(760, 400, 760, 480));
       parts.push(P('btn', 700, 740, { L: 'S', nc: true, maint: false, color: '#FF0032' }), P('btn', 820, 740, { L: 'A', maint: false, color: '#00B050' }), P('coil', 960, 740, { L: 'M', color: '#FFDC00' }), newPart('olc', 1100, 740), P('con', 820, 820, { L: 'M' }));
       wires.push(Wr(640, 640, 640, 740), Wr(640, 740, 660, 740), Wr(740, 740, 780, 740), Wr(860, 740, 900, 740), Wr(1020, 740, 1060, 740), Wr(1140, 740, 1180, 740), Wr(1180, 740, 1180, 680), Wr(1180, 680, 760, 680), Wr(760, 680, 760, 640));
@@ -1825,7 +1826,7 @@ const DEF_CIRCUIT = `
     const setup = x => page.evaluate(x => { loadPreset('blank'); POWER = 'boxes'; W = 1700; W_USER = 1700;
     const Y = [100, 220, 340];
     Y.forEach((y, i) => { const p = newPart('ph-' + (i + 1), 120, y); p.rot = 3; parts.push(p); wires.push(Wr(160, y, 220, y), Wr(300, y, 400, y), Wr(480, y, 960, y), Wr(1040, y, 1260, y), Wr(1340, y, 1440, y)); });
-    parts.push(newPart('dsc', 260, 220), newPart('fus', 440, 220), Object.assign(newPart('mst', 1000, 220), { L: 'X' }), Object.assign(newPart('mst', 1000, 560), { L: 'Y' }), newPart('olh', 1300, 220), newPart('mtr', 1560, 220));
+    parts.push(newPart('dsc', 260, 220), newPart('fus', 440, 220), Object.assign(newPart('mst', 1000, 220), { L: 'X' }), Object.assign(newPart('mst', 1000, 560), { L: 'Y' }), newPart('olh', 1300, 220), newPart('mtr', 1600, 220));
     wires.push(Wr(900, 100, 900, 440), Wr(900, 440, 960, 440), Wr(920, 220, 920, 560), Wr(920, 560, 960, 560), Wr(940, 340, 940, 680), Wr(940, 680, 960, 680));
     wires.push(...(x === 'bad' ? [Wr(1040, 440, 1080, 440), Wr(1080, 440, 1080, 400), Wr(1080, 400, 860, 400), Wr(860, 400, 860, 220)] : [Wr(1040, 440, 1100, 440), Wr(1100, 440, 1100, 340)]), Wr(1040, 560, 1120, 560), Wr(1120, 560, 1120, 220), Wr(1040, 680, 1140, 680), Wr(1140, 680, 1140, 100));
     parts.push(newPart('xfm', 580, 620)); wires.push(Wr(520, 100, 520, 540), Wr(640, 220, 640, 540));
@@ -1843,8 +1844,12 @@ const DEF_CIRCUIT = `
     const iss = await setup('');
     if (iss) out.push('issues: ' + iss);
     await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    // (lit: a starter's line side; never its load side, fed back from the other starter)
+    const sides = L => page.evaluate(L => { const m = parts.find(p => p.t === 'mst' && p.L === L); return [0, 1].map(k => m._t.filter((_, i) => i % 2 === k).map(n => +!!colAt(n, simT)).join('')).join('/'); }, L);
     await tap('F'); let s = await st(); if (s !== 'run1,fwd,1') out.push('forward: ' + s);
+    if ((s = await sides('Y')) !== '111/000') out.push('Y starter while running forward (line/load side lit): ' + s);
     await tap('S'); await tap('R'); s = await st(); if (s !== 'run-1,rev,1') out.push('reverse: ' + s);
+    if ((s = await sides('X')) !== '111/000') out.push('X starter while running backward (line/load side lit): ' + s);
     await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
     const bad = await setup('bad');
     if (!/mstY:Closing it joins L1 to L2/.test(bad) || /phshort/.test(bad)) out.push('miswired Y starter: ' + bad);

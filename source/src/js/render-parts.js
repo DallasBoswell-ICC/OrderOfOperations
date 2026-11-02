@@ -467,36 +467,41 @@ function drawPwr(p, g, x, y, v, chan) {
   }
   if (p.t === 'olh') { v.trip = el('text', { x, y: y + H / 2 + 22, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 800, fill: '#ff8a7a', display: 'none', stroke: '#404040', 'stroke-width': 4, 'paint-order': 'stroke' }, g); v.trip.textContent = 'TRIPPED'; }
 }
-/* A motor: T1, T2 and T3 down its left side; a ring that takes on the colour of the phase at each terminal (a third of
-   it each), round a fan that turns while it runs (an arrow shows which way) and shakes while it hums */
+/* A motor: a square box, T1, T2 and T3 down its left side; a ring that takes on the colour of the phase at each terminal
+   (a third of it each), round a fan that turns while it runs (an arrow beside it shows which way: clockwise forward)
+   and shakes while it hums */
 function drawMtr(p, g, x, y, v, chan) {
   v.lead = null; v.src = [];
-  const H = PWR_H, x0 = x - MTR_W / 2, cx = x + 15, R = 70;
+  const H = MTR_H, x0 = x - MTR_W / 2, cx = x + 22, R = 92;
   terms(p).forEach(([tx, ty], i) => {
     el('line', { x1: tx, y1: ty, x2: x0, y2: ty, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
     if (!editing && p._t) v.src.push({ n: p._t[i], ln: el('line', { x1: tx, y1: ty, x2: x0, y2: ty, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g) });
   });
-  framed('rect', { x: x0, y: y - H / 2, width: MTR_W, height: H, rx: 18, fill: 'url(#gWell)', stroke: MTR_COL, 'stroke-width': 2.2 }, g);
-  [-1, 0, 1].forEach((k, i) => { const ty = y + k * PWR_DY, tx = x0 + 22;
+  framed('rect', { x: x0, y: y - H / 2, width: MTR_W, height: H, rx: 22, fill: 'url(#gWell)', stroke: MTR_COL, 'stroke-width': 2.2 }, g);
+  [-1, 0, 1].forEach((k, i) => { const ty = y + k * PWR_DY, tx = x0 + 24;
     el('rect', { x: tx - 13, y: ty - 12, width: 26, height: 24, rx: 6, fill: '#1f1f1f', stroke: '#e2cc85', 'stroke-width': 1.2 }, g);
     el('text', { x: tx, y: ty + 4.3, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 700, fill: '#f2e6b8' }, g).textContent = 'T' + (i + 1); });
   el('circle', { cx, cy: y, r: R + 5, fill: '#111', filter: 'url(#fShadow)' }, g);
   v.arcs = [0, 1, 2].map(i => { const a0 = (i * 120 - 150) * Math.PI / 180, a1 = ((i + 1) * 120 - 150) * Math.PI / 180;
-    return el('path', { d: `M${cx + R * Math.cos(a0)} ${y + R * Math.sin(a0)}A${R} ${R} 0 0 1 ${cx + R * Math.cos(a1)} ${y + R * Math.sin(a1)}`, fill: 'none', stroke: GREY, 'stroke-width': 8 }, g); });
-  el('circle', { cx, cy: y, r: R - 6, fill: '#262626', stroke: '#111', 'stroke-width': 1.5 }, g);
+    return el('path', { d: `M${cx + R * Math.cos(a0)} ${y + R * Math.sin(a0)}A${R} ${R} 0 0 1 ${cx + R * Math.cos(a1)} ${y + R * Math.sin(a1)}`, fill: 'none', stroke: GREY, 'stroke-width': 9 }, g); });
+  el('circle', { cx, cy: y, r: R - 7, fill: '#262626', stroke: '#111', 'stroke-width': 1.5 }, g);
   const at = el('g', { transform: `translate(${cx} ${y})` }, g);
   v.rotor = el('g', {}, at);   // (it turns about its hub, see paintMtr)
-  for (let i = 0; i < 6; i++) el('path', { d: 'M0 -12C22 -30 30 -48 12 -56L-6 -48C8 -38 6 -26 0 -12Z', transform: `rotate(${i * 60})`, fill: '#6a7077', stroke: '#1c1c1c', 'stroke-width': 1.2 }, v.rotor);
-  rdot(v.rotor, 0, 0, 13).setAttribute('fill', '#7a8087');
-  el('text', { x: 0, y: 5, 'text-anchor': 'middle', 'font-size': 14, 'font-weight': 800, fill: '#1c1c1c' }, at).textContent = 'M';
-  // which way it turns (shown while it runs)
+  const fan = el('g', { transform: `scale(${(R / 70).toFixed(3)})` }, v.rotor);
+  for (let i = 0; i < 6; i++) el('path', { d: 'M0 -12C22 -30 30 -48 12 -56L-6 -48C8 -38 6 -26 0 -12Z', transform: `rotate(${i * 60})`, fill: '#6a7077', stroke: '#1c1c1c', 'stroke-width': 1.2 }, fan);
+  rdot(fan, 0, 0, 13).setAttribute('fill', '#7a8087');
+  el('text', { x: 0, y: 6, 'text-anchor': 'middle', 'font-size': 17, 'font-weight': 800, fill: '#1c1c1c' }, at).textContent = 'M';
+  // which way it turns (shown while it runs): an arc just outside the ring at its lower right, its head the way the fan
+  // goes (clockwise, so down that side, forward; turned over, up it, backward)
+  const ra = R + 13, pt = a => [cx + ra * Math.cos(a * Math.PI / 180), y + ra * Math.sin(a * Math.PI / 180)];
+  const [sx, sy] = pt(8), [tx, ty] = pt(52), tg = [-Math.sin(52 * Math.PI / 180), Math.cos(52 * Math.PI / 180)], bk = [-tg[0], -tg[1]], pp = [-bk[1], bk[0]];
   v.arrow = el('g', { display: 'none' }, g);
   v.arrowPath = el('g', {}, v.arrow);
-  el('path', { d: `M${cx + 46} ${y + 64}A80 80 0 0 0 ${cx + 76} ${y + 20}`, fill: 'none', stroke: '#9be03a', 'stroke-width': 3, 'stroke-linecap': 'round' }, v.arrowPath);
-  el('path', { d: `M${cx + 68} ${y + 24}l8 -6 3 10`, fill: 'none', stroke: '#9be03a', 'stroke-width': 3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, v.arrowPath);
-  v.dir = el('text', { x: cx + 30, y: y + 96, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 800, fill: '#9be03a' }, v.arrow);
-  v.hum = el('text', { x: cx - 5, y: y + R + 30, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: '#ff8a7a', display: 'none' }, g); v.hum.textContent = 'Humming: a phase is missing';
-  v.cx = cx;
+  el('path', { d: `M${sx} ${sy}A${ra} ${ra} 0 0 1 ${tx} ${ty}`, fill: 'none', stroke: '#9be03a', 'stroke-width': 3, 'stroke-linecap': 'round' }, v.arrowPath);
+  el('path', { d: `M${tx + 9 * bk[0] + 5.5 * pp[0]} ${ty + 9 * bk[1] + 5.5 * pp[1]}L${tx} ${ty}L${tx + 9 * bk[0] - 5.5 * pp[0]} ${ty + 9 * bk[1] - 5.5 * pp[1]}`, fill: 'none', stroke: '#9be03a', 'stroke-width': 3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, v.arrowPath);
+  v.dir = el('text', { x: x + MTR_W / 2 - 14, y: y + H / 2 - 12, 'text-anchor': 'end', 'font-size': 12, 'font-weight': 800, fill: '#9be03a' }, v.arrow);
+  v.hum = el('text', { x: cx, y: y + H / 2 - 14, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: '#ff8a7a', display: 'none' }, g); v.hum.textContent = 'Humming: a phase is missing';
+  v.cx = cx; v.cy = y;
 }
 
 // a relay contact's two posts (as drawPart draws them): a short stub in from each side, and a round post at its end,

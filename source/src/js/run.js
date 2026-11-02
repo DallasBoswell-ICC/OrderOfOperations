@@ -246,7 +246,7 @@ function paintMtr(p, v) {
   cols.forEach((c, i) => v.arcs[i].setAttribute('stroke', c));
   spinFan(v, m.st === 'run' ? (m.dir < 0 ? 'rev' : 'fwd') : m.st === 'hum' ? 'hum' : '');
   v.arrow.setAttribute('display', m.st === 'run' ? '' : 'none');
-  v.arrowPath.setAttribute('transform', m.dir < 0 ? `translate(${2 * v.cx} 0) scale(-1 1)` : '');
+  v.arrowPath.setAttribute('transform', m.dir < 0 ? `translate(0 ${2 * v.cy}) scale(1 -1)` : '');   // (backward: turned over, pointing up the right side)
   v.dir.textContent = m.dir < 0 ? 'REVERSE' : 'FORWARD';
   v.hum.setAttribute('display', m.st === 'hum' ? '' : 'none');
 }

@@ -74,7 +74,7 @@ function startRun() {
   checkShort();
   ALLOW = allowNow();
   for (const [id, v] of NET.feedV) if (v === 1) setRec(id, shortNow ? null : EGG(), 0);
-  phasesNow(0);
+  phaseWays(); phasesNow(0);
   updateCoils(0);
 }
 /* Long plain stretches of wire (no junctions or parts along them, only corners) carry the current faster in the
@@ -492,14 +492,21 @@ function phasesNow(t) {
   for (const L in PH) { const c = f(PH[L]); cph.set(c, cph.has(c) || c === l1 || c === l2 ? -1 : +L); }
   phFault = '';
   for (const L in PH) { const c = f(PH[L]); if (cph.get(c) === -1) { const o = Object.keys(PH).find(k => k !== L && f(PH[k]) === c); phFault = o ? `Short circuit! L${L} is connected straight to L${o}.` : `Short circuit! L${L} is connected straight to the control circuit.`; break; } }
-  const want = n => { const k = cph.get(f(n)); return k > 0 ? k : 0; };
+  // where each phase goes: out from its box, along the ways that lead on to a load, through closed poles from their
+  // line side (so never back into another starter's load side)
+  const reach = new Map();
+  for (const L in PH) if (cph.get(f(PH[L])) === +L) {
+    reach.set(PH[L], +L); const st = [PH[L]];
+    while (st.length) { const u = st.pop(); for (const i of NET.adj[u]) { const e = NET.edges[i], w = e.a === u ? e.b : e.a; if (!reach.has(w) && phStep(e, u)) { reach.set(w, +L); st.push(w); } } }
+  }
+  const want = n => reach.get(n) || 0;
   const N = NET.nodes.length, lost = [], gain = new Set();
   for (let n = 0; n < N; n++) { const o = PARR.get(n), k = want(n); if (o && o.k !== k) lost.push(n); if (k && (!o || o.k !== k)) gain.add(n); }
   const put = (n, at, c) => { let a = PTL.get(n); if (!a) PTL.set(n, a = [[-1e9, null]]); while (a.length > 1 && a[a.length - 1][0] >= at - 1e-9) a.pop(); a.push([at, c]); if (at > busyUntil) busyUntil = at; };
   // what has been cut off goes dark from where it was cut, outwards
   if (lost.length) {
     const L = new Set(lost), d = new Map(), h = heap();
-    for (const n of lost) for (const i of NET.adj[n]) { const e = NET.edges[i], w = e.a === n ? e.b : e.a; if (!L.has(w)) { d.set(n, t); h.push(t, n); break; } }
+    for (const n of lost) for (const i of NET.adj[n]) { const e = NET.edges[i], w = e.a === n ? e.b : e.a; if (!L.has(w) && want(w)) { d.set(n, t); h.push(t, n); break; } }   // (from where it is still lit)
     walk(h, d, n => L.has(n));
     for (const n of lost) { const off = Math.max(t, d.get(n) ?? t), o = PARR.get(n); put(n, off, null); PDARK.set(n, { k: o.k, t: o.t, off }); PARR.delete(n); }
   }
@@ -509,7 +516,7 @@ function phasesNow(t) {
     for (const L in PH) if (cph.get(f(PH[L])) === +L) { const s = PARR.get(PH[L]); if (s) { d.set(PH[L], Math.max(s.t, t)); h.push(Math.max(s.t, t), PH[L]); } }
     for (const [n, s] of PARR) if (!d.has(n)) { d.set(n, Math.max(s.t, t)); h.push(Math.max(s.t, t), n); }
     for (const n of gain) if (n === PH[(NET.nodes[n].k || '').slice(2)]) { d.set(n, t); h.push(t, n); }
-    walk(h, d, n => gain.has(n));
+    walk(h, d, n => gain.has(n), phStep);
     for (const n of gain) if (d.has(n)) { const k = want(n), at = d.get(n); PARR.set(n, { k, t: at }); put(n, at, PH_COL[k - 1]); }
   }
   // a transformer fed from the phases: look at it again as each phase reaches its primary
@@ -572,10 +579,10 @@ function workPower(p, i) {
 let DSC_T = {}, OLRESET = {};
 
 // spread out from what is in h (times in d), through wires and closed switches, into the junctions ok allows
-function walk(h, d, ok) {
+function walk(h, d, ok, step = e => conducts(e)) {
   while (h.size()) {
     const [tu, u] = h.pop(); if (tu > d.get(u) + 1e-12) continue;
-    for (const i of NET.adj[u]) { const e = NET.edges[i]; if (!conducts(e)) continue;
+    for (const i of NET.adj[u]) { const e = NET.edges[i]; if (!step(e, u)) continue;
       const w = e.a === u ? e.b : e.a; if (!ok(w)) continue;
       const tw = tu + stepTime(e); if (!d.has(w) || tw < d.get(w) - 1e-12) { d.set(w, tw); h.push(tw, w); } }
   }
@@ -591,4 +598,48 @@ function heap() {
   const up = i => { while (i) { const j = (i - 1) >> 1; if (a[j][0] <= a[i][0]) break; [a[i], a[j]] = [a[j], a[i]]; i = j; } };
   const down = i => { for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < a.length && a[l][0] < a[m][0]) m = l; if (r < a.length && a[r][0] < a[m][0]) m = r; if (m === i) return; [a[i], a[m]] = [a[m], a[i]]; i = m; } };
   return { size: () => a.length, push: (t, n) => { a.push([t, n]); up(a.length - 1); }, pop: () => { const top = a[0], last = a.pop(); if (a.length) { a[0] = last; down(0); } return top; } };
+}
+
+/* Which way three-phase power goes. Each pole of a disconnect, fuse block or starter passes it only from its line side
+   (PLINE: the end a phase box reaches through fewer other poles, then by the shorter way), as current would. And like
+   the current in the control circuit, a phase only goes along a way that leads on to a load (a motor's terminal, a
+   transformer's primary) without coming back on itself (PUSE: those ways, by jedge and the end they leave from). So a
+   wire to an open starter waits, lit, but a starter's load side is never fed back from another starter's. */
+let PLINE = new Map(), PUSE = new Set(), PSUB = new Map(), PJE = new Map();
+function phaseWays() {
+  PLINE = new Map(); PUSE = new Set(); PSUB = new Map(); PJE = new Map();
+  if (!NET.PH || !Object.keys(NET.PH).length) return;
+  const J = NET.jadj, srcs = [], isP = e => e.kind === 'part' && e.part.t === 'pp', passable = e => e.kind === 'seg' || (e.part && !LOADT(e.part.t));
+  for (const p of parts) if (isPh(p) && p._t) srcs.push(...p._t);
+  for (const pe of NET.jedges) if (isP(pe)) {
+    PJE.set(pe.part, pe);
+    const d = new Map(), h = heap();
+    for (const s of srcs) { d.set(s, 0); h.push(0, s); }
+    while (h.size()) { const [du, u] = h.pop(); if (du > d.get(u)) continue;
+      for (const e of J.get(u) || []) { if (e === pe || !passable(e)) continue; const w = e.a === u ? e.b : e.a, nd = du + (isP(e) ? 1e6 : e.len || 1);
+        if (!d.has(w) || nd < d.get(w)) { d.set(w, nd); h.push(nd, w); } } }
+    PLINE.set(pe.part, (d.get(pe.b) ?? Infinity) < (d.get(pe.a) ?? Infinity) ? pe.b : pe.a);
+  }
+  const T = new Set();
+  for (const p of parts) { if (p.t === 'mtr' && p._t) p._t.forEach(n => T.add(n)); if (p.t === 'xfm' && p._a !== undefined) { T.add(p._a); T.add(p._b); } }
+  const can = (e, u) => passable(e) && !(isP(e) && PLINE.get(e.part) !== u);
+  for (const e of NET.jedges) for (const u of [e.a, e.b]) {
+    if (!can(e, u)) continue;
+    const w = e.a === u ? e.b : e.a; let ok = T.has(w);
+    if (!ok) { const seen = new Set([u, w]), st = [w];
+      while (st.length && !ok) { const x = st.pop(); for (const e2 of J.get(x) || []) { if (!can(e2, x)) continue; const y = e2.a === x ? e2.b : e2.a; if (seen.has(y)) continue; if (T.has(y)) { ok = true; break; } seen.add(y); st.push(y); } } }
+    if (ok) PUSE.add(e.i + (u === e.a ? 'a' : 'b'));
+  }
+  // each small step of wire: the run it is part of, and which of its ends is the one nearer the run's start
+  for (const e of NET.jedges) if (e.kind === 'seg') for (let k = 1; k < e.chain.length; k++) { const a = e.chain[k - 1], b = e.chain[k]; PSUB.set(Math.min(a, b) + ',' + Math.max(a, b), { e, first: a }); }
+}
+// may a phase step along edge e (a small step of wire, or a part) from junction u?
+function phStep(e, u) {
+  if (!conducts(e)) return false;
+  if (e.kind === 'part') {
+    if (e.part.t !== 'pp') return true;
+    const je = PJE.get(e.part); return PLINE.get(e.part) === u && !!je && PUSE.has(je.i + (u === je.a ? 'a' : 'b'));
+  }
+  const m = PSUB.get(Math.min(e.a, e.b) + ',' + Math.max(e.a, e.b)); if (!m) return true;
+  return PUSE.has(m.e.i + (u === m.first ? 'a' : 'b'));
 }
