@@ -7,13 +7,19 @@ icons in dist/icons and dist/circuit-builder.webmanifest, for installing it from
 no server, no internet connection and nothing installed, so it can be opened straight from a USB stick or
 a Downloads folder, or published as a web page.
 
-    python3 build.py
+    python3 build.py           the full build: dist/Circuit_Builder.html (what students use)
+    python3 build.py --demo    the demo build: dist/demo/Circuit_Builder.html, where new features are tried out first
+
+The demo build is the same program, marked DEMO in its title bar and window title, and keeping its own autosave,
+settings and app install, so trying it never touches work kept in the full build (the two share a website).
 """
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src"
-OUT = ROOT / "dist" / "Circuit_Builder.html"
+DEMO = "--demo" in sys.argv[1:]
+OUT = ROOT / "dist" / ("demo" if DEMO else "") / "Circuit_Builder.html"
 
 # The scripts run in this order (later files use things defined in earlier ones).
 MODULES = [
@@ -60,6 +66,14 @@ def build() -> Path:
     # the O³ icon, built into the page as a data URL
     from urllib.parse import quote
     icon = "data:image/svg+xml," + quote(" ".join((SRC / "icons" / "icon.svg").read_text(encoding="utf-8").split()), safe=" =:/'(),")
+    if DEMO:
+        # its own name and badge, and its own keys in the browser's storage (autosave, view and other settings)
+        js = js.replace("'oo-circuit-builder:", "'oo-circuit-builder-demo:")
+        page = page.replace("<title>Circuit Builder</title>", "<title>Circuit Builder (Demo)</title>")
+        page = page.replace("<h1>Order of Operations: <span>Circuit Builder</span></h1>", '<h1>Order of Operations: <span>Circuit Builder</span> <em class="demo-badge" title="The demo build: new features are tried out here before they go into the full Circuit Builder">DEMO</em></h1>')
+        css += "\n.demo-badge { font-style: normal; font-size: .7rem; font-weight: 800; letter-spacing: .08em; color: #1c1d1f; background: #9be03a; border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }\n"
+        if "oo-circuit-builder-demo:" not in js or "DEMO</em>" not in page:
+            raise SystemExit("The demo build could not mark itself (has the title or a storage key changed?)")
     for marker, text in (("/*@@CSS@@*/", css), ("/*@@JS@@*/", js), ("/*@@ICON@@*/", icon)):
         if page.count(marker) != 1:
             raise SystemExit(f"src/index.html must contain {marker} exactly once")
@@ -69,7 +83,10 @@ def build() -> Path:
     # the app icons and the web app manifest go next to it (for the website: installing it as an app)
     import shutil
     shutil.copytree(SRC / "icons", OUT.parent / "icons", dirs_exist_ok=True)
-    shutil.copy(SRC / "circuit-builder.webmanifest", OUT.parent / "circuit-builder.webmanifest")
+    man = (SRC / "circuit-builder.webmanifest").read_text(encoding="utf-8")
+    if DEMO:   # (installed as an app of its own)
+        man = man.replace('"Order of Operations: Circuit Builder"', '"Order of Operations: Circuit Builder (Demo)"').replace('"short_name": "Circuit Builder"', '"short_name": "Circuit Builder Demo"')
+    (OUT.parent / "circuit-builder.webmanifest").write_text(man, encoding="utf-8")
     return OUT
 
 
