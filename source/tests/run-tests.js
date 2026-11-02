@@ -65,8 +65,14 @@ async function mouseDrag(page, a, b, opts = {}) {
   await page.waitForTimeout(40);
 }
 async function toolbarDrop(page, kind, x, y) {
-  // parts sit on the ribbon's Home tab: open it first (a part's own tab may be showing)
-  if (!(await page.locator(`[data-part="${kind}"]`).isVisible())) await page.click('#rt-home');
+  // (the kinds older checks name, as they were placed then: a pushbutton was maintained; a contact, instantaneous)
+  kind = { 'btn-no': 'btn-no-mnt', 'btn-nc': 'btn-nc-mnt', 'con-no': 'con-no-i', 'con-nc': 'con-nc-i' }[kind] || kind;
+  // parts sit on the ribbon's Home tab, most in a menu there: open it first (a part's own tab may be showing)
+  if (!(await page.locator(`[data-part="${kind}"]`).isVisible())) {
+    if (!(await page.locator('#toolbar').isVisible())) await page.click('#rt-home');
+    const menu = await page.evaluate(k => { const m = document.querySelector(`[data-part="${k}"]`).closest('.tp-menu'); return m ? m.id : null; }, kind);
+    if (menu && !(await page.locator(`[data-part="${kind}"]`).isVisible())) await page.click(`[aria-controls="${menu}"]`);
+  }
   const bx = await page.locator(`[data-part="${kind}"]`).boundingBox(), B = await scr(page, x, y);
   await page.mouse.move(bx.x + 10, bx.y + 10); await page.mouse.down();
   await page.mouse.move(bx.x + 40, bx.y + 60, { steps: 3 }); await page.mouse.move(...B, { steps: 6 }); await page.mouse.up();
@@ -838,7 +844,7 @@ const DEF_CIRCUIT = `
     // rung 1: A into a timer placed from the toolbar; rung 2: the timer's NO contact into a pilot light
     await mouseDrag(page, [4, 160], [876, 160]); await mouseDrag(page, [4, 320], [876, 320]);
     await toolbarDrop(page, 'btn-no', 200, 160); await toolbarDrop(page, 'timer', 700, 160);
-    await toolbarDrop(page, 'con-no', 300, 320); await toolbarDrop(page, 'lamp', 700, 320);
+    await toolbarDrop(page, 'con-no-t', 300, 320); await toolbarDrop(page, 'lamp', 700, 320);
     const T = await page.evaluate(() => { const p = parts.find(q => q.t === 'coil'); return { L: p.L, delay: p.delay, x: p.x, y: p.y }; });
     if (!(T.delay > 0)) out.push('the toolbar timer has no delay');
     // its settings: set it to 3 s, and make the contact the timer's
@@ -1243,16 +1249,16 @@ const DEF_CIRCUIT = `
     await page.click('#ribbon-toggle'); await page.waitForTimeout(100);
     const h1 = await page.evaluate(() => document.getElementById('stage').clientHeight);
     if (!(h1 > h0 + 60)) out.push('folding the ribbon away did not give the panel more room: ' + h0 + ' → ' + h1);
-    if (await page.isVisible('[data-part="coil"]')) out.push('folded, the ribbon still shows');
+    if (await page.isVisible('#out-btn')) out.push('folded, the ribbon still shows');
     await page.click('#rt-home'); await page.waitForTimeout(60);
-    if (!(await page.isVisible('[data-part="coil"]'))) out.push('folded, pressing Home did not open the ribbon');
+    if (!(await page.isVisible('#out-btn'))) out.push('folded, pressing Home did not open the ribbon');
     if (await page.evaluate(() => document.getElementById('stage').clientHeight) !== h1) out.push('opening the folded ribbon moved the panel');
     await page.mouse.click(...await scr(page, 450, 560)); await page.waitForTimeout(60);
-    if (await page.isVisible('[data-part="coil"]')) out.push('pressing the panel did not fold the ribbon away again');
+    if (await page.isVisible('#out-btn')) out.push('pressing the panel did not fold the ribbon away again');
     await page.reload(); await page.waitForTimeout(300);
-    if (await page.isVisible('[data-part="coil"]')) out.push('the ribbon did not stay folded after a reload');
+    if (await page.isVisible('#out-btn')) out.push('the ribbon did not stay folded after a reload');
     await page.click('#ribbon-toggle'); await page.waitForTimeout(60);
-    if (!(await page.isVisible('[data-part="coil"]'))) out.push('the ribbon did not open again');
+    if (!(await page.isVisible('#out-btn'))) out.push('the ribbon did not open again');
     return out;
   });
 
@@ -1299,7 +1305,7 @@ const DEF_CIRCUIT = `
         if (r.left < 0 || r.top < 0 || r.right > innerWidth || r.bottom > innerHeight) return 'outside the window';
         // (it floats on its own above everything, so nothing it sits in can cut it off)
         return t.parentElement === document.body && getComputedStyle(t).position === 'fixed' && r.height > 20 ? 'ok' : 'inside something that can cut it off'; }, sel); };
-    for (const sel of ['[data-part="timer-off"]', '[data-part="lamp"]', '#ribbon-toggle', '#redo', '#save-btn']) { const r = await tip(sel); if (r !== 'ok') out.push(sel + ': ' + r); }
+    for (const sel of ['#out-btn', '#ct-btn', '#ribbon-toggle', '#redo', '#save-btn']) { const r = await tip(sel); if (r !== 'ok') out.push(sel + ': ' + r); }
     await page.click('#tab-run'); await page.waitForTimeout(100);
     for (const sel of ['#speed-slider', '#reset-btn']) { const r = await tip(sel); if (r !== 'ok') out.push(sel + ': ' + r); }
     return out;
@@ -1774,13 +1780,13 @@ const DEF_CIRCUIT = `
     const turned = await page.evaluate(() => { const p = parts.find(q => q.t === 'ph' && q.L === '3'); sel = selOne('p', p.id); draw(); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' })); return p.rot || 0; });
     if (turned !== 0) out.push('R turned L3 to ' + turned);
     await page.evaluate(() => { sel = null; draw(); });
-    // the Three-phase menu on Home: opens, and picking a part arms it and closes the menu
+    // the Three-phase menu on Home: opens, and picking a part puts it on the panel, selected, and closes the menu
     await page.click('#tp-btn');
     if (await page.evaluate(() => document.getElementById('tp-menu').hidden)) out.push('the Three-phase menu did not open');
+    const n0 = await page.evaluate(() => parts.filter(p => p.t === 'olh').length);
     await page.click('#tp-menu [data-part="olh"]');
-    const armed = await page.evaluate(() => [tool, document.getElementById('tp-menu').hidden].join());
-    if (armed !== 'olh,true') out.push('picking Overload from the menu: ' + armed);
-    await page.evaluate(() => setTool('select'));
+    const picked = await page.evaluate(n0 => { const o = parts.filter(p => p.t === 'olh'); return [o.length - n0, sel && sel.parts.has(o[o.length - 1].id), tool, document.getElementById('tp-menu').hidden].join(); }, n0);
+    if (picked !== '1,true,select,true') out.push('picking Overload from the menu (placed, selected, tool, menu closed): ' + picked);
     return out;
   });
   await check('Three-phase motor branch: start/stop through a starter, disconnect, single-phasing trips the overload, reversal, a phase short blows fuses, saved', async page => {
@@ -1876,6 +1882,35 @@ const DEF_CIRCUIT = `
     if (back !== '1no#0070C0,2nc#0070C0,3noh#0070C0,4nch#0070C0') out.push('read back: ' + back);
     const pasted = await page.evaluate(() => { sel = { parts: new Set(parts.filter(p => p.t === 'lsw' && p.L === '1').map(p => p.id)), wires: new Set() }; copySel(); pasteClip(); return parts.filter(p => p.t === 'lsw').map(p => p.L).join(); });
     if (pasted !== '1,2,3,4,5') out.push('after pasting LS1: ' + pasted);
+    return out;
+  });
+  await check('Ribbon menus: Buttons, Switches, Outputs and Contacts open and place their parts (momentary or maintained, instantaneous or timing)', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    for (const [btn, kinds] of [['bt', ['btn-no-mom', 'btn-nc-mom', 'btn-no-mnt', 'btn-nc-mnt']], ['sw', ['sel', 'lsw-no', 'lsw-nch']], ['out', ['coil', 'timer', 'timer-off', 'lamp', 'sol']], ['ct', ['con-no-i', 'con-nc-i', 'con-no-t', 'con-nc-t']]]) {
+      await page.click(`#${btn}-btn`);
+      for (const k of kinds) if (!(await page.isVisible(`#${btn}-menu [data-part="${k}"]`))) out.push(`${k} not in the ${btn} menu`);
+      await page.keyboard.press('Escape');
+      if (!(await page.evaluate(id => document.getElementById(id).hidden, btn + '-menu'))) out.push(`Esc did not close the ${btn} menu`);
+    }
+    await toolbarDrop(page, 'timer', 700, 160); await toolbarDrop(page, 'coil', 700, 320);
+    await toolbarDrop(page, 'btn-no-mom', 200, 160); await toolbarDrop(page, 'btn-nc-mnt', 200, 320);
+    await toolbarDrop(page, 'con-no-t', 400, 160); await toolbarDrop(page, 'con-nc-i', 400, 320);
+    const got = await page.evaluate(() => parts.map(p => p.t === 'btn' ? `btn${p.nc ? 'nc' : 'no'}${p.maint ? 'mnt' : 'mom'}` : p.t === 'con' ? `con${p.nc ? 'nc' : 'no'}${isTimed(p) ? 'T' : 'I'}` : p.t).sort().join());
+    if (got !== 'btnncmnt,btnnomom,coil,con' + 'ncI,connoT,coil'.replace(',coil', '')) { const want = ['btnncmnt', 'btnnomom', 'coil', 'coil', 'conncI', 'connoT'].join(); if (got !== want) out.push('placed: ' + got + ' (want ' + want + ')'); }
+    return out;
+  });
+  await check('A part clicked on the ribbon goes onto the panel in a free spot: selected, clear of other parts and wires, joined to nothing', async page => {
+    const out = [];
+    await page.selectOption('#preset', page.evaluate ? await page.evaluate(() => document.querySelector('#preset option:nth-child(2)').value) : 'blank'); await page.waitForTimeout(100);
+    for (const [m, k] of [['out', 'coil'], ['bt', 'btn-no-mom'], ['ct', 'con-no-i'], ['sw', 'lsw-no'], ['tp', 'mtr'], [null, 'jmp'], ['out', 'lamp']]) {
+      if (m) await page.click(`#${m}-btn`); await page.click(`[data-part="${k}"]`); await page.waitForTimeout(60);
+      const r = await page.evaluate(() => { const p = parts[parts.length - 1];
+        const touching = terms(p).some(([x, y]) => { const i = pointInfo(x, y, new Set(), p); return i.ends > 0 || i.interior || i.bar; });
+        const clash = parts.some(q => q !== p && Math.abs(q.x - p.x) < halfW(q.t) + halfW(p.t) && Math.abs(q.y - p.y) < halfH(q.t) + halfH(p.t));
+        return [sel && sel.parts.size === 1 && sel.parts.has(p.id), touching, clash, wireInTheWay(p)].join(); });
+      if (r !== 'true,false,false,false') out.push(`${k} (selected, touching, overlapping, wire in the way): ${r}`);
+    }
     return out;
   });
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {

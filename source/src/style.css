@@ -281,4 +281,8 @@ body.fs .wrap { padding-top: 8px; }
 .tp-menu { position: fixed; z-index: 40; display: flex; align-items: stretch; padding: 8px 4px 2px; background: var(--chip); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 16px 34px rgba(0,0,0,.55); }
 .tp-menu .rgrp { height: auto; }
 .tp-menu .rgrp:last-child { border-right: 0; }
-#tp-btn[aria-expanded="true"], #ls-btn[aria-expanded="true"] { background: #4d462e; border-color: var(--gold); }
+#tp-btn[aria-expanded="true"], .menu-btn[aria-expanded="true"] { background: #4d462e; border-color: var(--gold); }
+
+/* a ribbon button that opens a menu of parts: a small arrow after its name */
+.menu-btn span::after { content: ""; display: inline-block; width: 0; height: 0; margin-left: 5px; vertical-align: 2px; border: 4px solid transparent; border-top: 5px solid currentColor; border-bottom: 0; }
+.tp-menu .gbody { justify-content: center; }
