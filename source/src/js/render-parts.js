@@ -72,7 +72,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => (p.t === 'dsc' ? PWR_H / 2 + 22 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => (p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -470,11 +470,17 @@ function drawPwr(p, g, x, y, v, chan) {
     return q;
   });
   if (p.t === 'dsc') {
-    // the handle: a red lever on a block on top of the box, up (to the left) when on, down when off
-    const hx = x + 21, hy = y - H / 2 - 3;
-    el('rect', { x: hx - 13, y: hy - 8, width: 26, height: 13, rx: 4, fill: '#1f1f1f', stroke: '#777', 'stroke-width': 1.2 }, g);
-    v.lever = el('g', { transform: `rotate(-35 ${hx} ${hy - 2})` }, g); v.hx = hx; v.hy = hy - 2;
-    el('rect', { x: hx - 3, y: hy - 24, width: 6, height: 22, rx: 3, fill: '#E8413C', stroke: '#111', 'stroke-width': 1, filter: 'url(#fShadow)' }, v.lever);
+    // its operating handle, on a head on top of the box: a selector switch's knob and handle (in red), turned to OFF
+    // (left) or ON (right), the one it points to lit
+    const top = y - H / 2 - DSC_HEAD, kx = x, ky = top + DSC_HEAD / 2 + 6;
+    framed('rect', { x: x - BOX / 2, y: top, width: BOX, height: DSC_HEAD - 4, rx: 12, fill: 'url(#gWell)', stroke: DSC_COL, 'stroke-width': 2.2 }, g);
+    v.offT = el('text', { x: x - 19, y: top + 15, 'text-anchor': 'middle', 'font-size': 9.5, 'font-weight': 800, fill: '#6a6a6a' }, g); v.offT.textContent = 'OFF';
+    v.onT = el('text', { x: x + 19, y: top + 15, 'text-anchor': 'middle', 'font-size': 9.5, 'font-weight': 800, fill: DSC_HANDLE }, g); v.onT.textContent = 'ON';
+    el('circle', { cx: kx, cy: ky, r: 13, fill: 'url(#gKnob)', stroke: '#1d2733', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, g);
+    v.lever = el('g', { transform: `rotate(45 ${kx} ${ky})` }, g); v.hx = kx; v.hy = ky;
+    el('rect', { x: kx - 4.5, y: ky - 14, width: 9, height: 28, rx: 4.5, fill: DSC_HANDLE, stroke: '#1d2733', 'stroke-width': 1.1 }, v.lever);
+    el('rect', { x: kx - 4.5, y: ky - 14, width: 9, height: 28, rx: 4.5, fill: 'url(#gGloss)' }, v.lever);
+    el('line', { x1: kx, y1: ky - 11, x2: kx, y2: ky - 5, stroke: '#fff', 'stroke-width': 2, 'stroke-linecap': 'round', opacity: .85 }, v.lever);
   }
   if (p.t === 'olh') { v.trip = el('text', { x, y: y + H / 2 + 22, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 800, fill: '#ff8a7a', display: 'none', stroke: '#404040', 'stroke-width': 4, 'paint-order': 'stroke' }, g); v.trip.textContent = 'TRIPPED'; }
 }

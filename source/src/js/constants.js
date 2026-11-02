@@ -41,8 +41,9 @@ const XFM_W = 210, XFM_H = 148, XFM_TX = 60, XFM_TY = 80, XFM_EDGE = '#9aa7b5';
    contact for the control circuit (olc, normally closed: it opens when the overload with its number trips); and a
    motor (mtr), with T1, T2 and T3 down its left side. */
 const isPwr3 = p => p.t === 'dsc' || p.t === 'fus' || p.t === 'mst' || p.t === 'olh', isPwrT = t => t === 'dsc' || t === 'fus' || t === 'mst' || t === 'olh';
+const DSC_HEAD = 50, DSC_HANDLE = '#E8413C';   // (a disconnect's head on top, with its handle)
 const PWR_DY = 120, PWR_H = 2 * PWR_DY + 66, MTR_W = 280, MTR_H = 280, MTR_COL = '#9aa7b5', OL_COL = '#FF6F59', DSC_COL = '#c9d2dd', FUS_COL = '#9aa0a6';
-const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : t === 'mtr' ? MTR_H / 2 : isPwrT(t) ? PWR_H / 2 : 40;   // (the room a part takes)
+const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : t === 'mtr' ? MTR_H / 2 : t === 'dsc' ? PWR_H / 2 + DSC_HEAD : isPwrT(t) ? PWR_H / 2 : 40;   // (the room a part takes)
 const SOL_COL = '#00D2BE';
 /* a solenoid (as on Dallas's drawing): a diamond (a rounded square on its corner) as tall and wide as a coil, with a
    dot at each end where the rung comes in, joined by the lightning bolt: along the rung, up to a peak, straight down and

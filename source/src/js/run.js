@@ -239,7 +239,7 @@ function paintPwr(p, v) {
       q.e.setAttribute('stroke', c || GREY);
     }
   });
-  if (v.lever) v.lever.setAttribute('transform', `rotate(${(-35 + 70 * lev).toFixed(2)} ${v.hx} ${v.hy})`);
+  if (v.lever) { v.lever.setAttribute('transform', `rotate(${(45 - 90 * lev).toFixed(2)} ${v.hx} ${v.hy})`); v.onT.setAttribute('fill', lev < .5 ? DSC_HANDLE : '#6a6a6a'); v.offT.setAttribute('fill', lev < .5 ? '#6a6a6a' : DSC_HANDLE); }
   if (v.trip) v.trip.setAttribute('display', OLTRIP[p.L] ? '' : 'none');
 }
 // a motor: each third of its ring in the phase at its terminal; its fan turning, or shaking, as it runs or hums
