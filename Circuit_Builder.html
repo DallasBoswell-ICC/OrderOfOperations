@@ -2385,15 +2385,15 @@ function drawPwr(p, g, x, y, v, chan) {
       // a cartridge fuse: metal end caps, and between them a body as tall as they are, a relay's grey until the phase
       // passes through it, as along a wire (a clip that sweeps across from its line side, see paintPwr). Blown: a
       // jagged crack through its body, and only its line side lit. (Clear of the box's sides, its leads outside it.)
-      const id = 'fuc' + (++solMaskN), L = 26, cw = 7, h = 20, bw = 2 * (L - cw);
-      el('rect', { x: x - L - .9, y: py - h / 2 - .9, width: 2 * L + 1.8, height: h + 1.8, rx: 3.4, fill: '#111', filter: 'url(#fShadow)' }, g);
+      const id = 'fuc' + (++solMaskN), L = 22, cw = 6, h = 20, bw = 2 * (L - cw);
+      el('rect', { x: x - L - .9, y: py - h / 2 - .9, width: 2 * L + 1.8, height: h + 1.8, rx: .9, fill: '#111', filter: 'url(#fShadow)' }, g);
       el('rect', { x: x - bw / 2, y: py - h / 2, width: bw, height: h, fill: GREY }, g);
       q.clip = el('rect', { x: x - L, y: py - h / 2, width: 0, height: h }, el('clipPath', { id }, g));
       q.col = el('rect', { x: x - bw / 2, y: py - h / 2, width: bw, height: h, fill: 'transparent', 'clip-path': `url(#${id})` }, g);
       el('rect', { x: x - bw / 2, y: py - h / 2, width: bw, height: h, fill: 'url(#gGloss)', stroke: '#111', 'stroke-width': 1.6 }, g);
       for (const s of [-1, 1]) { const cx0 = s < 0 ? x - L : x + bw / 2;
-        el('rect', { x: cx0, y: py - h / 2, width: cw, height: h, rx: 2.4, fill: 'url(#gTerm)', stroke: '#111', 'stroke-width': 1.6 }, g);
-        el('rect', { x: cx0, y: py - h / 2, width: cw, height: h, rx: 2.4, fill: 'url(#gGloss)' }, g); }
+        el('rect', { x: cx0, y: py - h / 2, width: cw, height: h, fill: 'url(#gTerm)', stroke: '#111', 'stroke-width': 1.6 }, g);
+        el('rect', { x: cx0, y: py - h / 2, width: cw, height: h, fill: 'url(#gGloss)' }, g); }
       q.mark = el('g', { display: 'none' }, g);
       const crack = `M${x - .5} ${py - h / 2 + .8}L${x + 3} ${py - 4}L${x - 2.6} ${py + .6}L${x + 2.4} ${py + 4.6}L${x - .8} ${py + h / 2 - .8}`;
       el('path', { d: crack, fill: 'none', stroke: '#141414', 'stroke-width': 3.6, 'stroke-linejoin': 'miter' }, q.mark);
