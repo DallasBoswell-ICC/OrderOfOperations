@@ -400,8 +400,8 @@ function drawXfm(p, g, x, y, v, chan) {
   // the nameplate
   const nx = x - W / 2 - 14, t = (dy, s, a) => el('text', Object.assign({ x: nx, y: y + dy, 'text-anchor': 'end' }, a), g).textContent = s;
   t(-6, 'T' + p.L, { 'font-size': 16, 'font-weight': 800, fill: '#e8e8e8' });
-  t(12, '480 V', { 'font-size': 12.5, 'font-weight': 600, fill: '#ff9d6b' });
-  t(28, '120 V', { 'font-size': 12.5, 'font-weight': 600, fill: '#e2cc85' });
+  t(12, 'Main Power Voltage', { 'font-size': 11.5, 'font-weight': 600, fill: '#ff9d6b' });   // (its primary's; then its secondary's)
+  t(27, 'Control Voltage', { 'font-size': 11.5, 'font-weight': 600, fill: '#e2cc85' });
 }
 
 /* ---------------- three-phase parts ----------------
