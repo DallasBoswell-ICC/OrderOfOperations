@@ -1859,6 +1859,25 @@ const DEF_CIRCUIT = `
     if (!/mstY:Closing it joins L1 to L2/.test(bad) || /phshort/.test(bad)) out.push('miswired Y starter: ' + bad);
     return out;
   });
+  await check('Limit switches: NO, NC, NO held closed and NC held open at rest and worked, saved, renumbered when pasted', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    const iss = await page.evaluate(() => { W = 700; W_USER = 700;
+      ['lsw-no', 'lsw-nc', 'lsw-noh', 'lsw-nch'].forEach((k, i) => { const y = 120 + i * 160; parts.push(newPart(k, 240, y), P('lamp', 480, y, { L: '', color: '#00B050' })); wires.push(Wr(0, y, 180, y), Wr(300, y, 420, y), Wr(540, y, W, y)); });
+      normalize(); draw(); return [...wiringIssues(network())].length; });
+    if (iss) out.push('wiring issues: ' + iss);
+    const lamps = () => page.evaluate(() => parts.filter(p => p.t === 'lamp').map(p => +!!coilOn[p.id]).join(''));
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    let s = await lamps(); if (s !== '0110') out.push('at rest (lamps lit): ' + s);
+    await page.evaluate(() => ['1', '2', '3', '4'].forEach(L => press(L, true))); await page.waitForTimeout(400);
+    s = await lamps(); if (s !== '1001') out.push('worked (lamps lit): ' + s);
+    await page.evaluate(() => { ['1', '2', '3', '4'].forEach(L => press(L, false)); setSpeed(1); }); await page.click('#tab-edit');
+    const back = await page.evaluate(() => readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.filter(p => p.t === 'lsw').map(p => p.L + (p.nc ? 'nc' : 'no') + (p.held ? 'h' : '') + p.color).join());
+    if (back !== '1no#0070C0,2nc#0070C0,3noh#0070C0,4nch#0070C0') out.push('read back: ' + back);
+    const pasted = await page.evaluate(() => { sel = { parts: new Set(parts.filter(p => p.t === 'lsw' && p.L === '1').map(p => p.id)), wires: new Set() }; copySel(); pasteClip(); return parts.filter(p => p.t === 'lsw').map(p => p.L).join(); });
+    if (pasted !== '1,2,3,4,5') out.push('after pasting LS1: ' + pasted);
+    return out;
+  });
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

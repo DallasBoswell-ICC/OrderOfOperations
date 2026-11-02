@@ -5,7 +5,7 @@ document.querySelectorAll('.tool[data-part]').forEach(b => {
     if (e.button !== 0 || !editing) return;
     e.preventDefault();
     const sx = e.clientX, sy = e.clientY; let moved = false, ghost = null;
-    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('timer') ? { t: 'coil', L: '?', color: '#FFDC00', delay: 5, tof: kind === 'timer-off' } : kind === 'lamp' ? { t: 'lamp', L: '', color: '#00B050' } : kind === 'sol' ? { t: 'sol', L: '?', color: SOL_COL } : kind === 'jmp' ? { t: 'jmp', L: '?' } : kind === 'xfm' ? { t: 'xfm', L: '?' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind === 'con-nc' } : kind === 'sel' ? { t: 'sel', L: '?', n: 3, closedIn: [0], pos: 1, color: '#0070C0' } : kind.startsWith('src-') ? { t: kind.slice(4), L: '' } : kind.startsWith('ph-') ? { t: 'ph', L: kind.slice(3) } : ['dsc', 'fus', 'mst', 'olh', 'mtr'].includes(kind) ? { t: kind, L: kind === 'mst' ? 'M' : '?' } : kind === 'olc' ? { t: 'olc', L: '?', nc: true } : { t: 'btn', L: '?', nc: kind === 'btn-nc', color: '#9a9a9a' };
+    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('timer') ? { t: 'coil', L: '?', color: '#FFDC00', delay: 5, tof: kind === 'timer-off' } : kind === 'lamp' ? { t: 'lamp', L: '', color: '#00B050' } : kind === 'sol' ? { t: 'sol', L: '?', color: SOL_COL } : kind === 'jmp' ? { t: 'jmp', L: '?' } : kind === 'xfm' ? { t: 'xfm', L: '?' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind === 'con-nc' } : kind === 'sel' ? { t: 'sel', L: '?', n: 3, closedIn: [0], pos: 1, color: '#0070C0' } : kind.startsWith('src-') ? { t: kind.slice(4), L: '' } : kind.startsWith('lsw') ? { t: 'lsw', L: '?', nc: kind === 'lsw-nc' || kind === 'lsw-nch', held: kind.endsWith('h'), color: LSW_COL } : kind.startsWith('ph-') ? { t: 'ph', L: kind.slice(3) } : ['dsc', 'fus', 'mst', 'olh', 'mtr'].includes(kind) ? { t: kind, L: kind === 'mst' ? 'M' : '?' } : kind === 'olc' ? { t: 'olc', L: '?', nc: true } : { t: 'btn', L: '?', nc: kind === 'btn-nc', color: '#9a9a9a' };
     const mv = ev => {
       if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 5) { moved = true; closeMenus(); ghost = document.createElement('div'); ghost.className = 'ghost'; ghost.innerHTML = b.innerHTML; document.body.append(ghost); document.body.classList.add('dragging'); }
       if (!moved) return;
@@ -140,16 +140,18 @@ document.querySelectorAll('[data-power]').forEach(b => b.addEventListener('click
   fitView(); fit(true); draw();
 }));
 
-/* the Three-phase menu: its button on Home drops the three-phase parts down under it; picking one (or dragging it out
-   onto the panel) places it, as from the ribbon, and closes the menu. A press anywhere else, or Esc, closes it too. */
-const tpBtn = document.getElementById('tp-btn'), tpBox = document.getElementById('tp-menu');
-function tpMenu(open) {
-  const tpBox = document.getElementById('tp-menu'), tpBtn = document.getElementById('tp-btn');   // (looked up here: it can be closed before this file has finished loading)
-  if (!tpBox || tpBox.hidden === !open) return;
-  tpBox.hidden = !open; tpBtn.setAttribute('aria-expanded', String(open));
-  if (open) { const r = tpBtn.getBoundingClientRect(), w = tpBox.offsetWidth; tpBox.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + 'px'; tpBox.style.top = (r.bottom + 6) + 'px'; }
+/* drop-down menus of parts (Three phase, Limit switch): the button drops its parts down under it; picking one (or
+   dragging it out onto the panel) places it, as from the ribbon, and closes the menu. A press anywhere else, or Esc,
+   closes it too. */
+function tpMenu(open, id) {
+  for (const box of document.querySelectorAll('.tp-menu')) {
+    const btn = document.querySelector(`[aria-controls="${box.id}"]`), on = open && box.id === id;
+    if (box.hidden === !on) continue;
+    box.hidden = !on; if (btn) btn.setAttribute('aria-expanded', String(on));
+    if (on) { const r = btn.getBoundingClientRect(), w = box.offsetWidth; box.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + 'px'; box.style.top = (r.bottom + 6) + 'px'; }
+  }
 }
-tpBtn.addEventListener('click', () => { if (editing) tpMenu(tpBox.hidden); });
-document.addEventListener('pointerdown', e => { if (!tpBox.hidden && !tpBox.contains(e.target) && !tpBtn.contains(e.target)) tpMenu(false); }, true);
+document.querySelectorAll('[aria-controls]').forEach(b => { const id = b.getAttribute('aria-controls'); if (document.getElementById(id)?.classList.contains('tp-menu')) b.addEventListener('click', () => { if (editing) tpMenu(document.getElementById(id).hidden, id); }); });
+document.addEventListener('pointerdown', e => { if (![...document.querySelectorAll('.tp-menu, [aria-controls]')].some(m => m.contains(e.target))) tpMenu(false); }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') tpMenu(false); });
 window.addEventListener('resize', () => tpMenu(false));

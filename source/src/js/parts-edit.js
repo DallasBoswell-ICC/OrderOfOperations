@@ -19,6 +19,7 @@ function newPart(kind, x, y) {
     const lone = Object.keys(n).filter(k => n[k] === 1).sort((a, b) => a - b)[0];
     return P('jmp', x, y, { L: lone || nextNum(new Set(Object.keys(n))) });
   }
+  if (kind.startsWith('lsw')) return P('lsw', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'lsw').map(q => q.L))), nc: kind === 'lsw-nc' || kind === 'lsw-nch', held: kind.endsWith('h'), color: LSW_COL });   // a limit switch: the next number
   if (kind === 'dsc' || kind === 'fus' || kind === 'olh' || kind === 'mtr') return P(kind, x, y, { L: nextNum(new Set(parts.filter(q => q.t === kind).map(q => q.L))) });   // the next number
   if (kind === 'mst') return P('mst', x, y, { L: 'M' });   // a starter: worked by the M coil (change it in its settings)
   if (kind === 'olc') { const ols = parts.filter(q => q.t === 'olh').map(q => q.L), free = ols.find(L => !parts.some(q => q.t === 'olc' && q.L === L)); return P('olc', x, y, { L: free || ols[0] || '1', nc: true }); }   // an overload's contact: one not yet in the control circuit
@@ -30,7 +31,7 @@ function newPart(kind, x, y) {
   const L = [...'ABCDEFGH' + ALL].find(c => !u.has(c));
   return P('btn', x, y, { L, nc: kind === 'btn-nc', maint: true, color: BTN_COL[L] || '#FF0032' });
 }
-const kindOf = k => ['dsc', 'fus', 'mst', 'olh', 'olc', 'mtr'].includes(k) ? k : k.startsWith('ph-') ? 'ph' : k === 'jmp' ? 'jmp' : k === 'xfm' ? 'xfm' : k === 'src-l1' || k === 'src-l2' ? k.slice(4) : k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k === 'sol' ? 'sol' : k.startsWith('con') ? 'con' : k === 'sel' ? 'sel' : 'btn';
+const kindOf = k => k.startsWith('lsw') ? 'lsw' : ['dsc', 'fus', 'mst', 'olh', 'olc', 'mtr'].includes(k) ? k : k.startsWith('ph-') ? 'ph' : k === 'jmp' ? 'jmp' : k === 'xfm' ? 'xfm' : k === 'src-l1' || k === 'src-l2' ? k.slice(4) : k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k === 'sol' ? 'sol' : k.startsWith('con') ? 'con' : k === 'sel' ? 'sel' : 'btn';
 // a horizontal wire running right through where a part's ends will be: the part goes into it
 function spliceTarget(x, y, t) { if (t === 'xfm' || t === 'ph' || isPwrT(t) || t === 'mtr') return null; const h = WIDE(t) ? 60 : 40; return wires.find(w => w.y1 === y && w.y2 === y && Math.min(w.x1, w.x2) <= x - h && Math.max(w.x1, w.x2) >= x + h); }
 function placePart(kind, x, y) {

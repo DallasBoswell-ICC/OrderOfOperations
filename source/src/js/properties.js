@@ -17,7 +17,7 @@ const selGroup = () => {
   return ps.every(q => q.t === ps[0].t) ? ps : [];
 };
 const each = f => { const g = selGroup(); if (!g.length) return false; snapshot(); g.forEach(f); normalize(); draw(); return true; };
-const KIND_NAME = { xfm: 'transformers', btn: 'pushbuttons', coil: 'coils', con: 'contacts', lamp: 'pilot lights', sel: 'selector switches', sol: 'solenoids', jmp: 'continuations', l1: 'L1 supplies', l2: 'L2 returns', ph: 'phases', dsc: 'disconnects', fus: 'fuse blocks', mst: 'starters', olh: 'overloads', olc: 'overload contacts', mtr: 'motors' };
+const KIND_NAME = { xfm: 'transformers', btn: 'pushbuttons', coil: 'coils', con: 'contacts', lamp: 'pilot lights', sel: 'selector switches', sol: 'solenoids', jmp: 'continuations', lsw: 'limit switches', l1: 'L1 supplies', l2: 'L2 returns', ph: 'phases', dsc: 'disconnects', fus: 'fuse blocks', mst: 'starters', olh: 'overloads', olc: 'overload contacts', mtr: 'motors' };
 const blocksOf = L => parts.filter(p => p.t === 'btn' && p.L === L);
 function renderProps() {
   const G = selGroup(), p = G[0] || null, multi = G.length > 1;
@@ -77,6 +77,15 @@ function renderProps() {
     }
     document.getElementById('ph-custom').value = cur.toLowerCase();
     document.getElementById('ph-colour-label').textContent = `L${p.L} colour`;
+  }
+  document.getElementById('props-lsw').hidden = !(p && p.t === 'lsw');
+  if (p && p.t === 'lsw') {
+    // its number (one no other limit switch has), its kind and its colour
+    const ns = document.getElementById('ls-num'), taken = new Set(parts.filter(q => q.t === 'lsw' && q !== p).map(q => q.L));
+    groupOf('ls-num').hidden = multi; ns.innerHTML = '';
+    for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n))) ns.add(new Option('LS' + n, String(n), false, String(n) === p.L));
+    document.getElementById('ls-kind').value = (p.nc ? 'nc' : 'no') + (p.held ? 'h' : '');
+    swatches(document.getElementById('ls-colour'), p.color, hex => each(q => q.color = hex));
   }
   const pw = p && (isPwr3(p) || p.t === 'olc' || p.t === 'mtr');
   document.getElementById('props-pwr').hidden = !pw;
@@ -287,3 +296,5 @@ document.getElementById('ph-num').addEventListener('change', e => { if (selGroup
 document.getElementById('ph-custom').addEventListener('change', e => { const p = selGroup()[0]; if (p && isPh(p)) setPhaseCol(p.L, e.target.value); });
 document.getElementById('box-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(isBox)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
 document.getElementById('pw-num').addEventListener('change', e => { const G = selGroup(); if (G.length && G.every(p => isPwr3(p) || p.t === 'olc' || p.t === 'mtr')) each(p => p.L = e.target.value); });
+document.getElementById('ls-num').addEventListener('change', e => { if (selGroup().every(p => p.t === 'lsw')) each(p => p.L = e.target.value); });
+document.getElementById('ls-kind').addEventListener('change', e => { const k = e.target.value; if (selGroup().every(p => p.t === 'lsw')) each(p => { p.nc = k.startsWith('nc'); if (k.endsWith('h')) p.held = true; else delete p.held; }); });

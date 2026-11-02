@@ -5,14 +5,16 @@ function frame(now) {
   if (!editing) {
     // at high speed a busy circuit (a buzzer, say) can have more to do in one frame than the computer can manage: it
     // does what it can in a set time and carries on from there next frame, so the page never stalls
-    const target = simT + dt * speed, ran = eventsRun;
+    const target = simT + dt * speed, ran = eventsRun, was = simT;
     tickRealTimers(real);   // (timers counting real time go by the clock; one timing out now is acted on below)
     if (runEvents(target, performance.now() + 12)) simT = target;
     if (mode === 'click') for (const L in autoRel) if (!busyQueue() && simT > busyUntil + .5) { delete autoRel[L]; press(L, false); }
     // once the circuit has settled (nothing on its way, and the last coil, light and contact has finished changing)
     // nothing on the panel moves, so it is not painted again until something happens: an idle circuit costs nothing
     // (at high speed a whole chain of changes can start and finish within one frame: whatever happened is painted)
-    if (needPaint || eventsRun !== ran || busyQueue() || simT <= busyUntil + 0.6) { paint(); needPaint = false; }
+    // (and once more as it settles, so whatever was moving is painted where it stopped, even when a fast clock went past
+    // the end of the movement within one frame)
+    if (needPaint || eventsRun !== ran || busyQueue() || simT <= busyUntil + 0.6 || was <= busyUntil + 0.6) { paint(); needPaint = false; }
     else if (anyTiming()) paintTimers();   // (a timer counting down: only its readout changes)
   }
   requestAnimationFrame(frame);
@@ -58,6 +60,7 @@ function paintView(V) {
     for (const S of ['A', 'B']) paintLead(v.lead[S], p._lead && p._lead[S]);
     let k;
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
+    else if (p.t === 'lsw') setLimit(v, p, lswPos(p), lswClosed(p));
     else if (p.t === 'con' || p.t === 'olc') {
       const s = p.t === 'olc' ? olState(p.L) : CON[p.id]; if (!s) continue;
       const f = clamp01((simT - s.t0) / SWING), e = f * f * (3 - 2 * f);   // ease in and out

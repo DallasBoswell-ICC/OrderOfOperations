@@ -43,7 +43,7 @@ function screw(x, y, g, bare) {
 }
 const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
-const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L} Fuses` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L} Fuses` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -72,7 +72,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => (p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -164,6 +164,8 @@ function drawPart(p, g, x, y, chan, onStation) {
     }
   } else if (p.t === 'sel') {
     drawSelector(p, g, x, y, v);
+  } else if (p.t === 'lsw') {
+    drawLimit(p, g, x, y, v);
   } else if (p.t === 'xfm') {
     drawXfm(p, g, x, y, v, chan);
   } else if (isPwr3(p)) {
@@ -531,4 +533,69 @@ function conPosts(g, x, py) {
   const gl = el('g', { fill: 'url(#gDome)' }, g);
   el('circle', { cx: x1, cy: py, r }, gl); el('circle', { cx: x2, cy: py, r }, gl);
   return { a, b, x1, x2, r };
+}
+
+/* A limit switch: a roomy square body (in its colour) holding the NEMA limit switch symbol, raised: a contact's two
+   posts, and a blade hinged on the left one, with the solid wedge under it. Its angle tells its kind and state, as on
+   the print: normally open, it hangs below the right post (open) and is lifted onto its underside (closed); normally
+   closed, it rests on top of the right post (closed) and is lifted clear above it (open). Working it always lifts the
+   blade. On top of the body, the roller lever it is worked by, and a bold arrow, the machine coming down on the roller.
+   (Painted by setLimit; working it eases from one position to the other over LSW_MOVE seconds.) */
+const LSW_WEDGE = [[0, 0], [51.3, 0], [35.8, 16.9]];
+const LSW_ROLLER = [43, -42];   // (the roller, from the head's middle: up and to the right)   // (the wedge, along the blade and out below it, from its hinge)
+const LSW_TOUCH = Math.atan((BOX * .105 + 3.5) / 60) * 180 / Math.PI;   // (the blade's angle lying on a post's edge)
+const lswAngles = p => p.nc ? [-LSW_TOUCH, -LSW_OPEN] : [LSW_OPEN, LSW_TOUCH];   // (at rest, and worked)
+function drawLimit(p, g, x, y, v) {
+  const col = p.color, r = BOX * .105, px1 = x - 30, px2 = x + 30, sy = BOX * .045, hw = LSW_W / 2, top = y - LSW_TOP, bot = y + LSW_BOT;
+  // its head: the roller lever, out of a dome on top of the body at 45 degrees, up to the right; the arrow comes down on its roller
+  const hc = [x, top]; v.pivot = hc;
+  v.arrow = el('g', { filter: 'url(#fShadow)' }, g);
+  v.arrowPath = el('path', { d: '', fill: '#ececec', stroke: '#1c1c1c', 'stroke-width': 1.6, 'stroke-linejoin': 'round' }, v.arrow);
+  v.lever = el('g', {}, g);
+  const [lx, ly] = LSW_ROLLER;
+  el('line', { x1: x, y1: top, x2: x + lx, y2: top + ly, stroke: '#111', 'stroke-width': 10.6, 'stroke-linecap': 'round', filter: 'url(#fShadow)' }, v.lever);
+  el('line', { x1: x, y1: top, x2: x + lx, y2: top + ly, stroke: '#b5b5b5', 'stroke-width': 8 }, v.lever);
+  el('line', { x1: x, y1: top, x2: x + lx, y2: top + ly, stroke: 'url(#gGloss)', 'stroke-width': 8 }, v.lever);
+  el('circle', { cx: x + lx, cy: top + ly, r: 13.3, fill: '#2b2b2b', stroke: '#c8c8c8', 'stroke-width': 3, filter: 'url(#fShadow)' }, v.lever);
+  el('circle', { cx: x + lx, cy: top + ly, r: 6.2, fill: 'url(#gTerm)', stroke: '#111', 'stroke-width': 1.2 }, v.lever);
+  framed('path', { d: `M${x - 27} ${top + 2}A27 27 0 0 1 ${x + 27} ${top + 2}Z`, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
+  // the body, the contact in its upper part
+  framed('rect', { x: x - hw, y: top, width: LSW_W, height: LSW_TOP + LSW_BOT, rx: 15, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
+  // the dashed link, from the head down to just over the blade (it follows it), and the blade and its wedge (behind
+  // the posts), turning about the left post
+  v.link = el('line', { x1: x, y1: top + 5, x2: x, y2: y, stroke: '#9a9a9a', 'stroke-width': 2.2, 'stroke-dasharray': '6 5' }, g);
+  v.blade = el('g', {}, g);
+  const wedge = 'M' + LSW_WEDGE.map(([a, b]) => `${px1 + a} ${y + b}`).join('L') + 'Z', len = 60 + r * .6;
+  v.wedge = el('path', { d: wedge, fill: BLADE_GREY, stroke: '#111', 'stroke-width': 1.2, 'stroke-linejoin': 'round', filter: 'url(#fShadow)' }, v.blade);
+  el('path', { d: wedge, fill: 'url(#gGloss)', opacity: .7 }, v.blade);
+  v.bladeShape = el('rect', { x: px1, y: y - 3.5, width: len, height: 7, rx: 3.5, fill: BLADE_GREY, stroke: 'rgba(0,0,0,.35)', 'stroke-width': .6 }, v.blade);
+  el('rect', { x: px1, y: y - 3.5, width: len, height: 7, rx: 3.5, fill: 'url(#gGloss)' }, v.blade);
+  v.hinge = [px1, y];
+  // the posts: a stub in from each side, a round post at its end (as a relay contact's)
+  v.posts = el('g', { fill: GREY }, g);
+  el('rect', { x: x - hw + 4.5, y: y - sy, width: px1 - (x - hw + 4.5), height: 2 * sy }, v.posts); el('circle', { cx: px1, cy: y, r }, v.posts);
+  el('rect', { x: px2, y: y - sy, width: x + hw - 4.5 - px2, height: 2 * sy }, v.posts); el('circle', { cx: px2, cy: y, r }, v.posts);
+  for (const cx of [px1, px2]) el('circle', { cx, cy: y, r, fill: 'url(#gDome)' }, g);
+  // its number, and NO or NC, in its bottom corners
+  el('rect', { x: x - hw + 7, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('text', { x: x - hw + 23, y: bot - 11.8, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = 'LS' + p.L;
+  el('rect', { x: x + hw - 37, y: bot - 25, width: 30, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('text', { x: x + hw - 22, y: bot - 11.8, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = p.nc ? 'NC' : 'NO';
+  setLimit(v, p, editing ? (p.held ? 1 : 0) : lswPos(p), editing ? !!p.nc !== !!p.held : lswClosed(p));
+}
+// a limit switch pos of the way from at rest (0) to worked (1): its lever down, the arrow on its roller (coming down,
+// fading in), its blade lifted; lit in its colour while closed
+function setLimit(v, p, pos, cl) {
+  const k = pos.toFixed(3) + (cl ? 'c' : 'o');
+  if (v.k === k) return; v.k = k;
+  const [hx, hy] = v.hinge, [px, py] = v.pivot, [a0, a1] = lswAngles(p), la = 16 * pos, ba = lerp(a0, a1, pos);
+  v.blade.setAttribute('transform', `rotate(${ba.toFixed(2)} ${hx} ${hy})`);
+  v.link.setAttribute('y2', (hy + 30 * Math.tan(ba * Math.PI / 180) - 5.5).toFixed(2));   // (to just over the blade, at the middle)
+  v.lever.setAttribute('transform', `rotate(${la.toFixed(2)} ${px} ${py})`);
+  const c = cl ? p.color : BLADE_GREY;
+  v.bladeShape.setAttribute('fill', c); v.wedge.setAttribute('fill', c); v.posts.setAttribute('fill', cl ? p.color : GREY);
+  // (the arrow's tip on top of the roller, where the lever has turned it to; higher up, and fainter, before it gets there)
+  const t = la * Math.PI / 180, [lx, ly] = LSW_ROLLER, rx = px + lx * Math.cos(t) - ly * Math.sin(t), ry = py + lx * Math.sin(t) + ly * Math.cos(t) - 13.3 - 1.5 - 16 * (1 - pos);
+  v.arrow.setAttribute('opacity', Math.min(1, pos * 2.5).toFixed(3));
+  v.arrowPath.setAttribute('d', `M${rx} ${ry}l-12 -13h6.5v-15h11v15h6.5z`);
 }

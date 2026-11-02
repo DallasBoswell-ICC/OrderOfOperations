@@ -43,7 +43,7 @@ const XFM_W = 210, XFM_H = 148, XFM_TX = 60, XFM_TY = 80, XFM_EDGE = '#9aa7b5';
 const isPwr3 = p => p.t === 'dsc' || p.t === 'fus' || p.t === 'mst' || p.t === 'olh', isPwrT = t => t === 'dsc' || t === 'fus' || t === 'mst' || t === 'olh';
 const DSC_HEAD = 50, DSC_HANDLE = '#E8413C';   // (a disconnect's head on top, with its handle)
 const PWR_DY = 120, PWR_H = 2 * PWR_DY + 66, MTR_W = 280, MTR_H = 280, MTR_COL = '#9aa7b5', OL_COL = '#FF6F59', DSC_COL = '#c9d2dd', FUS_COL = '#9aa0a6';
-const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : t === 'mtr' ? MTR_H / 2 : t === 'dsc' ? PWR_H / 2 + DSC_HEAD : isPwrT(t) ? PWR_H / 2 : 40;   // (the room a part takes)
+const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : t === 'lsw' ? LSW_S / 2 : t === 'mtr' ? MTR_H / 2 : t === 'dsc' ? PWR_H / 2 + DSC_HEAD : isPwrT(t) ? PWR_H / 2 : 40;   // (the room a part takes)
 const SOL_COL = '#00D2BE';
 /* a solenoid (as on Dallas's drawing): a diamond (a rounded square on its corner) as tall and wide as a coil, with a
    dot at each end where the rung comes in, joined by the lightning bolt: along the rung, up to a peak, straight down and
@@ -59,10 +59,15 @@ const SOL_D = [1, -1].map(k => `M ${-k * (SOL_DOT + SOL_DR)} 0 H ${-k * SOL_X} L
 const SOL_LEN = 2 * (SOL_DOT + SOL_DR - SOL_X) + 2 * Math.hypot(SOL_X, SOL_P) + 2 * SOL_P;
 // a selector switch: a square body a little larger than a pushbutton's (room for its position numbers round the top)
 const SEL_BOX = 80;
-const WIDE = t => LOADT(t) || t === 'sel';                                // parts whose ends sit 60 either side of their centre
-const BODYH = t => t === 'xfm' ? XFM_H : t === 'mtr' ? MTR_H : isPwrT(t) ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
+const WIDE = t => LOADT(t) || t === 'sel' || t === 'lsw';                                // parts whose ends sit 60 either side of their centre
+const BODYH = t => t === 'lsw' ? LSW_S : t === 'xfm' ? XFM_H : t === 'mtr' ? MTR_H : isPwrT(t) ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
 const TERM = p => p.t === 'mtr' ? MTR_W / 2 + 20 : WIDE(p.t) ? 60 : 40;
-const isOp = p => p.t === 'btn' || p.t === 'sel';   // operators: pushbuttons and selector switches (they tint the current with their colour)
+const isOp = p => p.t === 'btn' || p.t === 'sel' || p.t === 'lsw';
+/* A limit switch (lsw): numbered (p.L '1', '2'... : LS1, LS2), worked like a momentary pushbutton (down[p.L]) and
+   tinting the current with its colour as one does. Normally open or closed (p.nc); held (p.held): actuated by the
+   machine at rest, so working it lets it go. A square body, roomier than a contact's, its ends 60 either side. */
+const LSW_W = 110, LSW_TOP = 41, LSW_BOT = 82, LSW_COL = '#0070C0', LSW_OPEN = 23.4;   // (its body: its width, how far above and below the wire; LSW_OPEN: how far its blade drops, open, in degrees)
+const LSW_S = 2 * LSW_BOT;   // (the room it takes, up and down)   // operators: pushbuttons and selector switches (they tint the current with their colour)
 /* Power: each circuit is fed either by the L1 and L2 bars down its sides (POWER 'bars', as a ladder diagram is drawn),
    or by supply boxes placed anywhere on it ('boxes'): an L1 Supply box and an L2 Return box, each with three
    connection points (left, right and bottom), every one of them L1 or L2. */
@@ -87,5 +92,5 @@ let PH_COL = [...PH_DEFAULT];
 const phCol = p => PH_COL[(+p.L || 1) - 1];
 const lighten = (c, f) => { const n = parseInt(c.slice(1), 16), m = k => Math.round(((n >> k) & 255) + (255 - ((n >> k) & 255)) * f); return '#' + ((1 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)).toString(16).slice(1).toUpperCase(); };
 const JMP_EDGE = '#b8c2cf';
-const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc';
+const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel' || p.t === 'lsw' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc';
 const isCon = p => p.t === 'con' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc';   // (a relay contact, or a transformer's switch inside it: passes on what it is given)   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre

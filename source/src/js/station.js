@@ -16,7 +16,7 @@ const stationEl = document.getElementById('station');
 // the operators: the main drawing of each pushbutton and selector switch, top of the ladder first
 const operators = () => {
   const seen = new Set(), out = [];
-  for (const p of [...parts].sort((a, b) => a.y - b.y || a.x - b.x)) if (isOp(p) && !seen.has(p.t + p.L)) { seen.add(p.t + p.L); out.push(p.t === 'btn' ? mainBtn(p.L) : mainSel(p.L)); }
+  for (const p of [...parts].sort((a, b) => a.y - b.y || a.x - b.x)) if ((p.t === 'btn' || p.t === 'sel') && !seen.has(p.t + p.L)) { seen.add(p.t + p.L); out.push(p.t === 'btn' ? mainBtn(p.L) : mainSel(p.L)); }
   return out;
 };
 const plateOf = p => p.t === 'sel' ? ((p.names || []).filter(Boolean).join('/') || `${p.L} SELECTOR`) : nameOf(p);

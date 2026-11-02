@@ -177,7 +177,7 @@ body.ribbon-min .rbody { display: none; }
 body.ribbon-min .rtabs { border-bottom: 0; border-radius: 10px; }
 body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1px; right: -1px; top: 100%; z-index: 30; background: var(--chip); border: 1px solid var(--line); border-radius: 0 0 10px 10px; box-shadow: 0 16px 34px rgba(0,0,0,.55); }
 .rpanel { display: flex; align-items: stretch; flex: 1; min-width: 0; height: 100%; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
-.rgrp, .rpanel .tgroup, .rpanel .row { display: flex; flex-direction: column; flex: none; padding: 0 4px; border-right: 1px solid #3e3f44; height: 100%; }
+.rgrp, .rpanel .tgroup, .rpanel .row { display: flex; flex-direction: column; flex: none; padding: 0 3px; border-right: 1px solid #3e3f44; height: 100%; }
 .rgrp .gbody { display: flex; gap: 2px; align-items: flex-start; flex: 1; }
 .gname, .rpanel .label { font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--faint); text-align: center; padding: 2px 0 6px; white-space: nowrap; }
 /* settings and run controls: the controls along the top of each group, its name along the bottom */
@@ -190,7 +190,7 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
 .rpanel .seg button { padding: 4px 10px; }
 .rpanel select { padding: 4px 8px; width: auto; max-width: 13em; }
 /* ribbon buttons: big (icon over its name) and small (in stacks of three) */
-.tool.big { flex-direction: column; justify-content: flex-start; gap: 3px; min-width: 50px; padding: 5px 2px 4px; background: transparent; border-color: transparent; font-size: .76rem; line-height: 1.12; text-align: center; height: auto; }
+.tool.big { flex-direction: column; justify-content: flex-start; gap: 3px; min-width: 47px; padding: 5px 2px 4px; background: transparent; border-color: transparent; font-size: .76rem; line-height: 1.12; text-align: center; height: auto; }
 .tool.big svg { width: 32px; height: 28px; }
 .tool.big:hover:not(:disabled) { background: #3a3b40; }
 .tool.big[aria-pressed="true"] { background: #4d462e; border-color: var(--gold); }
@@ -294,7 +294,7 @@ body.fs .wrap { padding-top: 8px; }
 .tp-menu { position: fixed; z-index: 40; display: flex; align-items: stretch; padding: 8px 4px 2px; background: var(--chip); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 16px 34px rgba(0,0,0,.55); }
 .tp-menu .rgrp { height: auto; }
 .tp-menu .rgrp:last-child { border-right: 0; }
-#tp-btn[aria-expanded="true"] { background: #4d462e; border-color: var(--gold); }
+#tp-btn[aria-expanded="true"], #ls-btn[aria-expanded="true"] { background: #4d462e; border-color: var(--gold); }
 </style>
 </head>
 <body>
@@ -372,7 +372,7 @@ body.fs .wrap { padding-top: 8px; }
       <div class="rgrp" id="part-groups-pb"><div class="gbody"><button type="button" class="tool big" data-part="btn-no" data-tip="Pushbutton, normally open. Drag it onto the panel, or onto a wire to put it in that wire.">
         <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FF0032" stroke-width="1.6"/><rect x="8.5" y="6.5" width="13" height="13" rx="2.4" fill="#FF0032"/></svg><span>Button<br>NO</span></button><button type="button" class="tool big" data-part="btn-nc" data-tip="Pushbutton, normally closed">
         <svg viewBox="0 0 30 26"><path d="M15 1 L26 7.3 L26 18.7 L15 25 L4 18.7 L4 7.3 Z" fill="#222" stroke="#FF9600" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 6 L21.5 9.7 L21.5 16.3 L15 20 L8.5 16.3 L8.5 9.7 Z" fill="#FF9600"/></svg><span>Button<br>NC</span></button><button type="button" class="tool big" data-part="sel" data-tip="Selector switch: 2 to 4 positions, turned left or right. Put the same letter in several rungs for its contact blocks, each closed in the positions you choose.">
-        <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#0070C0" stroke-width="1.6"/><circle cx="15" cy="15" r="6.5" fill="#444"/><rect x="12.6" y="7.5" width="4.8" height="15" rx="2.4" fill="#0070C0" transform="rotate(45 15 15)"/></svg><span>Selector<br>switch</span></button></div><div class="gname">Switches</div></div>
+        <svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#0070C0" stroke-width="1.6"/><circle cx="15" cy="15" r="6.5" fill="#444"/><rect x="12.6" y="7.5" width="4.8" height="15" rx="2.4" fill="#0070C0" transform="rotate(45 15 15)"/></svg><span>Selector<br>switch</span></button><button type="button" class="tool big" id="ls-btn" data-menu="ls-menu" aria-haspopup="menu" aria-expanded="false" aria-controls="ls-menu" data-tip="Limit switch: worked by the machine (here, click it in Run, as a pushbutton). Pick normally open or closed, or one held by the machine at rest."><svg viewBox="0 0 30 26"><rect x="4" y="5" width="22" height="20" rx="4" fill="#222" stroke="#0070C0" stroke-width="1.5"/><path d="M9 17 l12 4" stroke="#b5b5b5" stroke-width="1.8" stroke-linecap="round"/><path d="M9 17l7.5 0l-2.5 3.5 z" fill="#b5b5b5"/><circle cx="9" cy="17" r="2" fill="#7c7c7c"/><circle cx="21" cy="17" r="2" fill="#7c7c7c"/><path d="M8 11.5l9-2" stroke="#c8c8c8" stroke-width="1.4" stroke-linecap="round"/><circle cx="17.5" cy="9.3" r="1.8" fill="#2b2b2b" stroke="#c8c8c8" stroke-width=".9"/></svg><span>Limit<br>switch</span></button></div><div class="gname">Switches</div></div>
       <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="coil" data-tip="Relay coil">
         <svg viewBox="0 0 30 26"><circle cx="15" cy="13" r="11.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="15" cy="13" r="7.5" fill="#555"/></svg><span>Coil</span></button><button type="button" class="tool big" data-part="timer" data-tip="On-delay timer: a relay coil whose contacts change only once it has been energized for its set time. Losing power resets it at once. Set the time in its settings.">
         <svg viewBox="0 0 30 26"><circle cx="13" cy="14" r="10.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="13" cy="14" r="6.8" fill="#555"/><rect x="18" y="1" width="11" height="11" rx="2" fill="#222" stroke="#FFDC00" stroke-width="1.2"/><path d="M21 3.5h5l-2.5 3 2.5 3h-5l2.5-3z" fill="#d8d8d8"/></svg><span>On-delay<br>timer</span></button><button type="button" class="tool big" data-part="timer-off" data-tip="Off-delay timer: its timed contacts change as soon as it is energized, and go back only once its set time has run out after it loses power. Energized again before then, it stops timing. Set the time in its settings.">
@@ -443,6 +443,11 @@ body.fs .wrap { padding-top: 8px; }
       <div class="props" id="props-pwr" hidden>
         <div class="tgroup"><span class="label" id="pw-label">Number</span><select id="pw-num" aria-label="Number"></select></div>
         <div class="tgroup"><span class="label">How it works</span><span class="selname" id="pw-how"></span></div>
+      </div>
+      <div class="props" id="props-lsw" hidden>
+        <div class="tgroup"><span class="label">Number</span><select id="ls-num" aria-label="Limit switch number"></select></div>
+        <div class="tgroup"><span class="label">Kind</span><select id="ls-kind" aria-label="Kind of limit switch"><option value="no">Normally open</option><option value="nc">Normally closed</option><option value="noh">NO held closed</option><option value="nch">NC held open</option></select></div>
+        <div class="tgroup"><span class="label">Colour</span><div class="swatches" id="ls-colour" role="radiogroup" aria-label="Limit switch colour"></div></div>
       </div>
       <div class="props" id="props-xfm" hidden>
         <div class="tgroup"><span class="label">Number</span><select id="x-num" aria-label="Transformer number"></select></div>
@@ -570,6 +575,9 @@ body.fs .wrap { padding-top: 8px; }
     <div class="dlg-end"><button value="close">Cancel</button><button type="button" class="primary" id="open-code-btn">Open code</button></div>
   </form>
 </dialog>
+<div class="tp-menu" id="ls-menu" role="menu" aria-label="Limit switches" hidden>
+  <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="lsw-no" data-tip="Limit switch, normally open: closes while it is worked."><svg viewBox="0 0 30 26"><rect x="4" y="5" width="22" height="20" rx="4" fill="#222" stroke="#0070C0" stroke-width="1.5"/><path d="M9 17 l12 4" stroke="#b5b5b5" stroke-width="1.8" stroke-linecap="round"/><path d="M9 17l7.5 0l-2.5 3.5 z" fill="#b5b5b5"/><circle cx="9" cy="17" r="2" fill="#7c7c7c"/><circle cx="21" cy="17" r="2" fill="#7c7c7c"/><path d="M8 11.5l9-2" stroke="#c8c8c8" stroke-width="1.4" stroke-linecap="round"/><circle cx="17.5" cy="9.3" r="1.8" fill="#2b2b2b" stroke="#c8c8c8" stroke-width=".9"/></svg><span>Normally<br>open</span></button><button type="button" class="tool big" data-part="lsw-nc" data-tip="Limit switch, normally closed: opens while it is worked."><svg viewBox="0 0 30 26"><rect x="4" y="5" width="22" height="20" rx="4" fill="#222" stroke="#0070C0" stroke-width="1.5"/><path d="M9 17 l12 0" stroke="#b5b5b5" stroke-width="1.8" stroke-linecap="round"/><path d="M9 17l7.5 0l-2.5 -3.5 z" fill="#b5b5b5"/><circle cx="9" cy="17" r="2" fill="#7c7c7c"/><circle cx="21" cy="17" r="2" fill="#7c7c7c"/><path d="M8 11.5l9-2" stroke="#c8c8c8" stroke-width="1.4" stroke-linecap="round"/><circle cx="17.5" cy="9.3" r="1.8" fill="#2b2b2b" stroke="#c8c8c8" stroke-width=".9"/></svg><span>Normally<br>closed</span></button><button type="button" class="tool big" data-part="lsw-noh" data-tip="Limit switch, normally open, held closed by the machine at rest: opens while it is let go (clicked)."><svg viewBox="0 0 30 26"><rect x="4" y="5" width="22" height="20" rx="4" fill="#222" stroke="#0070C0" stroke-width="1.5"/><path d="M11 4.5V.8h4V4.5h2l-4 4.4-4-4.4z" fill="#ececec" stroke="#1c1c1c" stroke-width=".6"/><path d="M9 17 l12 0" stroke="#b5b5b5" stroke-width="1.8" stroke-linecap="round"/><path d="M9 17l7.5 0l-2.5 3.5 z" fill="#b5b5b5"/><circle cx="9" cy="17" r="2" fill="#7c7c7c"/><circle cx="21" cy="17" r="2" fill="#7c7c7c"/><path d="M8 11.5l9-2" stroke="#c8c8c8" stroke-width="1.4" stroke-linecap="round"/><circle cx="17.5" cy="9.3" r="1.8" fill="#2b2b2b" stroke="#c8c8c8" stroke-width=".9"/></svg><span>NO<br>held closed</span></button><button type="button" class="tool big" data-part="lsw-nch" data-tip="Limit switch, normally closed, held open by the machine at rest: closes while it is let go (clicked)."><svg viewBox="0 0 30 26"><rect x="4" y="5" width="22" height="20" rx="4" fill="#222" stroke="#0070C0" stroke-width="1.5"/><path d="M11 4.5V.8h4V4.5h2l-4 4.4-4-4.4z" fill="#ececec" stroke="#1c1c1c" stroke-width=".6"/><path d="M9 17 l12 4" stroke="#b5b5b5" stroke-width="1.8" stroke-linecap="round"/><path d="M9 17l7.5 0l-2.5 -3.5 z" fill="#b5b5b5"/><circle cx="9" cy="17" r="2" fill="#7c7c7c"/><circle cx="21" cy="17" r="2" fill="#7c7c7c"/><path d="M8 11.5l9-2" stroke="#c8c8c8" stroke-width="1.4" stroke-linecap="round"/><circle cx="17.5" cy="9.3" r="1.8" fill="#2b2b2b" stroke="#c8c8c8" stroke-width=".9"/></svg><span>NC<br>held open</span></button></div><div class="gname">Limit switch</div></div>
+</div>
 <div class="tp-menu" id="tp-menu" role="menu" aria-label="Three-phase parts" hidden>
   <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="ph-1" data-tip="L1 phase of a three-phase supply: wire to its left, right or bottom (turn it with R to face other ways). Its phase, in its own colour, reaches everything wired to it."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" style="stroke:var(--ph1)" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" style="stroke:var(--ph1l)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L1<br>phase</span></button><button type="button" class="tool big" data-part="ph-2" data-tip="L2 phase of a three-phase supply: wire to its left, right or bottom (turn it with R to face other ways). Its phase, in its own colour, reaches everything wired to it."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" style="stroke:var(--ph2)" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" style="stroke:var(--ph2l)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L2<br>phase</span></button><button type="button" class="tool big" data-part="ph-3" data-tip="L3 phase of a three-phase supply: wire to its left, right or bottom (turn it with R to face other ways). Its phase, in its own colour, reaches everything wired to it."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" style="stroke:var(--ph3)" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" style="stroke:var(--ph3l)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L3<br>phase</span></button></div><div class="gname">Supply</div></div>
   <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="dsc" data-tip="Disconnect: one switch on all three lines, its poles worked together. In Run, click it to turn the power off or on."><svg viewBox="0 0 30 26"><rect x="7" y="8.5" width="16" height="16.5" rx="3" fill="#222" stroke="#c9d2dd" stroke-width="1.3"/><rect x="8.5" y="1" width="13" height="6.5" rx="2" fill="#222" stroke="#c9d2dd" stroke-width="1.1"/><circle cx="15" cy="4.3" r="2.3" fill="#4a4a4a"/><path d="M13.4 5.9l3.2-3.2" stroke="#E8413C" stroke-width="1.9" stroke-linecap="round"/><path d="M15 12v10" stroke="#9a9a9a" stroke-width=".8" stroke-dasharray="1.3 1.3"/><g stroke="#b5b5b5" stroke-width="1.6" stroke-linecap="round"><path d="M10.5 12.2h9M10.5 16.7h9M10.5 21.2h9"/></g><g fill="#7c7c7c"><circle cx="10.5" cy="12.2" r="1.5"/><circle cx="19.5" cy="12.2" r="1.5"/><circle cx="10.5" cy="16.7" r="1.5"/><circle cx="19.5" cy="16.7" r="1.5"/><circle cx="10.5" cy="21.2" r="1.5"/><circle cx="19.5" cy="21.2" r="1.5"/></g></svg><span>Disconnect</span></button><button type="button" class="tool big" data-part="fus" data-tip="Fuses: one on each of the three lines. They blow when two phases are joined after them; in Run, click one to blow it (or put a new one in)."><svg viewBox="0 0 30 26"><rect x="7" y="1.5" width="16" height="23" rx="3" fill="#222" stroke="#9aa0a6" stroke-width="1.3"/><rect x="11.4" y="4.6" width="7.2" height="4.4" fill="var(--ph1)"/><rect x="11.4" y="10.8" width="7.2" height="4.4" fill="var(--ph2)"/><rect x="11.4" y="17" width="7.2" height="4.4" fill="var(--ph3)"/><g fill="#c8c8c8" stroke="#111" stroke-width=".6"><rect x="9.6" y="4.6" width="1.8" height="4.4"/><rect x="18.6" y="4.6" width="1.8" height="4.4"/><rect x="9.6" y="10.8" width="1.8" height="4.4"/><rect x="18.6" y="10.8" width="1.8" height="4.4"/><rect x="9.6" y="17" width="1.8" height="4.4"/><rect x="18.6" y="17" width="1.8" height="4.4"/></g></svg><span>Fuses</span></button></div><div class="gname">Protection</div></div>
@@ -624,7 +632,7 @@ const XFM_W = 210, XFM_H = 148, XFM_TX = 60, XFM_TY = 80, XFM_EDGE = '#9aa7b5';
 const isPwr3 = p => p.t === 'dsc' || p.t === 'fus' || p.t === 'mst' || p.t === 'olh', isPwrT = t => t === 'dsc' || t === 'fus' || t === 'mst' || t === 'olh';
 const DSC_HEAD = 50, DSC_HANDLE = '#E8413C';   // (a disconnect's head on top, with its handle)
 const PWR_DY = 120, PWR_H = 2 * PWR_DY + 66, MTR_W = 280, MTR_H = 280, MTR_COL = '#9aa7b5', OL_COL = '#FF6F59', DSC_COL = '#c9d2dd', FUS_COL = '#9aa0a6';
-const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : t === 'mtr' ? MTR_H / 2 : t === 'dsc' ? PWR_H / 2 + DSC_HEAD : isPwrT(t) ? PWR_H / 2 : 40;   // (the room a part takes)
+const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : t === 'lsw' ? LSW_S / 2 : t === 'mtr' ? MTR_H / 2 : t === 'dsc' ? PWR_H / 2 + DSC_HEAD : isPwrT(t) ? PWR_H / 2 : 40;   // (the room a part takes)
 const SOL_COL = '#00D2BE';
 /* a solenoid (as on Dallas's drawing): a diamond (a rounded square on its corner) as tall and wide as a coil, with a
    dot at each end where the rung comes in, joined by the lightning bolt: along the rung, up to a peak, straight down and
@@ -640,10 +648,15 @@ const SOL_D = [1, -1].map(k => `M ${-k * (SOL_DOT + SOL_DR)} 0 H ${-k * SOL_X} L
 const SOL_LEN = 2 * (SOL_DOT + SOL_DR - SOL_X) + 2 * Math.hypot(SOL_X, SOL_P) + 2 * SOL_P;
 // a selector switch: a square body a little larger than a pushbutton's (room for its position numbers round the top)
 const SEL_BOX = 80;
-const WIDE = t => LOADT(t) || t === 'sel';                                // parts whose ends sit 60 either side of their centre
-const BODYH = t => t === 'xfm' ? XFM_H : t === 'mtr' ? MTR_H : isPwrT(t) ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
+const WIDE = t => LOADT(t) || t === 'sel' || t === 'lsw';                                // parts whose ends sit 60 either side of their centre
+const BODYH = t => t === 'lsw' ? LSW_S : t === 'xfm' ? XFM_H : t === 'mtr' ? MTR_H : isPwrT(t) ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
 const TERM = p => p.t === 'mtr' ? MTR_W / 2 + 20 : WIDE(p.t) ? 60 : 40;
-const isOp = p => p.t === 'btn' || p.t === 'sel';   // operators: pushbuttons and selector switches (they tint the current with their colour)
+const isOp = p => p.t === 'btn' || p.t === 'sel' || p.t === 'lsw';
+/* A limit switch (lsw): numbered (p.L '1', '2'... : LS1, LS2), worked like a momentary pushbutton (down[p.L]) and
+   tinting the current with its colour as one does. Normally open or closed (p.nc); held (p.held): actuated by the
+   machine at rest, so working it lets it go. A square body, roomier than a contact's, its ends 60 either side. */
+const LSW_W = 110, LSW_TOP = 41, LSW_BOT = 82, LSW_COL = '#0070C0', LSW_OPEN = 23.4;   // (its body: its width, how far above and below the wire; LSW_OPEN: how far its blade drops, open, in degrees)
+const LSW_S = 2 * LSW_BOT;   // (the room it takes, up and down)   // operators: pushbuttons and selector switches (they tint the current with their colour)
 /* Power: each circuit is fed either by the L1 and L2 bars down its sides (POWER 'bars', as a ladder diagram is drawn),
    or by supply boxes placed anywhere on it ('boxes'): an L1 Supply box and an L2 Return box, each with three
    connection points (left, right and bottom), every one of them L1 or L2. */
@@ -668,7 +681,7 @@ let PH_COL = [...PH_DEFAULT];
 const phCol = p => PH_COL[(+p.L || 1) - 1];
 const lighten = (c, f) => { const n = parseInt(c.slice(1), 16), m = k => Math.round(((n >> k) & 255) + (255 - ((n >> k) & 255)) * f); return '#' + ((1 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)).toString(16).slice(1).toUpperCase(); };
 const JMP_EDGE = '#b8c2cf';
-const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc';
+const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel' || p.t === 'lsw' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc';
 const isCon = p => p.t === 'con' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc';   // (a relay contact, or a transformer's switch inside it: passes on what it is given)   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre
 
 /* ---- js/model.js ---- */
@@ -1102,7 +1115,7 @@ function setAt(n, t, c, lane) {
 const setCol = set => set.size === 0 ? SRC_COL : set.size === 1 ? flowOf(btnColour([...set][0])) : blend([...set].map(L => flowOf(btnColour(L))));
 const colourOf = r => r.rd < RAMP ? mixOk(r.from, setCol(r.set), r.rd / RAMP) : setCol(r.set);
 // a pushbutton passes current while pressed (NO) or until pressed (NC); a relay contact once its bar has landed on its posts
-const closed = p => p.t === 'pp' ? poleClosed(p) : p.t === 'olc' ? !OLTRIP[p.L] : p.t === 'xsw' ? !!coilOn[p.x.id] : p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.t === 'sel' ? selClosed(p) : p.nc ? !down[p.L] : !!down[p.L];
+const closed = p => p.t === 'lsw' ? lswClosed(p) : p.t === 'pp' ? poleClosed(p) : p.t === 'olc' ? !OLTRIP[p.L] : p.t === 'xsw' ? !!coilOn[p.x.id] : p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.t === 'sel' ? selClosed(p) : p.nc ? !down[p.L] : !!down[p.L];
 /* Selector switches. One switch can be drawn in several rungs (the same letter, as a pushbutton with several contact
    blocks): turning any drawing turns them all. Each drawing is closed in the positions it is set to (p.closedIn).
    The switch has 2 to 4 positions (selN), can name them (p.names, such as HAND / OFF / AUTO), and starts in p.pos.
@@ -1171,6 +1184,13 @@ const coilColour = L => (parts.find(q => q.t === 'coil' && q.L === L) || {}).col
    overload's heaters always pass power (OLTRIP: the overloads tripped, by number). */
 let DSC = {}, BLOWN = {}, OLTRIP = {}, MOT = {};
 const poleClosed = k => { const p = k.x; return p.t === 'dsc' ? !DSC[p.id] : p.t === 'fus' ? !BLOWN[k.id] : p.t === 'mst' ? !!(CON[p.id] && CON[p.id].shut) : true; };
+// a limit switch: actuated while worked (a held one: while not), and closed accordingly
+const lswAct = p => !!down[p.L] !== !!p.held, lswClosed = p => p.nc ? !lswAct(p) : lswAct(p);
+// how far a limit switch has moved from at rest (0) to worked (1): easing in and out over LSW_MOVE after it was last
+// worked or let go
+const LSW_MOVE = .3;
+let LSW_T = {};
+function lswPos(p) { const to = lswAct(p) ? 1 : 0, t0 = LSW_T[p.L]; if (t0 === undefined) return to; const f = clamp01((simT - t0) / LSW_MOVE), e = f * f * (3 - 2 * f); return to ? e : 1 - e; }
 
 /* ---- js/solve.js ---- */
 /* =====================================================================
@@ -1341,6 +1361,7 @@ function startRun() {
   NET = network();
   simT = 0; queue = []; seq = 0; busyUntil = 0; autoRel = {}; down = {}; coilOn = {}; TIMER = {}; SELPOS = {}; SELTURN = {};
   FED_AT = {}; COMP = null; LV = null; COND = {}; needPaint = true; PTL = new Map(); PARR = new Map(); PDARK = new Map(); phFault = '';
+  LSW_T = {};
   CON = {}; for (const p of parts) if (p.t === 'con' || p.t === 'mst') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };
   DSC = {}; BLOWN = {}; OLTRIP = {}; MOT = {}; DSC_T = {}; OLRESET = {};   // every coil starts off
   tl = NET.nodes.map(() => [[-1e9, null]]);
@@ -1730,7 +1751,8 @@ function turn(L, pos) {
 function press(L, v) {
   if (!!down[L] === v) return;
   down[L] = v; needPaint = true;
-  switched(parts.filter(p => p.t === 'btn' && p.L === L), simT);
+  if (parts.some(p => p.t === 'lsw' && p.L === L)) { LSW_T[L] = simT; if (simT + LSW_MOVE > busyUntil) busyUntil = simT + LSW_MOVE; }   // (a limit switch: it moves over a moment)
+  switched(parts.filter(p => (p.t === 'btn' || p.t === 'lsw') && p.L === L), simT);   // (a pushbutton's letter, or a limit switch's number)
 }
 // a relay contact's bar starts to move: it stops passing current as soon as it lifts, and passes current again
 // only once it has landed
@@ -1986,7 +2008,7 @@ function screw(x, y, g, bare) {
 }
 const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
-const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L} Fuses` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L} Fuses` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -2015,7 +2037,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => (p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -2107,6 +2129,8 @@ function drawPart(p, g, x, y, chan, onStation) {
     }
   } else if (p.t === 'sel') {
     drawSelector(p, g, x, y, v);
+  } else if (p.t === 'lsw') {
+    drawLimit(p, g, x, y, v);
   } else if (p.t === 'xfm') {
     drawXfm(p, g, x, y, v, chan);
   } else if (isPwr3(p)) {
@@ -2476,6 +2500,71 @@ function conPosts(g, x, py) {
   return { a, b, x1, x2, r };
 }
 
+/* A limit switch: a roomy square body (in its colour) holding the NEMA limit switch symbol, raised: a contact's two
+   posts, and a blade hinged on the left one, with the solid wedge under it. Its angle tells its kind and state, as on
+   the print: normally open, it hangs below the right post (open) and is lifted onto its underside (closed); normally
+   closed, it rests on top of the right post (closed) and is lifted clear above it (open). Working it always lifts the
+   blade. On top of the body, the roller lever it is worked by, and a bold arrow, the machine coming down on the roller.
+   (Painted by setLimit; working it eases from one position to the other over LSW_MOVE seconds.) */
+const LSW_WEDGE = [[0, 0], [51.3, 0], [35.8, 16.9]];
+const LSW_ROLLER = [43, -42];   // (the roller, from the head's middle: up and to the right)   // (the wedge, along the blade and out below it, from its hinge)
+const LSW_TOUCH = Math.atan((BOX * .105 + 3.5) / 60) * 180 / Math.PI;   // (the blade's angle lying on a post's edge)
+const lswAngles = p => p.nc ? [-LSW_TOUCH, -LSW_OPEN] : [LSW_OPEN, LSW_TOUCH];   // (at rest, and worked)
+function drawLimit(p, g, x, y, v) {
+  const col = p.color, r = BOX * .105, px1 = x - 30, px2 = x + 30, sy = BOX * .045, hw = LSW_W / 2, top = y - LSW_TOP, bot = y + LSW_BOT;
+  // its head: the roller lever, out of a dome on top of the body at 45 degrees, up to the right; the arrow comes down on its roller
+  const hc = [x, top]; v.pivot = hc;
+  v.arrow = el('g', { filter: 'url(#fShadow)' }, g);
+  v.arrowPath = el('path', { d: '', fill: '#ececec', stroke: '#1c1c1c', 'stroke-width': 1.6, 'stroke-linejoin': 'round' }, v.arrow);
+  v.lever = el('g', {}, g);
+  const [lx, ly] = LSW_ROLLER;
+  el('line', { x1: x, y1: top, x2: x + lx, y2: top + ly, stroke: '#111', 'stroke-width': 10.6, 'stroke-linecap': 'round', filter: 'url(#fShadow)' }, v.lever);
+  el('line', { x1: x, y1: top, x2: x + lx, y2: top + ly, stroke: '#b5b5b5', 'stroke-width': 8 }, v.lever);
+  el('line', { x1: x, y1: top, x2: x + lx, y2: top + ly, stroke: 'url(#gGloss)', 'stroke-width': 8 }, v.lever);
+  el('circle', { cx: x + lx, cy: top + ly, r: 13.3, fill: '#2b2b2b', stroke: '#c8c8c8', 'stroke-width': 3, filter: 'url(#fShadow)' }, v.lever);
+  el('circle', { cx: x + lx, cy: top + ly, r: 6.2, fill: 'url(#gTerm)', stroke: '#111', 'stroke-width': 1.2 }, v.lever);
+  framed('path', { d: `M${x - 27} ${top + 2}A27 27 0 0 1 ${x + 27} ${top + 2}Z`, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
+  // the body, the contact in its upper part
+  framed('rect', { x: x - hw, y: top, width: LSW_W, height: LSW_TOP + LSW_BOT, rx: 15, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
+  // the dashed link, from the head down to just over the blade (it follows it), and the blade and its wedge (behind
+  // the posts), turning about the left post
+  v.link = el('line', { x1: x, y1: top + 5, x2: x, y2: y, stroke: '#9a9a9a', 'stroke-width': 2.2, 'stroke-dasharray': '6 5' }, g);
+  v.blade = el('g', {}, g);
+  const wedge = 'M' + LSW_WEDGE.map(([a, b]) => `${px1 + a} ${y + b}`).join('L') + 'Z', len = 60 + r * .6;
+  v.wedge = el('path', { d: wedge, fill: BLADE_GREY, stroke: '#111', 'stroke-width': 1.2, 'stroke-linejoin': 'round', filter: 'url(#fShadow)' }, v.blade);
+  el('path', { d: wedge, fill: 'url(#gGloss)', opacity: .7 }, v.blade);
+  v.bladeShape = el('rect', { x: px1, y: y - 3.5, width: len, height: 7, rx: 3.5, fill: BLADE_GREY, stroke: 'rgba(0,0,0,.35)', 'stroke-width': .6 }, v.blade);
+  el('rect', { x: px1, y: y - 3.5, width: len, height: 7, rx: 3.5, fill: 'url(#gGloss)' }, v.blade);
+  v.hinge = [px1, y];
+  // the posts: a stub in from each side, a round post at its end (as a relay contact's)
+  v.posts = el('g', { fill: GREY }, g);
+  el('rect', { x: x - hw + 4.5, y: y - sy, width: px1 - (x - hw + 4.5), height: 2 * sy }, v.posts); el('circle', { cx: px1, cy: y, r }, v.posts);
+  el('rect', { x: px2, y: y - sy, width: x + hw - 4.5 - px2, height: 2 * sy }, v.posts); el('circle', { cx: px2, cy: y, r }, v.posts);
+  for (const cx of [px1, px2]) el('circle', { cx, cy: y, r, fill: 'url(#gDome)' }, g);
+  // its number, and NO or NC, in its bottom corners
+  el('rect', { x: x - hw + 7, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('text', { x: x - hw + 23, y: bot - 11.8, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = 'LS' + p.L;
+  el('rect', { x: x + hw - 37, y: bot - 25, width: 30, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('text', { x: x + hw - 22, y: bot - 11.8, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = p.nc ? 'NC' : 'NO';
+  setLimit(v, p, editing ? (p.held ? 1 : 0) : lswPos(p), editing ? !!p.nc !== !!p.held : lswClosed(p));
+}
+// a limit switch pos of the way from at rest (0) to worked (1): its lever down, the arrow on its roller (coming down,
+// fading in), its blade lifted; lit in its colour while closed
+function setLimit(v, p, pos, cl) {
+  const k = pos.toFixed(3) + (cl ? 'c' : 'o');
+  if (v.k === k) return; v.k = k;
+  const [hx, hy] = v.hinge, [px, py] = v.pivot, [a0, a1] = lswAngles(p), la = 16 * pos, ba = lerp(a0, a1, pos);
+  v.blade.setAttribute('transform', `rotate(${ba.toFixed(2)} ${hx} ${hy})`);
+  v.link.setAttribute('y2', (hy + 30 * Math.tan(ba * Math.PI / 180) - 5.5).toFixed(2));   // (to just over the blade, at the middle)
+  v.lever.setAttribute('transform', `rotate(${la.toFixed(2)} ${px} ${py})`);
+  const c = cl ? p.color : BLADE_GREY;
+  v.bladeShape.setAttribute('fill', c); v.wedge.setAttribute('fill', c); v.posts.setAttribute('fill', cl ? p.color : GREY);
+  // (the arrow's tip on top of the roller, where the lever has turned it to; higher up, and fainter, before it gets there)
+  const t = la * Math.PI / 180, [lx, ly] = LSW_ROLLER, rx = px + lx * Math.cos(t) - ly * Math.sin(t), ry = py + lx * Math.sin(t) + ly * Math.cos(t) - 13.3 - 1.5 - 16 * (1 - pos);
+  v.arrow.setAttribute('opacity', Math.min(1, pos * 2.5).toFixed(3));
+  v.arrowPath.setAttribute('d', `M${rx} ${ry}l-12 -13h6.5v-15h11v15h6.5z`);
+}
+
 /* ---- js/editor-state.js ---- */
 let editing = true, tool = 'select', sel = null, view = {}, preview = null;
 // the ribbon's open tab while building: 'home', or 'part' (the selected part's settings)
@@ -2618,7 +2707,7 @@ function renderInto(target, V, L) {
         const t = el('text', { x: p.x, y: p.y - capTop(p) - 17, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': note ? 600 : 700, fill: note ? '#e2cc85' : '#ff8a7a', 'pointer-events': 'none', stroke: '#404040', 'stroke-width': 4, 'paint-order': 'stroke' }, g);
         t.textContent = note ? m.note : '⚠ ' + m;
       }
-    } else if (p.t === 'btn') bindButton(g, p);
+    } else if (p.t === 'btn' || p.t === 'lsw') bindButton(g, p);
     else if ((isPwr3(p) && p.t !== 'mst') || p.t === 'olc') bindPower(g, p);
     else if (p.t === 'sel') bindSelector(g, p);
   }
@@ -2687,7 +2776,7 @@ function linkRoute([P0, d0], [P1, d1], dx, dy) {
 }
 function selLinks(B) {
   const by = {};
-  for (const p of parts) if (isOp(p)) (by[p.t + p.L] = by[p.t + p.L] || []).push(p);
+  for (const p of parts) if (p.t === 'btn' || p.t === 'sel') (by[p.t + p.L] = by[p.t + p.L] || []).push(p);
   // (a pilot light built into a pushbutton is joined to it the same way)
   for (const p of parts) if (p.t === 'lamp' && p.L && by['btn' + p.L]) by['btn' + p.L].push(p);
   for (const k in by) {
@@ -2789,14 +2878,16 @@ function frame(now) {
   if (!editing) {
     // at high speed a busy circuit (a buzzer, say) can have more to do in one frame than the computer can manage: it
     // does what it can in a set time and carries on from there next frame, so the page never stalls
-    const target = simT + dt * speed, ran = eventsRun;
+    const target = simT + dt * speed, ran = eventsRun, was = simT;
     tickRealTimers(real);   // (timers counting real time go by the clock; one timing out now is acted on below)
     if (runEvents(target, performance.now() + 12)) simT = target;
     if (mode === 'click') for (const L in autoRel) if (!busyQueue() && simT > busyUntil + .5) { delete autoRel[L]; press(L, false); }
     // once the circuit has settled (nothing on its way, and the last coil, light and contact has finished changing)
     // nothing on the panel moves, so it is not painted again until something happens: an idle circuit costs nothing
     // (at high speed a whole chain of changes can start and finish within one frame: whatever happened is painted)
-    if (needPaint || eventsRun !== ran || busyQueue() || simT <= busyUntil + 0.6) { paint(); needPaint = false; }
+    // (and once more as it settles, so whatever was moving is painted where it stopped, even when a fast clock went past
+    // the end of the movement within one frame)
+    if (needPaint || eventsRun !== ran || busyQueue() || simT <= busyUntil + 0.6 || was <= busyUntil + 0.6) { paint(); needPaint = false; }
     else if (anyTiming()) paintTimers();   // (a timer counting down: only its readout changes)
   }
   requestAnimationFrame(frame);
@@ -2842,6 +2933,7 @@ function paintView(V) {
     for (const S of ['A', 'B']) paintLead(v.lead[S], p._lead && p._lead[S]);
     let k;
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
+    else if (p.t === 'lsw') setLimit(v, p, lswPos(p), lswClosed(p));
     else if (p.t === 'con' || p.t === 'olc') {
       const s = p.t === 'olc' ? olState(p.L) : CON[p.id]; if (!s) continue;
       const f = clamp01((simT - s.t0) / SWING), e = f * f * (3 - 2 * f);   // ease in and out
@@ -3077,7 +3169,7 @@ const stationEl = document.getElementById('station');
 // the operators: the main drawing of each pushbutton and selector switch, top of the ladder first
 const operators = () => {
   const seen = new Set(), out = [];
-  for (const p of [...parts].sort((a, b) => a.y - b.y || a.x - b.x)) if (isOp(p) && !seen.has(p.t + p.L)) { seen.add(p.t + p.L); out.push(p.t === 'btn' ? mainBtn(p.L) : mainSel(p.L)); }
+  for (const p of [...parts].sort((a, b) => a.y - b.y || a.x - b.x)) if ((p.t === 'btn' || p.t === 'sel') && !seen.has(p.t + p.L)) { seen.add(p.t + p.L); out.push(p.t === 'btn' ? mainBtn(p.L) : mainSel(p.L)); }
   return out;
 };
 const plateOf = p => p.t === 'sel' ? ((p.names || []).filter(Boolean).join('/') || `${p.L} SELECTOR`) : nameOf(p);
@@ -3166,6 +3258,7 @@ function newPart(kind, x, y) {
     const lone = Object.keys(n).filter(k => n[k] === 1).sort((a, b) => a - b)[0];
     return P('jmp', x, y, { L: lone || nextNum(new Set(Object.keys(n))) });
   }
+  if (kind.startsWith('lsw')) return P('lsw', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'lsw').map(q => q.L))), nc: kind === 'lsw-nc' || kind === 'lsw-nch', held: kind.endsWith('h'), color: LSW_COL });   // a limit switch: the next number
   if (kind === 'dsc' || kind === 'fus' || kind === 'olh' || kind === 'mtr') return P(kind, x, y, { L: nextNum(new Set(parts.filter(q => q.t === kind).map(q => q.L))) });   // the next number
   if (kind === 'mst') return P('mst', x, y, { L: 'M' });   // a starter: worked by the M coil (change it in its settings)
   if (kind === 'olc') { const ols = parts.filter(q => q.t === 'olh').map(q => q.L), free = ols.find(L => !parts.some(q => q.t === 'olc' && q.L === L)); return P('olc', x, y, { L: free || ols[0] || '1', nc: true }); }   // an overload's contact: one not yet in the control circuit
@@ -3177,7 +3270,7 @@ function newPart(kind, x, y) {
   const L = [...'ABCDEFGH' + ALL].find(c => !u.has(c));
   return P('btn', x, y, { L, nc: kind === 'btn-nc', maint: true, color: BTN_COL[L] || '#FF0032' });
 }
-const kindOf = k => ['dsc', 'fus', 'mst', 'olh', 'olc', 'mtr'].includes(k) ? k : k.startsWith('ph-') ? 'ph' : k === 'jmp' ? 'jmp' : k === 'xfm' ? 'xfm' : k === 'src-l1' || k === 'src-l2' ? k.slice(4) : k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k === 'sol' ? 'sol' : k.startsWith('con') ? 'con' : k === 'sel' ? 'sel' : 'btn';
+const kindOf = k => k.startsWith('lsw') ? 'lsw' : ['dsc', 'fus', 'mst', 'olh', 'olc', 'mtr'].includes(k) ? k : k.startsWith('ph-') ? 'ph' : k === 'jmp' ? 'jmp' : k === 'xfm' ? 'xfm' : k === 'src-l1' || k === 'src-l2' ? k.slice(4) : k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k === 'sol' ? 'sol' : k.startsWith('con') ? 'con' : k === 'sel' ? 'sel' : 'btn';
 // a horizontal wire running right through where a part's ends will be: the part goes into it
 function spliceTarget(x, y, t) { if (t === 'xfm' || t === 'ph' || isPwrT(t) || t === 'mtr') return null; const h = WIDE(t) ? 60 : 40; return wires.find(w => w.y1 === y && w.y2 === y && Math.min(w.x1, w.x2) <= x - h && Math.max(w.x1, w.x2) >= x + h); }
 function placePart(kind, x, y) {
@@ -3959,7 +4052,7 @@ document.querySelectorAll('.tool[data-part]').forEach(b => {
     if (e.button !== 0 || !editing) return;
     e.preventDefault();
     const sx = e.clientX, sy = e.clientY; let moved = false, ghost = null;
-    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('timer') ? { t: 'coil', L: '?', color: '#FFDC00', delay: 5, tof: kind === 'timer-off' } : kind === 'lamp' ? { t: 'lamp', L: '', color: '#00B050' } : kind === 'sol' ? { t: 'sol', L: '?', color: SOL_COL } : kind === 'jmp' ? { t: 'jmp', L: '?' } : kind === 'xfm' ? { t: 'xfm', L: '?' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind === 'con-nc' } : kind === 'sel' ? { t: 'sel', L: '?', n: 3, closedIn: [0], pos: 1, color: '#0070C0' } : kind.startsWith('src-') ? { t: kind.slice(4), L: '' } : kind.startsWith('ph-') ? { t: 'ph', L: kind.slice(3) } : ['dsc', 'fus', 'mst', 'olh', 'mtr'].includes(kind) ? { t: kind, L: kind === 'mst' ? 'M' : '?' } : kind === 'olc' ? { t: 'olc', L: '?', nc: true } : { t: 'btn', L: '?', nc: kind === 'btn-nc', color: '#9a9a9a' };
+    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('timer') ? { t: 'coil', L: '?', color: '#FFDC00', delay: 5, tof: kind === 'timer-off' } : kind === 'lamp' ? { t: 'lamp', L: '', color: '#00B050' } : kind === 'sol' ? { t: 'sol', L: '?', color: SOL_COL } : kind === 'jmp' ? { t: 'jmp', L: '?' } : kind === 'xfm' ? { t: 'xfm', L: '?' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind === 'con-nc' } : kind === 'sel' ? { t: 'sel', L: '?', n: 3, closedIn: [0], pos: 1, color: '#0070C0' } : kind.startsWith('src-') ? { t: kind.slice(4), L: '' } : kind.startsWith('lsw') ? { t: 'lsw', L: '?', nc: kind === 'lsw-nc' || kind === 'lsw-nch', held: kind.endsWith('h'), color: LSW_COL } : kind.startsWith('ph-') ? { t: 'ph', L: kind.slice(3) } : ['dsc', 'fus', 'mst', 'olh', 'mtr'].includes(kind) ? { t: kind, L: kind === 'mst' ? 'M' : '?' } : kind === 'olc' ? { t: 'olc', L: '?', nc: true } : { t: 'btn', L: '?', nc: kind === 'btn-nc', color: '#9a9a9a' };
     const mv = ev => {
       if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 5) { moved = true; closeMenus(); ghost = document.createElement('div'); ghost.className = 'ghost'; ghost.innerHTML = b.innerHTML; document.body.append(ghost); document.body.classList.add('dragging'); }
       if (!moved) return;
@@ -4094,17 +4187,19 @@ document.querySelectorAll('[data-power]').forEach(b => b.addEventListener('click
   fitView(); fit(true); draw();
 }));
 
-/* the Three-phase menu: its button on Home drops the three-phase parts down under it; picking one (or dragging it out
-   onto the panel) places it, as from the ribbon, and closes the menu. A press anywhere else, or Esc, closes it too. */
-const tpBtn = document.getElementById('tp-btn'), tpBox = document.getElementById('tp-menu');
-function tpMenu(open) {
-  const tpBox = document.getElementById('tp-menu'), tpBtn = document.getElementById('tp-btn');   // (looked up here: it can be closed before this file has finished loading)
-  if (!tpBox || tpBox.hidden === !open) return;
-  tpBox.hidden = !open; tpBtn.setAttribute('aria-expanded', String(open));
-  if (open) { const r = tpBtn.getBoundingClientRect(), w = tpBox.offsetWidth; tpBox.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + 'px'; tpBox.style.top = (r.bottom + 6) + 'px'; }
+/* drop-down menus of parts (Three phase, Limit switch): the button drops its parts down under it; picking one (or
+   dragging it out onto the panel) places it, as from the ribbon, and closes the menu. A press anywhere else, or Esc,
+   closes it too. */
+function tpMenu(open, id) {
+  for (const box of document.querySelectorAll('.tp-menu')) {
+    const btn = document.querySelector(`[aria-controls="${box.id}"]`), on = open && box.id === id;
+    if (box.hidden === !on) continue;
+    box.hidden = !on; if (btn) btn.setAttribute('aria-expanded', String(on));
+    if (on) { const r = btn.getBoundingClientRect(), w = box.offsetWidth; box.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + 'px'; box.style.top = (r.bottom + 6) + 'px'; }
+  }
 }
-tpBtn.addEventListener('click', () => { if (editing) tpMenu(tpBox.hidden); });
-document.addEventListener('pointerdown', e => { if (!tpBox.hidden && !tpBox.contains(e.target) && !tpBtn.contains(e.target)) tpMenu(false); }, true);
+document.querySelectorAll('[aria-controls]').forEach(b => { const id = b.getAttribute('aria-controls'); if (document.getElementById(id)?.classList.contains('tp-menu')) b.addEventListener('click', () => { if (editing) tpMenu(document.getElementById(id).hidden, id); }); });
+document.addEventListener('pointerdown', e => { if (![...document.querySelectorAll('.tp-menu, [aria-controls]')].some(m => m.contains(e.target))) tpMenu(false); }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') tpMenu(false); });
 window.addEventListener('resize', () => tpMenu(false));
 
@@ -4161,7 +4256,7 @@ function pasteClip() {
     if (p.t === 'con' && map['c' + p.L]) q.L = map['c' + p.L];
     if (p.t === 'lamp' && p.L && map['b' + p.L]) q.L = map['b' + p.L];
     if (p.t === 'jmp') { if (!jm[p.L]) jm[p.L] = nextNum(new Set([...parts.filter(isJmp).map(q => q.L), ...Object.values(jm)])); q.L = jm[p.L]; }   // (pasted continuations pair among themselves)
-    if (p.t === 'dsc' || p.t === 'fus' || p.t === 'mtr') { q.L = nextNum(new Set([...parts.filter(z => z.t === p.t).map(z => z.L), ...xf.filter(([t]) => t === p.t).map(([, L]) => L)])); xf.push([p.t, q.L]); }
+    if (p.t === 'dsc' || p.t === 'fus' || p.t === 'mtr' || p.t === 'lsw') { q.L = nextNum(new Set([...parts.filter(z => z.t === p.t).map(z => z.L), ...xf.filter(([t]) => t === p.t).map(([, L]) => L)])); xf.push([p.t, q.L]); }
     if (p.t === 'xfm') { q.L = nextNum(new Set([...parts.filter(z => z.t === 'xfm').map(z => z.L), ...xf.filter(([t]) => t === 'xfm').map(([, L]) => L)])); xf.push(['xfm', q.L]); }   // (a pasted transformer gets a number of its own)
     if (p.t === 'sol') { q.L = nextSol(new Set([...solNums(), ...np0])); np0.push(q.L); }   // (a pasted solenoid gets a number of its own)
     return q;
@@ -4209,7 +4304,7 @@ const selGroup = () => {
   return ps.every(q => q.t === ps[0].t) ? ps : [];
 };
 const each = f => { const g = selGroup(); if (!g.length) return false; snapshot(); g.forEach(f); normalize(); draw(); return true; };
-const KIND_NAME = { xfm: 'transformers', btn: 'pushbuttons', coil: 'coils', con: 'contacts', lamp: 'pilot lights', sel: 'selector switches', sol: 'solenoids', jmp: 'continuations', l1: 'L1 supplies', l2: 'L2 returns', ph: 'phases', dsc: 'disconnects', fus: 'fuse blocks', mst: 'starters', olh: 'overloads', olc: 'overload contacts', mtr: 'motors' };
+const KIND_NAME = { xfm: 'transformers', btn: 'pushbuttons', coil: 'coils', con: 'contacts', lamp: 'pilot lights', sel: 'selector switches', sol: 'solenoids', jmp: 'continuations', lsw: 'limit switches', l1: 'L1 supplies', l2: 'L2 returns', ph: 'phases', dsc: 'disconnects', fus: 'fuse blocks', mst: 'starters', olh: 'overloads', olc: 'overload contacts', mtr: 'motors' };
 const blocksOf = L => parts.filter(p => p.t === 'btn' && p.L === L);
 function renderProps() {
   const G = selGroup(), p = G[0] || null, multi = G.length > 1;
@@ -4269,6 +4364,15 @@ function renderProps() {
     }
     document.getElementById('ph-custom').value = cur.toLowerCase();
     document.getElementById('ph-colour-label').textContent = `L${p.L} colour`;
+  }
+  document.getElementById('props-lsw').hidden = !(p && p.t === 'lsw');
+  if (p && p.t === 'lsw') {
+    // its number (one no other limit switch has), its kind and its colour
+    const ns = document.getElementById('ls-num'), taken = new Set(parts.filter(q => q.t === 'lsw' && q !== p).map(q => q.L));
+    groupOf('ls-num').hidden = multi; ns.innerHTML = '';
+    for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n))) ns.add(new Option('LS' + n, String(n), false, String(n) === p.L));
+    document.getElementById('ls-kind').value = (p.nc ? 'nc' : 'no') + (p.held ? 'h' : '');
+    swatches(document.getElementById('ls-colour'), p.color, hex => each(q => q.color = hex));
   }
   const pw = p && (isPwr3(p) || p.t === 'olc' || p.t === 'mtr');
   document.getElementById('props-pwr').hidden = !pw;
@@ -4479,6 +4583,8 @@ document.getElementById('ph-num').addEventListener('change', e => { if (selGroup
 document.getElementById('ph-custom').addEventListener('change', e => { const p = selGroup()[0]; if (p && isPh(p)) setPhaseCol(p.L, e.target.value); });
 document.getElementById('box-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(isBox)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
 document.getElementById('pw-num').addEventListener('change', e => { const G = selGroup(); if (G.length && G.every(p => isPwr3(p) || p.t === 'olc' || p.t === 'mtr')) each(p => p.L = e.target.value); });
+document.getElementById('ls-num').addEventListener('change', e => { if (selGroup().every(p => p.t === 'lsw')) each(p => p.L = e.target.value); });
+document.getElementById('ls-kind').addEventListener('change', e => { const k = e.target.value; if (selGroup().every(p => p.t === 'lsw')) each(p => { p.nc = k.startsWith('nc'); if (k.endsWith('h')) p.held = true; else delete p.held; }); });
 
 /* ---- js/storage.js ---- */
 /* ---------------- saving and opening circuits ----------------
@@ -4500,7 +4606,7 @@ function circuitData() {
   const w = W_USER ? W : contentRight(), x = v => barsOn() && v === W ? w : v;   // (a length set by moving the bars is kept)
   return {
     app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}), ...(barsOn() ? {} : { pw: 'boxes' }), ...(SRC_COL !== SRC_DEFAULT ? { sc: SRC_COL } : {}), ...(PH_COL.join() !== PH_DEFAULT.join() ? { pc: PH_COL.map(c => c.slice(1)) } : {}),
-    parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (isBox(p) && p.rot) a.push(p.rot); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
+    parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (p.t === 'lsw' && p.held) a.push(1); if (isBox(p) && p.rot) a.push(p.rot); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
       if (p.t === 'sel') { while (a.length < 7) a.push(null); a.length = 7; a.push(selN(p), (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, (p.names || []).join('/'), p.pos || 0); }   // a selector switch: positions, closed-in mask, (no label), names, start
       if (p.lk || p.ls) { while (a.length < 12) a.push(null); a.push(p.lk ? p.lk[0] : 0, p.lk ? p.lk[1] : 0); if (p.ls) a.push(p.ls.join('')); }   // (its dashed link line, moved out of the way; the sides its ends join)
       return a; }),
@@ -4515,8 +4621,9 @@ function readCircuit(d) {
   const num = v => { const n = Number(v); if (!Number.isFinite(n)) throw new Error('The circuit is damaged (a position is not a number).'); return snap(n); };
   const hex = c => /^[0-9a-f]{6}$/i.test(c || '') ? '#' + c.toUpperCase() : null;
   const ps = d.parts.slice(0, 200).map(a => {
-    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'dsc', 'fus', 'mst', 'olh', 'olc', 'mtr'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
-    const p = P(t, num(a[1]), num(a[2]), { L: ['dsc', 'fus', 'olh', 'olc', 'mtr'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1))) : t === 'sol' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : BTN_COL[L] || '#FF0032') });
+    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'dsc', 'fus', 'mst', 'olh', 'olc', 'mtr', 'lsw'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
+    const p = P(t, num(a[1]), num(a[2]), { L: ['dsc', 'fus', 'olh', 'olc', 'mtr', 'lsw'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1))) : t === 'sol' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : t === 'lsw' ? LSW_COL : BTN_COL[L] || '#FF0032') });
+    if (t === 'lsw') { p.nc = !!a[4]; if (a[7] === 1) p.held = true; }   // (a limit switch: NO or NC, held or not)
     if (t === 'btn') { p.nc = !!a[4]; p.maint = a[5] !== 0; }
     if (t === 'sel') {
       p.n = Math.max(2, Math.min(4, Math.round(Number(a[7])) || 3)); const m = Math.round(Number(a[8])) || 0;

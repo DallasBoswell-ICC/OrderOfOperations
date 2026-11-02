@@ -112,7 +112,7 @@ function renderInto(target, V, L) {
         const t = el('text', { x: p.x, y: p.y - capTop(p) - 17, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': note ? 600 : 700, fill: note ? '#e2cc85' : '#ff8a7a', 'pointer-events': 'none', stroke: '#404040', 'stroke-width': 4, 'paint-order': 'stroke' }, g);
         t.textContent = note ? m.note : '⚠ ' + m;
       }
-    } else if (p.t === 'btn') bindButton(g, p);
+    } else if (p.t === 'btn' || p.t === 'lsw') bindButton(g, p);
     else if ((isPwr3(p) && p.t !== 'mst') || p.t === 'olc') bindPower(g, p);
     else if (p.t === 'sel') bindSelector(g, p);
   }
@@ -181,7 +181,7 @@ function linkRoute([P0, d0], [P1, d1], dx, dy) {
 }
 function selLinks(B) {
   const by = {};
-  for (const p of parts) if (isOp(p)) (by[p.t + p.L] = by[p.t + p.L] || []).push(p);
+  for (const p of parts) if (p.t === 'btn' || p.t === 'sel') (by[p.t + p.L] = by[p.t + p.L] || []).push(p);
   // (a pilot light built into a pushbutton is joined to it the same way)
   for (const p of parts) if (p.t === 'lamp' && p.L && by['btn' + p.L]) by['btn' + p.L].push(p);
   for (const k in by) {

@@ -45,6 +45,7 @@ function startRun() {
   NET = network();
   simT = 0; queue = []; seq = 0; busyUntil = 0; autoRel = {}; down = {}; coilOn = {}; TIMER = {}; SELPOS = {}; SELTURN = {};
   FED_AT = {}; COMP = null; LV = null; COND = {}; needPaint = true; PTL = new Map(); PARR = new Map(); PDARK = new Map(); phFault = '';
+  LSW_T = {};
   CON = {}; for (const p of parts) if (p.t === 'con' || p.t === 'mst') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };
   DSC = {}; BLOWN = {}; OLTRIP = {}; MOT = {}; DSC_T = {}; OLRESET = {};   // every coil starts off
   tl = NET.nodes.map(() => [[-1e9, null]]);
@@ -434,7 +435,8 @@ function turn(L, pos) {
 function press(L, v) {
   if (!!down[L] === v) return;
   down[L] = v; needPaint = true;
-  switched(parts.filter(p => p.t === 'btn' && p.L === L), simT);
+  if (parts.some(p => p.t === 'lsw' && p.L === L)) { LSW_T[L] = simT; if (simT + LSW_MOVE > busyUntil) busyUntil = simT + LSW_MOVE; }   // (a limit switch: it moves over a moment)
+  switched(parts.filter(p => (p.t === 'btn' || p.t === 'lsw') && p.L === L), simT);   // (a pushbutton's letter, or a limit switch's number)
 }
 // a relay contact's bar starts to move: it stops passing current as soon as it lifts, and passes current again
 // only once it has landed
