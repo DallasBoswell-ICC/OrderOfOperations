@@ -446,12 +446,17 @@ function drawPwr(p, g, x, y, v, chan) {
       el('rect', { x: bx1, y: py - bh / 2, width: bx2 - bx1, height: bh, rx: bh / 2, fill: 'url(#gGloss)' }, q.bg);
       q.pa = P.a; q.pb = P.b; q.px = P.x1; q.py = py;
     } else if (p.t === 'fus') {
-      // a cartridge with metal end caps; its element breaks in the middle when it blows
-      el('rect', { x: x - 20, y: py - 9, width: 40, height: 18, rx: 5, fill: '#1c1c1c', stroke: '#6a6a6a', 'stroke-width': 1.2 }, g);
-      q.l = rpath(g, `M${x - 16} ${py}H${x - 5}`, 4); q.r = rpath(g, `M${x + 5} ${py}H${x + 16}`, 4);
-      q.mg = el('g', {}, g); q.m = rpath(q.mg, `M${x - 5} ${py}l2.5 -3.5h5l2.5 3.5`, 4);
-      q.mark = el('path', { d: `M${x - 3} ${py - 8}l3 4.5 -3 2.5 4 7`, fill: 'none', stroke: '#ff6b5e', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', display: 'none' }, g);
-      for (const s of [-1, 1]) el('rect', { x: x + s * 24 - 4.5, y: py - 12, width: 9, height: 24, rx: 2.5, fill: 'url(#gTerm)', stroke: '#111', 'stroke-width': 1 }, g);
+      // the NEMA fuse: leads in to a cartridge outline with a bar across each end, one raised element; grey, then filling
+      // with the phase from its line side (a clip that sweeps across it, see paintPwr); blown, a red bolt across it
+      const d = `M${x - 31} ${py}H${x - 21}M${x + 21} ${py}H${x + 31}M${x - 21} ${py - 8}H${x + 21}V${py + 8}H${x - 21}ZM${x - 14.5} ${py - 8}V${py + 8}M${x + 14.5} ${py - 8}V${py + 8}`;
+      const round = { fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, id = 'fuc' + (++solMaskN);
+      el('path', { d, stroke: '#111', 'stroke-width': 5.8, filter: 'url(#fShadow)', ...round }, g);
+      el('path', { d, stroke: GREY, 'stroke-width': 4, ...round }, g);
+      q.clip = el('rect', { x: x - 33, y: py - 14, width: 0, height: 28 }, el('clipPath', { id }, g));
+      q.col = el('path', { d, stroke: 'transparent', 'stroke-width': 4, 'clip-path': `url(#${id})`, ...round }, g);
+      el('path', { d, transform: 'translate(-.4 -.8)', stroke: '#fff', 'stroke-opacity': .22, 'stroke-width': 1.6, ...round }, g);
+      q.mark = el('path', { d: `M${x + 9.9} ${py - 20}L${x - 7.6} ${py + 2.1}L${x + 7.5} ${py - 2.3}L${x - 10.1} ${py + 20.1}`, fill: 'none', stroke: '#ff3b3b', 'stroke-width': 3.2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', display: 'none', filter: 'url(#fShadow)' }, g);
+      q.x0 = x - 33;
     } else {
       // an overload heater: the NEMA heater symbol, as a raised element
       q.e = rpath(g, `M${x - 27} ${py}H${x - 14}V${py - 16}H${x + 14}V${py}H${x + 27}`, 5.2);

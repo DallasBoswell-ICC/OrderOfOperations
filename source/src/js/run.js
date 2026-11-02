@@ -221,9 +221,13 @@ function paintPwr(p, v) {
       q.bg.setAttribute('transform', `rotate(${(-32 * lev).toFixed(2)} ${q.px} ${q.py})`);
       q.blade.setAttribute('fill', cl && c ? c : BLADE_GREY); q.pa.setAttribute('fill', a || GREY); q.pb.setAttribute('fill', b || GREY);
     } else if (p.t === 'fus') {
-      key = `${a}|${b}|${cl}`; if (key === q.k) return; q.k = key;
-      q.l.setAttribute('stroke', (cl ? c : a) || GREY); q.r.setAttribute('stroke', (cl ? c : b) || GREY); q.m.setAttribute('stroke', c || GREY);
-      q.mg.setAttribute('display', cl ? '' : 'none'); q.mark.setAttribute('display', cl ? 'none' : '');
+      // filled from its line side as the phase crosses it (over the time it takes to cross the pole); half, blown
+      const ln = PLINE.get(k), lc = colAt(ln ?? k._a, simT), at = PARR.get(ln ?? k._a), fromA = (ln ?? k._a) === k._a;
+      const f = !lc ? 0 : Math.min(cl ? 1 : .5, at ? clamp01((simT - at.t) * V / 80) : 1);
+      key = `${lc}|${f.toFixed(3)}|${cl}`; if (key === q.k) return; q.k = key;
+      q.col.setAttribute('stroke', lc || 'transparent');
+      q.clip.setAttribute('width', (66 * f).toFixed(2)); q.clip.setAttribute('x', fromA ? q.x0 : (q.x0 + 66 * (1 - f)).toFixed(2));
+      q.mark.setAttribute('display', cl ? 'none' : '');
     } else if (p.t === 'mst') {
       const s = CON[p.id] || { t0: -1e9, closing: false, shut: false }, e = ease(s.t0), lift = (s.closing ? lerp(OPEN_LIFT, 0, e) : lerp(0, OPEN_LIFT, e)).toFixed(2);
       key = `${lift}|${s.shut}`; if (key === q.k) return; q.k = key;   // (exactly as a NO relay contact: its coil's colour once shut)
