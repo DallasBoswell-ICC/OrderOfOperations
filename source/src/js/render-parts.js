@@ -446,17 +446,31 @@ function drawPwr(p, g, x, y, v, chan) {
       el('rect', { x: bx1, y: py - bh / 2, width: bx2 - bx1, height: bh, rx: bh / 2, fill: 'url(#gGloss)' }, q.bg);
       q.pa = P.a; q.pb = P.b; q.px = P.x1; q.py = py;
     } else if (p.t === 'fus') {
-      // the NEMA fuse: leads in to a cartridge outline with a bar across each end, one raised element; grey, then filling
-      // with the phase from its line side (a clip that sweeps across it, see paintPwr); blown, a red bolt across it
-      const d = `M${x - 31} ${py}H${x - 21}M${x + 21} ${py}H${x + 31}M${x - 21} ${py - 8}H${x + 21}V${py + 8}H${x - 21}ZM${x - 14.5} ${py - 8}V${py + 8}M${x + 14.5} ${py - 8}V${py + 8}`;
+      // a cartridge fuse: round terminals and leads like the solenoid's, metal end caps, and a body that is a relay's grey
+      // until the phase passes through it, as along a wire (a clip that sweeps across from its line side, see
+      // paintPwr). Blown: a jagged crack through its body, and only its line side lit
       const round = { fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, id = 'fuc' + (++solMaskN);
-      el('path', { d, stroke: '#111', 'stroke-width': 5.8, filter: 'url(#fShadow)', ...round }, g);
-      el('path', { d, stroke: GREY, 'stroke-width': 4, ...round }, g);
-      q.clip = el('rect', { x: x - 33, y: py - 14, width: 0, height: 28 }, el('clipPath', { id }, g));
-      q.col = el('path', { d, stroke: 'transparent', 'stroke-width': 4, 'clip-path': `url(#${id})`, ...round }, g);
-      el('path', { d, transform: 'translate(-.4 -.8)', stroke: '#fff', 'stroke-opacity': .22, 'stroke-width': 1.6, ...round }, g);
-      q.mark = el('path', { d: `M${x + 9.9} ${py - 20}L${x - 7.6} ${py + 2.1}L${x + 7.5} ${py - 2.3}L${x - 10.1} ${py + 20.1}`, fill: 'none', stroke: '#ff3b3b', 'stroke-width': 3.2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', display: 'none', filter: 'url(#fShadow)' }, g);
-      q.x0 = x - 33;
+      const lead = `M${x - 27} ${py}H${x + 27}`, dr = 5.2, cw = 6, ch = 20, bw = 22, bh = 14;
+      const parts3 = to => { el('path', { d: lead, stroke: 'currentColor', 'stroke-width': 5, ...round }, to); for (const s of [-1, 1]) el('circle', { cx: x + s * 27, cy: py, r: dr, fill: 'currentColor' }, to); el('rect', { x: x - bw / 2, y: py - bh / 2, width: bw, height: bh, fill: 'currentColor' }, to); };
+      const sh = el('g', { filter: 'url(#fShadow)' }, g);
+      el('path', { d: lead, stroke: '#111', 'stroke-width': 6.8, ...round }, sh);
+      for (const s of [-1, 1]) el('circle', { cx: x + s * 27, cy: py, r: dr + .9, fill: '#111' }, sh);
+      el('rect', { x: x - bw / 2 - cw - .9, y: py - ch / 2 - .9, width: bw + 2 * cw + 1.8, height: ch + 1.8, rx: 3.4, fill: '#111' }, sh);
+      parts3(el('g', { color: GREY }, g));
+      q.clip = el('rect', { x: x - 34, y: py - 14, width: 0, height: 28 }, el('clipPath', { id }, g));
+      q.col = el('g', { color: 'transparent', 'clip-path': `url(#${id})` }, g); parts3(q.col);
+      // the body's edge and shine, the caps over its ends, the terminals' domes
+      el('rect', { x: x - bw / 2, y: py - bh / 2, width: bw, height: bh, fill: 'url(#gGloss)', stroke: '#111', 'stroke-width': 1.6 }, g);
+      for (const s of [-1, 1]) { const cx0 = x + s * (bw / 2 + cw / 2) - cw / 2;
+        el('rect', { x: cx0, y: py - ch / 2, width: cw, height: ch, rx: 2.4, fill: 'url(#gTerm)', stroke: '#111', 'stroke-width': 1.6 }, g);
+        el('rect', { x: cx0, y: py - ch / 2, width: cw, height: ch, rx: 2.4, fill: 'url(#gGloss)' }, g);
+        el('circle', { cx: x + s * 27, cy: py, r: dr, fill: 'url(#gDome)' }, g); }
+      for (const s of [-1, 1]) el('path', { d: `M${x + s * 27} ${py}H${x + s * (bw / 2 + cw + 1)}`, transform: 'translate(-.4 -1)', stroke: '#fff', 'stroke-opacity': .2, 'stroke-width': 1.6, ...round }, g);   // (the leads' shine)
+      q.mark = el('g', { display: 'none' }, g);
+      const crack = `M${x - .5} ${py - bh / 2}L${x + 2.6} ${py - 3}L${x - 2.4} ${py + .6}L${x + 2} ${py + 3.6}L${x - .8} ${py + bh / 2}`;
+      el('path', { d: crack, fill: 'none', stroke: '#141414', 'stroke-width': 3.4, 'stroke-linejoin': 'miter' }, q.mark);
+      el('path', { d: crack, fill: 'none', stroke: '#ff5a4e', 'stroke-width': 1, 'stroke-linejoin': 'miter' }, q.mark);
+      q.x0 = x - 34;
     } else {
       // an overload heater: the NEMA heater symbol, as a raised element
       q.e = rpath(g, `M${x - 27} ${py}H${x - 14}V${py - 16}H${x + 14}V${py}H${x + 27}`, 5.2);

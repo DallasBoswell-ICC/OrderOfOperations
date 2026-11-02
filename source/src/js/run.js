@@ -225,8 +225,8 @@ function paintPwr(p, v) {
       const ln = PLINE.get(k), lc = colAt(ln ?? k._a, simT), at = PARR.get(ln ?? k._a), fromA = (ln ?? k._a) === k._a;
       const f = !lc ? 0 : Math.min(cl ? 1 : .5, at ? clamp01((simT - at.t) * V / 80) : 1);
       key = `${lc}|${f.toFixed(3)}|${cl}`; if (key === q.k) return; q.k = key;
-      q.col.setAttribute('stroke', lc || 'transparent');
-      q.clip.setAttribute('width', (66 * f).toFixed(2)); q.clip.setAttribute('x', fromA ? q.x0 : (q.x0 + 66 * (1 - f)).toFixed(2));
+      q.col.setAttribute('color', lc || 'transparent');
+      q.clip.setAttribute('width', (68 * f).toFixed(2)); q.clip.setAttribute('x', fromA ? q.x0 : (q.x0 + 68 * (1 - f)).toFixed(2));
       q.mark.setAttribute('display', cl ? 'none' : '');
     } else if (p.t === 'mst') {
       const s = CON[p.id] || { t0: -1e9, closing: false, shut: false }, e = ease(s.t0), lift = (s.closing ? lerp(OPEN_LIFT, 0, e) : lerp(0, OPEN_LIFT, e)).toFixed(2);
