@@ -3294,6 +3294,43 @@ function placePart(kind, x, y) {
   parts.push(p); normalize(); sel = selOne('p', p.id); ribbonTab = mainTab; say(''); draw();
 }
 
+/* A part clicked on the ribbon goes straight onto the panel: to the free spot nearest the middle of the view, clear
+   of every part (with room for its name), of every wire, and with neither of its ends touching anything (so it is
+   never wired in by accident). It is selected, ready to be dragged where it is wanted. With no such spot in view, it
+   goes below the circuit, and the view moves down to it. */
+function placeFree(kind) {
+  const t = kindOf(kind), stage = document.getElementById('stage').getBoundingClientRect(), m = svg.getScreenCTM();
+  if (!m) return;
+  const inv = m.inverse(), at = (cx, cy) => { const q = svg.createSVGPoint(); q.x = cx; q.y = cy; return q.matrixTransform(inv); };
+  const l = Math.max(stage.left, 0), tp = Math.max(stage.top, 0), r = Math.min(stage.right, innerWidth), bt = Math.min(stage.bottom, innerHeight);
+  const a = at(l, tp), b = at(r, bt), c = at((l + r) / 2, (tp + bt) / 2);
+  const free = (x, y) => {
+    const [cx, cy] = clampPart(x, y, t); if (cx !== x || cy !== y) return false;
+    // (each part's room: its body, from end to end, and above it its name and a line for a warning)
+    const p = newPart(kind, x, y), room = q => [q.x - Math.max(halfW(q.t), 72), q.y - capTop(q) - 30, q.x + Math.max(halfW(q.t), 72), q.y + halfH(q.t) + 6], A = room(p);
+    if (parts.some(q => { const B = room(q); return A[0] < B[2] + 16 && B[0] < A[2] + 16 && A[1] < B[3] + 16 && B[1] < A[3] + 16; })) return false;
+    // (nor any wire across it, its own ends' leads aside, nor the bars)
+    if (wires.some(w => Math.max(w.x1, w.x2) > A[0] - 6 && Math.min(w.x1, w.x2) < A[2] + 6 && Math.max(w.y1, w.y2) > A[1] - 6 && Math.min(w.y1, w.y2) < A[3] + 6)) return false;
+    if (barsOn() && (A[0] < 30 || A[2] > W - 30)) return false;
+    return !wireInTheWay(p) && !terms(p).some(([tx, ty]) => connects(pointInfo(tx, ty)));
+  };
+  // (the spots in view, room left for the part's body and name, nearest the middle first)
+  const ys0 = snap(a.y + capTop(newPart(kind, 0, 0)) + 34), ys1 = b.y - halfH(t) - 10, xs0 = snap(a.x + halfW(t)), xs1 = b.x - halfW(t), spots = [];
+  for (let y = ys0; y <= ys1; y += G) for (let x = xs0; x <= xs1; x += G) spots.push([x, y, Math.hypot(x - c.x, (y - c.y) * 1.3)]);
+  spots.sort((p, q) => p[2] - q[2]);
+  let spot = spots.find(([x, y]) => free(x, y)), below = false;
+  if (!spot) {
+    // (below everything on the panel, lined up with the middle of the view)
+    const bottom = Math.max(0, ...parts.map(q => q.y + halfH(q.t)), ...wires.map(w => Math.max(w.y1, w.y2)));
+    let y = snap(bottom + halfH(t) + 80); const x = clampPart(c.x, y, t)[0];
+    for (let k = 0; k < 200 && !free(x, y); k++) y += G;
+    spot = [x, y]; below = true;
+  }
+  placePart(kind, spot[0], spot[1]);
+  if (below && !cam.fit) { cam.y = Math.max(0, spot[1] - viewH() / 2); draw(); }
+  say('Placed. Drag it where you want it (or drag a part from the ribbon straight to its place).');
+}
+
 /* ---- js/wires-attach.js ---- */
 /* ---------------- keeping wires attached ----------------
    A wire attached to a part is followed back along its run of straight pieces (through plain corners) to the first
@@ -4057,7 +4094,7 @@ ovEl.addEventListener('pointerdown', e => {
 window.addEventListener('resize', () => showOverview());
 
 /* ---- js/toolbar.js ---- */
-// toolbar parts: drag onto the panel, or click the tool and then click the panel
+// toolbar parts: drag one onto the panel, or click it to put it in a free spot there (see placeFree)
 document.querySelectorAll('.tool[data-part]').forEach(b => {
   const kind = b.dataset.part;
   b.addEventListener('pointerdown', e => {
@@ -4081,7 +4118,7 @@ document.querySelectorAll('.tool[data-part]').forEach(b => {
       if (moved) { ghost.remove(); document.body.classList.remove('dragging'); preview = null; view.overlay.innerHTML = '';
         const r = pt(ev), box = svg.getBoundingClientRect();
         if (ev.clientX >= box.left && ev.clientX <= box.right && ev.clientY >= box.top && ev.clientY <= box.bottom) placePart(kind, r.x, r.y); }
-      else setTool(tool === kind ? 'select' : kind);
+      else { closeMenus(); setTool('select'); placeFree(kind); }   // (a click: it goes onto the panel, in a free spot)
     };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
   });
