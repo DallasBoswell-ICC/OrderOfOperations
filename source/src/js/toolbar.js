@@ -58,20 +58,20 @@ document.addEventListener('keydown', e => {
 /* ---------------- the ribbon ----------------
    Home while building (and the gold tab of the selected part), Simulation while running. Folded away, only the tabs
    show: pressing one opens the ribbon over the panel until you press somewhere else. */
-function closeMenus() { document.body.classList.remove('ribbon-peek'); }
+function closeMenus() { document.body.classList.remove('ribbon-peek'); tpMenu(false); }
 function showRibbon() {
   const run = !editing, part = !run && selGroup().length > 0, tab = run ? 'run' : part && ribbonTab === 'part' ? 'part' : mainTab;
   const set = (id, shown, on) => { const b = document.getElementById(id); b.hidden = !shown; b.setAttribute('aria-pressed', String(on)); };
-  set('rt-home', !run, tab === 'home'); set('rt-3ph', !run, tab === 'three'); set('rt-part', part, tab === 'part'); set('rt-run', run, tab === 'run');
+  set('rt-home', !run, tab === 'home'); set('rt-part', part, tab === 'part'); set('rt-run', run, tab === 'run');
   document.getElementById('toolbar').hidden = tab !== 'home';
-  document.getElementById('toolbar3').hidden = tab !== 'three';
+  if (tab !== 'home') tpMenu(false);
   document.getElementById('editpanel').hidden = tab !== 'part';
   document.getElementById('runbar').hidden = tab !== 'run';
 }
-for (const [id, t] of [['rt-home', 'home'], ['rt-3ph', 'three'], ['rt-part', 'part'], ['rt-run', 'run']])
+for (const [id, t] of [['rt-home', 'home'], ['rt-part', 'part'], ['rt-run', 'run']])
   document.getElementById(id).addEventListener('click', () => {
     if (t !== 'run') ribbonTab = t;
-    if (t === 'home' || t === 'three') mainTab = t;
+    if (t === 'home') mainTab = t;
     if (document.body.classList.contains('ribbon-min') || document.body.classList.contains('fs')) document.body.classList.add('ribbon-peek');
     showRibbon();
   });
@@ -139,3 +139,17 @@ document.querySelectorAll('[data-power]').forEach(b => b.addEventListener('click
   say(barsOn() ? 'Powered by the L1 and L2 bars.' : 'Powered by supply boxes: place an L1 Supply and an L2 Return, and wire to their left, right or bottom.');
   fitView(); fit(true); draw();
 }));
+
+/* the Three-phase menu: its button on Home drops the three-phase parts down under it; picking one (or dragging it out
+   onto the panel) places it, as from the ribbon, and closes the menu. A press anywhere else, or Esc, closes it too. */
+const tpBtn = document.getElementById('tp-btn'), tpBox = document.getElementById('tp-menu');
+function tpMenu(open) {
+  const tpBox = document.getElementById('tp-menu'), tpBtn = document.getElementById('tp-btn');   // (looked up here: it can be closed before this file has finished loading)
+  if (!tpBox || tpBox.hidden === !open) return;
+  tpBox.hidden = !open; tpBtn.setAttribute('aria-expanded', String(open));
+  if (open) { const r = tpBtn.getBoundingClientRect(), w = tpBox.offsetWidth; tpBox.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + 'px'; tpBox.style.top = (r.bottom + 6) + 'px'; }
+}
+tpBtn.addEventListener('click', () => { if (editing) tpMenu(tpBox.hidden); });
+document.addEventListener('pointerdown', e => { if (!tpBox.hidden && !tpBox.contains(e.target) && !tpBtn.contains(e.target)) tpMenu(false); }, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') tpMenu(false); });
+window.addEventListener('resize', () => tpMenu(false));

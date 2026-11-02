@@ -1,6 +1,6 @@
 let editing = true, tool = 'select', sel = null, view = {}, preview = null;
 // the ribbon's open tab while building: 'home', or 'part' (the selected part's settings)
-let ribbonTab = 'home', mainTab = 'home';   // (mainTab: Home or Three-phase, whichever was open last)
+let ribbonTab = 'home', mainTab = 'home';   // (mainTab: the tab to go back to from a part's tab)
 // the selection: any number of parts and wires
 const selOne = (k, id) => ({ parts: new Set(k === 'p' ? [id] : []), wires: new Set(k === 'w' ? [id] : []) });
 const selHasP = id => !!sel && sel.parts.has(id), selHasW = id => !!sel && sel.wires.has(id);

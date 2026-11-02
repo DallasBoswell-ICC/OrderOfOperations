@@ -1774,9 +1774,13 @@ const DEF_CIRCUIT = `
     const turned = await page.evaluate(() => { const p = parts.find(q => q.t === 'ph' && q.L === '3'); sel = selOne('p', p.id); draw(); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' })); return p.rot || 0; });
     if (turned !== 0) out.push('R turned L3 to ' + turned);
     await page.evaluate(() => { sel = null; draw(); });
-    await page.click('#rt-3ph');
-    if (await page.evaluate(() => document.getElementById('toolbar3').hidden)) out.push('Three-phase tab did not open');
-    await page.evaluate(() => { mainTab = 'home'; ribbonTab = 'home'; showRibbon(); });
+    // the Three-phase menu on Home: opens, and picking a part arms it and closes the menu
+    await page.click('#tp-btn');
+    if (await page.evaluate(() => document.getElementById('tp-menu').hidden)) out.push('the Three-phase menu did not open');
+    await page.click('#tp-menu [data-part="olh"]');
+    const armed = await page.evaluate(() => [tool, document.getElementById('tp-menu').hidden].join());
+    if (armed !== 'olh,true') out.push('picking Overload from the menu: ' + armed);
+    await page.evaluate(() => setTool('select'));
     return out;
   });
   await check('Three-phase motor branch: start/stop through a starter, disconnect, single-phasing trips the overload, reversal, a phase short blows fuses, saved', async page => {
