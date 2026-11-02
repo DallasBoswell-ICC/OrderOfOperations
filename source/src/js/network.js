@@ -106,6 +106,15 @@ function wiringIssues(net) {
   const f = components(net, e => e.kind === 'w' || isSw(e.part)), l1 = f(net.L1), l2 = f(net.L2), out = new Map();
   if (l1 === l2) out.set('short', true);
   const S = l1 === l2 ? null : loadShares(f, net);
+  /* three-phase power: starters are never all in at once (a reversing pair is interlocked), so the phases are looked
+     at with every switch closed but the starters (V[0]), and then with each starter closed on its own. A short is
+     one with no starter in, or one that closing a single starter makes; a motor or transformer is fed if it is in
+     any of them */
+  const sts = parts.filter(q => q.t === 'mst'), isSt = e => e.part && e.part.t === 'pp' && e.part.x.t === 'mst';
+  const fixed = e => e.kind === 'w' || (isSw(e.part) && !isSt(e)), V = [components(net, fixed), ...sts.map(m => components(net, e => fixed(e) || (isSt(e) && e.part.x === m)))];
+  const f0 = V[0], k1 = f0(net.L1), k2 = f0(net.L2);
+  sts.forEach((m, i) => { const fm = V[i + 1], hs = Object.keys(net.PH);
+    for (const a of hs) for (const b of hs) if (a < b && fm(net.PH[a]) === fm(net.PH[b]) && f0(net.PH[a]) !== f0(net.PH[b]) && !out.has(m.id)) out.set(m.id, `Closing it joins L${a} to L${b}`); });
   for (const p of parts) {
     if (isSrc(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); continue; }
     if (isPwr3(p)) {
@@ -114,24 +123,23 @@ function wiringIssues(net) {
       continue;
     }
     if (p.t === 'mtr') {
-      const ks = p._t.map(i => phaseAt(net, f, i));
       if (!p._t.some(i => net.adj[i].length > 0)) out.set(p.id, 'Not wired to anything');
-      else if (new Set(ks.filter(k => k > 0)).size < 3) out.set(p.id, 'Not fed all three phases');
+      else if (!V.some(fv => new Set(p._t.map(i => phaseAt(net, fv, i)).filter(k => k > 0)).size === 3)) out.set(p.id, 'Not fed all three phases');
       continue;
     }
     if (isPh(p)) {
-      const c = f(net.PH[p.L]), o = Object.keys(net.PH).filter(k => k !== p.L && f(net.PH[k]) === c);
+      const c = f0(net.PH[p.L]), o = Object.keys(net.PH).filter(k => k !== p.L && f0(net.PH[k]) === c);
       if (o.length) { out.set(p.id, `Shorted to L${o[0]}`); out.set('phshort', `L${p.L} connects straight to L${o[0]}`); }
-      else if (c === l1 || c === l2) { out.set(p.id, 'Joined to the control circuit'); out.set('phshort', `L${p.L} connects straight to the control circuit's ${c === l1 ? 'L1' : 'L2'}`); }
+      else if (c === k1 || c === k2) { out.set(p.id, 'Joined to the control circuit'); out.set('phshort', `L${p.L} connects straight to the control circuit's ${c === k1 ? 'L1' : 'L2'}`); }
       else if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything');
       continue;
     }
     if (isJmp(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); else if (!parts.some(q => q !== p && isJmp(q) && q.L === p.L)) out.set(p.id, `No other continuation ${p.L}`); continue; }
     const a = f(p._a), b = f(p._b);
-    if (p.t === 'xfm' && phaseFed(net, f, p)) continue;   // (its primary across two phases)
+    if (p.t === 'xfm' && V.some(fv => phaseFed(net, fv, p))) continue;   // (its primary across two phases)
     if (LOADT(p.t)) {
       const sh = S ? S.share.get(p.id) || 0 : 1;
-      if (sh < 1e-9) out.set(p.id, p.t === 'xfm' && (phaseAt(net, f, p._a) || phaseAt(net, f, p._b)) ? 'Not wired across two phases' : 'Not wired from L1 to L2');
+      if (sh < 1e-9) out.set(p.id, p.t === 'xfm' && (phaseAt(net, f0, p._a) || phaseAt(net, f0, p._b)) ? 'Not wired across two phases' : 'Not wired from L1 to L2');
       else if (sh < 1 - 1e-6) out.set(p.id, { note: `In series: ${Math.round(sh * SUPPLY_V * 10) / 10} V` });
     }
     else if (net.adj[p._a].length < 2 || net.adj[p._b].length < 2) out.set(p.id, 'An end is not connected');

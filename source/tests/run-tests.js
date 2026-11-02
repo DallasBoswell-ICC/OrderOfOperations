@@ -1820,6 +1820,36 @@ const DEF_CIRCUIT = `
     if (back !== 'dsc1,fus1,mst' + 'M,olh1,mtr1,olc1nc') out.push('read back: ' + back);
     return out;
   });
+  await check('Reversing starter: no short warning for the interlocked pair, runs both ways with the fan turning; a starter that alone joins two phases is flagged', async page => {
+    const out = [];
+    const setup = x => page.evaluate(x => { loadPreset('blank'); POWER = 'boxes'; W = 1700; W_USER = 1700;
+    const Y = [100, 220, 340];
+    Y.forEach((y, i) => { const p = newPart('ph-' + (i + 1), 120, y); p.rot = 3; parts.push(p); wires.push(Wr(160, y, 220, y), Wr(300, y, 400, y), Wr(480, y, 960, y), Wr(1040, y, 1260, y), Wr(1340, y, 1440, y)); });
+    parts.push(newPart('dsc', 260, 220), newPart('fus', 440, 220), Object.assign(newPart('mst', 1000, 220), { L: 'X' }), Object.assign(newPart('mst', 1000, 560), { L: 'Y' }), newPart('olh', 1300, 220), newPart('mtr', 1560, 220));
+    wires.push(Wr(900, 100, 900, 440), Wr(900, 440, 960, 440), Wr(920, 220, 920, 560), Wr(920, 560, 960, 560), Wr(940, 340, 940, 680), Wr(940, 680, 960, 680));
+    wires.push(...(x === 'bad' ? [Wr(1040, 440, 1080, 440), Wr(1080, 440, 1080, 400), Wr(1080, 400, 860, 400), Wr(860, 400, 860, 220)] : [Wr(1040, 440, 1100, 440), Wr(1100, 440, 1100, 340)]), Wr(1040, 560, 1120, 560), Wr(1120, 560, 1120, 220), Wr(1040, 680, 1140, 680), Wr(1140, 680, 1140, 100));
+    parts.push(newPart('xfm', 580, 620)); wires.push(Wr(520, 100, 520, 540), Wr(640, 220, 640, 540));
+    parts.push(P('btn', 600, 800, { L: 'S', nc: true, maint: false, color: '#FF0032' }), P('btn', 720, 800, { L: 'F', maint: false, color: '#00B050' }), P('con', 840, 800, { L: 'Y', nc: true }), P('coil', 960, 800, { L: 'X', color: '#00B050' }), newPart('olc', 1100, 800), P('con', 720, 860, { L: 'X' }));
+    parts.push(P('btn', 720, 960, { L: 'R', maint: false, color: '#0070C0' }), P('con', 840, 960, { L: 'X', nc: true }), P('coil', 960, 960, { L: 'Y', color: '#0070C0' }), newPart('olc', 1100, 960), P('con', 720, 1020, { L: 'Y' }));
+    wires.push(Wr(520, 700, 520, 800), Wr(520, 800, 560, 800), Wr(640, 800, 680, 800), Wr(760, 800, 800, 800), Wr(880, 800, 900, 800), Wr(1020, 800, 1060, 800), Wr(1140, 800, 1180, 800), Wr(1180, 800, 1180, 740), Wr(1180, 740, 640, 740), Wr(640, 740, 640, 700));
+    wires.push(Wr(660, 800, 660, 860), Wr(660, 860, 680, 860), Wr(760, 860, 780, 860), Wr(780, 860, 780, 800));
+    wires.push(Wr(660, 860, 660, 960), Wr(660, 960, 680, 960), Wr(760, 960, 800, 960), Wr(880, 960, 900, 960), Wr(1020, 960, 1060, 960), Wr(1140, 960, 1180, 960), Wr(1180, 960, 1180, 800));
+    wires.push(Wr(660, 960, 660, 1020), Wr(660, 1020, 680, 1020), Wr(760, 1020, 780, 1020), Wr(780, 1020, 780, 960));
+    normalize(); draw();
+      return [...wiringIssues(network())].map(([k, v]) => ((parts.find(p => p.id === k) || {}).t || k) + (parts.find(p => p.id === k)?.L || '') + ':' + v).join(' ; '); }, x);
+    const st = () => page.evaluate(() => { const m = parts.find(p => p.t === 'mtr'); return [MOT[m.id] ? MOT[m.id].st + MOT[m.id].dir : 'off0', view.parts.get(m.id).anim || '-', view.parts.get(m.id).rotor.querySelectorAll('animateTransform').length].join(); });
+    const tap = async L => { await page.evaluate(L => press(L, true), L); await page.waitForTimeout(400); await page.evaluate(L => press(L, false), L); await page.waitForTimeout(500); };
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    const iss = await setup('');
+    if (iss) out.push('issues: ' + iss);
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    await tap('F'); let s = await st(); if (s !== 'run1,fwd,1') out.push('forward: ' + s);
+    await tap('S'); await tap('R'); s = await st(); if (s !== 'run-1,rev,1') out.push('reverse: ' + s);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    const bad = await setup('bad');
+    if (!/mstY:Closing it joins L1 to L2/.test(bad) || /phshort/.test(bad)) out.push('miswired Y starter: ' + bad);
+    return out;
+  });
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');

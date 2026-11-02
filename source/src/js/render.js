@@ -121,7 +121,7 @@ function renderInto(target, V, L) {
     const f = document.getElementById('fault');
     f.hidden = !issues.has('short') && !issues.has('phshort');
     f.textContent = issues.has('short') ? 'Warning: with every button passing current, L1 connects straight to L2 with no coil in between. That is a short circuit.'
-      : `Warning: with every switch closed, ${issues.get('phshort')}. That is a short circuit.`;
+      : `Warning: ${issues.get('phshort')} (with every switch but the starters closed). That is a short circuit.`;
   }
   if (V === view) { V.overlay = el('g', { 'pointer-events': 'none' }); if (preview) drawPreview(); }
 }

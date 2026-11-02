@@ -259,12 +259,12 @@ function bindPower(g, p) {
 }
 
 // a motor's fan: turning about its hub (an SVG animation: smooth, and no painting needed while it turns), the other way
-// backward, or shaking while it hums; still otherwise (and for anyone who has asked for less motion)
-const lessMotion = matchMedia('(prefers-reduced-motion: reduce)');
+// backward, or shaking while it hums; still otherwise. (It turns even where the computer asks for less motion: whether,
+// and which way, a motor runs is what it shows.)
 function spinFan(v, how) {
   if (v.anim === how) return; v.anim = how;
   for (const a of v.rotor.querySelectorAll('animateTransform')) a.remove();
-  if (!how || lessMotion.matches) return;
+  if (!how) return;
   const a = el('animateTransform', how === 'hum' ? { attributeName: 'transform', type: 'translate', values: '0 0;1.1 -.7;-1.1 .7;0 0', dur: '.08s', repeatCount: 'indefinite' }
     : { attributeName: 'transform', type: 'rotate', from: how === 'rev' ? '360' : '0', to: how === 'rev' ? '0' : '360', dur: '.9s', repeatCount: 'indefinite' }, v.rotor);
   try { a.beginElement(); } catch (_) {}
