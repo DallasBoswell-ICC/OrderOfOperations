@@ -1187,6 +1187,11 @@ let DSC = {}, BLOWN = {}, OLTRIP = {}, MOT = {};
 const poleClosed = k => { const p = k.x; return p.t === 'dsc' ? !DSC[p.id] : p.t === 'fus' ? !BLOWN[k.id] : p.t === 'mst' ? !!(CON[p.id] && CON[p.id].shut) : true; };
 // a limit switch: actuated while worked (a held one: while not), and closed accordingly
 const lswAct = p => !!down[p.L] !== !!p.held, lswClosed = p => p.nc ? !lswAct(p) : lswAct(p);
+// how far a limit switch has moved from at rest (0) to worked (1): easing in and out over LSW_MOVE after it was last
+// worked or let go
+const LSW_MOVE = .3;
+let LSW_T = {};
+function lswPos(p) { const to = lswAct(p) ? 1 : 0, t0 = LSW_T[p.L]; if (t0 === undefined) return to; const f = clamp01((simT - t0) / LSW_MOVE), e = f * f * (3 - 2 * f); return to ? e : 1 - e; }
 
 /* ---- js/solve.js ---- */
 /* =====================================================================
@@ -1357,6 +1362,7 @@ function startRun() {
   NET = network();
   simT = 0; queue = []; seq = 0; busyUntil = 0; autoRel = {}; down = {}; coilOn = {}; TIMER = {}; SELPOS = {}; SELTURN = {};
   FED_AT = {}; COMP = null; LV = null; COND = {}; needPaint = true; PTL = new Map(); PARR = new Map(); PDARK = new Map(); phFault = '';
+  LSW_T = {};
   CON = {}; for (const p of parts) if (p.t === 'con' || p.t === 'mst') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };
   DSC = {}; BLOWN = {}; OLTRIP = {}; MOT = {}; DSC_T = {}; OLRESET = {};   // every coil starts off
   tl = NET.nodes.map(() => [[-1e9, null]]);
@@ -1746,6 +1752,7 @@ function turn(L, pos) {
 function press(L, v) {
   if (!!down[L] === v) return;
   down[L] = v; needPaint = true;
+  if (parts.some(p => p.t === 'lsw' && p.L === L)) { LSW_T[L] = simT; if (simT + LSW_MOVE > busyUntil) busyUntil = simT + LSW_MOVE; }   // (a limit switch: it moves over a moment)
   switched(parts.filter(p => (p.t === 'btn' || p.t === 'lsw') && p.L === L), simT);   // (a pushbutton's letter, or a limit switch's number)
 }
 // a relay contact's bar starts to move: it stops passing current as soon as it lifts, and passes current again
@@ -2031,7 +2038,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => (p.t === 'lsw' ? LSW_S / 2 + 26 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => (p.t === 'lsw' ? LSW_S / 2 + 48 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -2495,55 +2502,59 @@ function conPosts(g, x, py) {
 }
 
 /* A limit switch: a roomy square body (in its colour) holding the NEMA limit switch symbol, raised: a contact's two
-   posts, and a blade hinged on the left one, with the solid wedge on it (under it, normally open; over it, normally
-   closed). Closed, the blade lies across both posts; open, it drops away below the right one. Above, the roller lever
-   it is worked by, and a bold arrow, the machine pressing the roller while it is actuated. (Painted by paintLimit.) */
-const LSW_WEDGE = [[0, 0], [50.4, 0], [35.6, 15.9]];   // (the wedge, along and out from the blade, from its hinge)
+   posts, and a blade hinged on the left one, with the solid wedge under it. Its angle tells its kind and state, as on
+   the print: normally open, it hangs below the right post (open) and is lifted onto its underside (closed); normally
+   closed, it rests on top of the right post (closed) and is lifted clear above it (open). Working it always lifts the
+   blade. On top of the body, the roller lever it is worked by, and a bold arrow, the machine coming down on the roller.
+   (Painted by setLimit; working it eases from one position to the other over LSW_MOVE seconds.) */
+const LSW_WEDGE = [[0, 0], [50.4, 0], [35.7, 15.8]];   // (the wedge, along the blade and out below it, from its hinge)
+const LSW_TOUCH = Math.atan((BOX * .105 + 3.5) / 60) * 180 / Math.PI;   // (the blade's angle lying on a post's edge)
+const lswAngles = p => p.nc ? [-LSW_TOUCH, -LSW_OPEN] : [LSW_OPEN, LSW_TOUCH];   // (at rest, and worked)
 function drawLimit(p, g, x, y, v) {
   const h = LSW_S / 2, col = p.color, r = BOX * .105, px1 = x - 30, px2 = x + 30, sy = BOX * .045;
   framed('rect', { x: x - h, y: y - h, width: LSW_S, height: LSW_S, rx: 14, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
   // the blade and its wedge (behind the posts), turning about the left post
   v.blade = el('g', {}, g);
-  const s = p.nc ? -1 : 1, wedge = 'M' + LSW_WEDGE.map(([a, b]) => `${px1 + a} ${y + s * b}`).join('L') + 'Z', bx2 = px2 + r * 1.15;
+  const wedge = 'M' + LSW_WEDGE.map(([a, b]) => `${px1 + a} ${y + b}`).join('L') + 'Z', len = 60 + r * .6;
   v.wedge = el('path', { d: wedge, fill: BLADE_GREY, stroke: '#111', 'stroke-width': 1.2, 'stroke-linejoin': 'round', filter: 'url(#fShadow)' }, v.blade);
   el('path', { d: wedge, fill: 'url(#gGloss)', opacity: .7 }, v.blade);
-  v.bladeShape = el('rect', { x: px1, y: y - 3.5, width: bx2 - px1, height: 7, rx: 3.5, fill: BLADE_GREY, stroke: 'rgba(0,0,0,.35)', 'stroke-width': .6 }, v.blade);
-  el('rect', { x: px1, y: y - 3.5, width: bx2 - px1, height: 7, rx: 3.5, fill: 'url(#gGloss)' }, v.blade);
+  v.bladeShape = el('rect', { x: px1, y: y - 3.5, width: len, height: 7, rx: 3.5, fill: BLADE_GREY, stroke: 'rgba(0,0,0,.35)', 'stroke-width': .6 }, v.blade);
+  el('rect', { x: px1, y: y - 3.5, width: len, height: 7, rx: 3.5, fill: 'url(#gGloss)' }, v.blade);
   v.hinge = [px1, y];
   // the posts: a stub in from each side, a round post at its end (as a relay contact's)
   v.posts = el('g', { fill: GREY }, g);
   el('rect', { x: x - h + 4.5, y: y - sy, width: px1 - (x - h + 4.5), height: 2 * sy }, v.posts); el('circle', { cx: px1, cy: y, r }, v.posts);
   el('rect', { x: px2, y: y - sy, width: x + h - 4.5 - px2, height: 2 * sy }, v.posts); el('circle', { cx: px2, cy: y, r }, v.posts);
   for (const cx of [px1, px2]) el('circle', { cx, cy: y, r, fill: 'url(#gDome)' }, g);
-  // the roller lever, pivoted near the top left, and the arrow that presses its roller
-  const pv = [x - 16, y - 30]; v.pivot = pv;
-  v.lever = el('g', {}, g);
-  el('line', { x1: pv[0], y1: pv[1], x2: pv[0] + 32, y2: pv[1] - 6, stroke: '#b5b5b5', 'stroke-width': 4.2, 'stroke-linecap': 'round', filter: 'url(#fShadow)' }, v.lever);
-  el('circle', { cx: pv[0] + 32, cy: pv[1] - 6, r: 6.5, fill: '#2b2b2b', stroke: '#c8c8c8', 'stroke-width': 2.4 }, v.lever);
-  el('circle', { cx: pv[0], cy: pv[1], r: 4.2, fill: 'url(#gTerm)', stroke: '#111', 'stroke-width': 1 }, g);
-  v.arrow = el('g', { display: 'none', filter: 'url(#fShadow)' }, g);
+  // on top: the roller lever, pivoted on the body's top edge, and the arrow that comes down on its roller
+  const pv = [x - 6, y - h - 4]; v.pivot = pv;
+  v.arrow = el('g', { filter: 'url(#fShadow)' }, g);
   v.arrowPath = el('path', { d: '', fill: '#ececec', stroke: '#1c1c1c', 'stroke-width': 1.6, 'stroke-linejoin': 'round' }, v.arrow);
-  // its number
+  v.lever = el('g', {}, g);
+  el('line', { x1: pv[0], y1: pv[1], x2: pv[0] + 30, y2: pv[1] - 14, stroke: '#b5b5b5', 'stroke-width': 4.2, 'stroke-linecap': 'round', filter: 'url(#fShadow)' }, v.lever);
+  el('circle', { cx: pv[0] + 30, cy: pv[1] - 14, r: 6.5, fill: '#2b2b2b', stroke: '#c8c8c8', 'stroke-width': 2.4 }, v.lever);
+  el('circle', { cx: pv[0], cy: pv[1], r: 4.2, fill: 'url(#gTerm)', stroke: '#111', 'stroke-width': 1 }, g);
+  // its number, and NO or NC
   el('rect', { x: x - h + 5, y: y + h - 22, width: 30, height: 17, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
   el('text', { x: x - h + 20, y: y + h - 9.6, 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = 'LS' + p.L;
-  setLimit(v, p, editing ? !!p.held : lswAct(p));
+  el('rect', { x: x + h - 33, y: y + h - 22, width: 28, height: 17, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('text', { x: x + h - 19, y: y + h - 9.6, 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = p.nc ? 'NC' : 'NO';
+  setLimit(v, p, editing ? (p.held ? 1 : 0) : lswPos(p), editing ? !!p.nc !== !!p.held : lswClosed(p));
 }
-// a limit switch shown actuated (act) or not: its lever down or up, the arrow on its roller, its blade across the
-// posts (closed) or dropped away (open), lit in its colour while closed
-function setLimit(v, p, act) {
-  const cl = p.nc ? !act : act, k = (act ? 'a' : 'r') + (cl ? 'c' : 'o');
+// a limit switch pos of the way from at rest (0) to worked (1): its lever down, the arrow on its roller (coming down,
+// fading in), its blade lifted; lit in its colour while closed
+function setLimit(v, p, pos, cl) {
+  const k = pos.toFixed(3) + (cl ? 'c' : 'o');
   if (v.k === k) return; v.k = k;
-  const [hx, hy] = v.hinge, [px, py] = v.pivot, la = act ? 18 : 0;
-  v.blade.setAttribute('transform', cl ? '' : `rotate(${LSW_OPEN} ${hx} ${hy})`);
-  v.lever.setAttribute('transform', la ? `rotate(${la} ${px} ${py})` : '');
+  const [hx, hy] = v.hinge, [px, py] = v.pivot, [a0, a1] = lswAngles(p), la = 30 * pos;
+  v.blade.setAttribute('transform', `rotate(${lerp(a0, a1, pos).toFixed(2)} ${hx} ${hy})`);
+  v.lever.setAttribute('transform', `rotate(${la.toFixed(2)} ${px} ${py})`);
   const c = cl ? p.color : BLADE_GREY;
   v.bladeShape.setAttribute('fill', c); v.wedge.setAttribute('fill', c); v.posts.setAttribute('fill', cl ? p.color : GREY);
-  v.arrow.setAttribute('display', act ? '' : 'none');
-  if (act) {
-    // (its tip on top of the roller, where the lever has turned it to)
-    const t = la * Math.PI / 180, rx = px + 32 * Math.cos(t) + 6 * Math.sin(t), ry = py + 32 * Math.sin(t) - 6 * Math.cos(t) - 6.5 - 1.5;
-    v.arrowPath.setAttribute('d', `M${rx} ${ry}l-12 -13h6.5v-15h11v15h6.5z`);
-  }
+  // (the arrow's tip on top of the roller, where the lever has turned it to; higher up, and fainter, before it gets there)
+  const t = la * Math.PI / 180, rx = px + 30 * Math.cos(t) + 14 * Math.sin(t), ry = py + 30 * Math.sin(t) - 14 * Math.cos(t) - 6.5 - 1.5 - 16 * (1 - pos);
+  v.arrow.setAttribute('opacity', Math.min(1, pos * 2.5).toFixed(3));
+  v.arrowPath.setAttribute('d', `M${rx} ${ry}l-12 -13h6.5v-15h11v15h6.5z`);
 }
 
 /* ---- js/editor-state.js ---- */
@@ -2859,14 +2870,16 @@ function frame(now) {
   if (!editing) {
     // at high speed a busy circuit (a buzzer, say) can have more to do in one frame than the computer can manage: it
     // does what it can in a set time and carries on from there next frame, so the page never stalls
-    const target = simT + dt * speed, ran = eventsRun;
+    const target = simT + dt * speed, ran = eventsRun, was = simT;
     tickRealTimers(real);   // (timers counting real time go by the clock; one timing out now is acted on below)
     if (runEvents(target, performance.now() + 12)) simT = target;
     if (mode === 'click') for (const L in autoRel) if (!busyQueue() && simT > busyUntil + .5) { delete autoRel[L]; press(L, false); }
     // once the circuit has settled (nothing on its way, and the last coil, light and contact has finished changing)
     // nothing on the panel moves, so it is not painted again until something happens: an idle circuit costs nothing
     // (at high speed a whole chain of changes can start and finish within one frame: whatever happened is painted)
-    if (needPaint || eventsRun !== ran || busyQueue() || simT <= busyUntil + 0.6) { paint(); needPaint = false; }
+    // (and once more as it settles, so whatever was moving is painted where it stopped, even when a fast clock went past
+    // the end of the movement within one frame)
+    if (needPaint || eventsRun !== ran || busyQueue() || simT <= busyUntil + 0.6 || was <= busyUntil + 0.6) { paint(); needPaint = false; }
     else if (anyTiming()) paintTimers();   // (a timer counting down: only its readout changes)
   }
   requestAnimationFrame(frame);
@@ -2912,7 +2925,7 @@ function paintView(V) {
     for (const S of ['A', 'B']) paintLead(v.lead[S], p._lead && p._lead[S]);
     let k;
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
-    else if (p.t === 'lsw') setLimit(v, p, lswAct(p));
+    else if (p.t === 'lsw') setLimit(v, p, lswPos(p), lswClosed(p));
     else if (p.t === 'con' || p.t === 'olc') {
       const s = p.t === 'olc' ? olState(p.L) : CON[p.id]; if (!s) continue;
       const f = clamp01((simT - s.t0) / SWING), e = f * f * (3 - 2 * f);   // ease in and out
