@@ -289,14 +289,6 @@ body.fs .wrap { padding-top: 8px; }
 /* a phase's colour: its swatches (eight, in two rows of four) and any other colour */
 .rpanel .swatches.phsw { grid-template-columns: repeat(4, 20px); gap: 3px; }
 #ph-custom { width: 30px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
-
-/* a motor's fan: turning while it runs (backward: the other way), shaking while it hums */
-@keyframes mtr-spin { to { transform: rotate(360deg); } }
-@keyframes mtr-hum { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(.9px, -.6px); } 75% { transform: translate(-.9px, .6px); } }
-.rotor.spin { animation: mtr-spin 1s linear infinite; }
-.rotor.spin.rev { animation-direction: reverse; }
-.rotor.hum { animation: mtr-hum .07s linear infinite; }
-@media (prefers-reduced-motion: reduce) { .rotor.spin, .rotor.hum { animation: none; } }
 </style>
 </head>
 <body>
@@ -1333,7 +1325,7 @@ function addLane(e, from) {
 function startRun() {
   NET = network();
   simT = 0; queue = []; seq = 0; busyUntil = 0; autoRel = {}; down = {}; coilOn = {}; TIMER = {}; SELPOS = {}; SELTURN = {};
-  FED_AT = {}; COMP = null; LV = null; COND = {}; needPaint = true; PTL = new Map(); PARR = new Map(); phFault = '';
+  FED_AT = {}; COMP = null; LV = null; COND = {}; needPaint = true; PTL = new Map(); PARR = new Map(); PDARK = new Map(); phFault = '';
   CON = {}; for (const p of parts) if (p.t === 'con' || p.t === 'mst') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };
   DSC = {}; BLOWN = {}; OLTRIP = {}; MOT = {}; DSC_T = {}; OLRESET = {};   // every coil starts off
   tl = NET.nodes.map(() => [[-1e9, null]]);
@@ -1682,7 +1674,7 @@ function updateCoils(t) {
     let atOnce = false; const wasOn = !!coilOn[p.id];
     if (want !== wasOn) {
       coilOn[p.id] = want; p._chg = t;
-      if (p.t === 'xfm') { if (want && pf) p._ph = { a: PH_COL[PARR.get(p._a).k - 1], b: PH_COL[PARR.get(p._b).k - 1], t0: t }; else if (want) delete p._ph; else if (p._ph) p._ph.off = t; }
+      if (p.t === 'xfm') { if (want && pf) p._ph = { a: PH_COL[phaseOfAt(p._a, t) - 1], b: PH_COL[phaseOfAt(p._b, t) - 1], t0: t }; else if (want) delete p._ph; else if (p._ph) p._ph.off = t; }
       const moveAll = at => { for (const c of parts) if ((c.t === 'con' || c.t === 'mst') && c.L === p.L) schedule(at + CT, () => moveContact(c, evT)); };
       if (isTimer(p)) {
         // its instantaneous contacts follow it at once; its timed ones as its type says (see sim-core). Every contact of
@@ -1773,7 +1765,7 @@ function refreshAllow(t) {
    same way), lighting them in the phase's colour. Where a switch closes it carries on from there; where one opens,
    what is cut off goes dark from the break outwards. Two phases joined together, or a phase joined to the control
    circuit, is a short: what they reach stays dark. A transformer whose primary is across two phases works. */
-let PARR = new Map(), phFault = '';   // (PARR: each junction a phase has reached: { k: the phase, t: when })
+let PARR = new Map(), PDARK = new Map(), phFault = '';   // (PARR: each junction a phase has reached: { k: the phase, t: when })
 function phasesNow(t) {
   const PH = NET.PH; if (!PH || !Object.keys(PH).length) return;
   const f = compNow(), cph = new Map(), l1 = f(NET.L1), l2 = f(NET.L2);
@@ -1790,7 +1782,7 @@ function phasesNow(t) {
     const L = new Set(lost), d = new Map(), h = heap();
     for (const n of lost) for (const i of NET.adj[n]) { const e = NET.edges[i], w = e.a === n ? e.b : e.a; if (!L.has(w)) { d.set(n, t); h.push(t, n); break; } }
     walk(h, d, n => L.has(n));
-    for (const n of lost) { put(n, Math.max(t, d.get(n) ?? t), null); PARR.delete(n); }
+    for (const n of lost) { const off = Math.max(t, d.get(n) ?? t), o = PARR.get(n); put(n, off, null); PDARK.set(n, { k: o.k, t: o.t, off }); PARR.delete(n); }
   }
   // what a phase can now reach lights up, spreading out from where it already is (or from its box)
   if (gain.size) {
@@ -1802,8 +1794,10 @@ function phasesNow(t) {
     for (const n of gain) if (d.has(n)) { const k = want(n), at = d.get(n); PARR.set(n, { k, t: at }); put(n, at, PH_COL[k - 1]); }
   }
   // a transformer fed from the phases: look at it again as each phase reaches its primary
-  for (const p of parts) if (p.t === 'xfm') for (const n of [p._a, p._b]) { const s = PARR.get(n); if (s && s.t > t) schedule(s.t, () => updateCoils(evT)); }
-  for (const p of parts) if (p.t === 'mtr') for (const n of p._t) { const s = PARR.get(n); if (s && s.t > t) schedule(s.t, () => motorsNow(evT)); }
+  // (and as it goes dark there)
+  const when = n => [PARR.get(n)?.t, PDARK.get(n)?.off].filter(x => x !== undefined && x > t);
+  for (const p of parts) if (p.t === 'xfm') for (const n of [p._a, p._b]) for (const at of when(n)) schedule(at, () => updateCoils(evT));
+  for (const p of parts) if (p.t === 'mtr') for (const n of p._t) for (const at of when(n)) schedule(at, () => motorsNow(evT));
   motorsNow(t);
   // two phases joined: the fuses on the way between them blow (just after, so they are seen to)
   if (phFault) { const fs = faultFuses(); if (fs.length) schedule(t + .05, () => { const now = fs.filter(k => !BLOWN[k.id]); if (!now.length) return; for (const k of now) BLOWN[k.id] = { t: evT }; switched(now, evT); }); }
@@ -1815,7 +1809,7 @@ function phasesNow(t) {
 const HUM_TRIP = 3;
 function motorsNow(t) {
   for (const p of parts) if (p.t === 'mtr' && p._t) {
-    const ks = p._t.map(n => { const s = PARR.get(n); return s && s.t <= t + 1e-9 ? s.k : 0; }), got = new Set(ks.filter(Boolean));
+    const ks = p._t.map(n => phaseOfAt(n, t)), got = new Set(ks.filter(Boolean));
     const st = got.size === 3 ? 'run' : got.size === 2 ? 'hum' : 'off', dir = st !== 'run' ? 0 : ['123', '231', '312'].includes(ks.join('')) ? 1 : -1;
     const m = MOT[p.id];
     if (m && m.st === st && m.dir === dir) continue;
@@ -1868,7 +1862,10 @@ function walk(h, d, ok) {
   }
 }
 // a transformer's primary fed across two phases at time t (each phase there by then)
-function phFedAt(p, t) { const a = PARR.get(p._a), b = PARR.get(p._b); return !!a && !!b && a.k !== b.k && a.t <= t + 1e-9 && b.t <= t + 1e-9; }
+function phFedAt(p, t) { const a = phaseOfAt(p._a, t), b = phaseOfAt(p._b, t); return a > 0 && b > 0 && a !== b; }
+// the phase at junction n at time t: once it has got there, and until the dark has (PDARK: where a phase has been
+// cut off, and when it goes dark there)
+function phaseOfAt(n, t) { const s = PARR.get(n); if (s && s.t <= t + 1e-9) return s.k; const g = PDARK.get(n); return g && g.t <= t + 1e-9 && g.off > t + 1e-9 ? g.k : 0; }
 // a small binary heap of [time, junction]
 function heap() {
   const a = [];
@@ -2316,26 +2313,25 @@ function drawPwr(p, g, x, y, v, chan) {
   if (p.t !== 'fus') el('line', { x1: x + 1, y1: y - PWR_DY + 4, x2: x + 1, y2: y + PWR_DY - 4, stroke: '#9a9a9a', 'stroke-width': 1.6, 'stroke-dasharray': '4 4' }, g);
   v.poles = [-1, 0, 1].map(k => {
     const py = y + k * PWR_DY, q = {};
-    if (p.t === 'dsc') {
-      // a knife blade, hinged on its left post; open, it swings up off the right one
-      q.bg = el('g', {}, g); q.blade = rpath(q.bg, `M${x - 19} ${py}H${x + 21}`, 5.2, BLADE_GREY);
-      q.a = rdot(g, x - 19, py, 5); q.b = rdot(g, x + 19, py, 5); q.px = x - 19; q.py = py;
+    if (p.t === 'dsc' || p.t === 'mst') {
+      // a relay contact's two posts, exactly (see drawPart); behind them, a starter's contact bar, which lifts off
+      // them while open (a NO contact's), or a disconnect's blade, hinged on its left post, that swings up off the right
+      const P = conPosts(g, x, py);
+      q.bg = el('g', p.t === 'mst' ? { transform: `translate(0 ${-OPEN_LIFT})` } : {}, g); g.insertBefore(q.bg, P.a);
+      const bx1 = p.t === 'mst' ? P.x1 - P.r * 1.15 : P.x1, bx2 = P.x2 + P.r * 1.15, bh = 7;
+      q.blade = el('rect', { x: bx1, y: py - bh / 2, width: bx2 - bx1, height: bh, rx: bh / 2, fill: BLADE_GREY, stroke: 'rgba(0,0,0,.35)', 'stroke-width': .6 }, q.bg);
+      el('rect', { x: bx1, y: py - bh / 2, width: bx2 - bx1, height: bh, rx: bh / 2, fill: 'url(#gGloss)' }, q.bg);
+      q.pa = P.a; q.pb = P.b; q.px = P.x1; q.py = py;
     } else if (p.t === 'fus') {
       // a cartridge with metal end caps; its element breaks in the middle when it blows
-      el('rect', { x: x - 19, y: py - 8, width: 38, height: 16, rx: 4, fill: '#1c1c1c', stroke: '#6a6a6a', 'stroke-width': 1.2 }, g);
-      q.l = rpath(g, `M${x - 15} ${py}H${x - 4}`, 3.2); q.r = rpath(g, `M${x + 4} ${py}H${x + 15}`, 3.2);
-      q.mg = el('g', {}, g); q.m = rpath(q.mg, `M${x - 4} ${py}l2 -3h4l2 3`, 3.2);
-      q.mark = el('path', { d: `M${x - 3} ${py - 7}l3 4 -3 2 4 6`, fill: 'none', stroke: '#ff6b5e', 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', display: 'none' }, g);
-      for (const s of [-1, 1]) el('rect', { x: x + s * 24 - 4, y: py - 10, width: 8, height: 20, rx: 2.5, fill: 'url(#gTerm)', stroke: '#111', 'stroke-width': 1 }, g);
-    } else if (p.t === 'mst') {
-      // a relay contact's posts and bar, heavier, in the starter's colour once shut
-      q.bg = el('g', { transform: `translate(0 ${-OPEN_LIFT})` }, g);
-      q.bar = el('rect', { x: x - 22, y: py - 3.2 - 6, width: 44, height: 6.4, rx: 3.2, fill: BLADE_GREY, stroke: '#111', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, q.bg);
-      el('rect', { x: x - 22, y: py - 3.2 - 6, width: 44, height: 6.4, rx: 3.2, fill: 'url(#gGloss)' }, q.bg);
-      q.a = rdot(g, x - 15, py, 4.6); q.b = rdot(g, x + 15, py, 4.6);
+      el('rect', { x: x - 20, y: py - 9, width: 40, height: 18, rx: 5, fill: '#1c1c1c', stroke: '#6a6a6a', 'stroke-width': 1.2 }, g);
+      q.l = rpath(g, `M${x - 16} ${py}H${x - 5}`, 4); q.r = rpath(g, `M${x + 5} ${py}H${x + 16}`, 4);
+      q.mg = el('g', {}, g); q.m = rpath(q.mg, `M${x - 5} ${py}l2.5 -3.5h5l2.5 3.5`, 4);
+      q.mark = el('path', { d: `M${x - 3} ${py - 8}l3 4.5 -3 2.5 4 7`, fill: 'none', stroke: '#ff6b5e', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', display: 'none' }, g);
+      for (const s of [-1, 1]) el('rect', { x: x + s * 24 - 4.5, y: py - 12, width: 9, height: 24, rx: 2.5, fill: 'url(#gTerm)', stroke: '#111', 'stroke-width': 1 }, g);
     } else {
       // an overload heater: the NEMA heater symbol, as a raised element
-      q.e = rpath(g, `M${x - 26} ${py}H${x - 13}V${py - 15}H${x + 13}V${py}H${x + 26}`, 4.4);
+      q.e = rpath(g, `M${x - 27} ${py}H${x - 14}V${py - 16}H${x + 14}V${py}H${x + 27}`, 5.2);
     }
     return q;
   });
@@ -2366,7 +2362,7 @@ function drawMtr(p, g, x, y, v, chan) {
     return el('path', { d: `M${cx + R * Math.cos(a0)} ${y + R * Math.sin(a0)}A${R} ${R} 0 0 1 ${cx + R * Math.cos(a1)} ${y + R * Math.sin(a1)}`, fill: 'none', stroke: GREY, 'stroke-width': 8 }, g); });
   el('circle', { cx, cy: y, r: R - 6, fill: '#262626', stroke: '#111', 'stroke-width': 1.5 }, g);
   const at = el('g', { transform: `translate(${cx} ${y})` }, g);
-  v.rotor = el('g', { class: 'rotor', style: 'transform-origin:0 0' }, at);
+  v.rotor = el('g', {}, at);   // (it turns about its hub, see paintMtr)
   for (let i = 0; i < 6; i++) el('path', { d: 'M0 -12C22 -30 30 -48 12 -56L-6 -48C8 -38 6 -26 0 -12Z', transform: `rotate(${i * 60})`, fill: '#6a7077', stroke: '#1c1c1c', 'stroke-width': 1.2 }, v.rotor);
   rdot(v.rotor, 0, 0, 13).setAttribute('fill', '#7a8087');
   el('text', { x: 0, y: 5, 'text-anchor': 'middle', 'font-size': 14, 'font-weight': 800, fill: '#1c1c1c' }, at).textContent = 'M';
@@ -2378,6 +2374,18 @@ function drawMtr(p, g, x, y, v, chan) {
   v.dir = el('text', { x: cx + 30, y: y + 96, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 800, fill: '#9be03a' }, v.arrow);
   v.hum = el('text', { x: cx - 5, y: y + R + 30, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: '#ff8a7a', display: 'none' }, g); v.hum.textContent = 'Humming: a phase is missing';
   v.cx = cx;
+}
+
+// a relay contact's two posts (as drawPart draws them): a short stub in from each side, and a round post at its end,
+// domed; returns each post (to colour) and where they are
+function conPosts(g, x, py) {
+  const B = BOX, sy = B * .045, r = B * .105, L = x - B / 2, inset = 4.5, x1 = L + B * .25, x2 = L + B * .75;
+  const a = el('g', { fill: GREY }, g), b = el('g', { fill: GREY }, g);
+  el('rect', { x: L + inset, y: py - sy, width: B * .25 - inset, height: 2 * sy }, a); el('circle', { cx: x1, cy: py, r }, a);
+  el('rect', { x: L + B * .75, y: py - sy, width: B * .25 - inset, height: 2 * sy }, b); el('circle', { cx: x2, cy: py, r }, b);
+  const gl = el('g', { fill: 'url(#gDome)' }, g);
+  el('circle', { cx: x1, cy: py, r }, gl); el('circle', { cx: x2, cy: py, r }, gl);
+  return { a, b, x1, x2, r };
 }
 
 /* ---- js/editor-state.js ---- */
@@ -2907,16 +2915,17 @@ function paintPwr(p, v) {
     if (p.t === 'dsc') {
       key = `${a}|${b}|${cl}|${lev.toFixed(3)}`; if (key === q.k) return; q.k = key;
       q.bg.setAttribute('transform', `rotate(${(-32 * lev).toFixed(2)} ${q.px} ${q.py})`);
-      q.blade.setAttribute('stroke', cl && c ? c : BLADE_GREY); q.a.setAttribute('fill', a || GREY); q.b.setAttribute('fill', b || GREY);
+      q.blade.setAttribute('fill', cl && c ? c : BLADE_GREY); q.pa.setAttribute('fill', a || GREY); q.pb.setAttribute('fill', b || GREY);
     } else if (p.t === 'fus') {
       key = `${a}|${b}|${cl}`; if (key === q.k) return; q.k = key;
       q.l.setAttribute('stroke', (cl ? c : a) || GREY); q.r.setAttribute('stroke', (cl ? c : b) || GREY); q.m.setAttribute('stroke', c || GREY);
       q.mg.setAttribute('display', cl ? '' : 'none'); q.mark.setAttribute('display', cl ? 'none' : '');
     } else if (p.t === 'mst') {
       const s = CON[p.id] || { t0: -1e9, closing: false, shut: false }, e = ease(s.t0), lift = (s.closing ? lerp(OPEN_LIFT, 0, e) : lerp(0, OPEN_LIFT, e)).toFixed(2);
-      key = `${a}|${b}|${lift}|${s.shut}`; if (key === q.k) return; q.k = key;
-      q.bg.setAttribute('transform', `translate(0 ${-lift})`); q.bar.setAttribute('fill', s.shut ? coilColour(p.L) : BLADE_GREY);
-      q.a.setAttribute('fill', a || GREY); q.b.setAttribute('fill', b || GREY);
+      key = `${lift}|${s.shut}`; if (key === q.k) return; q.k = key;   // (exactly as a NO relay contact: its coil's colour once shut)
+      const col = coilColour(p.L);
+      q.bg.setAttribute('transform', `translate(0 ${-lift})`); q.blade.setAttribute('fill', s.shut ? col : BLADE_GREY);
+      q.pa.setAttribute('fill', s.shut ? col : GREY); q.pb.setAttribute('fill', s.shut ? col : GREY);
     } else {
       key = `${c}`; if (key === q.k) return; q.k = key;
       q.e.setAttribute('stroke', c || GREY);
@@ -2931,7 +2940,7 @@ function paintMtr(p, v) {
   const cols = (p._t || []).map(n => colAt(n, simT) || GREY), m = MOT[p.id] || { st: 'off', dir: 0 };
   const key = cols.join('|') + m.st + m.dir; if (key === v.k) return; v.k = key;
   cols.forEach((c, i) => v.arcs[i].setAttribute('stroke', c));
-  v.rotor.setAttribute('class', 'rotor' + (m.st === 'run' ? ' spin' + (m.dir < 0 ? ' rev' : '') : m.st === 'hum' ? ' hum' : ''));
+  spinFan(v, m.st === 'run' ? (m.dir < 0 ? 'rev' : 'fwd') : m.st === 'hum' ? 'hum' : '');
   v.arrow.setAttribute('display', m.st === 'run' ? '' : 'none');
   v.arrowPath.setAttribute('transform', m.dir < 0 ? `translate(${2 * v.cx} 0) scale(-1 1)` : '');
   v.dir.textContent = m.dir < 0 ? 'REVERSE' : 'FORWARD';
@@ -2943,6 +2952,18 @@ function bindPower(g, p) {
   g.setAttribute('aria-label', captionOf(p) + (p.t === 'dsc' ? ': turn on or off' : p.t === 'fus' ? ': blow a fuse, or put it back' : p.t === 'olh' ? ': trip it, or reset it' : ': reset its overload'));
   g.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); const q = pt(e); workPower(p, Math.max(0, Math.min(2, Math.round((q.y - p.y) / PWR_DY) + 1))); });
   g.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); workPower(p, 1); } });
+}
+
+// a motor's fan: turning about its hub (an SVG animation: smooth, and no painting needed while it turns), the other way
+// backward, or shaking while it hums; still otherwise (and for anyone who has asked for less motion)
+const lessMotion = matchMedia('(prefers-reduced-motion: reduce)');
+function spinFan(v, how) {
+  if (v.anim === how) return; v.anim = how;
+  for (const a of v.rotor.querySelectorAll('animateTransform')) a.remove();
+  if (!how || lessMotion.matches) return;
+  const a = el('animateTransform', how === 'hum' ? { attributeName: 'transform', type: 'translate', values: '0 0;1.1 -.7;-1.1 .7;0 0', dur: '.08s', repeatCount: 'indefinite' }
+    : { attributeName: 'transform', type: 'rotate', from: how === 'rev' ? '360' : '0', to: how === 'rev' ? '0' : '360', dur: '.9s', repeatCount: 'indefinite' }, v.rotor);
+  try { a.beginElement(); } catch (_) {}
 }
 
 /* ---- js/station.js ---- */

@@ -219,16 +219,17 @@ function paintPwr(p, v) {
     if (p.t === 'dsc') {
       key = `${a}|${b}|${cl}|${lev.toFixed(3)}`; if (key === q.k) return; q.k = key;
       q.bg.setAttribute('transform', `rotate(${(-32 * lev).toFixed(2)} ${q.px} ${q.py})`);
-      q.blade.setAttribute('stroke', cl && c ? c : BLADE_GREY); q.a.setAttribute('fill', a || GREY); q.b.setAttribute('fill', b || GREY);
+      q.blade.setAttribute('fill', cl && c ? c : BLADE_GREY); q.pa.setAttribute('fill', a || GREY); q.pb.setAttribute('fill', b || GREY);
     } else if (p.t === 'fus') {
       key = `${a}|${b}|${cl}`; if (key === q.k) return; q.k = key;
       q.l.setAttribute('stroke', (cl ? c : a) || GREY); q.r.setAttribute('stroke', (cl ? c : b) || GREY); q.m.setAttribute('stroke', c || GREY);
       q.mg.setAttribute('display', cl ? '' : 'none'); q.mark.setAttribute('display', cl ? 'none' : '');
     } else if (p.t === 'mst') {
       const s = CON[p.id] || { t0: -1e9, closing: false, shut: false }, e = ease(s.t0), lift = (s.closing ? lerp(OPEN_LIFT, 0, e) : lerp(0, OPEN_LIFT, e)).toFixed(2);
-      key = `${a}|${b}|${lift}|${s.shut}`; if (key === q.k) return; q.k = key;
-      q.bg.setAttribute('transform', `translate(0 ${-lift})`); q.bar.setAttribute('fill', s.shut ? coilColour(p.L) : BLADE_GREY);
-      q.a.setAttribute('fill', a || GREY); q.b.setAttribute('fill', b || GREY);
+      key = `${lift}|${s.shut}`; if (key === q.k) return; q.k = key;   // (exactly as a NO relay contact: its coil's colour once shut)
+      const col = coilColour(p.L);
+      q.bg.setAttribute('transform', `translate(0 ${-lift})`); q.blade.setAttribute('fill', s.shut ? col : BLADE_GREY);
+      q.pa.setAttribute('fill', s.shut ? col : GREY); q.pb.setAttribute('fill', s.shut ? col : GREY);
     } else {
       key = `${c}`; if (key === q.k) return; q.k = key;
       q.e.setAttribute('stroke', c || GREY);
@@ -243,7 +244,7 @@ function paintMtr(p, v) {
   const cols = (p._t || []).map(n => colAt(n, simT) || GREY), m = MOT[p.id] || { st: 'off', dir: 0 };
   const key = cols.join('|') + m.st + m.dir; if (key === v.k) return; v.k = key;
   cols.forEach((c, i) => v.arcs[i].setAttribute('stroke', c));
-  v.rotor.setAttribute('class', 'rotor' + (m.st === 'run' ? ' spin' + (m.dir < 0 ? ' rev' : '') : m.st === 'hum' ? ' hum' : ''));
+  spinFan(v, m.st === 'run' ? (m.dir < 0 ? 'rev' : 'fwd') : m.st === 'hum' ? 'hum' : '');
   v.arrow.setAttribute('display', m.st === 'run' ? '' : 'none');
   v.arrowPath.setAttribute('transform', m.dir < 0 ? `translate(${2 * v.cx} 0) scale(-1 1)` : '');
   v.dir.textContent = m.dir < 0 ? 'REVERSE' : 'FORWARD';
@@ -255,4 +256,16 @@ function bindPower(g, p) {
   g.setAttribute('aria-label', captionOf(p) + (p.t === 'dsc' ? ': turn on or off' : p.t === 'fus' ? ': blow a fuse, or put it back' : p.t === 'olh' ? ': trip it, or reset it' : ': reset its overload'));
   g.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); const q = pt(e); workPower(p, Math.max(0, Math.min(2, Math.round((q.y - p.y) / PWR_DY) + 1))); });
   g.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); workPower(p, 1); } });
+}
+
+// a motor's fan: turning about its hub (an SVG animation: smooth, and no painting needed while it turns), the other way
+// backward, or shaking while it hums; still otherwise (and for anyone who has asked for less motion)
+const lessMotion = matchMedia('(prefers-reduced-motion: reduce)');
+function spinFan(v, how) {
+  if (v.anim === how) return; v.anim = how;
+  for (const a of v.rotor.querySelectorAll('animateTransform')) a.remove();
+  if (!how || lessMotion.matches) return;
+  const a = el('animateTransform', how === 'hum' ? { attributeName: 'transform', type: 'translate', values: '0 0;1.1 -.7;-1.1 .7;0 0', dur: '.08s', repeatCount: 'indefinite' }
+    : { attributeName: 'transform', type: 'rotate', from: how === 'rev' ? '360' : '0', to: how === 'rev' ? '0' : '360', dur: '.9s', repeatCount: 'indefinite' }, v.rotor);
+  try { a.beginElement(); } catch (_) {}
 }

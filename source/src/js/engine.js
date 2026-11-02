@@ -44,7 +44,7 @@ function addLane(e, from) {
 function startRun() {
   NET = network();
   simT = 0; queue = []; seq = 0; busyUntil = 0; autoRel = {}; down = {}; coilOn = {}; TIMER = {}; SELPOS = {}; SELTURN = {};
-  FED_AT = {}; COMP = null; LV = null; COND = {}; needPaint = true; PTL = new Map(); PARR = new Map(); phFault = '';
+  FED_AT = {}; COMP = null; LV = null; COND = {}; needPaint = true; PTL = new Map(); PARR = new Map(); PDARK = new Map(); phFault = '';
   CON = {}; for (const p of parts) if (p.t === 'con' || p.t === 'mst') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };
   DSC = {}; BLOWN = {}; OLTRIP = {}; MOT = {}; DSC_T = {}; OLRESET = {};   // every coil starts off
   tl = NET.nodes.map(() => [[-1e9, null]]);
@@ -393,7 +393,7 @@ function updateCoils(t) {
     let atOnce = false; const wasOn = !!coilOn[p.id];
     if (want !== wasOn) {
       coilOn[p.id] = want; p._chg = t;
-      if (p.t === 'xfm') { if (want && pf) p._ph = { a: PH_COL[PARR.get(p._a).k - 1], b: PH_COL[PARR.get(p._b).k - 1], t0: t }; else if (want) delete p._ph; else if (p._ph) p._ph.off = t; }
+      if (p.t === 'xfm') { if (want && pf) p._ph = { a: PH_COL[phaseOfAt(p._a, t) - 1], b: PH_COL[phaseOfAt(p._b, t) - 1], t0: t }; else if (want) delete p._ph; else if (p._ph) p._ph.off = t; }
       const moveAll = at => { for (const c of parts) if ((c.t === 'con' || c.t === 'mst') && c.L === p.L) schedule(at + CT, () => moveContact(c, evT)); };
       if (isTimer(p)) {
         // its instantaneous contacts follow it at once; its timed ones as its type says (see sim-core). Every contact of
@@ -484,7 +484,7 @@ function refreshAllow(t) {
    same way), lighting them in the phase's colour. Where a switch closes it carries on from there; where one opens,
    what is cut off goes dark from the break outwards. Two phases joined together, or a phase joined to the control
    circuit, is a short: what they reach stays dark. A transformer whose primary is across two phases works. */
-let PARR = new Map(), phFault = '';   // (PARR: each junction a phase has reached: { k: the phase, t: when })
+let PARR = new Map(), PDARK = new Map(), phFault = '';   // (PARR: each junction a phase has reached: { k: the phase, t: when })
 function phasesNow(t) {
   const PH = NET.PH; if (!PH || !Object.keys(PH).length) return;
   const f = compNow(), cph = new Map(), l1 = f(NET.L1), l2 = f(NET.L2);
@@ -501,7 +501,7 @@ function phasesNow(t) {
     const L = new Set(lost), d = new Map(), h = heap();
     for (const n of lost) for (const i of NET.adj[n]) { const e = NET.edges[i], w = e.a === n ? e.b : e.a; if (!L.has(w)) { d.set(n, t); h.push(t, n); break; } }
     walk(h, d, n => L.has(n));
-    for (const n of lost) { put(n, Math.max(t, d.get(n) ?? t), null); PARR.delete(n); }
+    for (const n of lost) { const off = Math.max(t, d.get(n) ?? t), o = PARR.get(n); put(n, off, null); PDARK.set(n, { k: o.k, t: o.t, off }); PARR.delete(n); }
   }
   // what a phase can now reach lights up, spreading out from where it already is (or from its box)
   if (gain.size) {
@@ -513,8 +513,10 @@ function phasesNow(t) {
     for (const n of gain) if (d.has(n)) { const k = want(n), at = d.get(n); PARR.set(n, { k, t: at }); put(n, at, PH_COL[k - 1]); }
   }
   // a transformer fed from the phases: look at it again as each phase reaches its primary
-  for (const p of parts) if (p.t === 'xfm') for (const n of [p._a, p._b]) { const s = PARR.get(n); if (s && s.t > t) schedule(s.t, () => updateCoils(evT)); }
-  for (const p of parts) if (p.t === 'mtr') for (const n of p._t) { const s = PARR.get(n); if (s && s.t > t) schedule(s.t, () => motorsNow(evT)); }
+  // (and as it goes dark there)
+  const when = n => [PARR.get(n)?.t, PDARK.get(n)?.off].filter(x => x !== undefined && x > t);
+  for (const p of parts) if (p.t === 'xfm') for (const n of [p._a, p._b]) for (const at of when(n)) schedule(at, () => updateCoils(evT));
+  for (const p of parts) if (p.t === 'mtr') for (const n of p._t) for (const at of when(n)) schedule(at, () => motorsNow(evT));
   motorsNow(t);
   // two phases joined: the fuses on the way between them blow (just after, so they are seen to)
   if (phFault) { const fs = faultFuses(); if (fs.length) schedule(t + .05, () => { const now = fs.filter(k => !BLOWN[k.id]); if (!now.length) return; for (const k of now) BLOWN[k.id] = { t: evT }; switched(now, evT); }); }
@@ -526,7 +528,7 @@ function phasesNow(t) {
 const HUM_TRIP = 3;
 function motorsNow(t) {
   for (const p of parts) if (p.t === 'mtr' && p._t) {
-    const ks = p._t.map(n => { const s = PARR.get(n); return s && s.t <= t + 1e-9 ? s.k : 0; }), got = new Set(ks.filter(Boolean));
+    const ks = p._t.map(n => phaseOfAt(n, t)), got = new Set(ks.filter(Boolean));
     const st = got.size === 3 ? 'run' : got.size === 2 ? 'hum' : 'off', dir = st !== 'run' ? 0 : ['123', '231', '312'].includes(ks.join('')) ? 1 : -1;
     const m = MOT[p.id];
     if (m && m.st === st && m.dir === dir) continue;
@@ -579,7 +581,10 @@ function walk(h, d, ok) {
   }
 }
 // a transformer's primary fed across two phases at time t (each phase there by then)
-function phFedAt(p, t) { const a = PARR.get(p._a), b = PARR.get(p._b); return !!a && !!b && a.k !== b.k && a.t <= t + 1e-9 && b.t <= t + 1e-9; }
+function phFedAt(p, t) { const a = phaseOfAt(p._a, t), b = phaseOfAt(p._b, t); return a > 0 && b > 0 && a !== b; }
+// the phase at junction n at time t: once it has got there, and until the dark has (PDARK: where a phase has been
+// cut off, and when it goes dark there)
+function phaseOfAt(n, t) { const s = PARR.get(n); if (s && s.t <= t + 1e-9) return s.k; const g = PDARK.get(n); return g && g.t <= t + 1e-9 && g.off > t + 1e-9 ? g.k : 0; }
 // a small binary heap of [time, junction]
 function heap() {
   const a = [];

@@ -436,26 +436,25 @@ function drawPwr(p, g, x, y, v, chan) {
   if (p.t !== 'fus') el('line', { x1: x + 1, y1: y - PWR_DY + 4, x2: x + 1, y2: y + PWR_DY - 4, stroke: '#9a9a9a', 'stroke-width': 1.6, 'stroke-dasharray': '4 4' }, g);
   v.poles = [-1, 0, 1].map(k => {
     const py = y + k * PWR_DY, q = {};
-    if (p.t === 'dsc') {
-      // a knife blade, hinged on its left post; open, it swings up off the right one
-      q.bg = el('g', {}, g); q.blade = rpath(q.bg, `M${x - 19} ${py}H${x + 21}`, 5.2, BLADE_GREY);
-      q.a = rdot(g, x - 19, py, 5); q.b = rdot(g, x + 19, py, 5); q.px = x - 19; q.py = py;
+    if (p.t === 'dsc' || p.t === 'mst') {
+      // a relay contact's two posts, exactly (see drawPart); behind them, a starter's contact bar, which lifts off
+      // them while open (a NO contact's), or a disconnect's blade, hinged on its left post, that swings up off the right
+      const P = conPosts(g, x, py);
+      q.bg = el('g', p.t === 'mst' ? { transform: `translate(0 ${-OPEN_LIFT})` } : {}, g); g.insertBefore(q.bg, P.a);
+      const bx1 = p.t === 'mst' ? P.x1 - P.r * 1.15 : P.x1, bx2 = P.x2 + P.r * 1.15, bh = 7;
+      q.blade = el('rect', { x: bx1, y: py - bh / 2, width: bx2 - bx1, height: bh, rx: bh / 2, fill: BLADE_GREY, stroke: 'rgba(0,0,0,.35)', 'stroke-width': .6 }, q.bg);
+      el('rect', { x: bx1, y: py - bh / 2, width: bx2 - bx1, height: bh, rx: bh / 2, fill: 'url(#gGloss)' }, q.bg);
+      q.pa = P.a; q.pb = P.b; q.px = P.x1; q.py = py;
     } else if (p.t === 'fus') {
       // a cartridge with metal end caps; its element breaks in the middle when it blows
-      el('rect', { x: x - 19, y: py - 8, width: 38, height: 16, rx: 4, fill: '#1c1c1c', stroke: '#6a6a6a', 'stroke-width': 1.2 }, g);
-      q.l = rpath(g, `M${x - 15} ${py}H${x - 4}`, 3.2); q.r = rpath(g, `M${x + 4} ${py}H${x + 15}`, 3.2);
-      q.mg = el('g', {}, g); q.m = rpath(q.mg, `M${x - 4} ${py}l2 -3h4l2 3`, 3.2);
-      q.mark = el('path', { d: `M${x - 3} ${py - 7}l3 4 -3 2 4 6`, fill: 'none', stroke: '#ff6b5e', 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', display: 'none' }, g);
-      for (const s of [-1, 1]) el('rect', { x: x + s * 24 - 4, y: py - 10, width: 8, height: 20, rx: 2.5, fill: 'url(#gTerm)', stroke: '#111', 'stroke-width': 1 }, g);
-    } else if (p.t === 'mst') {
-      // a relay contact's posts and bar, heavier, in the starter's colour once shut
-      q.bg = el('g', { transform: `translate(0 ${-OPEN_LIFT})` }, g);
-      q.bar = el('rect', { x: x - 22, y: py - 3.2 - 6, width: 44, height: 6.4, rx: 3.2, fill: BLADE_GREY, stroke: '#111', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, q.bg);
-      el('rect', { x: x - 22, y: py - 3.2 - 6, width: 44, height: 6.4, rx: 3.2, fill: 'url(#gGloss)' }, q.bg);
-      q.a = rdot(g, x - 15, py, 4.6); q.b = rdot(g, x + 15, py, 4.6);
+      el('rect', { x: x - 20, y: py - 9, width: 40, height: 18, rx: 5, fill: '#1c1c1c', stroke: '#6a6a6a', 'stroke-width': 1.2 }, g);
+      q.l = rpath(g, `M${x - 16} ${py}H${x - 5}`, 4); q.r = rpath(g, `M${x + 5} ${py}H${x + 16}`, 4);
+      q.mg = el('g', {}, g); q.m = rpath(q.mg, `M${x - 5} ${py}l2.5 -3.5h5l2.5 3.5`, 4);
+      q.mark = el('path', { d: `M${x - 3} ${py - 8}l3 4.5 -3 2.5 4 7`, fill: 'none', stroke: '#ff6b5e', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', display: 'none' }, g);
+      for (const s of [-1, 1]) el('rect', { x: x + s * 24 - 4.5, y: py - 12, width: 9, height: 24, rx: 2.5, fill: 'url(#gTerm)', stroke: '#111', 'stroke-width': 1 }, g);
     } else {
       // an overload heater: the NEMA heater symbol, as a raised element
-      q.e = rpath(g, `M${x - 26} ${py}H${x - 13}V${py - 15}H${x + 13}V${py}H${x + 26}`, 4.4);
+      q.e = rpath(g, `M${x - 27} ${py}H${x - 14}V${py - 16}H${x + 14}V${py}H${x + 27}`, 5.2);
     }
     return q;
   });
@@ -486,7 +485,7 @@ function drawMtr(p, g, x, y, v, chan) {
     return el('path', { d: `M${cx + R * Math.cos(a0)} ${y + R * Math.sin(a0)}A${R} ${R} 0 0 1 ${cx + R * Math.cos(a1)} ${y + R * Math.sin(a1)}`, fill: 'none', stroke: GREY, 'stroke-width': 8 }, g); });
   el('circle', { cx, cy: y, r: R - 6, fill: '#262626', stroke: '#111', 'stroke-width': 1.5 }, g);
   const at = el('g', { transform: `translate(${cx} ${y})` }, g);
-  v.rotor = el('g', { class: 'rotor', style: 'transform-origin:0 0' }, at);
+  v.rotor = el('g', {}, at);   // (it turns about its hub, see paintMtr)
   for (let i = 0; i < 6; i++) el('path', { d: 'M0 -12C22 -30 30 -48 12 -56L-6 -48C8 -38 6 -26 0 -12Z', transform: `rotate(${i * 60})`, fill: '#6a7077', stroke: '#1c1c1c', 'stroke-width': 1.2 }, v.rotor);
   rdot(v.rotor, 0, 0, 13).setAttribute('fill', '#7a8087');
   el('text', { x: 0, y: 5, 'text-anchor': 'middle', 'font-size': 14, 'font-weight': 800, fill: '#1c1c1c' }, at).textContent = 'M';
@@ -498,4 +497,16 @@ function drawMtr(p, g, x, y, v, chan) {
   v.dir = el('text', { x: cx + 30, y: y + 96, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 800, fill: '#9be03a' }, v.arrow);
   v.hum = el('text', { x: cx - 5, y: y + R + 30, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: '#ff8a7a', display: 'none' }, g); v.hum.textContent = 'Humming: a phase is missing';
   v.cx = cx;
+}
+
+// a relay contact's two posts (as drawPart draws them): a short stub in from each side, and a round post at its end,
+// domed; returns each post (to colour) and where they are
+function conPosts(g, x, py) {
+  const B = BOX, sy = B * .045, r = B * .105, L = x - B / 2, inset = 4.5, x1 = L + B * .25, x2 = L + B * .75;
+  const a = el('g', { fill: GREY }, g), b = el('g', { fill: GREY }, g);
+  el('rect', { x: L + inset, y: py - sy, width: B * .25 - inset, height: 2 * sy }, a); el('circle', { cx: x1, cy: py, r }, a);
+  el('rect', { x: L + B * .75, y: py - sy, width: B * .25 - inset, height: 2 * sy }, b); el('circle', { cx: x2, cy: py, r }, b);
+  const gl = el('g', { fill: 'url(#gDome)' }, g);
+  el('circle', { cx: x1, cy: py, r }, gl); el('circle', { cx: x2, cy: py, r }, gl);
+  return { a, b, x1, x2, r };
 }

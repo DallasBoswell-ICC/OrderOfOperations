@@ -276,11 +276,3 @@ body.fs .wrap { padding-top: 8px; }
 /* a phase's colour: its swatches (eight, in two rows of four) and any other colour */
 .rpanel .swatches.phsw { grid-template-columns: repeat(4, 20px); gap: 3px; }
 #ph-custom { width: 30px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
-
-/* a motor's fan: turning while it runs (backward: the other way), shaking while it hums */
-@keyframes mtr-spin { to { transform: rotate(360deg); } }
-@keyframes mtr-hum { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(.9px, -.6px); } 75% { transform: translate(-.9px, .6px); } }
-.rotor.spin { animation: mtr-spin 1s linear infinite; }
-.rotor.spin.rev { animation-direction: reverse; }
-.rotor.hum { animation: mtr-hum .07s linear infinite; }
-@media (prefers-reduced-motion: reduce) { .rotor.spin, .rotor.hum { animation: none; } }

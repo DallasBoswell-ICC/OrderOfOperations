@@ -1801,7 +1801,10 @@ const DEF_CIRCUIT = `
     await run();
     let s = await st(); if (s !== 'false,off0,false,0') out.push('at first: ' + s);
     await start(); s = await st(); if (s !== 'true,run1,false,0') out.push('started: ' + s);
-    await page.evaluate(() => workPower(parts.find(p => p.t === 'dsc'))); await page.waitForTimeout(500);
+    // turned off at normal speed: the transformer and motor keep running until the dark reaches them
+    const early = await page.evaluate(() => { setSpeed(1); workPower(parts.find(p => p.t === 'dsc')); return [!!coilOn[parts.find(p => p.t === 'xfm').id], MOT[parts.find(p => p.t === 'mtr').id].st].join(); });
+    if (early !== 'true,run') out.push('just after the disconnect opened (should still run): ' + early);
+    await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(500);
     s = await st(); if (s !== 'false,off0,false,0') out.push('disconnect off: ' + s);
     await page.evaluate(() => workPower(parts.find(p => p.t === 'dsc'))); await page.waitForTimeout(500);
     await start(); await page.evaluate(() => workPower(parts.find(p => p.t === 'fus'), 2)); await page.waitForTimeout(1200);
