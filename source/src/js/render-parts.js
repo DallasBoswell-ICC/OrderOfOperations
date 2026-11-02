@@ -446,31 +446,23 @@ function drawPwr(p, g, x, y, v, chan) {
       el('rect', { x: bx1, y: py - bh / 2, width: bx2 - bx1, height: bh, rx: bh / 2, fill: 'url(#gGloss)' }, q.bg);
       q.pa = P.a; q.pb = P.b; q.px = P.x1; q.py = py;
     } else if (p.t === 'fus') {
-      // a cartridge fuse: round terminals and leads like the solenoid's, metal end caps, and a body that is a relay's grey
-      // until the phase passes through it, as along a wire (a clip that sweeps across from its line side, see
-      // paintPwr). Blown: a jagged crack through its body, and only its line side lit
-      const round = { fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, id = 'fuc' + (++solMaskN);
-      const lead = `M${x - 27} ${py}H${x + 27}`, dr = 5.2, cw = 6, ch = 20, bw = 22, bh = 14;
-      const parts3 = to => { el('path', { d: lead, stroke: 'currentColor', 'stroke-width': 5, ...round }, to); for (const s of [-1, 1]) el('circle', { cx: x + s * 27, cy: py, r: dr, fill: 'currentColor' }, to); el('rect', { x: x - bw / 2, y: py - bh / 2, width: bw, height: bh, fill: 'currentColor' }, to); };
-      const sh = el('g', { filter: 'url(#fShadow)' }, g);
-      el('path', { d: lead, stroke: '#111', 'stroke-width': 6.8, ...round }, sh);
-      for (const s of [-1, 1]) el('circle', { cx: x + s * 27, cy: py, r: dr + .9, fill: '#111' }, sh);
-      el('rect', { x: x - bw / 2 - cw - .9, y: py - ch / 2 - .9, width: bw + 2 * cw + 1.8, height: ch + 1.8, rx: 3.4, fill: '#111' }, sh);
-      parts3(el('g', { color: GREY }, g));
-      q.clip = el('rect', { x: x - 34, y: py - 14, width: 0, height: 28 }, el('clipPath', { id }, g));
-      q.col = el('g', { color: 'transparent', 'clip-path': `url(#${id})` }, g); parts3(q.col);
-      // the body's edge and shine, the caps over its ends, the terminals' domes
-      el('rect', { x: x - bw / 2, y: py - bh / 2, width: bw, height: bh, fill: 'url(#gGloss)', stroke: '#111', 'stroke-width': 1.6 }, g);
-      for (const s of [-1, 1]) { const cx0 = x + s * (bw / 2 + cw / 2) - cw / 2;
-        el('rect', { x: cx0, y: py - ch / 2, width: cw, height: ch, rx: 2.4, fill: 'url(#gTerm)', stroke: '#111', 'stroke-width': 1.6 }, g);
-        el('rect', { x: cx0, y: py - ch / 2, width: cw, height: ch, rx: 2.4, fill: 'url(#gGloss)' }, g);
-        el('circle', { cx: x + s * 27, cy: py, r: dr, fill: 'url(#gDome)' }, g); }
-      for (const s of [-1, 1]) el('path', { d: `M${x + s * 27} ${py}H${x + s * (bw / 2 + cw + 1)}`, transform: 'translate(-.4 -1)', stroke: '#fff', 'stroke-opacity': .2, 'stroke-width': 1.6, ...round }, g);   // (the leads' shine)
+      // a cartridge fuse: metal end caps, and between them a body as tall as they are, a relay's grey until the phase
+      // passes through it, as along a wire (a clip that sweeps across from its line side, see paintPwr). Blown: a
+      // jagged crack through its body, and only its line side lit. (Clear of the box's sides, its leads outside it.)
+      const id = 'fuc' + (++solMaskN), L = 26, cw = 7, h = 20, bw = 2 * (L - cw);
+      el('rect', { x: x - L - .9, y: py - h / 2 - .9, width: 2 * L + 1.8, height: h + 1.8, rx: 3.4, fill: '#111', filter: 'url(#fShadow)' }, g);
+      el('rect', { x: x - bw / 2, y: py - h / 2, width: bw, height: h, fill: GREY }, g);
+      q.clip = el('rect', { x: x - L, y: py - h / 2, width: 0, height: h }, el('clipPath', { id }, g));
+      q.col = el('rect', { x: x - bw / 2, y: py - h / 2, width: bw, height: h, fill: 'transparent', 'clip-path': `url(#${id})` }, g);
+      el('rect', { x: x - bw / 2, y: py - h / 2, width: bw, height: h, fill: 'url(#gGloss)', stroke: '#111', 'stroke-width': 1.6 }, g);
+      for (const s of [-1, 1]) { const cx0 = s < 0 ? x - L : x + bw / 2;
+        el('rect', { x: cx0, y: py - h / 2, width: cw, height: h, rx: 2.4, fill: 'url(#gTerm)', stroke: '#111', 'stroke-width': 1.6 }, g);
+        el('rect', { x: cx0, y: py - h / 2, width: cw, height: h, rx: 2.4, fill: 'url(#gGloss)' }, g); }
       q.mark = el('g', { display: 'none' }, g);
-      const crack = `M${x - .5} ${py - bh / 2}L${x + 2.6} ${py - 3}L${x - 2.4} ${py + .6}L${x + 2} ${py + 3.6}L${x - .8} ${py + bh / 2}`;
-      el('path', { d: crack, fill: 'none', stroke: '#141414', 'stroke-width': 3.4, 'stroke-linejoin': 'miter' }, q.mark);
+      const crack = `M${x - .5} ${py - h / 2 + .8}L${x + 3} ${py - 4}L${x - 2.6} ${py + .6}L${x + 2.4} ${py + 4.6}L${x - .8} ${py + h / 2 - .8}`;
+      el('path', { d: crack, fill: 'none', stroke: '#141414', 'stroke-width': 3.6, 'stroke-linejoin': 'miter' }, q.mark);
       el('path', { d: crack, fill: 'none', stroke: '#ff5a4e', 'stroke-width': 1, 'stroke-linejoin': 'miter' }, q.mark);
-      q.x0 = x - 34;
+      q.x0 = x - L; q.span = 2 * L;
     } else {
       // an overload heater: the NEMA heater symbol, as a raised element
       q.e = rpath(g, `M${x - 27} ${py}H${x - 14}V${py - 16}H${x + 14}V${py}H${x + 27}`, 5.2);
