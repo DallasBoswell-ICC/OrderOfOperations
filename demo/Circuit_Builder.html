@@ -2644,15 +2644,19 @@ function drawTemp(p, g, x, y, v) {
   // the bulb's box, and its thermometer
   const sx = bx + hw - 6, sw = TSW_SB + 6, st = top + 20, sh = LSW_TOP + LSW_BOT - 40;
   framed('rect', { x: sx, y: st, width: sw, height: sh, rx: 9, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
-  const tx = sx + sw / 2 + 6, cTop = st + 9, cBot = st + sh - 18, br = 6.2, cw = 4.4;
-  el('rect', { x: tx - cw / 2 - 1.2, y: cTop - 1.2, width: cw + 2.4, height: cBot - cTop + 2.4, rx: cw / 2 + 1.2, fill: '#111' }, g);
-  el('rect', { x: tx - cw / 2, y: cTop, width: cw, height: cBot - cTop, rx: cw / 2, fill: '#5a5a5a' }, g);
+  // the thermometer (Dallas's design): a grey glass tube outlined in black, its bulb at the foot, a scale of ticks
+  // down its right side, and the column inside it in the switch's colour (red, high; blue, low) up to the temperature
+  const tx = sx + sw / 2 + 4, cTop = st + 12, by = st + sh - 13, R = 8, tw = 8, iw = 4.4;
+  el('rect', { x: tx - tw / 2 - 1.2, y: cTop - tw / 2 - 1.2, width: tw + 2.4, height: by - cTop + tw / 2 + 1.2, rx: tw / 2 + 1.2, fill: '#111' }, g);
+  el('circle', { cx: tx, cy: by, r: R + 1.2, fill: '#111' }, g);
+  el('rect', { x: tx - tw / 2, y: cTop - tw / 2, width: tw, height: by - cTop + tw / 2, rx: tw / 2, fill: '#9a9a9a' }, g);
+  el('circle', { cx: tx, cy: by, r: R, fill: '#9a9a9a' }, g);
+  el('rect', { x: tx - iw / 2, y: cTop - iw / 2, width: iw, height: by - cTop + iw / 2, rx: iw / 2, fill: '#6b6b6b' }, g);
   const tc = p.low ? TSW_COLD : TSW_HOT;   // (a low temperature switch's thermometer blue, a high one's red)
-  v.col = el('rect', { x: tx - cw / 2, y: cBot, width: cw, height: 2, fill: tc }, g); v.cTop = cTop; v.cBot = cBot;
-  el('circle', { cx: tx, cy: cBot + br - 1, r: br + 1.2, fill: '#111' }, g);
-  el('circle', { cx: tx, cy: cBot + br - 1, r: br, fill: tc }, g);
-  el('circle', { cx: tx, cy: cBot + br - 1, r: br, fill: 'url(#gDome)' }, g);
-  el('rect', { x: tx - cw / 2, y: cTop, width: cw, height: cBot - cTop, rx: cw / 2, fill: 'url(#gGloss)', opacity: .6 }, g);
+  v.col = el('rect', { x: tx - iw / 2, y: by, width: iw, height: 2, fill: tc }, g); v.cTop = cTop; v.cBot = by - R + 1;
+  el('circle', { cx: tx, cy: by, r: R - 1.8, fill: tc }, g);
+  const tk = el('g', { stroke: '#111', 'stroke-width': .9 }, g), n = 8;
+  for (let k = 0; k < n; k++) { const yy = cTop + 3 + k * (by - R - 3 - cTop) / (n - 1); el('line', { x1: tx + (k % 2 ? 1.6 : 0), y1: yy, x2: tx + tw / 2 + 1.2, y2: yy }, tk); }
   // on top of the bulb's box, a badge: a small flame on a high temperature switch, a snowflake on a low one
   const bx0 = tx, by0 = st - 1, bg = el('g', {}, g);   // (right above the thermometer)
   el('circle', { cx: bx0, cy: by0, r: 9, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.4 }, bg);
@@ -2691,7 +2695,7 @@ function drawTemp(p, g, x, y, v) {
 // a temperature switch pos of the way from at rest (0) to worked (1): the thermometer's column up from low to high,
 // its blade turned as the limit switch's; lit in its colour while closed
 // (a high temperature switch: its column from low up to high as it is worked; a low one's from the middle down to low)
-const TSW_HOT = '#E8413C', TSW_COLD = '#3F9BFF', TSW_LV = p => p.low ? [.55, .12] : [.25, .85];
+const TSW_HOT = '#FF3333', TSW_COLD = '#0073FF', TSW_LV = p => p.low ? [.55, .12] : [.25, .85];
 function setTemp(v, p, pos, cl) {
   const k = pos.toFixed(3) + (cl ? 'c' : 'o');
   if (v.k === k) return; v.k = k;
