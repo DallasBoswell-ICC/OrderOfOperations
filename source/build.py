@@ -19,6 +19,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src"
 DEMO = "--demo" in sys.argv[1:]
+# the demo build carries its own icons (green, with a DEMO band) so the two builds cannot be confused
+ICONS = "icons-demo" if DEMO else "icons"
 OUT = ROOT / "dist" / ("demo" if DEMO else "") / "Circuit_Builder.html"
 
 # The scripts run in this order (later files use things defined in earlier ones).
@@ -65,7 +67,7 @@ def build() -> Path:
         raise SystemExit("A script contains </script, which would end the page's <script> early: write it <\\/script")
     # the O³ icon, built into the page as a data URL
     from urllib.parse import quote
-    icon = "data:image/svg+xml," + quote(" ".join((SRC / "icons" / "icon.svg").read_text(encoding="utf-8").split()), safe=" =:/'(),")
+    icon = "data:image/svg+xml," + quote(" ".join((SRC / ICONS / "icon.svg").read_text(encoding="utf-8").split()), safe=" =:/'(),")
     if DEMO:
         # its own name and badge, and its own keys in the browser's storage (autosave, view and other settings)
         js = js.replace("'oo-circuit-builder:", "'oo-circuit-builder-demo:")
@@ -82,10 +84,10 @@ def build() -> Path:
     OUT.write_text(page, encoding="utf-8")
     # the app icons and the web app manifest go next to it (for the website: installing it as an app)
     import shutil
-    shutil.copytree(SRC / "icons", OUT.parent / "icons", dirs_exist_ok=True)
+    shutil.copytree(SRC / ICONS, OUT.parent / "icons", dirs_exist_ok=True)
     man = (SRC / "circuit-builder.webmanifest").read_text(encoding="utf-8")
     if DEMO:   # (installed as an app of its own)
-        man = man.replace('"Order of Operations: Circuit Builder"', '"Order of Operations: Circuit Builder (Demo)"').replace('"short_name": "Circuit Builder"', '"short_name": "Circuit Builder Demo"')
+        man = man.replace('"Order of Operations: Circuit Builder"', '"Order of Operations: Circuit Builder (Demo)"').replace('"short_name": "Circuit Builder"', '"short_name": "Circuit Builder Demo"').replace('"theme_color": "#1c1d1f"', '"theme_color": "#9be03a"')
     (OUT.parent / "circuit-builder.webmanifest").write_text(man, encoding="utf-8")
     return OUT
 

@@ -3,7 +3,7 @@
  "short_name": "Circuit Builder",
  "id": "./Circuit_Builder.html",
  "start_url": "./Circuit_Builder.html",
- "scope": "./",
+ "scope": "./Circuit_Builder.html",
  "display": "standalone",
  "background_color": "#1c1d1f",
  "theme_color": "#1c1d1f",

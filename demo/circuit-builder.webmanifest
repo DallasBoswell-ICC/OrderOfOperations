@@ -3,10 +3,10 @@
  "short_name": "Circuit Builder Demo",
  "id": "./Circuit_Builder.html",
  "start_url": "./Circuit_Builder.html",
- "scope": "./",
+ "scope": "./Circuit_Builder.html",
  "display": "standalone",
  "background_color": "#1c1d1f",
- "theme_color": "#1c1d1f",
+ "theme_color": "#9be03a",
  "description": "Build relay-logic circuits and watch the current flow, for the Order of Operations troubleshooting class.",
  "icons": [
   {
