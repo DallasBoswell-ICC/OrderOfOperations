@@ -4998,10 +4998,15 @@ function fit(widen) {
   let h = parseFloat(st.style.height);
   if (widen || k !== fitKey || !h) {
     const below = 16;
-    h = Math.round(Math.max(320, window.innerHeight - top - below));
+    h = Math.floor(Math.max(320, document.documentElement.clientHeight - top - below));
     if (st.style.height !== h + 'px') st.style.height = h + 'px';
     fitKey = k;
   }
+  // never let the page grow past the window: even a pixel over brings up a scrollbar, which narrows the page, which can
+  // wrap the header onto two rows, which shrinks the panel, which takes the scrollbar away again... and round it goes
+  // (a window flickering between the two layouts). So whatever pushes the page over, the panel gives up the difference
+  const over = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+  if (over > 0 && h > 320) { h = Math.max(320, h - over); st.style.height = h + 'px'; }
   // (the main view: the whole panel, or in split view its first pane)
   const w = svg.clientWidth || st.clientWidth || 1, hh = svg.clientHeight || h;
   const widened = !!widen && (editing || viewMode === 'normal') && setWidth(fitWidth(w, hh));
