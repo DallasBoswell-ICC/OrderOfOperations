@@ -1,7 +1,7 @@
 {
  "name": "Order of Operations: Circuit Builder (Demo)",
  "short_name": "Circuit Builder Demo",
- "id": "./Circuit_Builder.html",
+ "id": "./OrderOfOperations/demo/Circuit_Builder.html",
  "start_url": "./Circuit_Builder.html",
  "scope": "./Circuit_Builder.html",
  "display": "standalone",

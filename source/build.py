@@ -87,7 +87,7 @@ def build() -> Path:
     shutil.copytree(SRC / ICONS, OUT.parent / "icons", dirs_exist_ok=True)
     man = (SRC / "circuit-builder.webmanifest").read_text(encoding="utf-8")
     if DEMO:   # (installed as an app of its own)
-        man = man.replace('"Order of Operations: Circuit Builder"', '"Order of Operations: Circuit Builder (Demo)"').replace('"short_name": "Circuit Builder"', '"short_name": "Circuit Builder Demo"').replace('"theme_color": "#1c1d1f"', '"theme_color": "#9be03a"')
+        man = man.replace('"Order of Operations: Circuit Builder"', '"Order of Operations: Circuit Builder (Demo)"').replace('"short_name": "Circuit Builder"', '"short_name": "Circuit Builder Demo"').replace('"theme_color": "#1c1d1f"', '"theme_color": "#9be03a"').replace('"id": "./Circuit_Builder.html"', '"id": "./OrderOfOperations/demo/Circuit_Builder.html"')
     (OUT.parent / "circuit-builder.webmanifest").write_text(man, encoding="utf-8")
     return OUT
 
