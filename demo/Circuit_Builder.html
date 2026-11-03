@@ -3106,7 +3106,10 @@ function paintFu1(p, v) {
   const end = ev ? ev.t0 : T0 + v.span / 2 / V, g = T0 === undefined ? 1 : clamp01((simT - T0) / Math.max(end - T0, 1e-6));
   let k;
   if (!cl) {
-    const a = colAt(inN, simT), b = colAt(outN, simT); k = `x|${a}|${b}|${g.toFixed(3)}`; if (k === v.k) return; v.k = k;
+    // (the load end keeps its old colour a moment longer than the fuse, until the dark has run out along its lead: the
+    // load half takes it again only once that has gone, so it never flashes back on behind the dark)
+    const Ls = TERM(p) - BOX / 2, gone = T0 === undefined || simT >= end + Ls / V + 1e-6;
+    const a = colAt(inN, simT), b = gone ? colAt(outN, simT) : null; k = `x|${a}|${b}|${g.toFixed(3)}`; if (k === v.k) return; v.k = k;
     set(v.cur, 0, .5, a); if (g < 1) set(v.old, .5 + .5 * g, 1, a); else set(v.old, .5, 1, b);   // (the load half going dark from the break)
   } else if (g < 1) {
     const a = colAt(inN, simT); k = `r|${a}|${g.toFixed(3)}`; if (k === v.k) return; v.k = k;
