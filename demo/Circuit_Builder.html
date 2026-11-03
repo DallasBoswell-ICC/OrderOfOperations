@@ -2182,7 +2182,7 @@ function drawPart(p, g, x, y, chan, onStation) {
   } else if (p.t === 'fu1') {
     // a single fuse (Dallas's design): in a box the size of a contact's, a contact's stems in from either side to a
     // cartridge fuse, its body between two square metal end caps. Stems and body a relay's grey until current goes
-    // through (then its colour, see run.js); blown, a crack through its middle, and each side the colour that reaches it
+    // through (then its colour, see run.js); blown, a slanting break through its middle and a red badge, and each side the colour that reaches it
     // (the line side lit, the load side dark)
     framed('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: FU1_COL, 'stroke-width': 1.8 }, g);
     const sh = 2 * BOX * .045, inset = 4.5, bw = 43.75, bh = 16.25, br = 4.7, cw = 7.5, ch = 20, line = 'rgba(0,0,0,.35)';
@@ -2201,9 +2201,18 @@ function drawPart(p, g, x, y, chan, onStation) {
       el('rect', { x: x0, y: y - ch / 2, width: cw, height: ch, rx: .4, fill: 'url(#gTerm)', stroke: line, 'stroke-width': .6 }, g);
       el('rect', { x: x0, y: y - ch / 2, width: cw, height: ch, rx: .4, fill: 'url(#gGloss)' }, g); }
     v.mark = el('g', { display: 'none' }, g);
-    const h = bh, crack = `M${x - .5} ${y - h / 2 + .8}L${x + 3} ${y - 3.2}L${x - 2.6} ${y + .4}L${x + 2.4} ${y + 3.6}L${x - .8} ${y + h / 2 - .8}`;
-    el('path', { d: crack, fill: 'none', stroke: '#141414', 'stroke-width': 3.6, 'stroke-linejoin': 'miter' }, v.mark);
-    el('path', { d: crack, fill: 'none', stroke: '#ff5a4e', 'stroke-width': 1, 'stroke-linejoin': 'miter' }, v.mark);
+    // blown: a clean break slanting through its body, the well showing through, the ends either side of it scorched;
+    // and a red badge on the box's top right corner (top right as it is seen, however the fuse is turned)
+    const sc = el('linearGradient', { id: `fu1s${n}`, x1: 0, x2: 1 }, v.mark);
+    for (const [o, a] of [[0, 0], [.38, .55], [.5, .85], [.62, .55], [1, 0]]) el('stop', { offset: o, 'stop-color': '#000', 'stop-opacity': a }, sc);
+    el('rect', { x: x - 12, y: y - bh / 2, width: 24, height: bh, fill: `url(#fu1s${n})` }, v.mark);
+    const gx = 2.2, sl = 3.2, gy = bh / 2 + .8;
+    el('path', { d: `M${x - gx + sl} ${y - gy}L${x + gx + sl} ${y - gy}L${x + gx - sl} ${y + gy}L${x - gx - sl} ${y + gy}Z`, fill: '#272727' }, v.mark);
+    let [dx, dy] = [BOX / 2 - 3, -BOX / 2 + 3]; for (let r = 0; r < (4 - (p.rot || 0)) % 4; r++) [dx, dy] = [-dy, dx];
+    const bx = x + dx, by = y + dy;
+    el('circle', { cx: bx, cy: by, r: 9, fill: '#1f1f1f', stroke: FU1_COL, 'stroke-width': 1.4 }, v.mark);
+    el('circle', { cx: bx, cy: by, r: 6, fill: '#E8413C' }, v.mark);
+    el('path', { d: `M${bx - 2.6} ${by - 2.6}L${bx + 2.6} ${by + 2.6}M${bx + 2.6} ${by - 2.6}L${bx - 2.6} ${by + 2.6}`, stroke: '#fff', 'stroke-width': 1.6, 'stroke-linecap': 'round' }, v.mark);
   } else if (isPwr3(p)) {
     drawPwr(p, g, x, y, v, chan);
   } else if (p.t === 'mtr') {
