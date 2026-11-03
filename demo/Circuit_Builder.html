@@ -679,7 +679,7 @@ const isOp = p => p.t === 'btn' || p.t === 'sel' || p.t === 'lsw' || p.t === 'ts
    switch's stepped stem under its blade, and joined to its right side a sensing bulb's box with a thermometer in it.
    For now it is worked as a limit switch is (as a momentary pushbutton), by its own key (opKey: 'T' and its number,
    so TS1 and LS1 are two switches); the thermometer rises as it is worked and falls back as it is let go. NO or NC. */
-const TSW_COL = '#FF0032', TSW_T = 90, TSW_SB = 30, TSW_HALF = 70;   // (its ends; its bulb box's width; how far out its body and box reach)
+const TSW_COL = '#FF0032', TSW_T = 80, TSW_SB = 30, TSW_HALF = 70;   // (its ends; its bulb box's width; how far out its body and box reach)
 const isLim = p => p.t === 'lsw' || p.t === 'tsw', opKey = p => p.t === 'tsw' ? 'T' + p.L : p.L;
 /* A limit switch (lsw): numbered (p.L '1', '2'... : LS1, LS2), worked like a momentary pushbutton (down[p.L]) and
    tinting the current with its colour as one does. Normally open or closed (p.nc); held (p.held): actuated by the
