@@ -308,8 +308,9 @@ body.fs .wrap { padding-top: 8px; }
 .st-sseg button:hover { color: #fff; }
 .st-sseg button[aria-pressed="true"] { background: #4a4b50; color: #ffc000; }
 .st-srow { display: flex; align-items: center; gap: 8px; }
-.st-srow input[type=range] { width: 130px; accent-color: #ffc000; cursor: pointer; }
-.st-sout { font: 700 .82rem var(--ui); color: #ffc000; background: #1e1f22; border: 1px solid #55585c; border-radius: 5px; padding: 2px 7px; min-width: 3.6em; text-align: center; font-variant-numeric: tabular-nums; }
+.st-sout { font: 700 .82rem var(--ui); color: #ffc000; background: #1e1f22; border: 1px solid #55585c; border-radius: 5px; padding: 3px 7px; width: 4.6em; text-align: center; font-variant-numeric: tabular-nums; }
+.st-sout:hover { border-color: #8a8d91; }
+.st-sout:focus { outline: none; border-color: #ffc000; }
 
 .demo-badge { font-style: normal; font-size: .7rem; font-weight: 800; letter-spacing: .08em; color: #1c1d1f; background: #9be03a; border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }
 </style>
@@ -482,7 +483,7 @@ body.fs .wrap { padding-top: 8px; }
         <button type="button" data-speed="0.25" data-tip="Quarter speed: follow the current step by step">¼×</button><button type="button" data-speed="0.5" data-tip="Half speed">½×</button><button type="button" data-speed="1" aria-pressed="true" data-tip="Normal speed">1×</button><button type="button" data-speed="2" data-tip="Double speed">2×</button>
       </div>
       <input type="range" class="speed-slider" id="speed-slider" min="0" max="100" step="1" value="29" aria-label="Speed, from a tenth of normal to three hundred times normal" data-tip="Any speed from 0.1× up to 300×. Turned all the way up, the circuit acts almost at once, as a real one does.">
-      <input type="text" id="speed-out" value="1×" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Speed (type one in, such as 3 or 0.4)" data-tip="Type a speed and press Enter: any from 0.1× to 300×, such as 3 or 0.4">
+      <input type="text" class="speed-box" id="speed-out" value="1×" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Speed (type one in, such as 3 or 0.4)" data-tip="Type a speed and press Enter: any from 0.1× to 300×, such as 3 or 0.4">
     </div>
     <div class="row" id="timer-group"><span class="label">Timers</span>
       <div class="seg" role="group" aria-label="How timers count">
@@ -553,7 +554,7 @@ body.fs .wrap { padding-top: 8px; }
     <div class="st-speed">
       <div class="st-plate">Speed</div>
       <div class="st-sseg" role="group" aria-label="Speed"><button type="button" data-speed="0.25" data-tip="Quarter speed">¼×</button><button type="button" data-speed="0.5" data-tip="Half speed">½×</button><button type="button" data-speed="1" aria-pressed="true" data-tip="Normal speed">1×</button><button type="button" data-speed="2" data-tip="Double speed">2×</button></div>
-      <div class="st-srow"><input type="range" class="speed-slider" id="st-slider" min="0" max="100" step="1" value="29" aria-label="Speed, from a tenth of normal to three hundred times normal" data-tip="Any speed from 0.1× up to 300×"><span class="st-sout" id="st-sout">1×</span></div>
+      <div class="st-srow"><input type="text" class="st-sout speed-box" id="st-sout" value="1×" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Speed (type one in, such as 3 or 0.4)" data-tip="Type a speed and press Enter: any from 0.1× to 300×, such as 3 or 0.4"></div>
     </div>
   </div>
 </div>
@@ -5076,8 +5077,7 @@ const fmtSpeed = s => (s < 1 ? +s.toFixed(2) : s < 10 ? +s.toFixed(1) : Math.rou
 function setSpeed(s, fromSlider) {
   speed = s;
   for (const sl of document.querySelectorAll('.speed-slider')) if (sl !== fromSlider) sl.value = sliderOf(s);   // (the Simulation tab's and the operator station's)
-  document.getElementById('st-sout').textContent = fmtSpeed(s);
-  const o = document.getElementById('speed-out'); if (document.activeElement !== o) o.value = fmtSpeed(s);
+  for (const o of document.querySelectorAll('.speed-box')) if (document.activeElement !== o) o.value = fmtSpeed(s);   // (the Simulation tab's and the operator station's)
   document.querySelectorAll('[data-speed]').forEach(x => x.setAttribute('aria-pressed', String(Math.abs(+x.dataset.speed - s) < 1e-9)));
 }
 document.querySelectorAll('[data-speed]').forEach(b => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
@@ -5090,13 +5090,14 @@ function setTimersReal(v) {
 document.querySelectorAll('[data-treal]').forEach(b => b.addEventListener('click', () => setTimersReal(b.dataset.treal === '1')));
 try { if (localStorage.getItem('oo-circuit-builder-demo:timers-real') === '1') setTimersReal(true); } catch (_) {}
 // a speed typed in (Enter, or leaving the box): any from SPEED_MIN to SPEED_MAX; anything else puts the box back
-const speedBox = document.getElementById('speed-out');
+document.querySelectorAll('.speed-box').forEach(speedBox => {
 speedBox.addEventListener('focus', () => { speedBox.value = String(+speed.toFixed(3)); speedBox.select(); });
 speedBox.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') speedBox.blur(); else if (e.key === 'Escape') { speedBox.value = fmtSpeed(speed); speedBox.dataset.cancel = '1'; speedBox.blur(); } });
 speedBox.addEventListener('blur', () => {
   const v = parseFloat(speedBox.value.replace(',', '.').replace(/[x×]/gi, ''));
   if (!speedBox.dataset.cancel && isFinite(v) && v > 0) setSpeed(Math.min(SPEED_MAX, Math.max(SPEED_MIN, v)));
   delete speedBox.dataset.cancel; speedBox.value = fmtSpeed(speed);
+});
 });
 document.querySelectorAll('.speed-slider').forEach(sl => sl.addEventListener('input', e => {
   let s = SPEED_MIN * Math.pow(SPEED_MAX / SPEED_MIN, +e.target.value / 100);
