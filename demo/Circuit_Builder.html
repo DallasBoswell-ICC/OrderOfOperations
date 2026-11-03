@@ -1389,7 +1389,7 @@ function startRun() {
   FED_AT = {}; COMP = null; LV = null; COND = {}; needPaint = true; PTL = new Map(); PARR = new Map(); PDARK = new Map(); phFault = '';
   LSW_T = {};
   CON = {}; for (const p of parts) if (p.t === 'con' || p.t === 'mst') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };
-  DSC = {}; BLOWN = {}; OLTRIP = {}; MOT = {}; DSC_T = {}; OLRESET = {};   // every coil starts off
+  DSC = {}; BLOWN = {}; FU1T = {}; OLTRIP = {}; MOT = {}; DSC_T = {}; OLRESET = {};   // every coil starts off
   tl = NET.nodes.map(() => [[-1e9, null]]);
   for (const p of parts) { delete p._chg; delete p._lead; delete p._sh; delete p._lv; delete p._ph; }
   // which way each button and coil is passed through (as if every button were passing current)
@@ -1911,7 +1911,7 @@ function faultFuses() {
   return out;
 }
 // fuses blow (just after, so they are seen to)
-function blowSoon(fs, t) { if (fs.length) schedule(t + .05, () => { const now = fs.filter(k => !BLOWN[k.id]); if (!now.length) return; for (const k of now) BLOWN[k.id] = { t: evT }; switched(now, evT); }); }
+function blowSoon(fs, t) { if (fs.length) schedule(t + .05, () => { const now = fs.filter(k => !BLOWN[k.id]); if (!now.length) return; for (const k of now) { BLOWN[k.id] = { t: evT }; if (k.t === 'fu1') FU1T[k.id] = evT; } switched(now, evT); }); }
 // L1 joined straight to L2: the single fuse on the way blows (the first, nearest L1, where there are several in a row)
 function shortFuses() {
   const out = [];
@@ -1926,13 +1926,13 @@ function shortFuses() {
 function workPower(p, i) {
   const t = simT;
   if (p.t === 'dsc') { if (DSC[p.id]) delete DSC[p.id]; else DSC[p.id] = { t }; DSC_T[p.id] = t; if (t + SWING > busyUntil) busyUntil = t + SWING; switched(p._poles, t); }
-  else if (p.t === 'fu1') { if (BLOWN[p.id]) delete BLOWN[p.id]; else BLOWN[p.id] = { t }; switched([p], t); }
+  else if (p.t === 'fu1') { if (BLOWN[p.id]) delete BLOWN[p.id]; else BLOWN[p.id] = { t }; FU1T[p.id] = t; switched([p], t); }
   else if (p.t === 'fus') { const k = p._poles[i]; if (BLOWN[k.id]) delete BLOWN[k.id]; else BLOWN[k.id] = { t }; switched([k], t); }
   else if (p.t === 'olh') setTrip(p.L, !OLTRIP[p.L], t);
   else if (p.t === 'olc') setTrip(p.L, false, t);
   needPaint = true;
 }
-let DSC_T = {}, OLRESET = {};
+let DSC_T = {}, OLRESET = {}, FU1T = {};   // (FU1T: when each single fuse last blew or was put back)
 
 // spread out from what is in h (times in d), through wires and closed switches, into the junctions ok allows
 function walk(h, d, ok, step = e => conducts(e)) {
@@ -3094,21 +3094,30 @@ function paintSol(p, v) {
   }
 }
 /* a single fuse: the current crosses it from the end it comes in at, as along a wire (the new colour behind its front,
-   what was there before ahead of it). Blown: each half the colour at its own end (the line side lit, the load side
-   dark), and the crack. */
+   what was there before ahead of it). Blown: the line half stays lit, and the load half goes dark from the break out
+   to its end; put back: the current carries on from the break to the load end. Either way the front reaches the load
+   end just as the change sets off along the lead beyond (so it flows on without a pause). */
 function paintFu1(p, v) {
-  const cl = closed(p), set = (L, a, b, c) => { L.r.setAttribute('x', (v.x0 + a * v.span).toFixed(2)); L.r.setAttribute('width', ((b - a) * v.span).toFixed(2)); L.g.setAttribute('fill', c || 'transparent'); };
+  const cl = closed(p), d = DIRS.find(x => x.e.part === p), S = d && d.from === p._b ? 'B' : 'A', outS = S === 'A' ? 'B' : 'A';
+  const inN = S === 'A' ? p._a : p._b, outN = S === 'A' ? p._b : p._a;
+  // (spans along it, from the end the current comes in at: 0 there, 1 at the other)
+  const set = (L, a, b, c) => { if (S === 'B') [a, b] = [1 - b, 1 - a]; L.r.setAttribute('x', (v.x0 + a * v.span).toFixed(2)); L.r.setAttribute('width', (Math.max(0, b - a) * v.span).toFixed(2)); L.g.setAttribute('fill', c || 'transparent'); };
+  const T0 = FU1T[p.id], ev = T0 !== undefined && p._lead && p._lead[outS].find(e => e.from === 'body' && e.t0 >= T0 - 1e-9);
+  const end = ev ? ev.t0 : T0 + v.span / 2 / V, g = T0 === undefined ? 1 : clamp01((simT - T0) / Math.max(end - T0, 1e-6));
   let k;
   if (!cl) {
-    const a = colAt(p._a, simT), b = colAt(p._b, simT); k = `x|${a}|${b}`; if (k === v.k) return; v.k = k;
-    set(v.old, 0, .5, a); set(v.cur, .5, 1, b);
+    const a = colAt(inN, simT), b = colAt(outN, simT); k = `x|${a}|${b}|${g.toFixed(3)}`; if (k === v.k) return; v.k = k;
+    set(v.cur, 0, .5, a); if (g < 1) set(v.old, .5 + .5 * g, 1, a); else set(v.old, .5, 1, b);   // (the load half going dark from the break)
+  } else if (g < 1) {
+    const a = colAt(inN, simT); k = `r|${a}|${g.toFixed(3)}`; if (k === v.k) return; v.k = k;
+    set(v.cur, 0, .5 + .5 * g, a); set(v.old, .5 + .5 * g, 1, colAt(outN, simT));   // (put back: on from the break)
   } else {
-    const d = DIRS.find(x => x.e.part === p), S = d && d.from === p._b ? 'B' : 'A', evs = p._lead && p._lead[S], Ls = TERM(p) - BOX / 2, at = e => e.t0 + Ls / V;
+    const evs = p._lead && p._lead[S], Ls = TERM(p) - BOX / 2, at = e => e.t0 + Ls / V;
     let i = -1; if (evs) for (let n = 0; n < evs.length; n++) if (at(evs[n]) <= simT + 1e-9) i = n;
     const cur = i >= 0 ? evs[i] : null, now = cur && cur.col, prev = i > 0 ? evs[i - 1].col : null;
     const f = cur ? clamp01((simT - at(cur)) * V / v.span) : 0;
     k = `${S}|${f.toFixed(3)}|${now}|${prev}`; if (k === v.k) return; v.k = k;
-    if (S === 'A') { set(v.cur, 0, f, now); set(v.old, f, 1, prev); } else { set(v.cur, 1 - f, 1, now); set(v.old, 0, 1 - f, prev); }
+    set(v.cur, 0, f, now); set(v.old, f, 1, prev);
   }
   v.mark.setAttribute('display', cl ? 'none' : '');
 }
