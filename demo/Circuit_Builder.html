@@ -2186,14 +2186,17 @@ function drawPart(p, g, x, y, chan, onStation) {
     // (the line side lit, the load side dark)
     framed('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: FU1_COL, 'stroke-width': 1.8 }, g);
     const sh = 2 * BOX * .045, inset = 4.5, bw = 43.75, bh = 16.25, br = 4.7, cw = 7.5, ch = 20, line = 'rgba(0,0,0,.35)';
-    v.fa = []; v.fb = [];
-    for (const s of [-1, 1]) (s < 0 ? v.fa : v.fb).push(el('rect', { x: s < 0 ? x - BOX / 2 + inset : x + bw / 2, y: y - sh / 2, width: BOX / 2 - inset - bw / 2, height: sh, fill: GREY }, g));
-    const sg = el('g', { fill: '#111', filter: 'url(#fShadow)' }, g);   // (its shadow: the fuse's own shape)
-    el('rect', { x: x - bw / 2, y: y - bh / 2, width: bw, height: bh, rx: br }, sg);
+    // the way through it, stems and body as one shape: grey beneath, and over that the current's colour, in two layers
+    // (the new colour, and what was there before it) cut to length by a clip each, so the current can be seen to
+    // cross it from the end it comes in at (see run.js)
+    const way = gp => { for (const s of [-1, 1]) el('rect', { x: s < 0 ? x - BOX / 2 + inset : x + bw / 2 - cw / 2, y: y - sh / 2, width: BOX / 2 - inset - bw / 2 + cw / 2, height: sh }, gp);
+      el('rect', { x: x - bw / 2, y: y - bh / 2, width: bw, height: bh, rx: br }, gp); };
+    const sg = el('g', { fill: '#111', filter: 'url(#fShadow)' }, g);   // (the caps' shadow)
     for (const x0 of [x - bw / 2, x + bw / 2 - cw]) el('rect', { x: x0, y: y - ch / 2, width: cw, height: ch, rx: .4 }, sg);
-    v.fa.push(el('rect', { x: x - bw / 2 + cw / 2, y: y - bh / 2, width: bw / 2 - cw / 2, height: bh, fill: GREY }, g));
-    v.fb.push(el('rect', { x, y: y - bh / 2, width: bw / 2 - cw / 2, height: bh, fill: GREY }, g));
-    el('rect', { x: x - bw / 2, y: y - bh / 2, width: bw, height: bh, rx: br, fill: 'url(#gGloss)', stroke: line, 'stroke-width': .6 }, g);
+    way(el('g', { fill: GREY }, g));
+    const n = ++solMaskN, layer = nm => { const id = `fu1${nm}${n}`, r = el('rect', { x: x - BOX / 2, y: y - BOX / 2, width: 0, height: BOX }, el('clipPath', { id }, g)), lg = el('g', { fill: 'transparent', 'clip-path': `url(#${id})` }, g); way(lg); return { r, g: lg }; };
+    v.old = layer('o'); v.cur = layer('c'); v.x0 = x - BOX / 2; v.span = BOX;
+    el('rect', { x: x - bw / 2, y: y - bh / 2, width: bw, height: bh, rx: br, fill: 'url(#gGloss)' }, g);
     for (const x0 of [x - bw / 2, x + bw / 2 - cw]) {
       el('rect', { x: x0, y: y - ch / 2, width: cw, height: ch, rx: .4, fill: 'url(#gTerm)', stroke: line, 'stroke-width': .6 }, g);
       el('rect', { x: x0, y: y - ch / 2, width: cw, height: ch, rx: .4, fill: 'url(#gGloss)' }, g); }
@@ -3015,13 +3018,7 @@ function paintView(V) {
       if (v.arrow) { v.arrow.setAttribute('fill', s.shut ? v.col : BLADE_GREY); v.arrow.setAttribute('stroke', s.shut ? v.col : BLADE_GREY); }
       v.posts.setAttribute('fill', s.shut ? v.col : GREY);
     } else if (p.t === 'sel') paintSel(p, v);
-    else if (p.t === 'fu1') {
-      // whole: the colour going through it; blown: each half the colour at its own end
-      const a = colAt(p._a, simT), b = colAt(p._b, simT), cl = closed(p), c = a || b;
-      k = `${a}|${b}|${cl}`; if (k === v.k) continue; v.k = k;
-      for (const e of v.fa) e.setAttribute('fill', (cl ? c : a) || GREY); for (const e of v.fb) e.setAttribute('fill', (cl ? c : b) || GREY);
-      v.mark.setAttribute('display', cl ? 'none' : '');
-    }
+    else if (p.t === 'fu1') paintFu1(p, v);
     else if (p.t === 'sol') paintSol(p, v);
     else if (p.t === 'lamp') {
       const lit = litOf(p); k = lit.toFixed(3);
@@ -3086,6 +3083,25 @@ function paintSol(p, v) {
     if (ln.getAttribute('d') !== d) ln.setAttribute('d', d);
     ln.setAttribute('stroke', col || 'transparent'); ln.setAttribute('stroke-dasharray', dash);
   }
+}
+/* a single fuse: the current crosses it from the end it comes in at, as along a wire (the new colour behind its front,
+   what was there before ahead of it). Blown: each half the colour at its own end (the line side lit, the load side
+   dark), and the crack. */
+function paintFu1(p, v) {
+  const cl = closed(p), set = (L, a, b, c) => { L.r.setAttribute('x', (v.x0 + a * v.span).toFixed(2)); L.r.setAttribute('width', ((b - a) * v.span).toFixed(2)); L.g.setAttribute('fill', c || 'transparent'); };
+  let k;
+  if (!cl) {
+    const a = colAt(p._a, simT), b = colAt(p._b, simT); k = `x|${a}|${b}`; if (k === v.k) return; v.k = k;
+    set(v.old, 0, .5, a); set(v.cur, .5, 1, b);
+  } else {
+    const d = DIRS.find(x => x.e.part === p), S = d && d.from === p._b ? 'B' : 'A', evs = p._lead && p._lead[S], Ls = TERM(p) - BOX / 2, at = e => e.t0 + Ls / V;
+    let i = -1; if (evs) for (let n = 0; n < evs.length; n++) if (at(evs[n]) <= simT + 1e-9) i = n;
+    const cur = i >= 0 ? evs[i] : null, now = cur && cur.col, prev = i > 0 ? evs[i - 1].col : null;
+    const f = cur ? clamp01((simT - at(cur)) * V / v.span) : 0;
+    k = `${S}|${f.toFixed(3)}|${now}|${prev}`; if (k === v.k) return; v.k = k;
+    if (S === 'A') { set(v.cur, 0, f, now); set(v.old, f, 1, prev); } else { set(v.cur, 1 - f, 1, now); set(v.old, 0, 1 - f, prev); }
+  }
+  v.mark.setAttribute('display', cl ? 'none' : '');
 }
 /* a transformer: what reaches its terminals lights their leads; the primary fills as the solenoid's bolt does, in the
    colour of the current coming in, from the end it comes in at, and drains the same way; once the primary is fed the
