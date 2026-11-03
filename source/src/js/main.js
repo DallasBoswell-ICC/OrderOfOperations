@@ -22,9 +22,8 @@ const SPEED_MIN = 0.1, SPEED_MAX = 300, sliderOf = s => 100 * Math.log10(s / SPE
 const fmtSpeed = s => (s < 1 ? +s.toFixed(2) : s < 10 ? +s.toFixed(1) : Math.round(s)) + '×';
 function setSpeed(s, fromSlider) {
   speed = s;
-  const sl = document.getElementById('speed-slider');
-  if (!fromSlider) sl.value = sliderOf(s);
-  const o = document.getElementById('speed-out'); if (document.activeElement !== o) o.value = fmtSpeed(s);
+  for (const sl of document.querySelectorAll('.speed-slider')) if (sl !== fromSlider) sl.value = sliderOf(s);   // (the Simulation tab's and the operator station's)
+  for (const o of document.querySelectorAll('.speed-box')) if (document.activeElement !== o) o.value = fmtSpeed(s);   // (the Simulation tab's and the operator station's)
   document.querySelectorAll('[data-speed]').forEach(x => x.setAttribute('aria-pressed', String(Math.abs(+x.dataset.speed - s) < 1e-9)));
 }
 document.querySelectorAll('[data-speed]').forEach(b => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
@@ -37,7 +36,7 @@ function setTimersReal(v) {
 document.querySelectorAll('[data-treal]').forEach(b => b.addEventListener('click', () => setTimersReal(b.dataset.treal === '1')));
 try { if (localStorage.getItem('oo-circuit-builder:timers-real') === '1') setTimersReal(true); } catch (_) {}
 // a speed typed in (Enter, or leaving the box): any from SPEED_MIN to SPEED_MAX; anything else puts the box back
-const speedBox = document.getElementById('speed-out');
+document.querySelectorAll('.speed-box').forEach(speedBox => {
 speedBox.addEventListener('focus', () => { speedBox.value = String(+speed.toFixed(3)); speedBox.select(); });
 speedBox.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') speedBox.blur(); else if (e.key === 'Escape') { speedBox.value = fmtSpeed(speed); speedBox.dataset.cancel = '1'; speedBox.blur(); } });
 speedBox.addEventListener('blur', () => {
@@ -45,12 +44,13 @@ speedBox.addEventListener('blur', () => {
   if (!speedBox.dataset.cancel && isFinite(v) && v > 0) setSpeed(Math.min(SPEED_MAX, Math.max(SPEED_MIN, v)));
   delete speedBox.dataset.cancel; speedBox.value = fmtSpeed(speed);
 });
-document.getElementById('speed-slider').addEventListener('input', e => {
+});
+document.querySelectorAll('.speed-slider').forEach(sl => sl.addEventListener('input', e => {
   let s = SPEED_MIN * Math.pow(SPEED_MAX / SPEED_MIN, +e.target.value / 100);
   // it snaps to the round speeds when close to one (within about 13%: from 9× it lands on 10×)
   for (const k of SPEED_SNAPS) if (Math.abs(Math.log(s / k)) < 0.13) s = k;
-  setSpeed(s, true);
-});
+  setSpeed(s, e.target);
+}));
 document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
   mode = b.dataset.mode; document.querySelectorAll('[data-mode]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
   for (const L in down) if (down[L] && !(blocksOf(L)[0] || {}).maint) press(L, false);

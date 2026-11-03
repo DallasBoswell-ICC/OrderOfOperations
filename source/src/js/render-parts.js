@@ -43,7 +43,7 @@ function screw(x, y, g, bare) {
 }
 const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
-const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L} Fuses` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -72,7 +72,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -81,6 +81,14 @@ let solMaskN = 0;   // (each solenoid drawing's mask has an id of its own)
 function framed(tag, a, g) { el(tag, Object.assign({}, a, { fill: 'none', stroke: WELL, 'stroke-width': (a['stroke-width'] || 1.8) + 2 * BEZEL }), g); return el(tag, a, g); }
 // a part, in the same style as the Order of Operations simulators
 function drawPart(p, g, x, y, chan, onStation) {
+  // a single fuse turned: drawn as it is lying down, turned about its middle (its name, though, stays upright: above
+  // it, or beside it when it stands upright)
+  if (p.t === 'fu1' && p.rot && !g.turned) {
+    const a = { transform: `rotate(${p.rot * 90} ${x} ${y})` }, g2 = el('g', a, g); g2.turned = true;
+    const v = drawPart(p, g2, x, y, el('g', a, chan || g), true);
+    if (!onStation) (v.cap = el('text', vert(p) ? { x: x + BOX / 2 + 12, y: y + 4.5, 'text-anchor': 'start', class: 'cap' } : { x, y: y - capTop(p), 'text-anchor': 'middle', class: 'cap' }, g)).textContent = captionOf(p);
+    return v;
+  }
   const v = {}, T = TERM(p), half = BODYH(p.t) / 2;
   if (!isBox(p) && p.t !== 'xfm' && !isPwr3(p) && p.t !== 'mtr') el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
   // the short leads between the part's ends and its body: each drawn in two pieces, so the current can flow along
@@ -168,6 +176,13 @@ function drawPart(p, g, x, y, chan, onStation) {
     drawLimit(p, g, x, y, v);
   } else if (p.t === 'xfm') {
     drawXfm(p, g, x, y, v, chan);
+  } else if (p.t === 'fu1') {
+    // a single fuse (Dallas's design): in a box the size of a contact's, a contact's stems in from either side to a
+    // cartridge fuse, its body between two square metal end caps. Stems and body a relay's grey until current goes
+    // through (then its colour, see run.js); blown, a slanting break through its middle and a red badge, and each side the colour that reaches it
+    // (the line side lit, the load side dark)
+    framed('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: FU1_COL, 'stroke-width': 1.8 }, g);
+    Object.assign(v, fuseBody(g, x, y, p.rot || 0));
   } else if (isPwr3(p)) {
     drawPwr(p, g, x, y, v, chan);
   } else if (p.t === 'mtr') {
@@ -423,6 +438,44 @@ function rdot(g, cx, cy, r) {
   return m;
 }
 const pwrEdge = p => p.t === 'dsc' ? DSC_COL : p.t === 'fus' ? FUS_COL : p.t === 'mst' ? coilColour(p.L) : OL_COL;
+/* The fuse of a single fuse, and of each pole of the three-pole fuses (Dallas's design): a contact's stems in from either
+   side of a box BOX wide to a cartridge fuse, its body between two square metal end caps. The way through (stems and
+   body as one shape) is a relay's grey beneath, and over that the current's colour in two layers, each cut to length by
+   a clip, so the current can be seen to cross it (see paintFuse). Blown: a clean break slanting through its body, the
+   ends either side scorched, and a red badge on the top right corner of its square (as it is seen, however it is
+   turned: rot, quarter turns). */
+function fuseBody(g, x, y, rot) {
+  const v = {};
+  const sh = 2 * BOX * .045, inset = 4.5, bw = 43.75, bh = 16.25, br = 4.7, cw = 7.5, ch = 20, line = 'rgba(0,0,0,.35)';
+  // the way through it, stems and body as one shape: grey beneath, and over that the current's colour, in two layers
+  // (the new colour, and what was there before it) cut to length by a clip each, so the current can be seen to
+  // cross it from the end it comes in at (see run.js)
+  const way = gp => { for (const s of [-1, 1]) el('rect', { x: s < 0 ? x - BOX / 2 + inset : x + bw / 2 - cw / 2, y: y - sh / 2, width: BOX / 2 - inset - bw / 2 + cw / 2, height: sh }, gp);
+    el('rect', { x: x - bw / 2, y: y - bh / 2, width: bw, height: bh, rx: br }, gp); };
+  const sg = el('g', { fill: '#111', filter: 'url(#fShadow)' }, g);   // (the caps' shadow)
+  for (const x0 of [x - bw / 2, x + bw / 2 - cw]) el('rect', { x: x0, y: y - ch / 2, width: cw, height: ch, rx: .4 }, sg);
+  way(el('g', { fill: GREY }, g));
+  const n = ++solMaskN, layer = nm => { const id = `fu1${nm}${n}`, r = el('rect', { x: x - BOX / 2, y: y - BOX / 2, width: 0, height: BOX }, el('clipPath', { id }, g)), lg = el('g', { fill: 'transparent', 'clip-path': `url(#${id})` }, g); way(lg); return { r, g: lg }; };
+  v.old = layer('o'); v.cur = layer('c'); v.x0 = x - BOX / 2; v.span = BOX;
+  el('rect', { x: x - bw / 2, y: y - bh / 2, width: bw, height: bh, rx: br, fill: 'url(#gGloss)' }, g);
+  for (const x0 of [x - bw / 2, x + bw / 2 - cw]) {
+    el('rect', { x: x0, y: y - ch / 2, width: cw, height: ch, rx: .4, fill: 'url(#gTerm)', stroke: line, 'stroke-width': .6 }, g);
+    el('rect', { x: x0, y: y - ch / 2, width: cw, height: ch, rx: .4, fill: 'url(#gGloss)' }, g); }
+  v.mark = el('g', { display: 'none' }, g);
+  // blown: a clean break slanting through its body, the well showing through, the ends either side of it scorched;
+  // and a red badge on the box's top right corner (top right as it is seen, however the fuse is turned)
+  const sc = el('linearGradient', { id: `fu1s${n}`, x1: 0, x2: 1 }, v.mark);
+  for (const [o, a] of [[0, 0], [.38, .55], [.5, .85], [.62, .55], [1, 0]]) el('stop', { offset: o, 'stop-color': '#000', 'stop-opacity': a }, sc);
+  el('rect', { x: x - 12, y: y - bh / 2, width: 24, height: bh, fill: `url(#fu1s${n})` }, v.mark);
+  const gx = 2.2, sl = 3.2, gy = bh / 2 + .8;
+  el('path', { d: `M${x - gx + sl} ${y - gy}L${x + gx + sl} ${y - gy}L${x + gx - sl} ${y + gy}L${x - gx - sl} ${y + gy}Z`, fill: '#272727' }, v.mark);
+  let [dx, dy] = [BOX / 2 - 3, -BOX / 2 + 3]; for (let r = 0; r < (4 - rot) % 4; r++) [dx, dy] = [-dy, dx];
+  const bx = x + dx, by = y + dy;
+  el('circle', { cx: bx, cy: by, r: 9, fill: '#1f1f1f', stroke: FU1_COL, 'stroke-width': 1.4 }, v.mark);
+  el('circle', { cx: bx, cy: by, r: 6, fill: '#E8413C' }, v.mark);
+  el('path', { d: `M${bx - 2.6} ${by - 2.6}L${bx + 2.6} ${by + 2.6}M${bx + 2.6} ${by - 2.6}L${bx - 2.6} ${by + 2.6}`, stroke: '#fff', 'stroke-width': 1.6, 'stroke-linecap': 'round' }, v.mark);
+  return v;
+}
 /* A disconnect, fuses, a starter's main contacts or an overload's heaters: one tall box with a pole on each of the
    three lines (see PWR_DY), its ends out to the left and right. The poles that are worked together (all but the
    fuses) are joined by a dashed line, as on a print; a disconnect has its handle on top. */
@@ -448,23 +501,8 @@ function drawPwr(p, g, x, y, v, chan) {
       el('rect', { x: bx1, y: py - bh / 2, width: bx2 - bx1, height: bh, rx: bh / 2, fill: 'url(#gGloss)' }, q.bg);
       q.pa = P.a; q.pb = P.b; q.px = P.x1; q.py = py;
     } else if (p.t === 'fus') {
-      // a cartridge fuse: metal end caps, and between them a body as tall as they are, a relay's grey until the phase
-      // passes through it, as along a wire (a clip that sweeps across from its line side, see paintPwr). Blown: a
-      // jagged crack through its body, and only its line side lit. (Clear of the box's sides, its leads outside it.)
-      const id = 'fuc' + (++solMaskN), L = 22, cw = 6, h = 20, bw = 2 * (L - cw);
-      el('rect', { x: x - L - .9, y: py - h / 2 - .9, width: 2 * L + 1.8, height: h + 1.8, rx: .9, fill: '#111', filter: 'url(#fShadow)' }, g);
-      el('rect', { x: x - bw / 2, y: py - h / 2, width: bw, height: h, fill: GREY }, g);
-      q.clip = el('rect', { x: x - L, y: py - h / 2, width: 0, height: h }, el('clipPath', { id }, g));
-      q.col = el('rect', { x: x - bw / 2, y: py - h / 2, width: bw, height: h, fill: 'transparent', 'clip-path': `url(#${id})` }, g);
-      el('rect', { x: x - bw / 2, y: py - h / 2, width: bw, height: h, fill: 'url(#gGloss)', stroke: '#111', 'stroke-width': 1.6 }, g);
-      for (const s of [-1, 1]) { const cx0 = s < 0 ? x - L : x + bw / 2;
-        el('rect', { x: cx0, y: py - h / 2, width: cw, height: h, fill: 'url(#gTerm)', stroke: '#111', 'stroke-width': 1.6 }, g);
-        el('rect', { x: cx0, y: py - h / 2, width: cw, height: h, fill: 'url(#gGloss)' }, g); }
-      q.mark = el('g', { display: 'none' }, g);
-      const crack = `M${x - .5} ${py - h / 2 + .8}L${x + 3} ${py - 4}L${x - 2.6} ${py + .6}L${x + 2.4} ${py + 4.6}L${x - .8} ${py + h / 2 - .8}`;
-      el('path', { d: crack, fill: 'none', stroke: '#141414', 'stroke-width': 3.6, 'stroke-linejoin': 'miter' }, q.mark);
-      el('path', { d: crack, fill: 'none', stroke: '#ff5a4e', 'stroke-width': 1, 'stroke-linejoin': 'miter' }, q.mark);
-      q.x0 = x - L; q.span = 2 * L;
+      // a fuse on each line: the single fuse's (see fuseBody)
+      Object.assign(q, fuseBody(g, x, py, 0));
     } else {
       // an overload heater: the NEMA heater symbol, as a raised element
       q.e = rpath(g, `M${x - 27} ${py}H${x - 14}V${py - 16}H${x + 14}V${py}H${x + 27}`, 5.2);

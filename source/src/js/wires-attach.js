@@ -102,6 +102,10 @@ function restore(st) { const o = JSON.parse(st); parts = o.parts; wires = o.wire
 // the wire would be hidden under it and cut
 function wireInTheWay(p) {
   const h = BODYH(p.t) / 2, L = p.x - TERM(p), R = p.x + TERM(p);
+  if (vert(p)) { const T = p.y - TERM(p), Bm = p.y + TERM(p);   // (standing upright: the same, on its side)
+    return wires.some(w => w.y1 === w.y2
+      ? w.y1 > T && w.y1 < Bm && Math.max(w.x1, w.x2) > p.x - h && Math.min(w.x1, w.x2) < p.x + h
+      : w.x1 !== p.x && Math.abs(w.x1 - p.x) < h && Math.max(w.y1, w.y2) > T && Math.min(w.y1, w.y2) < Bm); }
   return wires.some(w => w.x1 === w.x2
     ? w.x1 > L && w.x1 < R && Math.max(w.y1, w.y2) > p.y - h && Math.min(w.y1, w.y2) < p.y + h
     : w.y1 !== p.y && Math.abs(w.y1 - p.y) < h && Math.max(w.x1, w.x2) > L && Math.min(w.x1, w.x2) < R);

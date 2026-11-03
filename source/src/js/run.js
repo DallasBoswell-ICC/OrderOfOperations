@@ -72,6 +72,7 @@ function paintView(V) {
       if (v.arrow) { v.arrow.setAttribute('fill', s.shut ? v.col : BLADE_GREY); v.arrow.setAttribute('stroke', s.shut ? v.col : BLADE_GREY); }
       v.posts.setAttribute('fill', s.shut ? v.col : GREY);
     } else if (p.t === 'sel') paintSel(p, v);
+    else if (p.t === 'fu1') paintFu1(p, v);
     else if (p.t === 'sol') paintSol(p, v);
     else if (p.t === 'lamp') {
       const lit = litOf(p); k = lit.toFixed(3);
@@ -136,6 +137,39 @@ function paintSol(p, v) {
     if (ln.getAttribute('d') !== d) ln.setAttribute('d', d);
     ln.setAttribute('stroke', col || 'transparent'); ln.setAttribute('stroke-dasharray', dash);
   }
+}
+/* a single fuse: the current crosses it from the end it comes in at, as along a wire (the new colour behind its front,
+   what was there before ahead of it). Blown: the line half stays lit, and the load half goes dark from the break out
+   to its end; put back: the current carries on from the break to the load end. Either way the front reaches the load
+   end just as the change sets off along the lead beyond (so it flows on without a pause). */
+// a stretch of a fuse's way through, from a to b (0 at the end its current comes in at, 1 at the other) in colour c
+function fuseSpan(v, S, L, a, b, c) { if (S === 'B') [a, b] = [1 - b, 1 - a]; L.r.setAttribute('x', (v.x0 + a * v.span).toFixed(2)); L.r.setAttribute('width', (Math.max(0, b - a) * v.span).toFixed(2)); L.g.setAttribute('fill', c || 'transparent'); }
+function paintFu1(p, v) {
+  const cl = closed(p), d = DIRS.find(x => x.e.part === p), S = d && d.from === p._b ? 'B' : 'A', outS = S === 'A' ? 'B' : 'A';
+  const inN = S === 'A' ? p._a : p._b, outN = S === 'A' ? p._b : p._a;
+  // (spans along it, from the end the current comes in at: 0 there, 1 at the other)
+  const set = (L, a, b, c) => fuseSpan(v, S, L, a, b, c);
+  const T0 = FU1T[p.id], ev = T0 !== undefined && p._lead && p._lead[outS].find(e => e.from === 'body' && e.t0 >= T0 - 1e-9);
+  const end = ev ? ev.t0 : T0 + v.span / 2 / V, g = T0 === undefined ? 1 : clamp01((simT - T0) / Math.max(end - T0, 1e-6));
+  let k;
+  if (!cl) {
+    // (the load end keeps its old colour a moment longer than the fuse, until the dark has run out along its lead: the
+    // load half takes it again only once that has gone, so it never flashes back on behind the dark)
+    const Ls = TERM(p) - BOX / 2, gone = T0 === undefined || simT >= end + Ls / V + 1e-6;
+    const a = colAt(inN, simT), b = gone ? colAt(outN, simT) : null; k = `x|${a}|${b}|${g.toFixed(3)}`; if (k === v.k) return; v.k = k;
+    set(v.cur, 0, .5, a); if (g < 1) set(v.old, .5 + .5 * g, 1, a); else set(v.old, .5, 1, b);   // (the load half going dark from the break)
+  } else if (g < 1) {
+    const a = colAt(inN, simT); k = `r|${a}|${g.toFixed(3)}`; if (k === v.k) return; v.k = k;
+    set(v.cur, 0, .5 + .5 * g, a); set(v.old, .5 + .5 * g, 1, colAt(outN, simT));   // (put back: on from the break)
+  } else {
+    const evs = p._lead && p._lead[S], Ls = TERM(p) - BOX / 2, at = e => e.t0 + Ls / V;
+    let i = -1; if (evs) for (let n = 0; n < evs.length; n++) if (at(evs[n]) <= simT + 1e-9) i = n;
+    const cur = i >= 0 ? evs[i] : null, now = cur && cur.col, prev = i > 0 ? evs[i - 1].col : null;
+    const f = cur ? clamp01((simT - at(cur)) * V / v.span) : 0;
+    k = `${S}|${f.toFixed(3)}|${now}|${prev}`; if (k === v.k) return; v.k = k;
+    set(v.cur, 0, f, now); set(v.old, f, 1, prev);
+  }
+  v.mark.setAttribute('display', cl ? 'none' : '');
 }
 /* a transformer: what reaches its terminals lights their leads; the primary fills as the solenoid's bolt does, in the
    colour of the current coming in, from the end it comes in at, and drains the same way; once the primary is fed the
@@ -224,12 +258,15 @@ function paintPwr(p, v) {
       q.bg.setAttribute('transform', `rotate(${(-32 * lev).toFixed(2)} ${q.px} ${q.py})`);
       q.blade.setAttribute('fill', cl && c ? c : BLADE_GREY); q.pa.setAttribute('fill', a || GREY); q.pb.setAttribute('fill', b || GREY);
     } else if (p.t === 'fus') {
-      // filled from its line side as the phase crosses it (over the time it takes to cross the pole); half, blown
-      const ln = PLINE.get(k), lc = colAt(ln ?? k._a, simT), at = PARR.get(ln ?? k._a), fromA = (ln ?? k._a) === k._a;
-      const f = !lc ? 0 : Math.min(cl ? 1 : .5, at ? clamp01((simT - at.t) * V / 80) : 1);
-      key = `${lc}|${f.toFixed(3)}|${cl}`; if (key === q.k) return; q.k = key;
-      q.col.setAttribute('fill', lc || 'transparent');
-      q.clip.setAttribute('width', (q.span * f).toFixed(2)); q.clip.setAttribute('x', fromA ? q.x0 : (q.x0 + q.span * (1 - f)).toFixed(2));
+      // as a single fuse does (see paintFu1), the phase crossing it from its line side as it arrives there (over the
+      // time it takes to cross the pole); blown, the load half going dark from the break; put back, on from the break
+      const ln = PLINE.get(k) ?? k._a, S = ln === k._a ? 'A' : 'B', lc = colAt(ln, simT), at = PARR.get(ln);
+      const T0 = FU1T[k.id], g = T0 === undefined ? 1 : clamp01((simT - T0) * V / (q.span / 2));
+      const f = !lc ? 0 : at ? clamp01((simT - at.t) * V / 80) : 1;
+      key = `${lc}|${f.toFixed(3)}|${cl}|${g.toFixed(3)}`; if (key === q.k) return; q.k = key;
+      if (!cl) { fuseSpan(q, S, q.cur, 0, .5, lc); fuseSpan(q, S, q.old, .5 + .5 * g, 1, g < 1 ? lc : null); }
+      else if (g < 1) { fuseSpan(q, S, q.cur, 0, .5 + .5 * g, lc); fuseSpan(q, S, q.old, .5 + .5 * g, 1, null); }
+      else { fuseSpan(q, S, q.cur, 0, f, lc); fuseSpan(q, S, q.old, f, 1, null); }
       q.mark.setAttribute('display', cl ? 'none' : '');
     } else if (p.t === 'mst') {
       const s = CON[p.id] || { t0: -1e9, closing: false, shut: false }, e = ease(s.t0), lift = (s.closing ? lerp(OPEN_LIFT, 0, e) : lerp(0, OPEN_LIFT, e)).toFixed(2);
@@ -260,7 +297,7 @@ function paintMtr(p, v) {
 // a three-phase part clicked while running (see workPower): the pole nearest where it was clicked
 function bindPower(g, p) {
   g.setAttribute('class', 'dev'); g.setAttribute('tabindex', '0'); g.setAttribute('role', 'button');
-  g.setAttribute('aria-label', captionOf(p) + (p.t === 'dsc' ? ': turn on or off' : p.t === 'fus' ? ': blow a fuse, or put it back' : p.t === 'olh' ? ': trip it, or reset it' : ': reset its overload'));
+  g.setAttribute('aria-label', captionOf(p) + (p.t === 'dsc' ? ': turn on or off' : p.t === 'fus' || p.t === 'fu1' ? ': blow a fuse, or put it back' : p.t === 'olh' ? ': trip it, or reset it' : ': reset its overload'));
   g.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); const q = pt(e); workPower(p, Math.max(0, Math.min(2, Math.round((q.y - p.y) / PWR_DY) + 1))); });
   g.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); workPower(p, 1); } });
 }

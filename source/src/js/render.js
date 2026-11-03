@@ -103,17 +103,17 @@ function renderInto(target, V, L) {
       for (const [tx, ty] of terms(p)) el('circle', { cx: tx, cy: ty, r: 6.5, fill: '#404040', stroke: '#c8c8c8', 'stroke-width': 1.6, style: 'cursor:crosshair' }, g);
       // the other drawings of a selected button (the same button): a fainter outline, so they show as one
       if (!selHasP(p.id) && isOp(p) && sel && sel.parts.size === 1 && parts.some(q => q !== p && q.t === p.t && q.L === p.L && selHasP(q.id)))
-        el('rect', { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 32, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44, rx: 12, fill: 'none', stroke: '#ffc000', 'stroke-opacity': .5, 'stroke-width': 1.6, 'stroke-dasharray': '3 5', 'pointer-events': 'none' }, g);
-      if (selHasP(p.id)) el('rect', { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 32, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44, rx: 12, fill: 'rgba(255,192,0,.07)', stroke: '#ffc000', 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'pointer-events': 'none' }, g);
+        el('rect', { ...selRect(p), rx: 12, fill: 'none', stroke: '#ffc000', 'stroke-opacity': .5, 'stroke-width': 1.6, 'stroke-dasharray': '3 5', 'pointer-events': 'none' }, g);
+      if (selHasP(p.id)) el('rect', { ...selRect(p), rx: 12, fill: 'rgba(255,192,0,.07)', stroke: '#ffc000', 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'pointer-events': 'none' }, g);
       // a continuation on its own selected: a rotate handle at the corner of the selection, to turn it either way
-      if (isBox(p) && selHasP(p.id) && sel.parts.size === 1 && V === view) rotHandle(p, p.x + TERM(p) + 18, p.y - BODYH(p.t) / 2 - 38, B(p.y).ends);
+      if (turns(p) && selHasP(p.id) && sel.parts.size === 1 && V === view) { const r = selRect(p); rotHandle(p, r.x + r.width + 6, r.y - 6, B(p.y).ends); }
       if (issues.has(p.id)) {
         const m = issues.get(p.id), note = typeof m === 'object';   // (a note, in gold: a load in series; a warning, in red)
         const t = el('text', { x: p.x, y: p.y - capTop(p) - 17, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': note ? 600 : 700, fill: note ? '#e2cc85' : '#ff8a7a', 'pointer-events': 'none', stroke: '#404040', 'stroke-width': 4, 'paint-order': 'stroke' }, g);
         t.textContent = note ? m.note : '⚠ ' + m;
       }
     } else if (p.t === 'btn' || p.t === 'lsw') bindButton(g, p);
-    else if ((isPwr3(p) && p.t !== 'mst') || p.t === 'olc') bindPower(g, p);
+    else if ((isPwr3(p) && p.t !== 'mst') || p.t === 'olc' || p.t === 'fu1') bindPower(g, p);
     else if (p.t === 'sel') bindSelector(g, p);
   }
   if (SHOW.rungs) drawRefs(V, B, net);
@@ -125,6 +125,8 @@ function renderInto(target, V, L) {
   }
   if (V === view) { V.overlay = el('g', { 'pointer-events': 'none' }); if (preview) drawPreview(); }
 }
+// the dashed outline round a selected part (a single fuse standing upright: its outline stands upright too, its name beside it)
+function selRect(p) { return vert(p) ? { x: p.x - BOX / 2 - 12, y: p.y - TERM(p) - 12, width: BOX + 120, height: 2 * TERM(p) + 24 } : { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 32, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44 }; }
 function drawPreview() {
   view.overlay.innerHTML = '';
   // a green ring wherever the wire end or part end being moved will connect

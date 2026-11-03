@@ -63,7 +63,7 @@ function renderProps() {
     const top = Math.max(10, ...Object.keys(cnt).map(Number)) + 3;
     for (let n = 1; n <= top; n++) { const c = cnt[String(n)] || 0; ns.add(new Option(`${n}` + (c ? ` (joins ${c} other${c > 1 ? 's' : ''})` : ''), String(n), false, String(n) === p.L)); }
   }
-  document.getElementById('props-box').hidden = !(p && (isSrc(p) || isPh(p)));
+  document.getElementById('props-box').hidden = !(p && (isSrc(p) || isPh(p) || p.t === 'fu1'));
   document.getElementById('props-ph').hidden = !(p && isPh(p));
   if (p && isPh(p)) {
     // which phase it is, and that phase's colour (the colour of every box and wire of that phase)
@@ -87,7 +87,7 @@ function renderProps() {
     document.getElementById('ls-kind').value = (p.nc ? 'nc' : 'no') + (p.held ? 'h' : '');
     swatches(document.getElementById('ls-colour'), p.color, hex => each(q => q.color = hex));
   }
-  const pw = p && (isPwr3(p) || p.t === 'olc' || p.t === 'mtr');
+  const pw = p && (isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'fu1');
   document.getElementById('props-pwr').hidden = !pw;
   if (pw) {
     // a number of its own (a disconnect, fuses, an overload, a motor); the overload an OL contact belongs to; the coil
@@ -104,10 +104,10 @@ function renderProps() {
       for (let n = 1; n <= Math.max(5, ...[...ols].map(Number)); n++) ns.add(new Option('OL' + n + (ols.has(String(n)) ? '' : ' (not placed)'), String(n), false, String(n) === p.L));
     } else {
       lab.textContent = 'Number';
-      const pre = { dsc: 'DS', fus: 'FU', olh: 'OL', mtr: 'MTR' }[p.t], taken = new Set(parts.filter(q => q.t === p.t && q !== p).map(q => q.L));
+      const pre = { dsc: 'DS', fus: 'FU', fu1: 'FU', olh: 'OL', mtr: 'MTR' }[p.t], fuse = q => q.t === 'fus' || q.t === 'fu1', taken = new Set(parts.filter(q => (q.t === p.t || fuse(p) && fuse(q)) && q !== p).map(q => q.L));   // (fuses, single or three-pole, number from one count)
       for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n))) ns.add(new Option(pre + n, String(n), false, String(n) === p.L));
     }
-    document.getElementById('pw-how').textContent = { dsc: 'In Run: click it to turn it off or on', fus: 'In Run: click a fuse to blow it, or to put a new one in', mst: 'Its contacts close while its coil is in', olh: 'In Run: click it to trip it, or to reset it', olc: 'Opens while its overload is tripped (click it in Run to reset)', mtr: 'Runs on three phases; two swapped, it runs backward' }[p.t];
+    document.getElementById('pw-how').textContent = { dsc: 'In Run: click it to turn it off or on', fus: 'In Run: click a fuse to blow it, or to put a new one in', fu1: 'Blows on a short through it. In Run: click it to blow it, or to put a new one in', mst: 'Its contacts close while its coil is in', olh: 'In Run: click it to trip it, or to reset it', olc: 'Opens while its overload is tripped (click it in Run to reset)', mtr: 'Runs on three phases; two swapped, it runs backward' }[p.t];
   }
   document.getElementById('props-xfm').hidden = !(p && p.t === 'xfm');
   if (p && p.t === 'xfm') {
@@ -294,7 +294,7 @@ document.getElementById('x-num').addEventListener('change', e => { const p = sel
 function setPhaseCol(L, hex) { hex = hex.toUpperCase(); if (PH_COL[L - 1] === hex) return; snapshot(); PH_COL = PH_COL.map((c, i) => i === L - 1 ? hex : c); say(`L${L} colour changed.`); draw(); }
 document.getElementById('ph-num').addEventListener('change', e => { if (selGroup().every(isPh)) each(p => p.L = e.target.value); });
 document.getElementById('ph-custom').addEventListener('change', e => { const p = selGroup()[0]; if (p && isPh(p)) setPhaseCol(p.L, e.target.value); });
-document.getElementById('box-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(isBox)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
-document.getElementById('pw-num').addEventListener('change', e => { const G = selGroup(); if (G.length && G.every(p => isPwr3(p) || p.t === 'olc' || p.t === 'mtr')) each(p => p.L = e.target.value); });
+document.getElementById('box-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(turns)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
+document.getElementById('pw-num').addEventListener('change', e => { const G = selGroup(); if (G.length && G.every(p => isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'fu1')) each(p => p.L = e.target.value); });
 document.getElementById('ls-num').addEventListener('change', e => { if (selGroup().every(p => p.t === 'lsw')) each(p => p.L = e.target.value); });
 document.getElementById('ls-kind').addEventListener('change', e => { const k = e.target.value; if (selGroup().every(p => p.t === 'lsw')) each(p => { p.nc = k.startsWith('nc'); if (k.endsWith('h')) p.held = true; else delete p.held; }); });

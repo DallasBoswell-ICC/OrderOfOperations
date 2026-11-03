@@ -47,7 +47,7 @@ function startRun() {
   FED_AT = {}; COMP = null; LV = null; COND = {}; needPaint = true; PTL = new Map(); PARR = new Map(); PDARK = new Map(); phFault = '';
   LSW_T = {};
   CON = {}; for (const p of parts) if (p.t === 'con' || p.t === 'mst') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };
-  DSC = {}; BLOWN = {}; OLTRIP = {}; MOT = {}; DSC_T = {}; OLRESET = {};   // every coil starts off
+  DSC = {}; BLOWN = {}; FU1T = {}; OLTRIP = {}; MOT = {}; DSC_T = {}; OLRESET = {};   // every coil starts off
   tl = NET.nodes.map(() => [[-1e9, null]]);
   for (const p of parts) { delete p._chg; delete p._lead; delete p._sh; delete p._lv; delete p._ph; }
   // which way each button and coil is passed through (as if every button were passing current)
@@ -72,7 +72,7 @@ function startRun() {
   INLEAD = new Map();
   for (const d of DIRS) if (d.e.kind === 'part') { const p = d.e.part; if (!INLEAD.has(d.from)) INLEAD.set(d.from, []); INLEAD.get(d.from).push([p, d.from === p._a ? 'A' : 'B']); }
   findPaths(); findNoway(); findReach();
-  checkShort();
+  checkShort(); if (shortNow) blowSoon(shortFuses(), 0);
   ALLOW = allowNow();
   for (const [id, v] of NET.feedV) if (v === 1) setRec(id, shortNow ? null : EGG(), 0);
   phaseWays(); phasesNow(0);
@@ -453,7 +453,7 @@ function moveContact(c, t) {
 function switched(sw, t) {
   COMP = null; LV = null;
   const was = shortNow;
-  checkShort();
+  checkShort(); if (shortNow) blowSoon(shortFuses(), t);
   if (was !== shortNow) for (const [id, fv] of NET.feedV) if (fv === 1) setRec(id, shortNow ? null : EGG(), t);
   for (const d of DIRS) if (d.e.kind === 'part' && sw.includes(d.e.part)) {
     const r = REC.get(d.from) || null;
@@ -528,7 +528,7 @@ function phasesNow(t) {
   for (const p of parts) if (p.t === 'mtr') for (const n of p._t) for (const at of when(n)) schedule(at, () => motorsNow(evT));
   motorsNow(t);
   // two phases joined: the fuses on the way between them blow (just after, so they are seen to)
-  if (phFault) { const fs = faultFuses(); if (fs.length) schedule(t + .05, () => { const now = fs.filter(k => !BLOWN[k.id]); if (!now.length) return; for (const k of now) BLOWN[k.id] = { t: evT }; switched(now, evT); }); }
+  if (phFault) blowSoon(faultFuses(), t);
   needPaint = true;
 }
 /* A motor runs with three different phases at T1, T2 and T3 (forward with them in order, L1-L2-L3 or a turn of it;
@@ -558,7 +558,7 @@ function tripFeeding(m, t) { const f = compNow(), cs = new Set(m._t.map(n => f(n
 // the other on another)
 function faultFuses() {
   const out = [], PH = NET.PH;
-  for (const p of parts) if (p.t === 'fus' && p._poles) for (const k of p._poles) {
+  for (const k of parts.flatMap(p => p.t === 'fus' && p._poles ? p._poles : p.t === 'fu1' ? [p] : [])) {   // (a single fuse is a pole of its own)
     if (BLOWN[k.id]) continue;
     const f = components(NET, e => conducts(e) && e.part !== k), a = f(k._a), b = f(k._b);
     if (a === b) continue;
@@ -568,17 +568,29 @@ function faultFuses() {
   }
   return out;
 }
+// fuses blow (just after, so they are seen to)
+function blowSoon(fs, t) { if (fs.length) schedule(t + .05, () => { const now = fs.filter(k => !BLOWN[k.id]); if (!now.length) return; for (const k of now) { BLOWN[k.id] = { t: evT }; FU1T[k.id] = evT; } switched(now, evT); }); }
+// L1 joined straight to L2: the single fuse on the way blows (the first, nearest L1, where there are several in a row)
+function shortFuses() {
+  const out = [];
+  for (const p of [...parts].sort((a, b) => a.x - b.x || a.y - b.y)) if (p.t === 'fu1' && !BLOWN[p.id]) {
+    const f = components(NET, e => conducts(e) && e.part !== p);
+    if (f(NET.L1) !== f(NET.L2)) { out.push(p); break; }
+  }
+  return out;
+}
 // clicked while running: a disconnect's handle (all of it), a fuse (the pole clicked: blown, or put back), an overload
 // (trip it, or reset it once tripped), an overload contact (reset)
 function workPower(p, i) {
   const t = simT;
   if (p.t === 'dsc') { if (DSC[p.id]) delete DSC[p.id]; else DSC[p.id] = { t }; DSC_T[p.id] = t; if (t + SWING > busyUntil) busyUntil = t + SWING; switched(p._poles, t); }
-  else if (p.t === 'fus') { const k = p._poles[i]; if (BLOWN[k.id]) delete BLOWN[k.id]; else BLOWN[k.id] = { t }; switched([k], t); }
+  else if (p.t === 'fu1') { if (BLOWN[p.id]) delete BLOWN[p.id]; else BLOWN[p.id] = { t }; FU1T[p.id] = t; switched([p], t); }
+  else if (p.t === 'fus') { const k = p._poles[i]; if (BLOWN[k.id]) delete BLOWN[k.id]; else BLOWN[k.id] = { t }; FU1T[k.id] = t; switched([k], t); }
   else if (p.t === 'olh') setTrip(p.L, !OLTRIP[p.L], t);
   else if (p.t === 'olc') setTrip(p.L, false, t);
   needPaint = true;
 }
-let DSC_T = {}, OLRESET = {};
+let DSC_T = {}, OLRESET = {}, FU1T = {};   // (FU1T: when each fuse, single or a three-pole fuses' pole, last blew or was put back)
 
 // spread out from what is in h (times in d), through wires and closed switches, into the junctions ok allows
 function walk(h, d, ok, step = e => conducts(e)) {

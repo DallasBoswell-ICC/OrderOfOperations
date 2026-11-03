@@ -22,14 +22,22 @@ function normalize() {
   };
   for (const [y, list] of Hs) {
     let ivs = merge(list, true, y);
-    for (const p of parts) if (p.y === y) {
+    for (const p of parts) if (p.y === y && !vert(p)) {
       const a = p.x - TERM(p), b = p.x + TERM(p), next = [];
       for (const [lo, hi, ids] of ivs) { if (hi <= a || lo >= b) next.push([lo, hi, ids]); else { if (lo < a) next.push([lo, a, ids]); if (hi > b) next.push([b, hi, ids]); } }
       ivs = next;
     }
     for (const [lo, hi, ids] of ivs) keep(lo, y, hi, y, ids);
   }
-  for (const [x, list] of Vs) for (const [lo, hi, ids] of merge(list, false, x)) keep(x, lo, x, hi, ids);
+  for (const [x, list] of Vs) {
+    let ivs = merge(list, false, x);
+    for (const p of parts) if (p.x === x && vert(p)) {   // (a single fuse standing upright sits in an upright run)
+      const a = p.y - TERM(p), b = p.y + TERM(p), next = [];
+      for (const [lo, hi, ids] of ivs) { if (hi <= a || lo >= b) next.push([lo, hi, ids]); else { if (lo < a) next.push([lo, a, ids]); if (hi > b) next.push([b, hi, ids]); } }
+      ivs = next;
+    }
+    for (const [lo, hi, ids] of ivs) keep(x, lo, x, hi, ids);
+  }
   wires = out;
   if (sel) { for (const id of [...sel.wires]) if (!wires.some(w => w.id === id)) sel.wires.delete(id); if (!selCount()) sel = null; }
 }
@@ -40,4 +48,4 @@ function addWire(segs) {
   normalize(); sel = null; say(''); draw();
 }
 function hitWire(p) { return wires.find(w => p.x >= Math.min(w.x1, w.x2) - 10 && p.x <= Math.max(w.x1, w.x2) + 10 && p.y >= Math.min(w.y1, w.y2) - 10 && p.y <= Math.max(w.y1, w.y2) + 10); }
-function hitPart(p) { return parts.find(q => Math.abs(p.x - q.x) < (q.t === 'xfm' || q.t === 'mtr' ? halfW(q.t) - (q.t === 'mtr' ? 20 : 0) : TERM(q) - 8) && Math.abs(p.y - q.y) < BODYH(q.t) / 2 + 6); }
+function hitPart(p) { return parts.find(q => vert(q) ? Math.abs(p.y - q.y) < TERM(q) - 8 && Math.abs(p.x - q.x) < BOX / 2 + 6 : Math.abs(p.x - q.x) < (q.t === 'xfm' || q.t === 'mtr' ? halfW(q.t) - (q.t === 'mtr' ? 20 : 0) : TERM(q) - 8) && Math.abs(p.y - q.y) < BODYH(q.t) / 2 + 6); }

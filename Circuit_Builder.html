@@ -299,6 +299,18 @@ body.fs .wrap { padding-top: 8px; }
 /* a ribbon button that opens a menu of parts: a small arrow after its name */
 .menu-btn span::after { content: ""; display: inline-block; width: 0; height: 0; margin-left: 5px; vertical-align: 2px; border: 4px solid transparent; border-top: 5px solid currentColor; border-bottom: 0; }
 .tp-menu .gbody { justify-content: center; }
+
+/* the speed on the operator station: a plate, the preset speeds, and the slider with the speed beside it */
+.st-speed { margin-top: 14px; padding-top: 10px; border-top: 1px solid #9a9ea2; display: grid; justify-items: center; gap: 7px; }
+.st-speed .st-plate { min-width: 0; }
+.st-sseg { display: inline-flex; background: #2c2d30; border: 1px solid #55585c; border-radius: 7px; padding: 2px; box-shadow: inset 0 1px 2px rgba(0,0,0,.5); }
+.st-sseg button { font: 600 .78rem var(--ui); color: #bfbfbf; background: transparent; border: 0; border-radius: 5px; padding: 4px 9px; cursor: pointer; }
+.st-sseg button:hover { color: #fff; }
+.st-sseg button[aria-pressed="true"] { background: #4a4b50; color: #ffc000; }
+.st-srow { display: flex; align-items: center; gap: 8px; }
+.st-sout { font: 700 .82rem var(--ui); color: #ffc000; background: #1e1f22; border: 1px solid #55585c; border-radius: 5px; padding: 3px 7px; width: 4.6em; text-align: center; font-variant-numeric: tabular-nums; }
+.st-sout:hover { border-color: #8a8d91; }
+.st-sout:focus { outline: none; border-color: #ffc000; }
 </style>
 </head>
 <body>
@@ -468,8 +480,8 @@ body.fs .wrap { padding-top: 8px; }
       <div class="seg" role="group" aria-label="Speed">
         <button type="button" data-speed="0.25" data-tip="Quarter speed: follow the current step by step">¼×</button><button type="button" data-speed="0.5" data-tip="Half speed">½×</button><button type="button" data-speed="1" aria-pressed="true" data-tip="Normal speed">1×</button><button type="button" data-speed="2" data-tip="Double speed">2×</button>
       </div>
-      <input type="range" id="speed-slider" min="0" max="100" step="1" value="29" aria-label="Speed, from a tenth of normal to three hundred times normal" data-tip="Any speed from 0.1× up to 300×. Turned all the way up, the circuit acts almost at once, as a real one does.">
-      <input type="text" id="speed-out" value="1×" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Speed (type one in, such as 3 or 0.4)" data-tip="Type a speed and press Enter: any from 0.1× to 300×, such as 3 or 0.4">
+      <input type="range" class="speed-slider" id="speed-slider" min="0" max="100" step="1" value="29" aria-label="Speed, from a tenth of normal to three hundred times normal" data-tip="Any speed from 0.1× up to 300×. Turned all the way up, the circuit acts almost at once, as a real one does.">
+      <input type="text" class="speed-box" id="speed-out" value="1×" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Speed (type one in, such as 3 or 0.4)" data-tip="Type a speed and press Enter: any from 0.1× to 300×, such as 3 or 0.4">
     </div>
     <div class="row" id="timer-group"><span class="label">Timers</span>
       <div class="seg" role="group" aria-label="How timers count">
@@ -536,6 +548,12 @@ body.fs .wrap { padding-top: 8px; }
     <svg class="st-screw" style="left:6px;bottom:6px" viewBox="-10 -10 20 20" aria-hidden="true"></svg><svg class="st-screw" style="right:6px;bottom:6px" viewBox="-10 -10 20 20" aria-hidden="true"></svg>
     <div class="st-name" id="st-name">Operator station</div>
     <div class="st-grid" id="st-grid"></div>
+    <!-- the speed, as on the Simulation tab (the two kept in step) -->
+    <div class="st-speed">
+      <div class="st-plate">Speed</div>
+      <div class="st-sseg" role="group" aria-label="Speed"><button type="button" data-speed="0.25" data-tip="Quarter speed">¼×</button><button type="button" data-speed="0.5" data-tip="Half speed">½×</button><button type="button" data-speed="1" aria-pressed="true" data-tip="Normal speed">1×</button><button type="button" data-speed="2" data-tip="Double speed">2×</button></div>
+      <div class="st-srow"><input type="text" class="st-sout speed-box" id="st-sout" value="1×" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Speed (type one in, such as 3 or 0.4)" data-tip="Type a speed and press Enter: any from 0.1× to 300×, such as 3 or 0.4"></div>
+    </div>
   </div>
 </div>
 <div class="toast" id="toast" role="status" hidden></div>
@@ -583,7 +601,7 @@ body.fs .wrap { padding-top: 8px; }
 </div>
 <div class="tp-menu" id="tp-menu" role="menu" aria-label="Three-phase parts" hidden>
   <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="ph-1" data-tip="L1 phase of a three-phase supply: wire to its left, right or bottom (turn it with R to face other ways). Its phase, in its own colour, reaches everything wired to it."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" style="stroke:var(--ph1)" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" style="stroke:var(--ph1l)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L1<br>phase</span></button><button type="button" class="tool big" data-part="ph-2" data-tip="L2 phase of a three-phase supply: wire to its left, right or bottom (turn it with R to face other ways). Its phase, in its own colour, reaches everything wired to it."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" style="stroke:var(--ph2)" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" style="stroke:var(--ph2l)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L2<br>phase</span></button><button type="button" class="tool big" data-part="ph-3" data-tip="L3 phase of a three-phase supply: wire to its left, right or bottom (turn it with R to face other ways). Its phase, in its own colour, reaches everything wired to it."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" style="stroke:var(--ph3)" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" style="stroke:var(--ph3l)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L3<br>phase</span></button></div><div class="gname">Supply</div></div>
-  <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="dsc" data-tip="Disconnect: one switch on all three lines, its poles worked together. In Run, click it to turn the power off or on."><svg viewBox="0 0 30 26"><rect x="7" y="8.5" width="16" height="16.5" rx="3" fill="#222" stroke="#c9d2dd" stroke-width="1.3"/><rect x="8.5" y="1" width="13" height="6.5" rx="2" fill="#222" stroke="#c9d2dd" stroke-width="1.1"/><circle cx="15" cy="4.3" r="2.3" fill="#4a4a4a"/><path d="M13.4 5.9l3.2-3.2" stroke="#E8413C" stroke-width="1.9" stroke-linecap="round"/><path d="M15 12v10" stroke="#9a9a9a" stroke-width=".8" stroke-dasharray="1.3 1.3"/><g stroke="#b5b5b5" stroke-width="1.6" stroke-linecap="round"><path d="M10.5 12.2h9M10.5 16.7h9M10.5 21.2h9"/></g><g fill="#7c7c7c"><circle cx="10.5" cy="12.2" r="1.5"/><circle cx="19.5" cy="12.2" r="1.5"/><circle cx="10.5" cy="16.7" r="1.5"/><circle cx="19.5" cy="16.7" r="1.5"/><circle cx="10.5" cy="21.2" r="1.5"/><circle cx="19.5" cy="21.2" r="1.5"/></g></svg><span>Disconnect</span></button><button type="button" class="tool big" data-part="fus" data-tip="Fuses: one on each of the three lines. They blow when two phases are joined after them; in Run, click one to blow it (or put a new one in)."><svg viewBox="0 0 30 26"><rect x="7" y="1.5" width="16" height="23" rx="3" fill="#222" stroke="#9aa0a6" stroke-width="1.3"/><rect x="11.4" y="4.6" width="7.2" height="4.4" fill="var(--ph1)"/><rect x="11.4" y="10.8" width="7.2" height="4.4" fill="var(--ph2)"/><rect x="11.4" y="17" width="7.2" height="4.4" fill="var(--ph3)"/><g fill="#c8c8c8" stroke="#111" stroke-width=".6"><rect x="9.6" y="4.6" width="1.8" height="4.4"/><rect x="18.6" y="4.6" width="1.8" height="4.4"/><rect x="9.6" y="10.8" width="1.8" height="4.4"/><rect x="18.6" y="10.8" width="1.8" height="4.4"/><rect x="9.6" y="17" width="1.8" height="4.4"/><rect x="18.6" y="17" width="1.8" height="4.4"/></g></svg><span>Fuses</span></button></div><div class="gname">Protection</div></div>
+  <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="dsc" data-tip="Disconnect: one switch on all three lines, its poles worked together. In Run, click it to turn the power off or on."><svg viewBox="0 0 30 26"><rect x="7" y="8.5" width="16" height="16.5" rx="3" fill="#222" stroke="#c9d2dd" stroke-width="1.3"/><rect x="8.5" y="1" width="13" height="6.5" rx="2" fill="#222" stroke="#c9d2dd" stroke-width="1.1"/><circle cx="15" cy="4.3" r="2.3" fill="#4a4a4a"/><path d="M13.4 5.9l3.2-3.2" stroke="#E8413C" stroke-width="1.9" stroke-linecap="round"/><path d="M15 12v10" stroke="#9a9a9a" stroke-width=".8" stroke-dasharray="1.3 1.3"/><g stroke="#b5b5b5" stroke-width="1.6" stroke-linecap="round"><path d="M10.5 12.2h9M10.5 16.7h9M10.5 21.2h9"/></g><g fill="#7c7c7c"><circle cx="10.5" cy="12.2" r="1.5"/><circle cx="19.5" cy="12.2" r="1.5"/><circle cx="10.5" cy="16.7" r="1.5"/><circle cx="19.5" cy="16.7" r="1.5"/><circle cx="10.5" cy="21.2" r="1.5"/><circle cx="19.5" cy="21.2" r="1.5"/></g></svg><span>Disconnect</span></button><button type="button" class="tool big" data-part="fus" data-tip="Fuses: one on each of the three lines. They blow when two phases are joined after them; in Run, click one to blow it (or put a new one in)."><svg viewBox="0 0 30 26"><rect x="7" y="1.5" width="16" height="23" rx="3" fill="#222" stroke="#c8c8c8" stroke-width="1.3"/><rect x="8.6" y="6.1" width="12.8" height="1.4" fill="var(--ph1)"/><rect x="11" y="5.0" width="8" height="3.6" rx=".9" fill="var(--ph1)"/><rect x="10.6" y="4.5" width="1.7" height="4.6" fill="#d0d0d0"/><rect x="17.7" y="4.5" width="1.7" height="4.6" fill="#d0d0d0"/><rect x="8.6" y="12.3" width="12.8" height="1.4" fill="var(--ph2)"/><rect x="11" y="11.2" width="8" height="3.6" rx=".9" fill="var(--ph2)"/><rect x="10.6" y="10.7" width="1.7" height="4.6" fill="#d0d0d0"/><rect x="17.7" y="10.7" width="1.7" height="4.6" fill="#d0d0d0"/><rect x="8.6" y="18.5" width="12.8" height="1.4" fill="var(--ph3)"/><rect x="11" y="17.4" width="8" height="3.6" rx=".9" fill="var(--ph3)"/><rect x="10.6" y="16.9" width="1.7" height="4.6" fill="#d0d0d0"/><rect x="17.7" y="16.9" width="1.7" height="4.6" fill="#d0d0d0"/></svg><span>Fuses</span></button><button type="button" class="tool big" data-part="fu1" data-tip="Fuse: a single fuse on one wire, in the control circuit or on one line. A short circuit through it blows it; in Run, click it to blow it (or put a new one in). Turn it with R to stand it upright."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#c8c8c8" stroke-width="1.3"/><g fill="#7a7a7a"><rect x="6" y="12" width="2.4" height="2"/><rect x="21.6" y="12" width="2.4" height="2"/><rect x="8.4" y="10.3" width="13.2" height="5.4" rx="1.4"/></g><g fill="#d0d0d0" stroke="#111" stroke-width=".4"><rect x="8.4" y="9.6" width="2.5" height="6.8"/><rect x="19.1" y="9.6" width="2.5" height="6.8"/></g></svg><span>Fuse</span></button></div><div class="gname">Protection</div></div>
   <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="mst" data-tip="Starter: its main contacts, one on each of the three lines, worked by the coil with its letter (M to begin with) in the control circuit."><svg viewBox="0 0 30 26"><rect x="7" y="1.5" width="16" height="23" rx="3" fill="#222" stroke="#FFDC00" stroke-width="1.3"/><path d="M15 6v14" stroke="#9a9a9a" stroke-width=".8" stroke-dasharray="1.3 1.3"/><g fill="#FFDC00"><rect x="9.6" y="4.2" width="10.8" height="1.9" rx=".95"/><rect x="9.6" y="11.2" width="10.8" height="1.9" rx=".95"/><rect x="9.6" y="18.2" width="10.8" height="1.9" rx=".95"/></g><g fill="#7c7c7c"><circle cx="11.4" cy="8" r="1.5"/><circle cx="18.6" cy="8" r="1.5"/><circle cx="11.4" cy="15" r="1.5"/><circle cx="18.6" cy="15" r="1.5"/><circle cx="11.4" cy="22" r="1.5"/><circle cx="18.6" cy="22" r="1.5"/></g></svg><span>Starter</span></button><button type="button" class="tool big" data-part="olh" data-tip="Overload: its heaters, one on each of the three lines. It trips when its motor runs on two phases; in Run, click it to trip it (or reset it). Its OL contact in the control circuit opens while it is tripped."><svg viewBox="0 0 30 26"><rect x="7" y="1.5" width="16" height="23" rx="3" fill="#222" stroke="#FF6F59" stroke-width="1.4"/><path d="M9 7.5h3v-3h6v3h3M9 14h3v-3h6v3h3M9 20.5h3v-3h6v3h3" fill="none" stroke="#FF6F59" stroke-width="1.5" stroke-linejoin="round"/></svg><span>Overload</span></button><button type="button" class="tool big" data-part="olc" data-tip="OL contact: the overload’s normally closed contact, for the control circuit. It opens while its overload is tripped."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FF6F59" stroke-width="1.6"/><rect x="8" y="12.7" width="14" height="2.6" rx="1.3" fill="#FF6F59"/><circle cx="10" cy="14" r="2.4" fill="#FF6F59"/><circle cx="20" cy="14" r="2.4" fill="#FF6F59"/></svg><span>OL<br>contact</span></button></div><div class="gname">Starter</div></div>
   <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="mtr" data-tip="Motor: T1, T2 and T3 on its left. It runs with all three phases (forward in order, backward with two swapped) and hums on only two."><svg viewBox="0 0 30 26"><rect x="3" y="1" width="24" height="24" rx="4" fill="#222" stroke="#9aa7b5" stroke-width="1.3"/><g fill="none" stroke-width="2.2"><path d="M9.07 9A8 8 0 0 1 22.93 9" stroke="var(--ph1)"/><path d="M22.93 9A8 8 0 0 1 16 21" stroke="var(--ph2)"/><path d="M16 21A8 8 0 0 1 9.07 9" stroke="var(--ph3)"/></g><g fill="#8b929a"><path d="M16 13l1.4-4.6 2 .8z"/><path d="M16 13l3.6 3.2-1.6 1.4z"/><path d="M16 13l-4.8 1.2-.2-2.1z"/></g><circle cx="16" cy="13" r="1.6" fill="#b0b5bb"/></svg><span>Motor</span></button></div><div class="gname">Load</div></div>
   <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="xfm" data-tip="Control transformer: wire its primary, H1 and H2 on top, across the main power (Main Power Voltage); while it is fed, its secondary, X1 and X2 below, powers a control circuit (Control Voltage): X1 like L1, X2 like L2."><svg viewBox="0 0 30 26"><rect x="3" y="3" width="24" height="20" rx="4" fill="#222" stroke="#9aa7b5" stroke-width="1.4"/><path d="M8 7v2.6a2.33 2.33 0 0 0 4.66 0a2.33 2.33 0 0 0 4.67 0a2.33 2.33 0 0 0 4.67 0V7M8 19v-2.6a2.33 2.33 0 0 1 4.66 0a2.33 2.33 0 0 1 4.67 0a2.33 2.33 0 0 1 4.67 0V19" fill="none" stroke="#ff9d6b" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.5 12.2h15M7.5 13.8h15" stroke="#c0c6cc" stroke-width="1"/></svg><span>Transformer</span></button></div><div class="gname">Control power</div></div>
@@ -634,7 +652,7 @@ const XFM_W = 210, XFM_H = 148, XFM_TX = 60, XFM_TY = 80, XFM_EDGE = '#9aa7b5';
    motor (mtr), with T1, T2 and T3 down its left side. */
 const isPwr3 = p => p.t === 'dsc' || p.t === 'fus' || p.t === 'mst' || p.t === 'olh', isPwrT = t => t === 'dsc' || t === 'fus' || t === 'mst' || t === 'olh';
 const DSC_HEAD = 50, DSC_HANDLE = '#E8413C';   // (a disconnect's head on top, with its handle)
-const PWR_DY = 120, PWR_H = 2 * PWR_DY + 66, MTR_W = 280, MTR_H = 280, MTR_COL = '#9aa7b5', OL_COL = '#FF6F59', DSC_COL = '#c9d2dd', FUS_COL = '#9aa0a6';
+const PWR_DY = 120, PWR_H = 2 * PWR_DY + 66, MTR_W = 280, MTR_H = 280, MTR_COL = '#9aa7b5', OL_COL = '#FF6F59', DSC_COL = '#c9d2dd', FUS_COL = '#c8c8c8';
 const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : t === 'lsw' ? LSW_S / 2 : t === 'mtr' ? MTR_H / 2 : t === 'dsc' ? PWR_H / 2 + DSC_HEAD : isPwrT(t) ? PWR_H / 2 : 40;   // (the room a part takes)
 const SOL_COL = '#00D2BE';
 /* a solenoid (as on Dallas's drawing): a diamond (a rounded square on its corner) as tall and wide as a coil, with a
@@ -674,6 +692,10 @@ const isSrc = p => p.t === 'l1' || p.t === 'l2';
 /* A continuation: a box like a supply box, wired from its left, right or bottom, that carries the current on to
    every other continuation with the same number, as if a wire ran between them (so a long run can be left out) */
 const isJmp = p => p.t === 'jmp', isBox = p => isSrc(p) || isJmp(p) || isPh(p);
+/* A single fuse (fu1): one cartridge fuse on one wire, in a box the size of a contact's. It turns a quarter turn at a
+   time, as a box does, so it can sit in an upright run too (vert: turned upright) */
+const FU1_COL = '#c8c8c8';   // (its silver edge)
+const turns = p => isBox(p) || p.t === 'fu1', vert = p => p.t === 'fu1' && !!((p.rot || 0) & 1);
 /* Three-phase power: an L1, L2 or L3 phase box (p.L '1', '2' or '3'), built like a supply box, every connection point
    of it that phase. Each phase has its own colour (each circuit keeps its own; brown, orange and yellow, as on 480 V).
    Every box turns, a quarter turn at a time (p.rot), as a continuation does. */
@@ -684,8 +706,8 @@ let PH_COL = [...PH_DEFAULT];
 const phCol = p => PH_COL[(+p.L || 1) - 1];
 const lighten = (c, f) => { const n = parseInt(c.slice(1), 16), m = k => Math.round(((n >> k) & 255) + (255 - ((n >> k) & 255)) * f); return '#' + ((1 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)).toString(16).slice(1).toUpperCase(); };
 const JMP_EDGE = '#b8c2cf';
-const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel' || p.t === 'lsw' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc';
-const isCon = p => p.t === 'con' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc';   // (a relay contact, or a transformer's switch inside it: passes on what it is given)   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre
+const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel' || p.t === 'lsw' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc' || p.t === 'fu1';
+const isCon = p => p.t === 'con' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc' || p.t === 'fu1';   // (a relay contact, or a transformer's switch inside it: passes on what it is given)   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre
 
 /* ---- js/model.js ---- */
 /* ---------------- the drawing ---------------- */
@@ -806,7 +828,7 @@ const key = (x, y) => x + ',' + y;
 // (a continuation can be turned, p.rot quarter turns clockwise: its connection points turn with it)
 const rotQ = (p, dx, dy) => { for (let k = 0; k < (p.rot || 0); k++) [dx, dy] = [-dy, dx]; return [p.x + dx, p.y + dy]; };
 // (a supply box: left, right and bottom; a continuation its top too)
-const terms = p => isPwr3(p) ? [-PWR_DY, 0, PWR_DY].flatMap(dy => [[p.x - 40, p.y + dy], [p.x + 40, p.y + dy]]) : p.t === 'mtr' ? [-PWR_DY, 0, PWR_DY].map(dy => [p.x - TERM(p), p.y + dy]) : p.t === 'xfm' ? [[-XFM_TX, -XFM_TY], [XFM_TX, -XFM_TY], [-XFM_TX, XFM_TY], [XFM_TX, XFM_TY]].map(([dx, dy]) => [p.x + dx, p.y + dy]) : isBox(p) ? [[-TERM(p), 0], [TERM(p), 0], [0, TERM(p)], ...(isJmp(p) ? [[0, -TERM(p)]] : [])].map(([dx, dy]) => rotQ(p, dx, dy)) : [[p.x - TERM(p), p.y], [p.x + TERM(p), p.y]];   // (a supply box: left, right and bottom)
+const terms = p => isPwr3(p) ? [-PWR_DY, 0, PWR_DY].flatMap(dy => [[p.x - 40, p.y + dy], [p.x + 40, p.y + dy]]) : p.t === 'mtr' ? [-PWR_DY, 0, PWR_DY].map(dy => [p.x - TERM(p), p.y + dy]) : p.t === 'xfm' ? [[-XFM_TX, -XFM_TY], [XFM_TX, -XFM_TY], [-XFM_TX, XFM_TY], [XFM_TX, XFM_TY]].map(([dx, dy]) => [p.x + dx, p.y + dy]) : p.t === 'fu1' ? [[-TERM(p), 0], [TERM(p), 0]].map(([dx, dy]) => rotQ(p, dx, dy)) : isBox(p) ? [[-TERM(p), 0], [TERM(p), 0], [0, TERM(p)], ...(isJmp(p) ? [[0, -TERM(p)]] : [])].map(([dx, dy]) => rotQ(p, dx, dy)) : [[p.x - TERM(p), p.y], [p.x + TERM(p), p.y]];   // (a supply box: left, right and bottom)
 /* The sheet is as wide as it needs to be to fill the panel with the whole circuit in view: on a wide screen, or for a
    tall circuit, the L2 bar moves out to the right edge and the wires fastened to it stretch to meet it. (It is never
    narrower than W_MIN, nor so narrow that a part would end up past L2.) Once the L1 or L2 bar has been moved by hand,
@@ -1118,7 +1140,7 @@ function setAt(n, t, c, lane) {
 const setCol = set => set.size === 0 ? SRC_COL : set.size === 1 ? flowOf(btnColour([...set][0])) : blend([...set].map(L => flowOf(btnColour(L))));
 const colourOf = r => r.rd < RAMP ? mixOk(r.from, setCol(r.set), r.rd / RAMP) : setCol(r.set);
 // a pushbutton passes current while pressed (NO) or until pressed (NC); a relay contact once its bar has landed on its posts
-const closed = p => p.t === 'lsw' ? lswClosed(p) : p.t === 'pp' ? poleClosed(p) : p.t === 'olc' ? !OLTRIP[p.L] : p.t === 'xsw' ? !!coilOn[p.x.id] : p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.t === 'sel' ? selClosed(p) : p.nc ? !down[p.L] : !!down[p.L];
+const closed = p => p.t === 'fu1' ? !BLOWN[p.id] : p.t === 'lsw' ? lswClosed(p) : p.t === 'pp' ? poleClosed(p) : p.t === 'olc' ? !OLTRIP[p.L] : p.t === 'xsw' ? !!coilOn[p.x.id] : p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.t === 'sel' ? selClosed(p) : p.nc ? !down[p.L] : !!down[p.L];
 /* Selector switches. One switch can be drawn in several rungs (the same letter, as a pushbutton with several contact
    blocks): turning any drawing turns them all. Each drawing is closed in the positions it is set to (p.closedIn).
    The switch has 2 to 4 positions (selN), can name them (p.names, such as HAND / OFF / AUTO), and starts in p.pos.
@@ -1366,7 +1388,7 @@ function startRun() {
   FED_AT = {}; COMP = null; LV = null; COND = {}; needPaint = true; PTL = new Map(); PARR = new Map(); PDARK = new Map(); phFault = '';
   LSW_T = {};
   CON = {}; for (const p of parts) if (p.t === 'con' || p.t === 'mst') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };
-  DSC = {}; BLOWN = {}; OLTRIP = {}; MOT = {}; DSC_T = {}; OLRESET = {};   // every coil starts off
+  DSC = {}; BLOWN = {}; FU1T = {}; OLTRIP = {}; MOT = {}; DSC_T = {}; OLRESET = {};   // every coil starts off
   tl = NET.nodes.map(() => [[-1e9, null]]);
   for (const p of parts) { delete p._chg; delete p._lead; delete p._sh; delete p._lv; delete p._ph; }
   // which way each button and coil is passed through (as if every button were passing current)
@@ -1391,7 +1413,7 @@ function startRun() {
   INLEAD = new Map();
   for (const d of DIRS) if (d.e.kind === 'part') { const p = d.e.part; if (!INLEAD.has(d.from)) INLEAD.set(d.from, []); INLEAD.get(d.from).push([p, d.from === p._a ? 'A' : 'B']); }
   findPaths(); findNoway(); findReach();
-  checkShort();
+  checkShort(); if (shortNow) blowSoon(shortFuses(), 0);
   ALLOW = allowNow();
   for (const [id, v] of NET.feedV) if (v === 1) setRec(id, shortNow ? null : EGG(), 0);
   phaseWays(); phasesNow(0);
@@ -1772,7 +1794,7 @@ function moveContact(c, t) {
 function switched(sw, t) {
   COMP = null; LV = null;
   const was = shortNow;
-  checkShort();
+  checkShort(); if (shortNow) blowSoon(shortFuses(), t);
   if (was !== shortNow) for (const [id, fv] of NET.feedV) if (fv === 1) setRec(id, shortNow ? null : EGG(), t);
   for (const d of DIRS) if (d.e.kind === 'part' && sw.includes(d.e.part)) {
     const r = REC.get(d.from) || null;
@@ -1847,7 +1869,7 @@ function phasesNow(t) {
   for (const p of parts) if (p.t === 'mtr') for (const n of p._t) for (const at of when(n)) schedule(at, () => motorsNow(evT));
   motorsNow(t);
   // two phases joined: the fuses on the way between them blow (just after, so they are seen to)
-  if (phFault) { const fs = faultFuses(); if (fs.length) schedule(t + .05, () => { const now = fs.filter(k => !BLOWN[k.id]); if (!now.length) return; for (const k of now) BLOWN[k.id] = { t: evT }; switched(now, evT); }); }
+  if (phFault) blowSoon(faultFuses(), t);
   needPaint = true;
 }
 /* A motor runs with three different phases at T1, T2 and T3 (forward with them in order, L1-L2-L3 or a turn of it;
@@ -1877,7 +1899,7 @@ function tripFeeding(m, t) { const f = compNow(), cs = new Set(m._t.map(n => f(n
 // the other on another)
 function faultFuses() {
   const out = [], PH = NET.PH;
-  for (const p of parts) if (p.t === 'fus' && p._poles) for (const k of p._poles) {
+  for (const k of parts.flatMap(p => p.t === 'fus' && p._poles ? p._poles : p.t === 'fu1' ? [p] : [])) {   // (a single fuse is a pole of its own)
     if (BLOWN[k.id]) continue;
     const f = components(NET, e => conducts(e) && e.part !== k), a = f(k._a), b = f(k._b);
     if (a === b) continue;
@@ -1887,17 +1909,29 @@ function faultFuses() {
   }
   return out;
 }
+// fuses blow (just after, so they are seen to)
+function blowSoon(fs, t) { if (fs.length) schedule(t + .05, () => { const now = fs.filter(k => !BLOWN[k.id]); if (!now.length) return; for (const k of now) { BLOWN[k.id] = { t: evT }; FU1T[k.id] = evT; } switched(now, evT); }); }
+// L1 joined straight to L2: the single fuse on the way blows (the first, nearest L1, where there are several in a row)
+function shortFuses() {
+  const out = [];
+  for (const p of [...parts].sort((a, b) => a.x - b.x || a.y - b.y)) if (p.t === 'fu1' && !BLOWN[p.id]) {
+    const f = components(NET, e => conducts(e) && e.part !== p);
+    if (f(NET.L1) !== f(NET.L2)) { out.push(p); break; }
+  }
+  return out;
+}
 // clicked while running: a disconnect's handle (all of it), a fuse (the pole clicked: blown, or put back), an overload
 // (trip it, or reset it once tripped), an overload contact (reset)
 function workPower(p, i) {
   const t = simT;
   if (p.t === 'dsc') { if (DSC[p.id]) delete DSC[p.id]; else DSC[p.id] = { t }; DSC_T[p.id] = t; if (t + SWING > busyUntil) busyUntil = t + SWING; switched(p._poles, t); }
-  else if (p.t === 'fus') { const k = p._poles[i]; if (BLOWN[k.id]) delete BLOWN[k.id]; else BLOWN[k.id] = { t }; switched([k], t); }
+  else if (p.t === 'fu1') { if (BLOWN[p.id]) delete BLOWN[p.id]; else BLOWN[p.id] = { t }; FU1T[p.id] = t; switched([p], t); }
+  else if (p.t === 'fus') { const k = p._poles[i]; if (BLOWN[k.id]) delete BLOWN[k.id]; else BLOWN[k.id] = { t }; FU1T[k.id] = t; switched([k], t); }
   else if (p.t === 'olh') setTrip(p.L, !OLTRIP[p.L], t);
   else if (p.t === 'olc') setTrip(p.L, false, t);
   needPaint = true;
 }
-let DSC_T = {}, OLRESET = {};
+let DSC_T = {}, OLRESET = {}, FU1T = {};   // (FU1T: when each fuse, single or a three-pole fuses' pole, last blew or was put back)
 
 // spread out from what is in h (times in d), through wires and closed switches, into the junctions ok allows
 function walk(h, d, ok, step = e => conducts(e)) {
@@ -2011,7 +2045,7 @@ function screw(x, y, g, bare) {
 }
 const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
-const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L} Fuses` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -2040,7 +2074,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -2049,6 +2083,14 @@ let solMaskN = 0;   // (each solenoid drawing's mask has an id of its own)
 function framed(tag, a, g) { el(tag, Object.assign({}, a, { fill: 'none', stroke: WELL, 'stroke-width': (a['stroke-width'] || 1.8) + 2 * BEZEL }), g); return el(tag, a, g); }
 // a part, in the same style as the Order of Operations simulators
 function drawPart(p, g, x, y, chan, onStation) {
+  // a single fuse turned: drawn as it is lying down, turned about its middle (its name, though, stays upright: above
+  // it, or beside it when it stands upright)
+  if (p.t === 'fu1' && p.rot && !g.turned) {
+    const a = { transform: `rotate(${p.rot * 90} ${x} ${y})` }, g2 = el('g', a, g); g2.turned = true;
+    const v = drawPart(p, g2, x, y, el('g', a, chan || g), true);
+    if (!onStation) (v.cap = el('text', vert(p) ? { x: x + BOX / 2 + 12, y: y + 4.5, 'text-anchor': 'start', class: 'cap' } : { x, y: y - capTop(p), 'text-anchor': 'middle', class: 'cap' }, g)).textContent = captionOf(p);
+    return v;
+  }
   const v = {}, T = TERM(p), half = BODYH(p.t) / 2;
   if (!isBox(p) && p.t !== 'xfm' && !isPwr3(p) && p.t !== 'mtr') el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
   // the short leads between the part's ends and its body: each drawn in two pieces, so the current can flow along
@@ -2136,6 +2178,13 @@ function drawPart(p, g, x, y, chan, onStation) {
     drawLimit(p, g, x, y, v);
   } else if (p.t === 'xfm') {
     drawXfm(p, g, x, y, v, chan);
+  } else if (p.t === 'fu1') {
+    // a single fuse (Dallas's design): in a box the size of a contact's, a contact's stems in from either side to a
+    // cartridge fuse, its body between two square metal end caps. Stems and body a relay's grey until current goes
+    // through (then its colour, see run.js); blown, a slanting break through its middle and a red badge, and each side the colour that reaches it
+    // (the line side lit, the load side dark)
+    framed('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: FU1_COL, 'stroke-width': 1.8 }, g);
+    Object.assign(v, fuseBody(g, x, y, p.rot || 0));
   } else if (isPwr3(p)) {
     drawPwr(p, g, x, y, v, chan);
   } else if (p.t === 'mtr') {
@@ -2391,6 +2440,44 @@ function rdot(g, cx, cy, r) {
   return m;
 }
 const pwrEdge = p => p.t === 'dsc' ? DSC_COL : p.t === 'fus' ? FUS_COL : p.t === 'mst' ? coilColour(p.L) : OL_COL;
+/* The fuse of a single fuse, and of each pole of the three-pole fuses (Dallas's design): a contact's stems in from either
+   side of a box BOX wide to a cartridge fuse, its body between two square metal end caps. The way through (stems and
+   body as one shape) is a relay's grey beneath, and over that the current's colour in two layers, each cut to length by
+   a clip, so the current can be seen to cross it (see paintFuse). Blown: a clean break slanting through its body, the
+   ends either side scorched, and a red badge on the top right corner of its square (as it is seen, however it is
+   turned: rot, quarter turns). */
+function fuseBody(g, x, y, rot) {
+  const v = {};
+  const sh = 2 * BOX * .045, inset = 4.5, bw = 43.75, bh = 16.25, br = 4.7, cw = 7.5, ch = 20, line = 'rgba(0,0,0,.35)';
+  // the way through it, stems and body as one shape: grey beneath, and over that the current's colour, in two layers
+  // (the new colour, and what was there before it) cut to length by a clip each, so the current can be seen to
+  // cross it from the end it comes in at (see run.js)
+  const way = gp => { for (const s of [-1, 1]) el('rect', { x: s < 0 ? x - BOX / 2 + inset : x + bw / 2 - cw / 2, y: y - sh / 2, width: BOX / 2 - inset - bw / 2 + cw / 2, height: sh }, gp);
+    el('rect', { x: x - bw / 2, y: y - bh / 2, width: bw, height: bh, rx: br }, gp); };
+  const sg = el('g', { fill: '#111', filter: 'url(#fShadow)' }, g);   // (the caps' shadow)
+  for (const x0 of [x - bw / 2, x + bw / 2 - cw]) el('rect', { x: x0, y: y - ch / 2, width: cw, height: ch, rx: .4 }, sg);
+  way(el('g', { fill: GREY }, g));
+  const n = ++solMaskN, layer = nm => { const id = `fu1${nm}${n}`, r = el('rect', { x: x - BOX / 2, y: y - BOX / 2, width: 0, height: BOX }, el('clipPath', { id }, g)), lg = el('g', { fill: 'transparent', 'clip-path': `url(#${id})` }, g); way(lg); return { r, g: lg }; };
+  v.old = layer('o'); v.cur = layer('c'); v.x0 = x - BOX / 2; v.span = BOX;
+  el('rect', { x: x - bw / 2, y: y - bh / 2, width: bw, height: bh, rx: br, fill: 'url(#gGloss)' }, g);
+  for (const x0 of [x - bw / 2, x + bw / 2 - cw]) {
+    el('rect', { x: x0, y: y - ch / 2, width: cw, height: ch, rx: .4, fill: 'url(#gTerm)', stroke: line, 'stroke-width': .6 }, g);
+    el('rect', { x: x0, y: y - ch / 2, width: cw, height: ch, rx: .4, fill: 'url(#gGloss)' }, g); }
+  v.mark = el('g', { display: 'none' }, g);
+  // blown: a clean break slanting through its body, the well showing through, the ends either side of it scorched;
+  // and a red badge on the box's top right corner (top right as it is seen, however the fuse is turned)
+  const sc = el('linearGradient', { id: `fu1s${n}`, x1: 0, x2: 1 }, v.mark);
+  for (const [o, a] of [[0, 0], [.38, .55], [.5, .85], [.62, .55], [1, 0]]) el('stop', { offset: o, 'stop-color': '#000', 'stop-opacity': a }, sc);
+  el('rect', { x: x - 12, y: y - bh / 2, width: 24, height: bh, fill: `url(#fu1s${n})` }, v.mark);
+  const gx = 2.2, sl = 3.2, gy = bh / 2 + .8;
+  el('path', { d: `M${x - gx + sl} ${y - gy}L${x + gx + sl} ${y - gy}L${x + gx - sl} ${y + gy}L${x - gx - sl} ${y + gy}Z`, fill: '#272727' }, v.mark);
+  let [dx, dy] = [BOX / 2 - 3, -BOX / 2 + 3]; for (let r = 0; r < (4 - rot) % 4; r++) [dx, dy] = [-dy, dx];
+  const bx = x + dx, by = y + dy;
+  el('circle', { cx: bx, cy: by, r: 9, fill: '#1f1f1f', stroke: FU1_COL, 'stroke-width': 1.4 }, v.mark);
+  el('circle', { cx: bx, cy: by, r: 6, fill: '#E8413C' }, v.mark);
+  el('path', { d: `M${bx - 2.6} ${by - 2.6}L${bx + 2.6} ${by + 2.6}M${bx + 2.6} ${by - 2.6}L${bx - 2.6} ${by + 2.6}`, stroke: '#fff', 'stroke-width': 1.6, 'stroke-linecap': 'round' }, v.mark);
+  return v;
+}
 /* A disconnect, fuses, a starter's main contacts or an overload's heaters: one tall box with a pole on each of the
    three lines (see PWR_DY), its ends out to the left and right. The poles that are worked together (all but the
    fuses) are joined by a dashed line, as on a print; a disconnect has its handle on top. */
@@ -2416,23 +2503,8 @@ function drawPwr(p, g, x, y, v, chan) {
       el('rect', { x: bx1, y: py - bh / 2, width: bx2 - bx1, height: bh, rx: bh / 2, fill: 'url(#gGloss)' }, q.bg);
       q.pa = P.a; q.pb = P.b; q.px = P.x1; q.py = py;
     } else if (p.t === 'fus') {
-      // a cartridge fuse: metal end caps, and between them a body as tall as they are, a relay's grey until the phase
-      // passes through it, as along a wire (a clip that sweeps across from its line side, see paintPwr). Blown: a
-      // jagged crack through its body, and only its line side lit. (Clear of the box's sides, its leads outside it.)
-      const id = 'fuc' + (++solMaskN), L = 22, cw = 6, h = 20, bw = 2 * (L - cw);
-      el('rect', { x: x - L - .9, y: py - h / 2 - .9, width: 2 * L + 1.8, height: h + 1.8, rx: .9, fill: '#111', filter: 'url(#fShadow)' }, g);
-      el('rect', { x: x - bw / 2, y: py - h / 2, width: bw, height: h, fill: GREY }, g);
-      q.clip = el('rect', { x: x - L, y: py - h / 2, width: 0, height: h }, el('clipPath', { id }, g));
-      q.col = el('rect', { x: x - bw / 2, y: py - h / 2, width: bw, height: h, fill: 'transparent', 'clip-path': `url(#${id})` }, g);
-      el('rect', { x: x - bw / 2, y: py - h / 2, width: bw, height: h, fill: 'url(#gGloss)', stroke: '#111', 'stroke-width': 1.6 }, g);
-      for (const s of [-1, 1]) { const cx0 = s < 0 ? x - L : x + bw / 2;
-        el('rect', { x: cx0, y: py - h / 2, width: cw, height: h, fill: 'url(#gTerm)', stroke: '#111', 'stroke-width': 1.6 }, g);
-        el('rect', { x: cx0, y: py - h / 2, width: cw, height: h, fill: 'url(#gGloss)' }, g); }
-      q.mark = el('g', { display: 'none' }, g);
-      const crack = `M${x - .5} ${py - h / 2 + .8}L${x + 3} ${py - 4}L${x - 2.6} ${py + .6}L${x + 2.4} ${py + 4.6}L${x - .8} ${py + h / 2 - .8}`;
-      el('path', { d: crack, fill: 'none', stroke: '#141414', 'stroke-width': 3.6, 'stroke-linejoin': 'miter' }, q.mark);
-      el('path', { d: crack, fill: 'none', stroke: '#ff5a4e', 'stroke-width': 1, 'stroke-linejoin': 'miter' }, q.mark);
-      q.x0 = x - L; q.span = 2 * L;
+      // a fuse on each line: the single fuse's (see fuseBody)
+      Object.assign(q, fuseBody(g, x, py, 0));
     } else {
       // an overload heater: the NEMA heater symbol, as a raised element
       q.e = rpath(g, `M${x - 27} ${py}H${x - 14}V${py - 16}H${x + 14}V${py}H${x + 27}`, 5.2);
@@ -2701,17 +2773,17 @@ function renderInto(target, V, L) {
       for (const [tx, ty] of terms(p)) el('circle', { cx: tx, cy: ty, r: 6.5, fill: '#404040', stroke: '#c8c8c8', 'stroke-width': 1.6, style: 'cursor:crosshair' }, g);
       // the other drawings of a selected button (the same button): a fainter outline, so they show as one
       if (!selHasP(p.id) && isOp(p) && sel && sel.parts.size === 1 && parts.some(q => q !== p && q.t === p.t && q.L === p.L && selHasP(q.id)))
-        el('rect', { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 32, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44, rx: 12, fill: 'none', stroke: '#ffc000', 'stroke-opacity': .5, 'stroke-width': 1.6, 'stroke-dasharray': '3 5', 'pointer-events': 'none' }, g);
-      if (selHasP(p.id)) el('rect', { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 32, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44, rx: 12, fill: 'rgba(255,192,0,.07)', stroke: '#ffc000', 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'pointer-events': 'none' }, g);
+        el('rect', { ...selRect(p), rx: 12, fill: 'none', stroke: '#ffc000', 'stroke-opacity': .5, 'stroke-width': 1.6, 'stroke-dasharray': '3 5', 'pointer-events': 'none' }, g);
+      if (selHasP(p.id)) el('rect', { ...selRect(p), rx: 12, fill: 'rgba(255,192,0,.07)', stroke: '#ffc000', 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'pointer-events': 'none' }, g);
       // a continuation on its own selected: a rotate handle at the corner of the selection, to turn it either way
-      if (isBox(p) && selHasP(p.id) && sel.parts.size === 1 && V === view) rotHandle(p, p.x + TERM(p) + 18, p.y - BODYH(p.t) / 2 - 38, B(p.y).ends);
+      if (turns(p) && selHasP(p.id) && sel.parts.size === 1 && V === view) { const r = selRect(p); rotHandle(p, r.x + r.width + 6, r.y - 6, B(p.y).ends); }
       if (issues.has(p.id)) {
         const m = issues.get(p.id), note = typeof m === 'object';   // (a note, in gold: a load in series; a warning, in red)
         const t = el('text', { x: p.x, y: p.y - capTop(p) - 17, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': note ? 600 : 700, fill: note ? '#e2cc85' : '#ff8a7a', 'pointer-events': 'none', stroke: '#404040', 'stroke-width': 4, 'paint-order': 'stroke' }, g);
         t.textContent = note ? m.note : '⚠ ' + m;
       }
     } else if (p.t === 'btn' || p.t === 'lsw') bindButton(g, p);
-    else if ((isPwr3(p) && p.t !== 'mst') || p.t === 'olc') bindPower(g, p);
+    else if ((isPwr3(p) && p.t !== 'mst') || p.t === 'olc' || p.t === 'fu1') bindPower(g, p);
     else if (p.t === 'sel') bindSelector(g, p);
   }
   if (SHOW.rungs) drawRefs(V, B, net);
@@ -2723,6 +2795,8 @@ function renderInto(target, V, L) {
   }
   if (V === view) { V.overlay = el('g', { 'pointer-events': 'none' }); if (preview) drawPreview(); }
 }
+// the dashed outline round a selected part (a single fuse standing upright: its outline stands upright too, its name beside it)
+function selRect(p) { return vert(p) ? { x: p.x - BOX / 2 - 12, y: p.y - TERM(p) - 12, width: BOX + 120, height: 2 * TERM(p) + 24 } : { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 32, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44 }; }
 function drawPreview() {
   view.overlay.innerHTML = '';
   // a green ring wherever the wire end or part end being moved will connect
@@ -2948,6 +3022,7 @@ function paintView(V) {
       if (v.arrow) { v.arrow.setAttribute('fill', s.shut ? v.col : BLADE_GREY); v.arrow.setAttribute('stroke', s.shut ? v.col : BLADE_GREY); }
       v.posts.setAttribute('fill', s.shut ? v.col : GREY);
     } else if (p.t === 'sel') paintSel(p, v);
+    else if (p.t === 'fu1') paintFu1(p, v);
     else if (p.t === 'sol') paintSol(p, v);
     else if (p.t === 'lamp') {
       const lit = litOf(p); k = lit.toFixed(3);
@@ -3012,6 +3087,39 @@ function paintSol(p, v) {
     if (ln.getAttribute('d') !== d) ln.setAttribute('d', d);
     ln.setAttribute('stroke', col || 'transparent'); ln.setAttribute('stroke-dasharray', dash);
   }
+}
+/* a single fuse: the current crosses it from the end it comes in at, as along a wire (the new colour behind its front,
+   what was there before ahead of it). Blown: the line half stays lit, and the load half goes dark from the break out
+   to its end; put back: the current carries on from the break to the load end. Either way the front reaches the load
+   end just as the change sets off along the lead beyond (so it flows on without a pause). */
+// a stretch of a fuse's way through, from a to b (0 at the end its current comes in at, 1 at the other) in colour c
+function fuseSpan(v, S, L, a, b, c) { if (S === 'B') [a, b] = [1 - b, 1 - a]; L.r.setAttribute('x', (v.x0 + a * v.span).toFixed(2)); L.r.setAttribute('width', (Math.max(0, b - a) * v.span).toFixed(2)); L.g.setAttribute('fill', c || 'transparent'); }
+function paintFu1(p, v) {
+  const cl = closed(p), d = DIRS.find(x => x.e.part === p), S = d && d.from === p._b ? 'B' : 'A', outS = S === 'A' ? 'B' : 'A';
+  const inN = S === 'A' ? p._a : p._b, outN = S === 'A' ? p._b : p._a;
+  // (spans along it, from the end the current comes in at: 0 there, 1 at the other)
+  const set = (L, a, b, c) => fuseSpan(v, S, L, a, b, c);
+  const T0 = FU1T[p.id], ev = T0 !== undefined && p._lead && p._lead[outS].find(e => e.from === 'body' && e.t0 >= T0 - 1e-9);
+  const end = ev ? ev.t0 : T0 + v.span / 2 / V, g = T0 === undefined ? 1 : clamp01((simT - T0) / Math.max(end - T0, 1e-6));
+  let k;
+  if (!cl) {
+    // (the load end keeps its old colour a moment longer than the fuse, until the dark has run out along its lead: the
+    // load half takes it again only once that has gone, so it never flashes back on behind the dark)
+    const Ls = TERM(p) - BOX / 2, gone = T0 === undefined || simT >= end + Ls / V + 1e-6;
+    const a = colAt(inN, simT), b = gone ? colAt(outN, simT) : null; k = `x|${a}|${b}|${g.toFixed(3)}`; if (k === v.k) return; v.k = k;
+    set(v.cur, 0, .5, a); if (g < 1) set(v.old, .5 + .5 * g, 1, a); else set(v.old, .5, 1, b);   // (the load half going dark from the break)
+  } else if (g < 1) {
+    const a = colAt(inN, simT); k = `r|${a}|${g.toFixed(3)}`; if (k === v.k) return; v.k = k;
+    set(v.cur, 0, .5 + .5 * g, a); set(v.old, .5 + .5 * g, 1, colAt(outN, simT));   // (put back: on from the break)
+  } else {
+    const evs = p._lead && p._lead[S], Ls = TERM(p) - BOX / 2, at = e => e.t0 + Ls / V;
+    let i = -1; if (evs) for (let n = 0; n < evs.length; n++) if (at(evs[n]) <= simT + 1e-9) i = n;
+    const cur = i >= 0 ? evs[i] : null, now = cur && cur.col, prev = i > 0 ? evs[i - 1].col : null;
+    const f = cur ? clamp01((simT - at(cur)) * V / v.span) : 0;
+    k = `${S}|${f.toFixed(3)}|${now}|${prev}`; if (k === v.k) return; v.k = k;
+    set(v.cur, 0, f, now); set(v.old, f, 1, prev);
+  }
+  v.mark.setAttribute('display', cl ? 'none' : '');
 }
 /* a transformer: what reaches its terminals lights their leads; the primary fills as the solenoid's bolt does, in the
    colour of the current coming in, from the end it comes in at, and drains the same way; once the primary is fed the
@@ -3100,12 +3208,15 @@ function paintPwr(p, v) {
       q.bg.setAttribute('transform', `rotate(${(-32 * lev).toFixed(2)} ${q.px} ${q.py})`);
       q.blade.setAttribute('fill', cl && c ? c : BLADE_GREY); q.pa.setAttribute('fill', a || GREY); q.pb.setAttribute('fill', b || GREY);
     } else if (p.t === 'fus') {
-      // filled from its line side as the phase crosses it (over the time it takes to cross the pole); half, blown
-      const ln = PLINE.get(k), lc = colAt(ln ?? k._a, simT), at = PARR.get(ln ?? k._a), fromA = (ln ?? k._a) === k._a;
-      const f = !lc ? 0 : Math.min(cl ? 1 : .5, at ? clamp01((simT - at.t) * V / 80) : 1);
-      key = `${lc}|${f.toFixed(3)}|${cl}`; if (key === q.k) return; q.k = key;
-      q.col.setAttribute('fill', lc || 'transparent');
-      q.clip.setAttribute('width', (q.span * f).toFixed(2)); q.clip.setAttribute('x', fromA ? q.x0 : (q.x0 + q.span * (1 - f)).toFixed(2));
+      // as a single fuse does (see paintFu1), the phase crossing it from its line side as it arrives there (over the
+      // time it takes to cross the pole); blown, the load half going dark from the break; put back, on from the break
+      const ln = PLINE.get(k) ?? k._a, S = ln === k._a ? 'A' : 'B', lc = colAt(ln, simT), at = PARR.get(ln);
+      const T0 = FU1T[k.id], g = T0 === undefined ? 1 : clamp01((simT - T0) * V / (q.span / 2));
+      const f = !lc ? 0 : at ? clamp01((simT - at.t) * V / 80) : 1;
+      key = `${lc}|${f.toFixed(3)}|${cl}|${g.toFixed(3)}`; if (key === q.k) return; q.k = key;
+      if (!cl) { fuseSpan(q, S, q.cur, 0, .5, lc); fuseSpan(q, S, q.old, .5 + .5 * g, 1, g < 1 ? lc : null); }
+      else if (g < 1) { fuseSpan(q, S, q.cur, 0, .5 + .5 * g, lc); fuseSpan(q, S, q.old, .5 + .5 * g, 1, null); }
+      else { fuseSpan(q, S, q.cur, 0, f, lc); fuseSpan(q, S, q.old, f, 1, null); }
       q.mark.setAttribute('display', cl ? 'none' : '');
     } else if (p.t === 'mst') {
       const s = CON[p.id] || { t0: -1e9, closing: false, shut: false }, e = ease(s.t0), lift = (s.closing ? lerp(OPEN_LIFT, 0, e) : lerp(0, OPEN_LIFT, e)).toFixed(2);
@@ -3136,7 +3247,7 @@ function paintMtr(p, v) {
 // a three-phase part clicked while running (see workPower): the pole nearest where it was clicked
 function bindPower(g, p) {
   g.setAttribute('class', 'dev'); g.setAttribute('tabindex', '0'); g.setAttribute('role', 'button');
-  g.setAttribute('aria-label', captionOf(p) + (p.t === 'dsc' ? ': turn on or off' : p.t === 'fus' ? ': blow a fuse, or put it back' : p.t === 'olh' ? ': trip it, or reset it' : ': reset its overload'));
+  g.setAttribute('aria-label', captionOf(p) + (p.t === 'dsc' ? ': turn on or off' : p.t === 'fus' || p.t === 'fu1' ? ': blow a fuse, or put it back' : p.t === 'olh' ? ': trip it, or reset it' : ': reset its overload'));
   g.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); const q = pt(e); workPower(p, Math.max(0, Math.min(2, Math.round((q.y - p.y) / PWR_DY) + 1))); });
   g.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); workPower(p, 1); } });
 }
@@ -3262,7 +3373,8 @@ function newPart(kind, x, y) {
     return P('jmp', x, y, { L: lone || nextNum(new Set(Object.keys(n))) });
   }
   if (kind.startsWith('lsw')) return P('lsw', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'lsw').map(q => q.L))), nc: kind === 'lsw-nc' || kind === 'lsw-nch', held: kind.endsWith('h'), color: LSW_COL });   // a limit switch: the next number
-  if (kind === 'dsc' || kind === 'fus' || kind === 'olh' || kind === 'mtr') return P(kind, x, y, { L: nextNum(new Set(parts.filter(q => q.t === kind).map(q => q.L))) });   // the next number
+  if (kind === 'fus' || kind === 'fu1') return P(kind, x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'fus' || q.t === 'fu1').map(q => q.L))) });   // (fuses, single or three-pole, number from one count)
+  if (kind === 'dsc' || kind === 'olh' || kind === 'mtr') return P(kind, x, y, { L: nextNum(new Set(parts.filter(q => q.t === kind).map(q => q.L))) });   // the next number
   if (kind === 'mst') return P('mst', x, y, { L: 'M' });   // a starter: worked by the M coil (change it in its settings)
   if (kind === 'olc') { const ols = parts.filter(q => q.t === 'olh').map(q => q.L), free = ols.find(L => !parts.some(q => q.t === 'olc' && q.L === L)); return P('olc', x, y, { L: free || ols[0] || '1', nc: true }); }   // an overload's contact: one not yet in the control circuit
   if (kind.startsWith('ph-')) return P('ph', x, y, { L: kind.slice(3) });   // a phase box: L1, L2 or L3
@@ -3280,7 +3392,7 @@ function newPart(kind, x, y) {
   const L = [...'ABCDEFGH' + ALL].find(c => !u.has(c));
   return P('btn', x, y, { L, nc: kind.startsWith('btn-nc'), maint: !kind.endsWith('-mom'), color: kind.startsWith('btn-nc') ? '#FF0032' : '#00B050' });   // (normally open green, normally closed red)   // (-mom: momentary; otherwise maintained)
 }
-const kindOf = k => k.startsWith('lsw') ? 'lsw' : ['dsc', 'fus', 'mst', 'olh', 'olc', 'mtr'].includes(k) ? k : k.startsWith('ph-') ? 'ph' : k === 'jmp' ? 'jmp' : k === 'xfm' ? 'xfm' : k === 'src-l1' || k === 'src-l2' ? k.slice(4) : k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k === 'sol' ? 'sol' : k.startsWith('con') ? 'con' : k === 'sel' ? 'sel' : 'btn';
+const kindOf = k => k.startsWith('lsw') ? 'lsw' : ['dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr'].includes(k) ? k : k.startsWith('ph-') ? 'ph' : k === 'jmp' ? 'jmp' : k === 'xfm' ? 'xfm' : k === 'src-l1' || k === 'src-l2' ? k.slice(4) : k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k === 'sol' ? 'sol' : k.startsWith('con') ? 'con' : k === 'sel' ? 'sel' : 'btn';
 // a horizontal wire running right through where a part's ends will be: the part goes into it
 function spliceTarget(x, y, t) { if (t === 'xfm' || t === 'ph' || isPwrT(t) || t === 'mtr') return null; const h = WIDE(t) ? 60 : 40; return wires.find(w => w.y1 === y && w.y2 === y && Math.min(w.x1, w.x2) <= x - h && Math.max(w.x1, w.x2) >= x + h); }
 function placePart(kind, x, y) {
@@ -3434,6 +3546,10 @@ function restore(st) { const o = JSON.parse(st); parts = o.parts; wires = o.wire
 // the wire would be hidden under it and cut
 function wireInTheWay(p) {
   const h = BODYH(p.t) / 2, L = p.x - TERM(p), R = p.x + TERM(p);
+  if (vert(p)) { const T = p.y - TERM(p), Bm = p.y + TERM(p);   // (standing upright: the same, on its side)
+    return wires.some(w => w.y1 === w.y2
+      ? w.y1 > T && w.y1 < Bm && Math.max(w.x1, w.x2) > p.x - h && Math.min(w.x1, w.x2) < p.x + h
+      : w.x1 !== p.x && Math.abs(w.x1 - p.x) < h && Math.max(w.y1, w.y2) > T && Math.min(w.y1, w.y2) < Bm); }
   return wires.some(w => w.x1 === w.x2
     ? w.x1 > L && w.x1 < R && Math.max(w.y1, w.y2) > p.y - h && Math.min(w.y1, w.y2) < p.y + h
     : w.y1 !== p.y && Math.abs(w.y1 - p.y) < h && Math.max(w.x1, w.x2) > L && Math.min(w.x1, w.x2) < R);
@@ -3464,14 +3580,22 @@ function normalize() {
   };
   for (const [y, list] of Hs) {
     let ivs = merge(list, true, y);
-    for (const p of parts) if (p.y === y) {
+    for (const p of parts) if (p.y === y && !vert(p)) {
       const a = p.x - TERM(p), b = p.x + TERM(p), next = [];
       for (const [lo, hi, ids] of ivs) { if (hi <= a || lo >= b) next.push([lo, hi, ids]); else { if (lo < a) next.push([lo, a, ids]); if (hi > b) next.push([b, hi, ids]); } }
       ivs = next;
     }
     for (const [lo, hi, ids] of ivs) keep(lo, y, hi, y, ids);
   }
-  for (const [x, list] of Vs) for (const [lo, hi, ids] of merge(list, false, x)) keep(x, lo, x, hi, ids);
+  for (const [x, list] of Vs) {
+    let ivs = merge(list, false, x);
+    for (const p of parts) if (p.x === x && vert(p)) {   // (a single fuse standing upright sits in an upright run)
+      const a = p.y - TERM(p), b = p.y + TERM(p), next = [];
+      for (const [lo, hi, ids] of ivs) { if (hi <= a || lo >= b) next.push([lo, hi, ids]); else { if (lo < a) next.push([lo, a, ids]); if (hi > b) next.push([b, hi, ids]); } }
+      ivs = next;
+    }
+    for (const [lo, hi, ids] of ivs) keep(x, lo, x, hi, ids);
+  }
   wires = out;
   if (sel) { for (const id of [...sel.wires]) if (!wires.some(w => w.id === id)) sel.wires.delete(id); if (!selCount()) sel = null; }
 }
@@ -3482,7 +3606,7 @@ function addWire(segs) {
   normalize(); sel = null; say(''); draw();
 }
 function hitWire(p) { return wires.find(w => p.x >= Math.min(w.x1, w.x2) - 10 && p.x <= Math.max(w.x1, w.x2) + 10 && p.y >= Math.min(w.y1, w.y2) - 10 && p.y <= Math.max(w.y1, w.y2) + 10); }
-function hitPart(p) { return parts.find(q => Math.abs(p.x - q.x) < (q.t === 'xfm' || q.t === 'mtr' ? halfW(q.t) - (q.t === 'mtr' ? 20 : 0) : TERM(q) - 8) && Math.abs(p.y - q.y) < BODYH(q.t) / 2 + 6); }
+function hitPart(p) { return parts.find(q => vert(q) ? Math.abs(p.y - q.y) < TERM(q) - 8 && Math.abs(p.x - q.x) < BOX / 2 + 6 : Math.abs(p.x - q.x) < (q.t === 'xfm' || q.t === 'mtr' ? halfW(q.t) - (q.t === 'mtr' ? 20 : 0) : TERM(q) - 8) && Math.abs(p.y - q.y) < BODYH(q.t) / 2 + 6); }
 
 /* ---- js/pointer.js ---- */
 // the wire end under the pointer (if several wires end there, the newest one)
@@ -3926,7 +4050,7 @@ try { Object.assign(SHOW, JSON.parse(localStorage.getItem(SHOW_KEY) || '{}')); }
 // the lines, top first: every line that starts at L1, and every branch with a part on it (each its own number, as on
 // a print); lines closer together than a part is tall count as one
 function rungYs(net) {
-  const ys = [...net.feeds.filter(f => f.t === 'L1' && f.bar).map(f => f.y), ...parts.map(p => p.y)].sort((a, b) => a - b), out = [];
+  const ys = [...net.feeds.filter(f => f.t === 'L1' && f.bar).map(f => f.y), ...parts.filter(p => !vert(p)).map(p => p.y)].sort((a, b) => a - b), out = [];
   for (const y of ys) if (!out.length || y - out[out.length - 1] > 20) out.push(y);
   return out;
 }
@@ -4099,7 +4223,7 @@ document.querySelectorAll('.tool[data-part]').forEach(b => {
     if (e.button !== 0 || !editing) return;
     e.preventDefault();
     const sx = e.clientX, sy = e.clientY; let moved = false, ghost = null;
-    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('timer') ? { t: 'coil', L: '?', color: '#FFDC00', delay: 5, tof: kind === 'timer-off' } : kind === 'lamp' ? { t: 'lamp', L: '', color: '#00B050' } : kind === 'sol' ? { t: 'sol', L: '?', color: SOL_COL } : kind === 'jmp' ? { t: 'jmp', L: '?' } : kind === 'xfm' ? { t: 'xfm', L: '?' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind.startsWith('con-nc') } : kind === 'sel' ? { t: 'sel', L: '?', n: 3, closedIn: [0], pos: 1, color: '#0070C0' } : kind.startsWith('src-') ? { t: kind.slice(4), L: '' } : kind.startsWith('lsw') ? { t: 'lsw', L: '?', nc: kind === 'lsw-nc' || kind === 'lsw-nch', held: kind.endsWith('h'), color: LSW_COL } : kind.startsWith('ph-') ? { t: 'ph', L: kind.slice(3) } : ['dsc', 'fus', 'mst', 'olh', 'mtr'].includes(kind) ? { t: kind, L: kind === 'mst' ? 'M' : '?' } : kind === 'olc' ? { t: 'olc', L: '?', nc: true } : { t: 'btn', L: '?', nc: kind.startsWith('btn-nc'), color: '#9a9a9a' };
+    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('timer') ? { t: 'coil', L: '?', color: '#FFDC00', delay: 5, tof: kind === 'timer-off' } : kind === 'lamp' ? { t: 'lamp', L: '', color: '#00B050' } : kind === 'sol' ? { t: 'sol', L: '?', color: SOL_COL } : kind === 'jmp' ? { t: 'jmp', L: '?' } : kind === 'xfm' ? { t: 'xfm', L: '?' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind.startsWith('con-nc') } : kind === 'sel' ? { t: 'sel', L: '?', n: 3, closedIn: [0], pos: 1, color: '#0070C0' } : kind.startsWith('src-') ? { t: kind.slice(4), L: '' } : kind.startsWith('lsw') ? { t: 'lsw', L: '?', nc: kind === 'lsw-nc' || kind === 'lsw-nch', held: kind.endsWith('h'), color: LSW_COL } : kind.startsWith('ph-') ? { t: 'ph', L: kind.slice(3) } : ['dsc', 'fus', 'fu1', 'mst', 'olh', 'mtr'].includes(kind) ? { t: kind, L: kind === 'mst' ? 'M' : '?' } : kind === 'olc' ? { t: 'olc', L: '?', nc: true } : { t: 'btn', L: '?', nc: kind.startsWith('btn-nc'), color: '#9a9a9a' };
     const mv = ev => {
       if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 5) { moved = true; closeMenus(); ghost = document.createElement('div'); ghost.className = 'ghost'; ghost.innerHTML = b.innerHTML; document.body.append(ghost); document.body.classList.add('dragging'); }
       if (!moved) return;
@@ -4146,7 +4270,7 @@ document.addEventListener('keydown', e => {
   else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || e.shiftKey && e.key.toLowerCase() === 'z')) { e.preventDefault(); redo(); }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
   else if (e.key === 'Escape') { setTool('select'); sel = null; draw(); }
-  else if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey && !e.altKey) { const G = selGroup(); if (G.length && G.every(isBox)) { e.preventDefault(); each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); } }
+  else if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey && !e.altKey) { const G = selGroup(); if (G.length && G.every(turns)) { e.preventDefault(); each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); } }
 });
 
 /* ---------------- the ribbon ----------------
@@ -4397,7 +4521,7 @@ function renderProps() {
     const top = Math.max(10, ...Object.keys(cnt).map(Number)) + 3;
     for (let n = 1; n <= top; n++) { const c = cnt[String(n)] || 0; ns.add(new Option(`${n}` + (c ? ` (joins ${c} other${c > 1 ? 's' : ''})` : ''), String(n), false, String(n) === p.L)); }
   }
-  document.getElementById('props-box').hidden = !(p && (isSrc(p) || isPh(p)));
+  document.getElementById('props-box').hidden = !(p && (isSrc(p) || isPh(p) || p.t === 'fu1'));
   document.getElementById('props-ph').hidden = !(p && isPh(p));
   if (p && isPh(p)) {
     // which phase it is, and that phase's colour (the colour of every box and wire of that phase)
@@ -4421,7 +4545,7 @@ function renderProps() {
     document.getElementById('ls-kind').value = (p.nc ? 'nc' : 'no') + (p.held ? 'h' : '');
     swatches(document.getElementById('ls-colour'), p.color, hex => each(q => q.color = hex));
   }
-  const pw = p && (isPwr3(p) || p.t === 'olc' || p.t === 'mtr');
+  const pw = p && (isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'fu1');
   document.getElementById('props-pwr').hidden = !pw;
   if (pw) {
     // a number of its own (a disconnect, fuses, an overload, a motor); the overload an OL contact belongs to; the coil
@@ -4438,10 +4562,10 @@ function renderProps() {
       for (let n = 1; n <= Math.max(5, ...[...ols].map(Number)); n++) ns.add(new Option('OL' + n + (ols.has(String(n)) ? '' : ' (not placed)'), String(n), false, String(n) === p.L));
     } else {
       lab.textContent = 'Number';
-      const pre = { dsc: 'DS', fus: 'FU', olh: 'OL', mtr: 'MTR' }[p.t], taken = new Set(parts.filter(q => q.t === p.t && q !== p).map(q => q.L));
+      const pre = { dsc: 'DS', fus: 'FU', fu1: 'FU', olh: 'OL', mtr: 'MTR' }[p.t], fuse = q => q.t === 'fus' || q.t === 'fu1', taken = new Set(parts.filter(q => (q.t === p.t || fuse(p) && fuse(q)) && q !== p).map(q => q.L));   // (fuses, single or three-pole, number from one count)
       for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n))) ns.add(new Option(pre + n, String(n), false, String(n) === p.L));
     }
-    document.getElementById('pw-how').textContent = { dsc: 'In Run: click it to turn it off or on', fus: 'In Run: click a fuse to blow it, or to put a new one in', mst: 'Its contacts close while its coil is in', olh: 'In Run: click it to trip it, or to reset it', olc: 'Opens while its overload is tripped (click it in Run to reset)', mtr: 'Runs on three phases; two swapped, it runs backward' }[p.t];
+    document.getElementById('pw-how').textContent = { dsc: 'In Run: click it to turn it off or on', fus: 'In Run: click a fuse to blow it, or to put a new one in', fu1: 'Blows on a short through it. In Run: click it to blow it, or to put a new one in', mst: 'Its contacts close while its coil is in', olh: 'In Run: click it to trip it, or to reset it', olc: 'Opens while its overload is tripped (click it in Run to reset)', mtr: 'Runs on three phases; two swapped, it runs backward' }[p.t];
   }
   document.getElementById('props-xfm').hidden = !(p && p.t === 'xfm');
   if (p && p.t === 'xfm') {
@@ -4628,8 +4752,8 @@ document.getElementById('x-num').addEventListener('change', e => { const p = sel
 function setPhaseCol(L, hex) { hex = hex.toUpperCase(); if (PH_COL[L - 1] === hex) return; snapshot(); PH_COL = PH_COL.map((c, i) => i === L - 1 ? hex : c); say(`L${L} colour changed.`); draw(); }
 document.getElementById('ph-num').addEventListener('change', e => { if (selGroup().every(isPh)) each(p => p.L = e.target.value); });
 document.getElementById('ph-custom').addEventListener('change', e => { const p = selGroup()[0]; if (p && isPh(p)) setPhaseCol(p.L, e.target.value); });
-document.getElementById('box-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(isBox)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
-document.getElementById('pw-num').addEventListener('change', e => { const G = selGroup(); if (G.length && G.every(p => isPwr3(p) || p.t === 'olc' || p.t === 'mtr')) each(p => p.L = e.target.value); });
+document.getElementById('box-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(turns)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
+document.getElementById('pw-num').addEventListener('change', e => { const G = selGroup(); if (G.length && G.every(p => isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'fu1')) each(p => p.L = e.target.value); });
 document.getElementById('ls-num').addEventListener('change', e => { if (selGroup().every(p => p.t === 'lsw')) each(p => p.L = e.target.value); });
 document.getElementById('ls-kind').addEventListener('change', e => { const k = e.target.value; if (selGroup().every(p => p.t === 'lsw')) each(p => { p.nc = k.startsWith('nc'); if (k.endsWith('h')) p.held = true; else delete p.held; }); });
 
@@ -4653,7 +4777,7 @@ function circuitData() {
   const w = W_USER ? W : contentRight(), x = v => barsOn() && v === W ? w : v;   // (a length set by moving the bars is kept)
   return {
     app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}), ...(barsOn() ? {} : { pw: 'boxes' }), ...(SRC_COL !== SRC_DEFAULT ? { sc: SRC_COL } : {}), ...(PH_COL.join() !== PH_DEFAULT.join() ? { pc: PH_COL.map(c => c.slice(1)) } : {}),
-    parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (p.t === 'lsw' && p.held) a.push(1); if (isBox(p) && p.rot) a.push(p.rot); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
+    parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (p.t === 'lsw' && p.held) a.push(1); if (turns(p) && p.rot) a.push(p.rot); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
       if (p.t === 'sel') { while (a.length < 7) a.push(null); a.length = 7; a.push(selN(p), (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, (p.names || []).join('/'), p.pos || 0); }   // a selector switch: positions, closed-in mask, (no label), names, start
       if (p.lk || p.ls) { while (a.length < 12) a.push(null); a.push(p.lk ? p.lk[0] : 0, p.lk ? p.lk[1] : 0); if (p.ls) a.push(p.ls.join('')); }   // (its dashed link line, moved out of the way; the sides its ends join)
       return a; }),
@@ -4668,8 +4792,8 @@ function readCircuit(d) {
   const num = v => { const n = Number(v); if (!Number.isFinite(n)) throw new Error('The circuit is damaged (a position is not a number).'); return snap(n); };
   const hex = c => /^[0-9a-f]{6}$/i.test(c || '') ? '#' + c.toUpperCase() : null;
   const ps = d.parts.slice(0, 200).map(a => {
-    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'dsc', 'fus', 'mst', 'olh', 'olc', 'mtr', 'lsw'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
-    const p = P(t, num(a[1]), num(a[2]), { L: ['dsc', 'fus', 'olh', 'olc', 'mtr', 'lsw'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1))) : t === 'sol' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : t === 'lsw' ? LSW_COL : BTN_COL[L] || '#FF0032') });
+    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'lsw'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
+    const p = P(t, num(a[1]), num(a[2]), { L: ['dsc', 'fus', 'fu1', 'olh', 'olc', 'mtr', 'lsw'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1))) : t === 'sol' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : t === 'lsw' ? LSW_COL : BTN_COL[L] || '#FF0032') });
     if (t === 'lsw') { p.nc = !!a[4]; if (a[7] === 1) p.held = true; }   // (a limit switch: NO or NC, held or not)
     if (t === 'btn') { p.nc = !!a[4]; p.maint = a[5] !== 0; }
     if (t === 'sel') {
@@ -4680,9 +4804,9 @@ function readCircuit(d) {
       p.pos = Math.max(0, Math.min(p.n - 1, Math.round(Number(a[11])) || 0));
     }
     if ((t === 'btn' || t === 'sel' || t === 'lamp') && a.length >= 14) { const dx = Math.round(Number(a[12])) || 0, dy = Math.round(Number(a[13])) || 0; if (dx || dy) p.lk = [Math.max(-5000, Math.min(5000, dx)), Math.max(-5000, Math.min(5000, dy))]; if (/^[tblr]{2}$/.test(a[14] || '')) p.ls = [...a[14]]; }
-    if (['l1', 'l2', 'ph', 'jmp', 'xfm', 'dsc', 'fus', 'mst', 'olh', 'olc', 'mtr'].includes(t)) delete p.color;
+    if (['l1', 'l2', 'ph', 'jmp', 'xfm', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr'].includes(t)) delete p.color;
     if (t === 'olc') p.nc = true;
-    if (t === 'jmp' || t === 'l1' || t === 'l2' || t === 'ph') { const r = Math.round(Number(a[7])) || 0; if (r >= 1 && r <= 3) p.rot = r; }   // (turned)   // (a supply box has no colour of its own)
+    if (t === 'jmp' || t === 'l1' || t === 'l2' || t === 'ph' || t === 'fu1') { const r = Math.round(Number(a[7])) || 0; if (r >= 1 && r <= 3) p.rot = r; }   // (turned)   // (a supply box has no colour of its own)
     if (t === 'con') { p.nc = !!a[4]; delete p.color; if (a[7] === 1) p.inst = true; }   // (a timer's instantaneous contact)
     if (t === 'coil' && a[7] !== undefined) { const n = Math.round(Number(a[7])); if (n >= 1) { p.delay = Math.min(999, n); if (a[8] === 1) p.tof = true; } }   // a timer (a[8] = 1: off-delay)
     if ((t === 'btn' || t === 'coil') && typeof a[9] === 'string' && a[9].trim()) p.label = a[9].replace(/\s+/g, ' ').trim().slice(0, 8);   // (a label written on it)
@@ -4950,9 +5074,8 @@ const SPEED_MIN = 0.1, SPEED_MAX = 300, sliderOf = s => 100 * Math.log10(s / SPE
 const fmtSpeed = s => (s < 1 ? +s.toFixed(2) : s < 10 ? +s.toFixed(1) : Math.round(s)) + '×';
 function setSpeed(s, fromSlider) {
   speed = s;
-  const sl = document.getElementById('speed-slider');
-  if (!fromSlider) sl.value = sliderOf(s);
-  const o = document.getElementById('speed-out'); if (document.activeElement !== o) o.value = fmtSpeed(s);
+  for (const sl of document.querySelectorAll('.speed-slider')) if (sl !== fromSlider) sl.value = sliderOf(s);   // (the Simulation tab's and the operator station's)
+  for (const o of document.querySelectorAll('.speed-box')) if (document.activeElement !== o) o.value = fmtSpeed(s);   // (the Simulation tab's and the operator station's)
   document.querySelectorAll('[data-speed]').forEach(x => x.setAttribute('aria-pressed', String(Math.abs(+x.dataset.speed - s) < 1e-9)));
 }
 document.querySelectorAll('[data-speed]').forEach(b => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
@@ -4965,7 +5088,7 @@ function setTimersReal(v) {
 document.querySelectorAll('[data-treal]').forEach(b => b.addEventListener('click', () => setTimersReal(b.dataset.treal === '1')));
 try { if (localStorage.getItem('oo-circuit-builder:timers-real') === '1') setTimersReal(true); } catch (_) {}
 // a speed typed in (Enter, or leaving the box): any from SPEED_MIN to SPEED_MAX; anything else puts the box back
-const speedBox = document.getElementById('speed-out');
+document.querySelectorAll('.speed-box').forEach(speedBox => {
 speedBox.addEventListener('focus', () => { speedBox.value = String(+speed.toFixed(3)); speedBox.select(); });
 speedBox.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') speedBox.blur(); else if (e.key === 'Escape') { speedBox.value = fmtSpeed(speed); speedBox.dataset.cancel = '1'; speedBox.blur(); } });
 speedBox.addEventListener('blur', () => {
@@ -4973,12 +5096,13 @@ speedBox.addEventListener('blur', () => {
   if (!speedBox.dataset.cancel && isFinite(v) && v > 0) setSpeed(Math.min(SPEED_MAX, Math.max(SPEED_MIN, v)));
   delete speedBox.dataset.cancel; speedBox.value = fmtSpeed(speed);
 });
-document.getElementById('speed-slider').addEventListener('input', e => {
+});
+document.querySelectorAll('.speed-slider').forEach(sl => sl.addEventListener('input', e => {
   let s = SPEED_MIN * Math.pow(SPEED_MAX / SPEED_MIN, +e.target.value / 100);
   // it snaps to the round speeds when close to one (within about 13%: from 9× it lands on 10×)
   for (const k of SPEED_SNAPS) if (Math.abs(Math.log(s / k)) < 0.13) s = k;
-  setSpeed(s, true);
-});
+  setSpeed(s, e.target);
+}));
 document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
   mode = b.dataset.mode; document.querySelectorAll('[data-mode]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
   for (const L in down) if (down[L] && !(blocksOf(L)[0] || {}).maint) press(L, false);

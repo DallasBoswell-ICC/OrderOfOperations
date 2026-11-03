@@ -1913,6 +1913,67 @@ const DEF_CIRCUIT = `
     }
     return out;
   });
+  await check('Single fuse: lit while current passes, clicked to blow and replace, blown by a short, upright in an upright run, saved turned', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    const ids = await page.evaluate(() => { W = 760; W_USER = 760;
+      const f1 = newPart('fu1', 240, 120); parts.push(f1); const f2 = newPart('fu1', 240, 280); parts.push(f2); const f3 = newPart('fu1', 360, 440); f3.rot = 1; parts.push(f3);   // (each numbered after the last)
+      parts.splice(1, 0, P('lamp', 480, 120, { L: '', color: '#00B050' })); parts.push(P('lamp', 480, 520, { L: '', color: '#00B050' }));
+      wires.push(Wr(0, 120, 200, 120), Wr(280, 120, 420, 120), Wr(540, 120, W, 120));   // L1 - FU - lamp - L2
+      wires.push(Wr(0, 280, 200, 280), Wr(280, 280, W, 280));                            // L1 - FU - L2: a short
+      wires.push(Wr(0, 400, 360, 400), Wr(360, 480, 360, 520), Wr(360, 520, 420, 520), Wr(540, 520, W, 520));   // through an upright fuse
+      normalize(); draw(); return [f1.id, f2.id, f3.id]; });
+    const nums = await page.evaluate(() => parts.filter(p => p.t === 'fu1').map(p => p.L).join());
+    if (nums !== '1,2,3') out.push('numbered ' + nums);
+    const t3 = await page.evaluate(() => JSON.stringify(terms(parts.find(p => p.rot === 1))));
+    if (t3 !== '[[360,400],[360,480]]') out.push('upright fuse ends at ' + t3);
+    const iss = await page.evaluate(() => [...wiringIssues(network()).keys()].filter(k => k !== 'short').join());
+    if (iss) out.push('wiring issues: ' + iss);
+    const lamps = () => page.evaluate(() => parts.filter(p => p.t === 'lamp').map(p => +!!coilOn[p.id]).join(''));
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(500);
+    const blown = () => page.evaluate(ids => ids.map(id => +!!BLOWN[id]).join(''), ids);
+    let b = await blown(); if (b !== '010') out.push('blown at the start (the short through FU2): ' + b);
+    let s = await lamps(); if (s !== '11') out.push('lamps lit once FU2 had blown: ' + s);
+    if (await page.evaluate(() => shortNow)) out.push('still a short after FU2 blew');
+    const fill = await page.evaluate(id => { const v = view.parts.get(id); return [v.cur.g.getAttribute('fill'), +v.cur.r.getAttribute('width') > 60 ? 'whole' : 'part', v.mark.getAttribute('display')].join(); }, ids[0]);
+    if (!/^#[0-9A-F]{6},whole,none$/i.test(fill)) out.push('FU1 while passing current: fill/crack ' + fill);
+    await page.evaluate(() => workPower(parts.find(p => p.t === 'fu1' && p.L === '1'))); await page.waitForTimeout(300);
+    s = await lamps(); if (s !== '01') out.push('FU1 clicked (blown): lamps ' + s);
+    const half = await page.evaluate(id => { const v = view.parts.get(id); return [v.cur.g.getAttribute('fill') !== 'transparent', v.old.g.getAttribute('fill') === 'transparent', v.mark.getAttribute('display') !== 'none'].join(); }, ids[0]);
+    if (half !== 'true,true,true') out.push('FU1 blown: line half lit, load half dark, crack shown: ' + half);
+    await page.evaluate(() => workPower(parts.find(p => p.t === 'fu1' && p.L === '1'))); await page.waitForTimeout(300);
+    s = await lamps(); if (s !== '11') out.push('FU1 put back: lamps ' + s);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    const back = await page.evaluate(() => readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.filter(p => p.t === 'fu1').map(p => p.L + ':' + (p.rot || 0)).join());
+    if (back !== '1:0,2:0,3:1') out.push('read back: ' + back);
+    // an upright fuse dropped on an upright wire sits in it (the wire cut either side of it), and turns with R
+    const cut = await page.evaluate(() => { loadPreset('blank'); sel = null; wires.push(Wr(300, 100, 300, 400)); const f = newPart('fu1', 300, 240); f.rot = 1; parts.push(f); normalize(); return wires.map(w => [w.y1, w.y2].sort((a, b) => a - b).join('-')).sort().join(); });
+    if (cut !== '100-200,280-400') out.push('upright wire round an upright fuse: ' + cut);
+    await page.evaluate(() => { sel = selOne('p', parts[0].id); draw(); });
+    await page.keyboard.press('r');
+    const r = await page.evaluate(() => parts[0].rot || 0); if (r !== 2) out.push('R turned it to ' + r);
+    return out;
+  });
+  await check('Operator station: its speed controls set the speed, in step with the Simulation tab', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'seal'); await page.waitForTimeout(60);
+    await page.click('#tab-run'); await page.waitForTimeout(100);
+    await page.evaluate(() => { if (ST.hidden) document.getElementById('st-toggle').click(); });
+    await page.click('#station [data-speed="2"]');
+    let r = await page.evaluate(() => [speed, document.getElementById('st-sout').value, document.getElementById('speed-out').value, document.querySelector('#speed-group [data-speed="2"]').getAttribute('aria-pressed'), Math.round(+document.getElementById('speed-slider').value)].join());
+    if (r !== '2,2×,2×,true,' + Math.round(100 * Math.log10(20) / Math.log10(3000))) out.push('2× on the station: ' + r);
+    await page.fill('#st-sout', '40'); await page.press('#st-sout', 'Enter');
+    r = await page.evaluate(() => [speed, document.getElementById('st-sout').value, document.getElementById('speed-out').value].join());
+    if (r !== '40,40×,40×') out.push('40 typed on the station: ' + r);
+    await page.fill('#st-sout', 'abc'); await page.press('#st-sout', 'Enter');
+    r = await page.evaluate(() => [speed, document.getElementById('st-sout').value].join());
+    if (r !== '40,40×') out.push('nonsense typed on the station: ' + r);
+    await page.click('#speed-group [data-speed="0.5"]');
+    r = await page.evaluate(() => [document.getElementById('st-sout').value, document.querySelector('#station [data-speed="0.5"]').getAttribute('aria-pressed')].join());
+    if (r !== '0.5×,true') out.push('½× on the Simulation tab, on the station: ' + r);
+    await page.evaluate(() => { setSpeed(1); ST.hidden = true; saveStation(); }); await page.click('#tab-edit');
+    return out;
+  });
   await check('Editing wires: parts drag their wires, wire ends pull off, runs slide, undo', async page => {
     const out = [];
     await page.selectOption('#preset', 'io');
