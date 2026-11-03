@@ -2644,7 +2644,7 @@ function drawTemp(p, g, x, y, v) {
   // the bulb's box, and its thermometer
   const sx = bx + hw - 6, sw = TSW_SB + 6, st = top + 20, sh = LSW_TOP + LSW_BOT - 40;
   framed('rect', { x: sx, y: st, width: sw, height: sh, rx: 9, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
-  const tx = sx + sw / 2 + 2, cTop = st + 9, cBot = st + sh - 18, br = 6.2, cw = 4.4;
+  const tx = sx + sw / 2 + 6, cTop = st + 9, cBot = st + sh - 18, br = 6.2, cw = 4.4;
   el('rect', { x: tx - cw / 2 - 1.2, y: cTop - 1.2, width: cw + 2.4, height: cBot - cTop + 2.4, rx: cw / 2 + 1.2, fill: '#111' }, g);
   el('rect', { x: tx - cw / 2, y: cTop, width: cw, height: cBot - cTop, rx: cw / 2, fill: '#5a5a5a' }, g);
   const tc = p.low ? TSW_COLD : TSW_HOT;   // (a low temperature switch's thermometer blue, a high one's red)
