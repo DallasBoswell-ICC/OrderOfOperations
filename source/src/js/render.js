@@ -112,7 +112,7 @@ function renderInto(target, V, L) {
         const t = el('text', { x: p.x, y: p.y - capTop(p) - 17, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': note ? 600 : 700, fill: note ? '#e2cc85' : '#ff8a7a', 'pointer-events': 'none', stroke: '#404040', 'stroke-width': 4, 'paint-order': 'stroke' }, g);
         t.textContent = note ? m.note : '⚠ ' + m;
       }
-    } else if (p.t === 'btn' || p.t === 'lsw') bindButton(g, p);
+    } else if (p.t === 'btn' || isLim(p)) bindButton(g, p);
     else if ((isPwr3(p) && p.t !== 'mst') || p.t === 'olc' || p.t === 'fu1') bindPower(g, p);
     else if (p.t === 'sel') bindSelector(g, p);
   }

@@ -1,5 +1,5 @@
 /* ---------------- build / run ---------------- */
-function afterRunStart() { buildStation(); document.getElementById('mode-group').hidden = !parts.some(p => p.t === 'btn' && !p.maint); document.getElementById('timer-group').hidden = !parts.some(isTimer); paint(); }
+function afterRunStart() { buildStation(); document.getElementById('mode-group').hidden = !parts.some(p => (p.t === 'btn' && !p.maint) || isLim(p)); document.getElementById('timer-group').hidden = !parts.some(isTimer); paint(); }
 function setMode(run) {
   editing = !run;
   document.getElementById('tab-edit').setAttribute('aria-selected', String(!run));

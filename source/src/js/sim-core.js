@@ -8,7 +8,7 @@ let NET = null, simT = 0, speed = 1, mode = 'click', queue = [], seq = 0, evT = 
 let tl = [], coilOn = {}, down = {}, autoRel = {}, shortNow = false;
 // paint again even though the circuit has settled (something was pressed, or the panel was drawn afresh)
 let needPaint = true;
-const btnColour = L => (parts.find(p => isOp(p) && p.L === L) || {}).color || '#888888';
+const btnColour = L => (parts.find(p => isOp(p) && opKey(p) === L) || {}).color || '#888888';
 function schedule(t, fn) { queue.push({ t, s: seq++, fn }); if (t > busyUntil) busyUntil = t; }
 // an event that is only waited for (a timer timing out): nothing moves until it comes, so it does not keep the panel
 // being painted, or a clicked button held down, in the meantime
@@ -57,7 +57,7 @@ function setAt(n, t, c, lane) {
 const setCol = set => set.size === 0 ? SRC_COL : set.size === 1 ? flowOf(btnColour([...set][0])) : blend([...set].map(L => flowOf(btnColour(L))));
 const colourOf = r => r.rd < RAMP ? mixOk(r.from, setCol(r.set), r.rd / RAMP) : setCol(r.set);
 // a pushbutton passes current while pressed (NO) or until pressed (NC); a relay contact once its bar has landed on its posts
-const closed = p => p.t === 'fu1' ? !BLOWN[p.id] : p.t === 'lsw' ? lswClosed(p) : p.t === 'pp' ? poleClosed(p) : p.t === 'olc' ? !OLTRIP[p.L] : p.t === 'xsw' ? !!coilOn[p.x.id] : p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.t === 'sel' ? selClosed(p) : p.nc ? !down[p.L] : !!down[p.L];
+const closed = p => p.t === 'fu1' ? !BLOWN[p.id] : isLim(p) ? lswClosed(p) : p.t === 'pp' ? poleClosed(p) : p.t === 'olc' ? !OLTRIP[p.L] : p.t === 'xsw' ? !!coilOn[p.x.id] : p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.t === 'sel' ? selClosed(p) : p.nc ? !down[p.L] : !!down[p.L];
 /* Selector switches. One switch can be drawn in several rungs (the same letter, as a pushbutton with several contact
    blocks): turning any drawing turns them all. Each drawing is closed in the positions it is set to (p.closedIn).
    The switch has 2 to 4 positions (selN), can name them (p.names, such as HAND / OFF / AUTO), and starts in p.pos.
@@ -127,9 +127,9 @@ const coilColour = L => (parts.find(q => q.t === 'coil' && q.L === L) || {}).col
 let DSC = {}, BLOWN = {}, OLTRIP = {}, MOT = {};
 const poleClosed = k => { const p = k.x; return p.t === 'dsc' ? !DSC[p.id] : p.t === 'fus' ? !BLOWN[k.id] : p.t === 'mst' ? !!(CON[p.id] && CON[p.id].shut) : true; };
 // a limit switch: actuated while worked (a held one: while not), and closed accordingly
-const lswAct = p => !!down[p.L] !== !!p.held, lswClosed = p => p.nc ? !lswAct(p) : lswAct(p);
+const lswAct = p => !!down[opKey(p)] !== !!p.held, lswClosed = p => p.nc ? !lswAct(p) : lswAct(p);
 // how far a limit switch has moved from at rest (0) to worked (1): easing in and out over LSW_MOVE after it was last
 // worked or let go
 const LSW_MOVE = .3;
 let LSW_T = {};
-function lswPos(p) { const to = lswAct(p) ? 1 : 0, t0 = LSW_T[p.L]; if (t0 === undefined) return to; const f = clamp01((simT - t0) / LSW_MOVE), e = f * f * (3 - 2 * f); return to ? e : 1 - e; }
+function lswPos(p) { const to = lswAct(p) ? 1 : 0, t0 = LSW_T[opKey(p)]; if (t0 === undefined) return to; const f = clamp01((simT - t0) / LSW_MOVE), e = f * f * (3 - 2 * f); return to ? e : 1 - e; }

@@ -449,7 +449,7 @@ body.fs .wrap { padding-top: 8px; }
       </div>
       <div class="props" id="props-lsw" hidden>
         <div class="tgroup"><span class="label">Number</span><select id="ls-num" aria-label="Limit switch number"></select></div>
-        <div class="tgroup"><span class="label">Kind</span><select id="ls-kind" aria-label="Kind of limit switch"><option value="no">Normally open</option><option value="nc">Normally closed</option><option value="noh">NO held closed</option><option value="nch">NC held open</option></select></div>
+        <div class="tgroup"><span class="label">Kind</span><select id="ls-kind" aria-label="Kind of limit switch"><option value="no">Normally open</option><option value="nc">Normally closed</option><option value="noh">NO held closed</option><option value="nch">NC held open</option><option value="nol">Low temp., NO</option><option value="ncl">Low temp., NC</option></select></div>
         <div class="tgroup"><span class="label">Colour</span><div class="swatches" id="ls-colour" role="radiogroup" aria-label="Limit switch colour"></div></div>
       </div>
       <div class="props" id="props-xfm" hidden>
@@ -589,7 +589,7 @@ body.fs .wrap { padding-top: 8px; }
 </div>
 <div class="tp-menu" id="sw-menu" role="menu" aria-label="Switches" hidden>
   <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="sel" data-tip="Selector switch: 2 to 4 positions, turned left or right. Put the same letter in several rungs for its contact blocks, each closed in the positions you choose."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#0070C0" stroke-width="1.6"/><circle cx="15" cy="15" r="6.5" fill="#444"/><rect x="12.6" y="7.5" width="4.8" height="15" rx="2.4" fill="#0070C0" transform="rotate(45 15 15)"/></svg><span>Selector<br>switch</span></button></div><div class="gname">Selector switch</div></div>
-  <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="lsw-no" data-tip="Limit switch, normally open: closes while it is worked."><svg viewBox="0 0 30 26"><line x1="14" y1="11.5" x2="22.0" y2="4.2" stroke="#b5b5b5" stroke-width="2.1" stroke-linecap="round"/><circle cx="22.0" cy="4.2" r="2.7" fill="#2b2b2b" stroke="#c8c8c8" stroke-width="1.1"/><circle cx="22.0" cy="4.2" r="1" fill="#a3a3a3"/><path d="M9.4 11.5A4.6 4.6 0 0 1 18.6 11.5Z" fill="#222" stroke="#0070C0" stroke-width="1.2"/><rect x="3.5" y="11.5" width="21" height="14" rx="3" fill="#222" stroke="#0070C0" stroke-width="1.4"/><path d="M14 12.6V15" stroke="#9a9a9a" stroke-width=".8" stroke-dasharray="1.2 1"/><path d="M8.20 16.50L18.13 20.80L13.83 22.42Z" fill="#a6a6a6"/><path d="M8.2 16.5L20.31 21.74" stroke="#a6a6a6" stroke-width="1.6" stroke-linecap="round"/><circle cx="8.2" cy="16.5" r="1.8" fill="#7c7c7c"/><circle cx="20.2" cy="16.5" r="1.8" fill="#7c7c7c"/></svg><span>Normally<br>open</span></button><button type="button" class="tool big" data-part="lsw-nc" data-tip="Limit switch, normally closed: opens while it is worked."><svg viewBox="0 0 30 26"><line x1="14" y1="11.5" x2="22.0" y2="4.2" stroke="#b5b5b5" stroke-width="2.1" stroke-linecap="round"/><circle cx="22.0" cy="4.2" r="2.7" fill="#2b2b2b" stroke="#c8c8c8" stroke-width="1.1"/><circle cx="22.0" cy="4.2" r="1" fill="#a3a3a3"/><path d="M9.4 11.5A4.6 4.6 0 0 1 18.6 11.5Z" fill="#222" stroke="#0070C0" stroke-width="1.2"/><rect x="3.5" y="11.5" width="21" height="14" rx="3" fill="#222" stroke="#0070C0" stroke-width="1.4"/><path d="M14 12.6V15" stroke="#9a9a9a" stroke-width=".8" stroke-dasharray="1.2 1"/><path d="M8.20 16.50L18.87 14.66L16.16 18.37Z" fill="#0070C0"/><path d="M8.2 16.5L21.21 14.25" stroke="#0070C0" stroke-width="1.6" stroke-linecap="round"/><circle cx="8.2" cy="16.5" r="1.8" fill="#0070C0"/><circle cx="20.2" cy="16.5" r="1.8" fill="#0070C0"/></svg><span>Normally<br>closed</span></button><button type="button" class="tool big" data-part="lsw-noh" data-tip="Limit switch, normally open, held closed by the machine at rest: opens while it is let go (clicked)."><svg viewBox="0 0 30 26"><line x1="14" y1="11.5" x2="22.6" y2="6.6" stroke="#b5b5b5" stroke-width="2.1" stroke-linecap="round"/><circle cx="22.6" cy="6.6" r="2.7" fill="#2b2b2b" stroke="#c8c8c8" stroke-width="1.1"/><circle cx="22.6" cy="6.6" r="1" fill="#a3a3a3"/><path d="M9.4 11.5A4.6 4.6 0 0 1 18.6 11.5Z" fill="#222" stroke="#0070C0" stroke-width="1.2"/><rect x="3.5" y="11.5" width="21" height="14" rx="3" fill="#222" stroke="#0070C0" stroke-width="1.4"/><path d="M14 12.6V15" stroke="#9a9a9a" stroke-width=".8" stroke-dasharray="1.2 1"/><path d="M8.20 16.50L18.87 18.34L15.07 20.93Z" fill="#0070C0"/><path d="M8.2 16.5L21.21 18.75" stroke="#0070C0" stroke-width="1.6" stroke-linecap="round"/><circle cx="8.2" cy="16.5" r="1.8" fill="#0070C0"/><circle cx="20.2" cy="16.5" r="1.8" fill="#0070C0"/><path d="M22.6 3.5l-2.6 -2.6h1.4v-1.3h2.4v1.3h1.4z" fill="#ececec" stroke="#1c1c1c" stroke-width=".5" stroke-linejoin="round"/></svg><span>NO<br>held closed</span></button><button type="button" class="tool big" data-part="lsw-nch" data-tip="Limit switch, normally closed, held open by the machine at rest: closes while it is let go (clicked)."><svg viewBox="0 0 30 26"><line x1="14" y1="11.5" x2="22.6" y2="6.6" stroke="#b5b5b5" stroke-width="2.1" stroke-linecap="round"/><circle cx="22.6" cy="6.6" r="2.7" fill="#2b2b2b" stroke="#c8c8c8" stroke-width="1.1"/><circle cx="22.6" cy="6.6" r="1" fill="#a3a3a3"/><path d="M9.4 11.5A4.6 4.6 0 0 1 18.6 11.5Z" fill="#222" stroke="#0070C0" stroke-width="1.2"/><rect x="3.5" y="11.5" width="21" height="14" rx="3" fill="#222" stroke="#0070C0" stroke-width="1.4"/><path d="M14 12.6V15" stroke="#9a9a9a" stroke-width=".8" stroke-dasharray="1.2 1"/><path d="M8.20 16.50L18.13 12.20L16.38 16.45Z" fill="#a6a6a6"/><path d="M8.2 16.5L20.31 11.26" stroke="#a6a6a6" stroke-width="1.6" stroke-linecap="round"/><circle cx="8.2" cy="16.5" r="1.8" fill="#7c7c7c"/><circle cx="20.2" cy="16.5" r="1.8" fill="#7c7c7c"/><path d="M22.6 3.5l-2.6 -2.6h1.4v-1.3h2.4v1.3h1.4z" fill="#ececec" stroke="#1c1c1c" stroke-width=".5" stroke-linejoin="round"/></svg><span>NC<br>held open</span></button></div><div class="gname">Limit switches</div></div>
+  <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="lsw-no" data-tip="Limit switch, normally open: closes while it is worked."><svg viewBox="0 0 30 26"><line x1="14" y1="11.5" x2="22.0" y2="4.2" stroke="#b5b5b5" stroke-width="2.1" stroke-linecap="round"/><circle cx="22.0" cy="4.2" r="2.7" fill="#2b2b2b" stroke="#c8c8c8" stroke-width="1.1"/><circle cx="22.0" cy="4.2" r="1" fill="#a3a3a3"/><path d="M9.4 11.5A4.6 4.6 0 0 1 18.6 11.5Z" fill="#222" stroke="#0070C0" stroke-width="1.2"/><rect x="3.5" y="11.5" width="21" height="14" rx="3" fill="#222" stroke="#0070C0" stroke-width="1.4"/><path d="M14 12.6V15" stroke="#9a9a9a" stroke-width=".8" stroke-dasharray="1.2 1"/><path d="M8.20 16.50L18.13 20.80L13.83 22.42Z" fill="#a6a6a6"/><path d="M8.2 16.5L20.31 21.74" stroke="#a6a6a6" stroke-width="1.6" stroke-linecap="round"/><circle cx="8.2" cy="16.5" r="1.8" fill="#7c7c7c"/><circle cx="20.2" cy="16.5" r="1.8" fill="#7c7c7c"/></svg><span>Normally<br>open</span></button><button type="button" class="tool big" data-part="lsw-nc" data-tip="Limit switch, normally closed: opens while it is worked."><svg viewBox="0 0 30 26"><line x1="14" y1="11.5" x2="22.0" y2="4.2" stroke="#b5b5b5" stroke-width="2.1" stroke-linecap="round"/><circle cx="22.0" cy="4.2" r="2.7" fill="#2b2b2b" stroke="#c8c8c8" stroke-width="1.1"/><circle cx="22.0" cy="4.2" r="1" fill="#a3a3a3"/><path d="M9.4 11.5A4.6 4.6 0 0 1 18.6 11.5Z" fill="#222" stroke="#0070C0" stroke-width="1.2"/><rect x="3.5" y="11.5" width="21" height="14" rx="3" fill="#222" stroke="#0070C0" stroke-width="1.4"/><path d="M14 12.6V15" stroke="#9a9a9a" stroke-width=".8" stroke-dasharray="1.2 1"/><path d="M8.20 16.50L18.87 14.66L16.16 18.37Z" fill="#0070C0"/><path d="M8.2 16.5L21.21 14.25" stroke="#0070C0" stroke-width="1.6" stroke-linecap="round"/><circle cx="8.2" cy="16.5" r="1.8" fill="#0070C0"/><circle cx="20.2" cy="16.5" r="1.8" fill="#0070C0"/></svg><span>Normally<br>closed</span></button><button type="button" class="tool big" data-part="lsw-noh" data-tip="Limit switch, normally open, held closed by the machine at rest: opens while it is let go (clicked)."><svg viewBox="0 0 30 26"><line x1="14" y1="11.5" x2="22.6" y2="6.6" stroke="#b5b5b5" stroke-width="2.1" stroke-linecap="round"/><circle cx="22.6" cy="6.6" r="2.7" fill="#2b2b2b" stroke="#c8c8c8" stroke-width="1.1"/><circle cx="22.6" cy="6.6" r="1" fill="#a3a3a3"/><path d="M9.4 11.5A4.6 4.6 0 0 1 18.6 11.5Z" fill="#222" stroke="#0070C0" stroke-width="1.2"/><rect x="3.5" y="11.5" width="21" height="14" rx="3" fill="#222" stroke="#0070C0" stroke-width="1.4"/><path d="M14 12.6V15" stroke="#9a9a9a" stroke-width=".8" stroke-dasharray="1.2 1"/><path d="M8.20 16.50L18.87 18.34L15.07 20.93Z" fill="#0070C0"/><path d="M8.2 16.5L21.21 18.75" stroke="#0070C0" stroke-width="1.6" stroke-linecap="round"/><circle cx="8.2" cy="16.5" r="1.8" fill="#0070C0"/><circle cx="20.2" cy="16.5" r="1.8" fill="#0070C0"/><path d="M22.6 3.5l-2.6 -2.6h1.4v-1.3h2.4v1.3h1.4z" fill="#ececec" stroke="#1c1c1c" stroke-width=".5" stroke-linejoin="round"/></svg><span>NO<br>held closed</span></button><button type="button" class="tool big" data-part="lsw-nch" data-tip="Limit switch, normally closed, held open by the machine at rest: closes while it is let go (clicked)."><svg viewBox="0 0 30 26"><line x1="14" y1="11.5" x2="22.6" y2="6.6" stroke="#b5b5b5" stroke-width="2.1" stroke-linecap="round"/><circle cx="22.6" cy="6.6" r="2.7" fill="#2b2b2b" stroke="#c8c8c8" stroke-width="1.1"/><circle cx="22.6" cy="6.6" r="1" fill="#a3a3a3"/><path d="M9.4 11.5A4.6 4.6 0 0 1 18.6 11.5Z" fill="#222" stroke="#0070C0" stroke-width="1.2"/><rect x="3.5" y="11.5" width="21" height="14" rx="3" fill="#222" stroke="#0070C0" stroke-width="1.4"/><path d="M14 12.6V15" stroke="#9a9a9a" stroke-width=".8" stroke-dasharray="1.2 1"/><path d="M8.20 16.50L18.13 12.20L16.38 16.45Z" fill="#a6a6a6"/><path d="M8.2 16.5L20.31 11.26" stroke="#a6a6a6" stroke-width="1.6" stroke-linecap="round"/><circle cx="8.2" cy="16.5" r="1.8" fill="#7c7c7c"/><circle cx="20.2" cy="16.5" r="1.8" fill="#7c7c7c"/><path d="M22.6 3.5l-2.6 -2.6h1.4v-1.3h2.4v1.3h1.4z" fill="#ececec" stroke="#1c1c1c" stroke-width=".5" stroke-linejoin="round"/></svg><span>NC<br>held open</span></button></div><div class="gname">Limit switches</div></div><div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="tsw-no" data-tip="High temperature switch, normally open: closes as it gets hot. For now it is worked as a limit switch is (click it, or press and hold)."><svg viewBox="0 0 30 26"><rect x="1.5" y="5" width="18.5" height="19" rx="3.5" fill="#222" stroke="#FF0032" stroke-width="1.3"/><rect x="19.5" y="8" width="7.6" height="14" rx="2" fill="#222" stroke="#FF0032" stroke-width="1.1"/><rect x="23" y="10" width="1.6" height="8" rx=".8" fill="#5a5a5a"/><rect x="23" y="16" width="1.6" height="2.4" fill="#E8413C"/><circle cx="23.8" cy="19" r="1.6" fill="#E8413C"/><path d="M23.8 .8c1.2 1.4 2.4 2.6 2.4 4a2.4 2.4 0 0 1-4.8 0c0-.9.6-1.6 1.1-2.3.3.7.6 1 1 1.2.1-1 .1-1.9.3-2.9z" fill="#FF8A1F"/><circle cx="7.5" cy="12.5" r="1.9" fill="#777"/><circle cx="15" cy="12.5" r="1.9" fill="#777"/><line x1="7.5" y1="12.5" x2="17" y2="16" stroke="#b5b5b5" stroke-width="1.8" stroke-linecap="round"/><path d="M12 14.4v2.4h1.8v2h-1.8v2" fill="none" stroke="#b5b5b5" stroke-width="1"/></svg><span>Normally<br>open</span></button><button type="button" class="tool big" data-part="tsw-nc" data-tip="High temperature switch, normally closed: opens as it gets hot. For now it is worked as a limit switch is (click it, or press and hold)."><svg viewBox="0 0 30 26"><rect x="1.5" y="5" width="18.5" height="19" rx="3.5" fill="#222" stroke="#FF0032" stroke-width="1.3"/><rect x="19.5" y="8" width="7.6" height="14" rx="2" fill="#222" stroke="#FF0032" stroke-width="1.1"/><rect x="23" y="10" width="1.6" height="8" rx=".8" fill="#5a5a5a"/><rect x="23" y="16" width="1.6" height="2.4" fill="#E8413C"/><circle cx="23.8" cy="19" r="1.6" fill="#E8413C"/><path d="M23.8 .8c1.2 1.4 2.4 2.6 2.4 4a2.4 2.4 0 0 1-4.8 0c0-.9.6-1.6 1.1-2.3.3.7.6 1 1 1.2.1-1 .1-1.9.3-2.9z" fill="#FF8A1F"/><circle cx="7.5" cy="12.5" r="1.9" fill="#777"/><circle cx="15" cy="12.5" r="1.9" fill="#777"/><line x1="7.5" y1="12.5" x2="17" y2="10" stroke="#b5b5b5" stroke-width="1.8" stroke-linecap="round"/><path d="M12 11.4v2.4h1.8v2h-1.8v2" fill="none" stroke="#b5b5b5" stroke-width="1"/></svg><span>Normally<br>closed</span></button></div><div class="gname">High temperature switches</div></div><div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="tsw-nol" data-tip="Low temperature switch, normally open: closes as it gets cold. For now it is worked as a limit switch is (click it, or press and hold)."><svg viewBox="0 0 30 26"><rect x="1.5" y="5" width="18.5" height="19" rx="3.5" fill="#222" stroke="#FF0032" stroke-width="1.3"/><rect x="19.5" y="8" width="7.6" height="14" rx="2" fill="#222" stroke="#FF0032" stroke-width="1.1"/><rect x="23" y="10" width="1.6" height="8" rx=".8" fill="#5a5a5a"/><rect x="23" y="16.5" width="1.6" height="1.9" fill="#3F9BFF"/><circle cx="23.8" cy="19" r="1.6" fill="#3F9BFF"/><g stroke="#3F9BFF" stroke-width=".9" stroke-linecap="round"><line x1="23.8" y1="1" x2="23.8" y2="6.6"/><line x1="21.4" y1="2.4" x2="26.2" y2="5.2"/><line x1="21.4" y1="5.2" x2="26.2" y2="2.4"/></g><circle cx="7.5" cy="12.5" r="1.9" fill="#777"/><circle cx="15" cy="12.5" r="1.9" fill="#777"/><line x1="7.5" y1="12.5" x2="17" y2="16" stroke="#b5b5b5" stroke-width="1.8" stroke-linecap="round"/><path d="M12 14.4v2.4h1.8v2h-1.8v2" fill="none" stroke="#b5b5b5" stroke-width="1"/></svg><span>Normally<br>open</span></button><button type="button" class="tool big" data-part="tsw-ncl" data-tip="Low temperature switch, normally closed: opens as it gets cold. For now it is worked as a limit switch is (click it, or press and hold)."><svg viewBox="0 0 30 26"><rect x="1.5" y="5" width="18.5" height="19" rx="3.5" fill="#222" stroke="#FF0032" stroke-width="1.3"/><rect x="19.5" y="8" width="7.6" height="14" rx="2" fill="#222" stroke="#FF0032" stroke-width="1.1"/><rect x="23" y="10" width="1.6" height="8" rx=".8" fill="#5a5a5a"/><rect x="23" y="16.5" width="1.6" height="1.9" fill="#3F9BFF"/><circle cx="23.8" cy="19" r="1.6" fill="#3F9BFF"/><g stroke="#3F9BFF" stroke-width=".9" stroke-linecap="round"><line x1="23.8" y1="1" x2="23.8" y2="6.6"/><line x1="21.4" y1="2.4" x2="26.2" y2="5.2"/><line x1="21.4" y1="5.2" x2="26.2" y2="2.4"/></g><circle cx="7.5" cy="12.5" r="1.9" fill="#777"/><circle cx="15" cy="12.5" r="1.9" fill="#777"/><line x1="7.5" y1="12.5" x2="17" y2="10" stroke="#b5b5b5" stroke-width="1.8" stroke-linecap="round"/><path d="M12 11.4v2.4h1.8v2h-1.8v2" fill="none" stroke="#b5b5b5" stroke-width="1"/></svg><span>Normally<br>closed</span></button></div><div class="gname">Low temperature switches</div></div>
 </div>
 <div class="tp-menu" id="out-menu" role="menu" aria-label="Outputs" hidden>
   <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="coil" data-tip="Relay coil"><svg viewBox="0 0 30 26"><circle cx="15" cy="13" r="11.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="15" cy="13" r="7.5" fill="#555"/></svg><span>Control<br>relay</span></button><button type="button" class="tool big" data-part="timer" data-tip="On-delay timer: a relay coil whose contacts change only once it has been energized for its set time. Losing power resets it at once. Set the time in its settings."><svg viewBox="0 0 30 26"><circle cx="13" cy="14" r="10.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="13" cy="14" r="6.8" fill="#555"/><rect x="18" y="1" width="11" height="11" rx="2" fill="#222" stroke="#FFDC00" stroke-width="1.2"/><path d="M21 3.5h5l-2.5 3 2.5 3h-5l2.5-3z" fill="#d8d8d8"/></svg><span>On-delay<br>timer</span></button><button type="button" class="tool big" data-part="timer-off" data-tip="Off-delay timer: its timed contacts change as soon as it is energized, and go back only once its set time has run out after it loses power. Energized again before then, it stops timing. Set the time in its settings."><svg viewBox="0 0 30 26"><circle cx="13" cy="14" r="10.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="13" cy="14" r="6.8" fill="#555"/><rect x="18" y="1" width="11" height="11" rx="2" fill="#222" stroke="#FFDC00" stroke-width="1.2"/><path d="M21 3.5h5l-2.5 3 2.5 3h-5l2.5-3z" fill="#d8d8d8"/></svg><span>Off-delay<br>timer</span></button></div><div class="gname">Relays</div></div>
@@ -653,7 +653,7 @@ const XFM_W = 210, XFM_H = 148, XFM_TX = 60, XFM_TY = 80, XFM_EDGE = '#9aa7b5';
 const isPwr3 = p => p.t === 'dsc' || p.t === 'fus' || p.t === 'mst' || p.t === 'olh', isPwrT = t => t === 'dsc' || t === 'fus' || t === 'mst' || t === 'olh';
 const DSC_HEAD = 50, DSC_HANDLE = '#E8413C';   // (a disconnect's head on top, with its handle)
 const PWR_DY = 120, PWR_H = 2 * PWR_DY + 66, MTR_W = 280, MTR_H = 280, MTR_COL = '#9aa7b5', OL_COL = '#FF6F59', DSC_COL = '#c9d2dd', FUS_COL = '#c8c8c8';
-const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : t === 'lsw' ? LSW_S / 2 : t === 'mtr' ? MTR_H / 2 : t === 'dsc' ? PWR_H / 2 + DSC_HEAD : isPwrT(t) ? PWR_H / 2 : 40;   // (the room a part takes)
+const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : t === 'tsw' ? TSW_T : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : t === 'lsw' || t === 'tsw' ? LSW_S / 2 : t === 'mtr' ? MTR_H / 2 : t === 'dsc' ? PWR_H / 2 + DSC_HEAD : isPwrT(t) ? PWR_H / 2 : 40;   // (the room a part takes)
 const SOL_COL = '#00D2BE';
 /* a solenoid (as on Dallas's drawing): a diamond (a rounded square on its corner) as tall and wide as a coil, with a
    dot at each end where the rung comes in, joined by the lightning bolt: along the rung, up to a peak, straight down and
@@ -670,9 +670,15 @@ const SOL_LEN = 2 * (SOL_DOT + SOL_DR - SOL_X) + 2 * Math.hypot(SOL_X, SOL_P) + 
 // a selector switch: a square body a little larger than a pushbutton's (room for its position numbers round the top)
 const SEL_BOX = 80;
 const WIDE = t => LOADT(t) || t === 'sel' || t === 'lsw';                                // parts whose ends sit 60 either side of their centre
-const BODYH = t => t === 'lsw' ? LSW_S : t === 'xfm' ? XFM_H : t === 'mtr' ? MTR_H : isPwrT(t) ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
-const TERM = p => p.t === 'mtr' ? MTR_W / 2 + 20 : WIDE(p.t) ? 60 : 40;
-const isOp = p => p.t === 'btn' || p.t === 'sel' || p.t === 'lsw';
+const BODYH = t => t === 'lsw' || t === 'tsw' ? LSW_S : t === 'xfm' ? XFM_H : t === 'mtr' ? MTR_H : isPwrT(t) ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
+const TERM = p => p.t === 'mtr' ? MTR_W / 2 + 20 : p.t === 'tsw' ? TSW_T : WIDE(p.t) ? 60 : 40;
+const isOp = p => p.t === 'btn' || p.t === 'sel' || p.t === 'lsw' || p.t === 'tsw';
+/* A temperature switch (tsw): numbered (TS1, TS2...), the limit switch's body without its head, the NEMA temperature
+   switch's stepped stem under its blade, and joined to its right side a sensing bulb's box with a thermometer in it.
+   For now it is worked as a limit switch is (as a momentary pushbutton), by its own key (opKey: 'T' and its number,
+   so TS1 and LS1 are two switches); the thermometer rises as it is worked and falls back as it is let go. NO or NC. */
+const TSW_COL = '#FF0032', TSW_T = 80, TSW_SB = 30, TSW_HALF = 70;   // (its ends; its bulb box's width; how far out its body and box reach)
+const isLim = p => p.t === 'lsw' || p.t === 'tsw', opKey = p => p.t === 'tsw' ? 'T' + p.L : p.L;
 /* A limit switch (lsw): numbered (p.L '1', '2'... : LS1, LS2), worked like a momentary pushbutton (down[p.L]) and
    tinting the current with its colour as one does. Normally open or closed (p.nc); held (p.held): actuated by the
    machine at rest, so working it lets it go. A square body, roomier than a contact's, its ends 60 either side. */
@@ -706,7 +712,7 @@ let PH_COL = [...PH_DEFAULT];
 const phCol = p => PH_COL[(+p.L || 1) - 1];
 const lighten = (c, f) => { const n = parseInt(c.slice(1), 16), m = k => Math.round(((n >> k) & 255) + (255 - ((n >> k) & 255)) * f); return '#' + ((1 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)).toString(16).slice(1).toUpperCase(); };
 const JMP_EDGE = '#b8c2cf';
-const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel' || p.t === 'lsw' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc' || p.t === 'fu1';
+const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel' || p.t === 'lsw' || p.t === 'tsw' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc' || p.t === 'fu1';
 const isCon = p => p.t === 'con' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc' || p.t === 'fu1';   // (a relay contact, or a transformer's switch inside it: passes on what it is given)   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre
 
 /* ---- js/model.js ---- */
@@ -1091,7 +1097,7 @@ let NET = null, simT = 0, speed = 1, mode = 'click', queue = [], seq = 0, evT = 
 let tl = [], coilOn = {}, down = {}, autoRel = {}, shortNow = false;
 // paint again even though the circuit has settled (something was pressed, or the panel was drawn afresh)
 let needPaint = true;
-const btnColour = L => (parts.find(p => isOp(p) && p.L === L) || {}).color || '#888888';
+const btnColour = L => (parts.find(p => isOp(p) && opKey(p) === L) || {}).color || '#888888';
 function schedule(t, fn) { queue.push({ t, s: seq++, fn }); if (t > busyUntil) busyUntil = t; }
 // an event that is only waited for (a timer timing out): nothing moves until it comes, so it does not keep the panel
 // being painted, or a clicked button held down, in the meantime
@@ -1140,7 +1146,7 @@ function setAt(n, t, c, lane) {
 const setCol = set => set.size === 0 ? SRC_COL : set.size === 1 ? flowOf(btnColour([...set][0])) : blend([...set].map(L => flowOf(btnColour(L))));
 const colourOf = r => r.rd < RAMP ? mixOk(r.from, setCol(r.set), r.rd / RAMP) : setCol(r.set);
 // a pushbutton passes current while pressed (NO) or until pressed (NC); a relay contact once its bar has landed on its posts
-const closed = p => p.t === 'fu1' ? !BLOWN[p.id] : p.t === 'lsw' ? lswClosed(p) : p.t === 'pp' ? poleClosed(p) : p.t === 'olc' ? !OLTRIP[p.L] : p.t === 'xsw' ? !!coilOn[p.x.id] : p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.t === 'sel' ? selClosed(p) : p.nc ? !down[p.L] : !!down[p.L];
+const closed = p => p.t === 'fu1' ? !BLOWN[p.id] : isLim(p) ? lswClosed(p) : p.t === 'pp' ? poleClosed(p) : p.t === 'olc' ? !OLTRIP[p.L] : p.t === 'xsw' ? !!coilOn[p.x.id] : p.t === 'con' ? !!(CON[p.id] ? CON[p.id].shut : p.nc) : p.t === 'sel' ? selClosed(p) : p.nc ? !down[p.L] : !!down[p.L];
 /* Selector switches. One switch can be drawn in several rungs (the same letter, as a pushbutton with several contact
    blocks): turning any drawing turns them all. Each drawing is closed in the positions it is set to (p.closedIn).
    The switch has 2 to 4 positions (selN), can name them (p.names, such as HAND / OFF / AUTO), and starts in p.pos.
@@ -1210,12 +1216,12 @@ const coilColour = L => (parts.find(q => q.t === 'coil' && q.L === L) || {}).col
 let DSC = {}, BLOWN = {}, OLTRIP = {}, MOT = {};
 const poleClosed = k => { const p = k.x; return p.t === 'dsc' ? !DSC[p.id] : p.t === 'fus' ? !BLOWN[k.id] : p.t === 'mst' ? !!(CON[p.id] && CON[p.id].shut) : true; };
 // a limit switch: actuated while worked (a held one: while not), and closed accordingly
-const lswAct = p => !!down[p.L] !== !!p.held, lswClosed = p => p.nc ? !lswAct(p) : lswAct(p);
+const lswAct = p => !!down[opKey(p)] !== !!p.held, lswClosed = p => p.nc ? !lswAct(p) : lswAct(p);
 // how far a limit switch has moved from at rest (0) to worked (1): easing in and out over LSW_MOVE after it was last
 // worked or let go
 const LSW_MOVE = .3;
 let LSW_T = {};
-function lswPos(p) { const to = lswAct(p) ? 1 : 0, t0 = LSW_T[p.L]; if (t0 === undefined) return to; const f = clamp01((simT - t0) / LSW_MOVE), e = f * f * (3 - 2 * f); return to ? e : 1 - e; }
+function lswPos(p) { const to = lswAct(p) ? 1 : 0, t0 = LSW_T[opKey(p)]; if (t0 === undefined) return to; const f = clamp01((simT - t0) / LSW_MOVE), e = f * f * (3 - 2 * f); return to ? e : 1 - e; }
 
 /* ---- js/solve.js ---- */
 /* =====================================================================
@@ -1519,7 +1525,7 @@ function findNoway() {
   for (const coilsIn of [false, true]) for (const path of PATHS) {
     let label = '';
     for (const d of path) {
-      if (d.e.kind === 'part') { if (isOp(d.e.part)) label = d.e.part.L; else if (isCon(d.e.part)) add(d, label); else if (LOADT(d.e.part.t) && coilsIn) label = 'ret'; continue; }
+      if (d.e.kind === 'part') { if (isOp(d.e.part)) label = opKey(d.e.part); else if (isCon(d.e.part)) add(d, label); else if (LOADT(d.e.part.t) && coilsIn) label = 'ret'; continue; }
       add(d, label);
     }
   }
@@ -1567,7 +1573,7 @@ function findReach() {
     let label = '', s = 0;   // (s: how long the current takes to get there, in seconds)
     for (const d of path) {
       s += d.e.kind === 'seg' ? d.delay : d.e.len / V;
-      if (d.e.kind === 'part' && !isCon(d.e.part)) { if (isOp(d.e.part)) label = d.e.part.L; else if (LOADT(d.e.part.t)) label = 'ret'; continue; }
+      if (d.e.kind === 'part' && !isCon(d.e.part)) { if (isOp(d.e.part)) label = opKey(d.e.part); else if (LOADT(d.e.part.t)) label = 'ret'; continue; }
       if (!onward(d, label)) break;   // (the colour cannot go this way: this path carries none of it on from here)
       const m = REACH.get(d) || {}; m[label] = Math.max(m[label] || 0, s); REACH.set(d, m);
     }
@@ -1580,7 +1586,7 @@ function allowNow() {
     let label = '';
     for (const d of path) {
       if (d.e.kind === 'part') {
-        if (isSw(d.e.part)) { if (!closed(d.e.part)) break; if (isOp(d.e.part)) label = d.e.part.L; else { if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label); } }   // a contact passes on the colour it is given
+        if (isSw(d.e.part)) { if (!closed(d.e.part)) break; if (isOp(d.e.part)) label = opKey(d.e.part); else { if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label); } }   // a contact passes on the colour it is given
         else if (COND[d.e.part.id]) label = 'ret';   // past a coil with current through it: the return side, back to L2
         // (a coil that cannot pick up, because something past it is open, carries no current: the wire past it is as
         // live as the wire before it, so the colour waiting at the coil carries on up to whatever is open)
@@ -1611,7 +1617,7 @@ const active = d => d.e.kind === 'seg' ? ALLOW.has(d) : isSw(d.e.part) ? closed(
 function through(d, r) {
   if (!r) return null;
   if (d.e.kind === 'seg') return along(r, d.e.len);
-  if (isOp(d.e.part)) return { set: new Set([d.e.part.L]), from: colourOf(r), rd: 0 };
+  if (isOp(d.e.part)) return { set: new Set([opKey(d.e.part)]), from: colourOf(r), rd: 0 };
   if (isCon(d.e.part)) return along(r, d.e.len);   // a relay contact passes the current on as it is
   // through a coil that is in: the return side, fading to egg. Through a coil that cannot pick up: the colour
   // waiting at it, on up to whatever is open past it
@@ -1630,7 +1636,7 @@ function send(d, r, t, atOnce) {
   if (d.e.kind !== 'seg') {
     // the part's leads: the current flows in from the end it enters at, and out along the far lead just in time to
     // reach the far end when it arrives there
-    const p = d.e.part, outS = d.from === p._a ? 'B' : 'A', Ls = TERM(p) - BODYH(p.t) / 2;
+    const p = d.e.part, outS = d.from === p._a ? 'B' : 'A', Ls = TERM(p) - (p.t === 'tsw' ? TSW_HALF : BODYH(p.t) / 2);
     const tOut = t + (atOnce ? 0 : d.delay);
     leadEvent(p, outS, tOut - Ls / V, out, 'body');
     schedule(tOut, () => { d.arrived = out; reeval(d.to, evT); });
@@ -1776,8 +1782,8 @@ function turn(L, pos) {
 function press(L, v) {
   if (!!down[L] === v) return;
   down[L] = v; needPaint = true;
-  if (parts.some(p => p.t === 'lsw' && p.L === L)) { LSW_T[L] = simT; if (simT + LSW_MOVE > busyUntil) busyUntil = simT + LSW_MOVE; }   // (a limit switch: it moves over a moment)
-  switched(parts.filter(p => (p.t === 'btn' || p.t === 'lsw') && p.L === L), simT);   // (a pushbutton's letter, or a limit switch's number)
+  if (parts.some(p => isLim(p) && opKey(p) === L)) { LSW_T[L] = simT; if (simT + LSW_MOVE > busyUntil) busyUntil = simT + LSW_MOVE; }   // (a limit switch: it moves over a moment)
+  switched(parts.filter(p => (p.t === 'btn' && p.L === L) || (isLim(p) && opKey(p) === L)), simT);   // (a pushbutton's letter, or a limit or temperature switch's key)
 }
 // a relay contact's bar starts to move: it stops passing current as soon as it lifts, and passes current again
 // only once it has landed
@@ -2045,7 +2051,7 @@ function screw(x, y, g, bare) {
 }
 const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
-const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -2074,7 +2080,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -2091,7 +2097,7 @@ function drawPart(p, g, x, y, chan, onStation) {
     if (!onStation) (v.cap = el('text', vert(p) ? { x: x + BOX / 2 + 12, y: y + 4.5, 'text-anchor': 'start', class: 'cap' } : { x, y: y - capTop(p), 'text-anchor': 'middle', class: 'cap' }, g)).textContent = captionOf(p);
     return v;
   }
-  const v = {}, T = TERM(p), half = BODYH(p.t) / 2;
+  const v = {}, T = TERM(p), half = p.t === 'tsw' ? TSW_HALF : BODYH(p.t) / 2;
   if (!isBox(p) && p.t !== 'xfm' && !isPwr3(p) && p.t !== 'mtr') el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
   // the short leads between the part's ends and its body: each drawn in two pieces, so the current can flow along
   // them (the new colour, and what was there before it)
@@ -2176,6 +2182,8 @@ function drawPart(p, g, x, y, chan, onStation) {
     drawSelector(p, g, x, y, v);
   } else if (p.t === 'lsw') {
     drawLimit(p, g, x, y, v);
+  } else if (p.t === 'tsw') {
+    drawTemp(p, g, x, y, v);
   } else if (p.t === 'xfm') {
     drawXfm(p, g, x, y, v, chan);
   } else if (p.t === 'fu1') {
@@ -2623,6 +2631,79 @@ function drawLimit(p, g, x, y, v) {
   el('text', { x: x + hw - 22, y: bot - 11.8, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = p.nc ? 'NC' : 'NO';
   setLimit(v, p, editing ? (p.held ? 1 : 0) : lswPos(p), editing ? !!p.nc !== !!p.held : lswClosed(p));
 }
+/* A temperature switch (Dallas's design): the limit switch's body, its head left off, and the same contact (posts and a
+   blade hinged on the left one); under the blade the NEMA temperature switch's stepped stem, which turns with it. Joined
+   to the body's right side, a sensing bulb's box with a thermometer: its column red up to the temperature (low while
+   at rest, high while worked). The body sits left of the middle, so the two together are centred, the right-hand end
+   leading out through the bulb's box. Its number and NO or NC in the body's bottom corners. */
+function drawTemp(p, g, x, y, v) {
+  const col = p.color, r = BOX * .105, sy = BOX * .045, hw = LSW_W / 2, bx = x - TSW_SB / 2, top = y - LSW_TOP, bot = y + LSW_BOT;
+  const px1 = bx - 30, px2 = bx + 30;
+  // the bulb's box, and its thermometer
+  const sx = bx + hw - 6, sw = TSW_SB + 6, st = top + 20, sh = LSW_TOP + LSW_BOT - 40;
+  framed('rect', { x: sx, y: st, width: sw, height: sh, rx: 9, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
+  // the thermometer (Dallas's design): a grey glass tube outlined in black, its bulb at the foot, a scale of ticks
+  // down its right side, and the column inside it in the switch's colour (red, high; blue, low) up to the temperature
+  const tx = sx + sw / 2 + 4, cTop = st + 12, by = st + sh - 13, R = 8, tw = 8, iw = 4.4;
+  el('rect', { x: tx - tw / 2 - 1.2, y: cTop - tw / 2 - 1.2, width: tw + 2.4, height: by - cTop + tw / 2 + 1.2, rx: tw / 2 + 1.2, fill: '#111' }, g);
+  el('circle', { cx: tx, cy: by, r: R + 1.2, fill: '#111' }, g);
+  el('rect', { x: tx - tw / 2, y: cTop - tw / 2, width: tw, height: by - cTop + tw / 2, rx: tw / 2, fill: '#9a9a9a' }, g);
+  el('circle', { cx: tx, cy: by, r: R, fill: '#9a9a9a' }, g);
+  el('rect', { x: tx - iw / 2, y: cTop - iw / 2, width: iw, height: by - cTop + iw / 2, rx: iw / 2, fill: '#6b6b6b' }, g);
+  const tc = p.low ? TSW_COLD : TSW_HOT;   // (a low temperature switch's thermometer blue, a high one's red)
+  v.col = el('rect', { x: tx - iw / 2, y: by, width: iw, height: 2, fill: tc }, g); v.cTop = cTop; v.cBot = by - R + 1;
+  el('circle', { cx: tx, cy: by, r: R - 1.8, fill: tc }, g);
+  const tk = el('g', { stroke: '#111', 'stroke-width': .9 }, g), n = 8;
+  for (let k = 0; k < n; k++) { const yy = cTop + 3 + k * (by - R - 3 - cTop) / (n - 1); el('line', { x1: tx + (k % 2 ? 1.6 : 0), y1: yy, x2: tx + tw / 2 + 1.2, y2: yy }, tk); }
+  // on top of the bulb's box, a badge: a small flame on a high temperature switch, a snowflake on a low one
+  const bx0 = tx, by0 = st - 1, bg = el('g', {}, g);   // (right above the thermometer)
+  el('circle', { cx: bx0, cy: by0, r: 9, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.4 }, bg);
+  if (p.low) {
+    const sf = el('g', { stroke: TSW_COLD, 'stroke-width': 1.5, 'stroke-linecap': 'round', fill: 'none' }, bg);
+    for (let k = 0; k < 3; k++) {
+      const a = k * Math.PI / 3 + Math.PI / 2, c = Math.cos(a), s = Math.sin(a);
+      el('line', { x1: bx0 - 5.6 * c, y1: by0 - 5.6 * s, x2: bx0 + 5.6 * c, y2: by0 + 5.6 * s }, sf);
+      for (const e of [-1, 1]) { const ex = bx0 + e * 3.6 * c, ey = by0 + e * 3.6 * s, n = 1.7;   // (the little branches near each tip)
+        el('path', { d: `M${ex + e * n * c - n * s} ${ey + e * n * s + n * c}L${ex} ${ey}L${ex + e * n * c + n * s} ${ey + e * n * s - n * c}`, 'stroke-width': 1.1 }, sf); }
+    }
+  } else {
+    el('path', { d: `M${bx0} ${by0 - 6.2}C${bx0 + 2.2} ${by0 - 3.4} ${bx0 + 4.4} ${by0 - 1.4} ${bx0 + 4.4} ${by0 + 1.6}A4.4 4.4 0 0 1 ${bx0 - 4.4} ${by0 + 1.6}C${bx0 - 4.4} ${by0 - .4} ${bx0 - 3} ${by0 - 1.8} ${bx0 - 2} ${by0 - 3.2}C${bx0 - 1.6} ${by0 - 1.8} ${bx0 - 1.2} ${by0 - 1} ${bx0 - .4} ${by0 - .6}C${bx0 - .2} ${by0 - 2.6} ${bx0 + .4} ${by0 - 4.4} ${bx0} ${by0 - 6.2}Z`, fill: '#FF8A1F' }, bg);
+    el('path', { d: `M${bx0} ${by0 - .8}C${bx0 + 1.2} ${by0 + .4} ${bx0 + 2.2} ${by0 + 1.4} ${bx0 + 2.2} ${by0 + 2.6}A2.2 2.2 0 0 1 ${bx0 - 2.2} ${by0 + 2.6}C${bx0 - 2.2} ${by0 + 1.4} ${bx0 - 1.2} ${by0 + .4} ${bx0} ${by0 - .8}Z`, fill: '#FFD23F' }, bg);
+  }
+  // the body, and in it the contact: the blade (behind the posts) with its stem, turning about the left post
+  framed('rect', { x: bx - hw, y: top, width: LSW_W, height: LSW_TOP + LSW_BOT, rx: 15, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
+  v.blade = el('g', {}, g);
+  const len = 60 + r * .6, s0 = px1 + 30, s1 = y + 2;
+  const stem = `M${s0} ${s1}V${s1 + 10.6}H${s0 + 8.6}V${s1 + 19.2}H${s0}V${s1 + 25.6}`;
+  el('path', { d: stem, fill: 'none', stroke: '#111', 'stroke-width': 6.4, 'stroke-linejoin': 'miter', filter: 'url(#fShadow)' }, v.blade);
+  v.stem = el('path', { d: stem, fill: 'none', stroke: BLADE_GREY, 'stroke-width': 4.3, 'stroke-linejoin': 'miter' }, v.blade);
+  v.bladeShape = el('rect', { x: px1, y: y - 3.5, width: len, height: 7, rx: 3.5, fill: BLADE_GREY, stroke: 'rgba(0,0,0,.35)', 'stroke-width': .6 }, v.blade);
+  el('rect', { x: px1, y: y - 3.5, width: len, height: 7, rx: 3.5, fill: 'url(#gGloss)' }, v.blade);
+  v.hinge = [px1, y];
+  v.posts = el('g', { fill: GREY }, g);
+  el('rect', { x: bx - hw + 4.5, y: y - sy, width: px1 - (bx - hw + 4.5), height: 2 * sy }, v.posts); el('circle', { cx: px1, cy: y, r }, v.posts);
+  el('rect', { x: px2, y: y - sy, width: bx + hw - 4.5 - px2, height: 2 * sy }, v.posts); el('circle', { cx: px2, cy: y, r }, v.posts);
+  for (const cx of [px1, px2]) el('circle', { cx, cy: y, r, fill: 'url(#gDome)' }, g);
+  el('rect', { x: bx - hw + 7, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('text', { x: bx - hw + 23, y: bot - 11.8, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = 'TS' + p.L;
+  el('rect', { x: bx + hw - 37, y: bot - 25, width: 30, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('text', { x: bx + hw - 22, y: bot - 11.8, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = (p.nc ? 'NC' : 'NO') + (p.low ? '↓' : '↑');   // (works as it gets colder, or hotter)
+  setTemp(v, p, editing ? 0 : lswPos(p), editing ? !!p.nc : lswClosed(p));
+}
+// a temperature switch pos of the way from at rest (0) to worked (1): the thermometer's column up from low to high,
+// its blade turned as the limit switch's; lit in its colour while closed
+// (a high temperature switch: its column from low up to high as it is worked; a low one's from the middle down to low)
+const TSW_HOT = '#FF3333', TSW_COLD = '#0073FF', TSW_LV = p => p.low ? [.55, .12] : [.25, .85];
+function setTemp(v, p, pos, cl) {
+  const k = pos.toFixed(3) + (cl ? 'c' : 'o');
+  if (v.k === k) return; v.k = k;
+  const [hx, hy] = v.hinge, [a0, a1] = lswAngles(p), ba = lerp(a0, a1, pos);
+  v.blade.setAttribute('transform', `rotate(${ba.toFixed(2)} ${hx} ${hy})`);
+  const c = cl ? p.color : BLADE_GREY;
+  v.bladeShape.setAttribute('fill', c); v.stem.setAttribute('stroke', c); v.posts.setAttribute('fill', cl ? p.color : GREY);
+  const [l0, l1] = TSW_LV(p), lv = v.cBot - (v.cBot - v.cTop) * lerp(l0, l1, pos);
+  v.col.setAttribute('y', lv.toFixed(2)); v.col.setAttribute('height', (v.cBot - lv + 2).toFixed(2));
+}
 // a limit switch pos of the way from at rest (0) to worked (1): its lever down, the arrow on its roller (coming down,
 // fading in), its blade lifted; lit in its colour while closed
 function setLimit(v, p, pos, cl) {
@@ -2782,7 +2863,7 @@ function renderInto(target, V, L) {
         const t = el('text', { x: p.x, y: p.y - capTop(p) - 17, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': note ? 600 : 700, fill: note ? '#e2cc85' : '#ff8a7a', 'pointer-events': 'none', stroke: '#404040', 'stroke-width': 4, 'paint-order': 'stroke' }, g);
         t.textContent = note ? m.note : '⚠ ' + m;
       }
-    } else if (p.t === 'btn' || p.t === 'lsw') bindButton(g, p);
+    } else if (p.t === 'btn' || isLim(p)) bindButton(g, p);
     else if ((isPwr3(p) && p.t !== 'mst') || p.t === 'olc' || p.t === 'fu1') bindPower(g, p);
     else if (p.t === 'sel') bindSelector(g, p);
   }
@@ -3011,6 +3092,7 @@ function paintView(V) {
     let k;
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
     else if (p.t === 'lsw') setLimit(v, p, lswPos(p), lswClosed(p));
+    else if (p.t === 'tsw') setTemp(v, p, lswPos(p), lswClosed(p));
     else if (p.t === 'con' || p.t === 'olc') {
       const s = p.t === 'olc' ? olState(p.L) : CON[p.id]; if (!s) continue;
       const f = clamp01((simT - s.t0) / SWING), e = f * f * (3 - 2 * f);   // ease in and out
@@ -3162,11 +3244,12 @@ function paintLead(L, evs) {
 }
 function bindButton(g, p) {
   g.setAttribute('class', 'dev'); g.setAttribute('tabindex', '0'); g.setAttribute('role', 'button'); g.setAttribute('aria-label', captionOf(p));
+  const K = opKey(p);   // (a pushbutton's letter; a limit switch's number; a temperature switch's T and its number)
   const dn = () => {
-    if (p.maint) return press(p.L, !down[p.L]);
-    if (mode === 'click') { if (down[p.L]) return; press(p.L, true); autoRel[p.L] = true; } else press(p.L, true);
+    if (p.maint) return press(K, !down[K]);
+    if (mode === 'click') { if (down[K]) return; press(K, true); autoRel[K] = true; } else press(K, true);
   };
-  const up = () => { if (mode === 'hold' && !p.maint) press(p.L, false); };
+  const up = () => { if (mode === 'hold' && !p.maint) press(K, false); };
   g.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); try { g.setPointerCapture(e.pointerId); } catch (_) {} dn(); });
   g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up);
   g.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); dn(); } });
@@ -3372,6 +3455,7 @@ function newPart(kind, x, y) {
     const lone = Object.keys(n).filter(k => n[k] === 1).sort((a, b) => a - b)[0];
     return P('jmp', x, y, { L: lone || nextNum(new Set(Object.keys(n))) });
   }
+  if (kind.startsWith('tsw')) return P('tsw', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'tsw').map(q => q.L))), nc: kind.startsWith('tsw-nc'), ...(kind.endsWith('l') ? { low: true } : {}), color: TSW_COL });   // (tsw-no, tsw-nc: high temperature; tsw-nol, tsw-ncl: low)
   if (kind.startsWith('lsw')) return P('lsw', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'lsw').map(q => q.L))), nc: kind === 'lsw-nc' || kind === 'lsw-nch', held: kind.endsWith('h'), color: LSW_COL });   // a limit switch: the next number
   if (kind === 'fus' || kind === 'fu1') return P(kind, x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'fus' || q.t === 'fu1').map(q => q.L))) });   // (fuses, single or three-pole, number from one count)
   if (kind === 'dsc' || kind === 'olh' || kind === 'mtr') return P(kind, x, y, { L: nextNum(new Set(parts.filter(q => q.t === kind).map(q => q.L))) });   // the next number
@@ -3392,9 +3476,9 @@ function newPart(kind, x, y) {
   const L = [...'ABCDEFGH' + ALL].find(c => !u.has(c));
   return P('btn', x, y, { L, nc: kind.startsWith('btn-nc'), maint: !kind.endsWith('-mom'), color: kind.startsWith('btn-nc') ? '#FF0032' : '#00B050' });   // (normally open green, normally closed red)   // (-mom: momentary; otherwise maintained)
 }
-const kindOf = k => k.startsWith('lsw') ? 'lsw' : ['dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr'].includes(k) ? k : k.startsWith('ph-') ? 'ph' : k === 'jmp' ? 'jmp' : k === 'xfm' ? 'xfm' : k === 'src-l1' || k === 'src-l2' ? k.slice(4) : k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k === 'sol' ? 'sol' : k.startsWith('con') ? 'con' : k === 'sel' ? 'sel' : 'btn';
+const kindOf = k => k.startsWith('lsw') ? 'lsw' : k.startsWith('tsw') ? 'tsw' : ['dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr'].includes(k) ? k : k.startsWith('ph-') ? 'ph' : k === 'jmp' ? 'jmp' : k === 'xfm' ? 'xfm' : k === 'src-l1' || k === 'src-l2' ? k.slice(4) : k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k === 'sol' ? 'sol' : k.startsWith('con') ? 'con' : k === 'sel' ? 'sel' : 'btn';
 // a horizontal wire running right through where a part's ends will be: the part goes into it
-function spliceTarget(x, y, t) { if (t === 'xfm' || t === 'ph' || isPwrT(t) || t === 'mtr') return null; const h = WIDE(t) ? 60 : 40; return wires.find(w => w.y1 === y && w.y2 === y && Math.min(w.x1, w.x2) <= x - h && Math.max(w.x1, w.x2) >= x + h); }
+function spliceTarget(x, y, t) { if (t === 'xfm' || t === 'ph' || isPwrT(t) || t === 'mtr') return null; const h = t === 'tsw' ? TSW_T : WIDE(t) ? 60 : 40; return wires.find(w => w.y1 === y && w.y2 === y && Math.min(w.x1, w.x2) <= x - h && Math.max(w.x1, w.x2) >= x + h); }
 function placePart(kind, x, y) {
   [x, y] = clampPart(x, y, kindOf(kind));
   if (overlaps(null, x, y, kindOf(kind))) { say('There is already a part there.'); return; }
@@ -4223,7 +4307,7 @@ document.querySelectorAll('.tool[data-part]').forEach(b => {
     if (e.button !== 0 || !editing) return;
     e.preventDefault();
     const sx = e.clientX, sy = e.clientY; let moved = false, ghost = null;
-    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('timer') ? { t: 'coil', L: '?', color: '#FFDC00', delay: 5, tof: kind === 'timer-off' } : kind === 'lamp' ? { t: 'lamp', L: '', color: '#00B050' } : kind === 'sol' ? { t: 'sol', L: '?', color: SOL_COL } : kind === 'jmp' ? { t: 'jmp', L: '?' } : kind === 'xfm' ? { t: 'xfm', L: '?' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind.startsWith('con-nc') } : kind === 'sel' ? { t: 'sel', L: '?', n: 3, closedIn: [0], pos: 1, color: '#0070C0' } : kind.startsWith('src-') ? { t: kind.slice(4), L: '' } : kind.startsWith('lsw') ? { t: 'lsw', L: '?', nc: kind === 'lsw-nc' || kind === 'lsw-nch', held: kind.endsWith('h'), color: LSW_COL } : kind.startsWith('ph-') ? { t: 'ph', L: kind.slice(3) } : ['dsc', 'fus', 'fu1', 'mst', 'olh', 'mtr'].includes(kind) ? { t: kind, L: kind === 'mst' ? 'M' : '?' } : kind === 'olc' ? { t: 'olc', L: '?', nc: true } : { t: 'btn', L: '?', nc: kind.startsWith('btn-nc'), color: '#9a9a9a' };
+    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('timer') ? { t: 'coil', L: '?', color: '#FFDC00', delay: 5, tof: kind === 'timer-off' } : kind === 'lamp' ? { t: 'lamp', L: '', color: '#00B050' } : kind === 'sol' ? { t: 'sol', L: '?', color: SOL_COL } : kind === 'jmp' ? { t: 'jmp', L: '?' } : kind === 'xfm' ? { t: 'xfm', L: '?' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind.startsWith('con-nc') } : kind === 'sel' ? { t: 'sel', L: '?', n: 3, closedIn: [0], pos: 1, color: '#0070C0' } : kind.startsWith('src-') ? { t: kind.slice(4), L: '' } : kind.startsWith('tsw') ? { t: 'tsw', L: '?', nc: kind.startsWith('tsw-nc'), low: kind.endsWith('l'), color: TSW_COL } : kind.startsWith('lsw') ? { t: 'lsw', L: '?', nc: kind === 'lsw-nc' || kind === 'lsw-nch', held: kind.endsWith('h'), color: LSW_COL } : kind.startsWith('ph-') ? { t: 'ph', L: kind.slice(3) } : ['dsc', 'fus', 'fu1', 'mst', 'olh', 'mtr'].includes(kind) ? { t: kind, L: kind === 'mst' ? 'M' : '?' } : kind === 'olc' ? { t: 'olc', L: '?', nc: true } : { t: 'btn', L: '?', nc: kind.startsWith('btn-nc'), color: '#9a9a9a' };
     const mv = ev => {
       if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 5) { moved = true; closeMenus(); ghost = document.createElement('div'); ghost.className = 'ghost'; ghost.innerHTML = b.innerHTML; document.body.append(ghost); document.body.classList.add('dragging'); }
       if (!moved) return;
@@ -4427,7 +4511,7 @@ function pasteClip() {
     if (p.t === 'con' && map['c' + p.L]) q.L = map['c' + p.L];
     if (p.t === 'lamp' && p.L && map['b' + p.L]) q.L = map['b' + p.L];
     if (p.t === 'jmp') { if (!jm[p.L]) jm[p.L] = nextNum(new Set([...parts.filter(isJmp).map(q => q.L), ...Object.values(jm)])); q.L = jm[p.L]; }   // (pasted continuations pair among themselves)
-    if (p.t === 'dsc' || p.t === 'fus' || p.t === 'mtr' || p.t === 'lsw') { q.L = nextNum(new Set([...parts.filter(z => z.t === p.t).map(z => z.L), ...xf.filter(([t]) => t === p.t).map(([, L]) => L)])); xf.push([p.t, q.L]); }
+    if (p.t === 'dsc' || p.t === 'fus' || p.t === 'mtr' || p.t === 'lsw' || p.t === 'tsw') { q.L = nextNum(new Set([...parts.filter(z => z.t === p.t).map(z => z.L), ...xf.filter(([t]) => t === p.t).map(([, L]) => L)])); xf.push([p.t, q.L]); }
     if (p.t === 'xfm') { q.L = nextNum(new Set([...parts.filter(z => z.t === 'xfm').map(z => z.L), ...xf.filter(([t]) => t === 'xfm').map(([, L]) => L)])); xf.push(['xfm', q.L]); }   // (a pasted transformer gets a number of its own)
     if (p.t === 'sol') { q.L = nextSol(new Set([...solNums(), ...np0])); np0.push(q.L); }   // (a pasted solenoid gets a number of its own)
     return q;
@@ -4475,7 +4559,7 @@ const selGroup = () => {
   return ps.every(q => q.t === ps[0].t) ? ps : [];
 };
 const each = f => { const g = selGroup(); if (!g.length) return false; snapshot(); g.forEach(f); normalize(); draw(); return true; };
-const KIND_NAME = { xfm: 'transformers', btn: 'pushbuttons', coil: 'coils', con: 'contacts', lamp: 'pilot lights', sel: 'selector switches', sol: 'solenoids', jmp: 'continuations', lsw: 'limit switches', l1: 'L1 supplies', l2: 'L2 returns', ph: 'phases', dsc: 'disconnects', fus: 'fuse blocks', mst: 'starters', olh: 'overloads', olc: 'overload contacts', mtr: 'motors' };
+const KIND_NAME = { xfm: 'transformers', btn: 'pushbuttons', coil: 'coils', con: 'contacts', lamp: 'pilot lights', sel: 'selector switches', sol: 'solenoids', jmp: 'continuations', lsw: 'limit switches', tsw: 'temperature switches', l1: 'L1 supplies', l2: 'L2 returns', ph: 'phases', dsc: 'disconnects', fus: 'fuse blocks', mst: 'starters', olh: 'overloads', olc: 'overload contacts', mtr: 'motors' };
 const blocksOf = L => parts.filter(p => p.t === 'btn' && p.L === L);
 function renderProps() {
   const G = selGroup(), p = G[0] || null, multi = G.length > 1;
@@ -4536,13 +4620,16 @@ function renderProps() {
     document.getElementById('ph-custom').value = cur.toLowerCase();
     document.getElementById('ph-colour-label').textContent = `L${p.L} colour`;
   }
-  document.getElementById('props-lsw').hidden = !(p && p.t === 'lsw');
-  if (p && p.t === 'lsw') {
-    // its number (one no other limit switch has), its kind and its colour
-    const ns = document.getElementById('ls-num'), taken = new Set(parts.filter(q => q.t === 'lsw' && q !== p).map(q => q.L));
+  document.getElementById('props-lsw').hidden = !(p && isLim(p));
+  if (p && isLim(p)) {
+    // its number (one no other switch of its kind has), its kind and its colour (a temperature switch: NO or NC only)
+    const ns = document.getElementById('ls-num'), taken = new Set(parts.filter(q => q.t === p.t && q !== p).map(q => q.L));
     groupOf('ls-num').hidden = multi; ns.innerHTML = '';
-    for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n))) ns.add(new Option('LS' + n, String(n), false, String(n) === p.L));
-    document.getElementById('ls-kind').value = (p.nc ? 'nc' : 'no') + (p.held ? 'h' : '');
+    for (const o of document.querySelectorAll('#ls-kind option')) { o.hidden = p.t === 'tsw' ? o.value.endsWith('h') : o.value.endsWith('l');
+      if (p.t === 'tsw') o.textContent = { no: 'High temp., NO', nc: 'High temp., NC', nol: 'Low temp., NO', ncl: 'Low temp., NC' }[o.value] || o.textContent;
+      else o.textContent = { no: 'Normally open', nc: 'Normally closed' }[o.value] || o.textContent; }
+    for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n))) ns.add(new Option((p.t === 'tsw' ? 'TS' : 'LS') + n, String(n), false, String(n) === p.L));
+    document.getElementById('ls-kind').value = (p.nc ? 'nc' : 'no') + (p.held ? 'h' : '') + (p.low ? 'l' : '');
     swatches(document.getElementById('ls-colour'), p.color, hex => each(q => q.color = hex));
   }
   const pw = p && (isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'fu1');
@@ -4754,8 +4841,8 @@ document.getElementById('ph-num').addEventListener('change', e => { if (selGroup
 document.getElementById('ph-custom').addEventListener('change', e => { const p = selGroup()[0]; if (p && isPh(p)) setPhaseCol(p.L, e.target.value); });
 document.getElementById('box-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(turns)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
 document.getElementById('pw-num').addEventListener('change', e => { const G = selGroup(); if (G.length && G.every(p => isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'fu1')) each(p => p.L = e.target.value); });
-document.getElementById('ls-num').addEventListener('change', e => { if (selGroup().every(p => p.t === 'lsw')) each(p => p.L = e.target.value); });
-document.getElementById('ls-kind').addEventListener('change', e => { const k = e.target.value; if (selGroup().every(p => p.t === 'lsw')) each(p => { p.nc = k.startsWith('nc'); if (k.endsWith('h')) p.held = true; else delete p.held; }); });
+document.getElementById('ls-num').addEventListener('change', e => { const G = selGroup(); if (G.every(p => p.t === G[0].t && isLim(p))) each(p => p.L = e.target.value); });
+document.getElementById('ls-kind').addEventListener('change', e => { const k = e.target.value; if (selGroup().every(isLim)) each(p => { p.nc = k.startsWith('nc'); if (k.endsWith('h') && p.t === 'lsw') p.held = true; else delete p.held; if (k.endsWith('l') && p.t === 'tsw') p.low = true; else delete p.low; }); });
 
 /* ---- js/storage.js ---- */
 /* ---------------- saving and opening circuits ----------------
@@ -4777,7 +4864,7 @@ function circuitData() {
   const w = W_USER ? W : contentRight(), x = v => barsOn() && v === W ? w : v;   // (a length set by moving the bars is kept)
   return {
     app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}), ...(barsOn() ? {} : { pw: 'boxes' }), ...(SRC_COL !== SRC_DEFAULT ? { sc: SRC_COL } : {}), ...(PH_COL.join() !== PH_DEFAULT.join() ? { pc: PH_COL.map(c => c.slice(1)) } : {}),
-    parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (p.t === 'lsw' && p.held) a.push(1); if (turns(p) && p.rot) a.push(p.rot); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
+    parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (p.t === 'lsw' && p.held) a.push(1); if (p.t === 'tsw' && p.low) a.push(1); if (turns(p) && p.rot) a.push(p.rot); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
       if (p.t === 'sel') { while (a.length < 7) a.push(null); a.length = 7; a.push(selN(p), (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, (p.names || []).join('/'), p.pos || 0); }   // a selector switch: positions, closed-in mask, (no label), names, start
       if (p.lk || p.ls) { while (a.length < 12) a.push(null); a.push(p.lk ? p.lk[0] : 0, p.lk ? p.lk[1] : 0); if (p.ls) a.push(p.ls.join('')); }   // (its dashed link line, moved out of the way; the sides its ends join)
       return a; }),
@@ -4792,9 +4879,10 @@ function readCircuit(d) {
   const num = v => { const n = Number(v); if (!Number.isFinite(n)) throw new Error('The circuit is damaged (a position is not a number).'); return snap(n); };
   const hex = c => /^[0-9a-f]{6}$/i.test(c || '') ? '#' + c.toUpperCase() : null;
   const ps = d.parts.slice(0, 200).map(a => {
-    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'lsw'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
-    const p = P(t, num(a[1]), num(a[2]), { L: ['dsc', 'fus', 'fu1', 'olh', 'olc', 'mtr', 'lsw'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1))) : t === 'sol' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : t === 'lsw' ? LSW_COL : BTN_COL[L] || '#FF0032') });
-    if (t === 'lsw') { p.nc = !!a[4]; if (a[7] === 1) p.held = true; }   // (a limit switch: NO or NC, held or not)
+    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'lsw', 'tsw'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
+    const p = P(t, num(a[1]), num(a[2]), { L: ['dsc', 'fus', 'fu1', 'olh', 'olc', 'mtr', 'lsw', 'tsw'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1))) : t === 'sol' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : t === 'lsw' ? LSW_COL : t === 'tsw' ? TSW_COL : BTN_COL[L] || '#FF0032') });
+    if (t === 'lsw') { p.nc = !!a[4]; if (a[7] === 1) p.held = true; }
+    if (t === 'tsw') { p.nc = !!a[4]; if (a[7] === 1) p.low = true; }   // (a temperature switch: NO or NC, high or low temperature)   // (a limit switch: NO or NC, held or not)
     if (t === 'btn') { p.nc = !!a[4]; p.maint = a[5] !== 0; }
     if (t === 'sel') {
       p.n = Math.max(2, Math.min(4, Math.round(Number(a[7])) || 3)); const m = Math.round(Number(a[8])) || 0;
@@ -5051,7 +5139,7 @@ document.getElementById('save-sim').addEventListener('click', async () => { cons
 
 /* ---- js/main.js ---- */
 /* ---------------- build / run ---------------- */
-function afterRunStart() { buildStation(); document.getElementById('mode-group').hidden = !parts.some(p => p.t === 'btn' && !p.maint); document.getElementById('timer-group').hidden = !parts.some(isTimer); paint(); }
+function afterRunStart() { buildStation(); document.getElementById('mode-group').hidden = !parts.some(p => (p.t === 'btn' && !p.maint) || isLim(p)); document.getElementById('timer-group').hidden = !parts.some(isTimer); paint(); }
 function setMode(run) {
   editing = !run;
   document.getElementById('tab-edit').setAttribute('aria-selected', String(!run));

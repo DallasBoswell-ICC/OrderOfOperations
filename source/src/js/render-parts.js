@@ -43,7 +43,7 @@ function screw(x, y, g, bare) {
 }
 const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
-const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -72,7 +72,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -89,7 +89,7 @@ function drawPart(p, g, x, y, chan, onStation) {
     if (!onStation) (v.cap = el('text', vert(p) ? { x: x + BOX / 2 + 12, y: y + 4.5, 'text-anchor': 'start', class: 'cap' } : { x, y: y - capTop(p), 'text-anchor': 'middle', class: 'cap' }, g)).textContent = captionOf(p);
     return v;
   }
-  const v = {}, T = TERM(p), half = BODYH(p.t) / 2;
+  const v = {}, T = TERM(p), half = p.t === 'tsw' ? TSW_HALF : BODYH(p.t) / 2;
   if (!isBox(p) && p.t !== 'xfm' && !isPwr3(p) && p.t !== 'mtr') el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
   // the short leads between the part's ends and its body: each drawn in two pieces, so the current can flow along
   // them (the new colour, and what was there before it)
@@ -174,6 +174,8 @@ function drawPart(p, g, x, y, chan, onStation) {
     drawSelector(p, g, x, y, v);
   } else if (p.t === 'lsw') {
     drawLimit(p, g, x, y, v);
+  } else if (p.t === 'tsw') {
+    drawTemp(p, g, x, y, v);
   } else if (p.t === 'xfm') {
     drawXfm(p, g, x, y, v, chan);
   } else if (p.t === 'fu1') {
@@ -620,6 +622,79 @@ function drawLimit(p, g, x, y, v) {
   el('rect', { x: x + hw - 37, y: bot - 25, width: 30, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
   el('text', { x: x + hw - 22, y: bot - 11.8, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = p.nc ? 'NC' : 'NO';
   setLimit(v, p, editing ? (p.held ? 1 : 0) : lswPos(p), editing ? !!p.nc !== !!p.held : lswClosed(p));
+}
+/* A temperature switch (Dallas's design): the limit switch's body, its head left off, and the same contact (posts and a
+   blade hinged on the left one); under the blade the NEMA temperature switch's stepped stem, which turns with it. Joined
+   to the body's right side, a sensing bulb's box with a thermometer: its column red up to the temperature (low while
+   at rest, high while worked). The body sits left of the middle, so the two together are centred, the right-hand end
+   leading out through the bulb's box. Its number and NO or NC in the body's bottom corners. */
+function drawTemp(p, g, x, y, v) {
+  const col = p.color, r = BOX * .105, sy = BOX * .045, hw = LSW_W / 2, bx = x - TSW_SB / 2, top = y - LSW_TOP, bot = y + LSW_BOT;
+  const px1 = bx - 30, px2 = bx + 30;
+  // the bulb's box, and its thermometer
+  const sx = bx + hw - 6, sw = TSW_SB + 6, st = top + 20, sh = LSW_TOP + LSW_BOT - 40;
+  framed('rect', { x: sx, y: st, width: sw, height: sh, rx: 9, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
+  // the thermometer (Dallas's design): a grey glass tube outlined in black, its bulb at the foot, a scale of ticks
+  // down its right side, and the column inside it in the switch's colour (red, high; blue, low) up to the temperature
+  const tx = sx + sw / 2 + 4, cTop = st + 12, by = st + sh - 13, R = 8, tw = 8, iw = 4.4;
+  el('rect', { x: tx - tw / 2 - 1.2, y: cTop - tw / 2 - 1.2, width: tw + 2.4, height: by - cTop + tw / 2 + 1.2, rx: tw / 2 + 1.2, fill: '#111' }, g);
+  el('circle', { cx: tx, cy: by, r: R + 1.2, fill: '#111' }, g);
+  el('rect', { x: tx - tw / 2, y: cTop - tw / 2, width: tw, height: by - cTop + tw / 2, rx: tw / 2, fill: '#9a9a9a' }, g);
+  el('circle', { cx: tx, cy: by, r: R, fill: '#9a9a9a' }, g);
+  el('rect', { x: tx - iw / 2, y: cTop - iw / 2, width: iw, height: by - cTop + iw / 2, rx: iw / 2, fill: '#6b6b6b' }, g);
+  const tc = p.low ? TSW_COLD : TSW_HOT;   // (a low temperature switch's thermometer blue, a high one's red)
+  v.col = el('rect', { x: tx - iw / 2, y: by, width: iw, height: 2, fill: tc }, g); v.cTop = cTop; v.cBot = by - R + 1;
+  el('circle', { cx: tx, cy: by, r: R - 1.8, fill: tc }, g);
+  const tk = el('g', { stroke: '#111', 'stroke-width': .9 }, g), n = 8;
+  for (let k = 0; k < n; k++) { const yy = cTop + 3 + k * (by - R - 3 - cTop) / (n - 1); el('line', { x1: tx + (k % 2 ? 1.6 : 0), y1: yy, x2: tx + tw / 2 + 1.2, y2: yy }, tk); }
+  // on top of the bulb's box, a badge: a small flame on a high temperature switch, a snowflake on a low one
+  const bx0 = tx, by0 = st - 1, bg = el('g', {}, g);   // (right above the thermometer)
+  el('circle', { cx: bx0, cy: by0, r: 9, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.4 }, bg);
+  if (p.low) {
+    const sf = el('g', { stroke: TSW_COLD, 'stroke-width': 1.5, 'stroke-linecap': 'round', fill: 'none' }, bg);
+    for (let k = 0; k < 3; k++) {
+      const a = k * Math.PI / 3 + Math.PI / 2, c = Math.cos(a), s = Math.sin(a);
+      el('line', { x1: bx0 - 5.6 * c, y1: by0 - 5.6 * s, x2: bx0 + 5.6 * c, y2: by0 + 5.6 * s }, sf);
+      for (const e of [-1, 1]) { const ex = bx0 + e * 3.6 * c, ey = by0 + e * 3.6 * s, n = 1.7;   // (the little branches near each tip)
+        el('path', { d: `M${ex + e * n * c - n * s} ${ey + e * n * s + n * c}L${ex} ${ey}L${ex + e * n * c + n * s} ${ey + e * n * s - n * c}`, 'stroke-width': 1.1 }, sf); }
+    }
+  } else {
+    el('path', { d: `M${bx0} ${by0 - 6.2}C${bx0 + 2.2} ${by0 - 3.4} ${bx0 + 4.4} ${by0 - 1.4} ${bx0 + 4.4} ${by0 + 1.6}A4.4 4.4 0 0 1 ${bx0 - 4.4} ${by0 + 1.6}C${bx0 - 4.4} ${by0 - .4} ${bx0 - 3} ${by0 - 1.8} ${bx0 - 2} ${by0 - 3.2}C${bx0 - 1.6} ${by0 - 1.8} ${bx0 - 1.2} ${by0 - 1} ${bx0 - .4} ${by0 - .6}C${bx0 - .2} ${by0 - 2.6} ${bx0 + .4} ${by0 - 4.4} ${bx0} ${by0 - 6.2}Z`, fill: '#FF8A1F' }, bg);
+    el('path', { d: `M${bx0} ${by0 - .8}C${bx0 + 1.2} ${by0 + .4} ${bx0 + 2.2} ${by0 + 1.4} ${bx0 + 2.2} ${by0 + 2.6}A2.2 2.2 0 0 1 ${bx0 - 2.2} ${by0 + 2.6}C${bx0 - 2.2} ${by0 + 1.4} ${bx0 - 1.2} ${by0 + .4} ${bx0} ${by0 - .8}Z`, fill: '#FFD23F' }, bg);
+  }
+  // the body, and in it the contact: the blade (behind the posts) with its stem, turning about the left post
+  framed('rect', { x: bx - hw, y: top, width: LSW_W, height: LSW_TOP + LSW_BOT, rx: 15, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
+  v.blade = el('g', {}, g);
+  const len = 60 + r * .6, s0 = px1 + 30, s1 = y + 2;
+  const stem = `M${s0} ${s1}V${s1 + 10.6}H${s0 + 8.6}V${s1 + 19.2}H${s0}V${s1 + 25.6}`;
+  el('path', { d: stem, fill: 'none', stroke: '#111', 'stroke-width': 6.4, 'stroke-linejoin': 'miter', filter: 'url(#fShadow)' }, v.blade);
+  v.stem = el('path', { d: stem, fill: 'none', stroke: BLADE_GREY, 'stroke-width': 4.3, 'stroke-linejoin': 'miter' }, v.blade);
+  v.bladeShape = el('rect', { x: px1, y: y - 3.5, width: len, height: 7, rx: 3.5, fill: BLADE_GREY, stroke: 'rgba(0,0,0,.35)', 'stroke-width': .6 }, v.blade);
+  el('rect', { x: px1, y: y - 3.5, width: len, height: 7, rx: 3.5, fill: 'url(#gGloss)' }, v.blade);
+  v.hinge = [px1, y];
+  v.posts = el('g', { fill: GREY }, g);
+  el('rect', { x: bx - hw + 4.5, y: y - sy, width: px1 - (bx - hw + 4.5), height: 2 * sy }, v.posts); el('circle', { cx: px1, cy: y, r }, v.posts);
+  el('rect', { x: px2, y: y - sy, width: bx + hw - 4.5 - px2, height: 2 * sy }, v.posts); el('circle', { cx: px2, cy: y, r }, v.posts);
+  for (const cx of [px1, px2]) el('circle', { cx, cy: y, r, fill: 'url(#gDome)' }, g);
+  el('rect', { x: bx - hw + 7, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('text', { x: bx - hw + 23, y: bot - 11.8, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = 'TS' + p.L;
+  el('rect', { x: bx + hw - 37, y: bot - 25, width: 30, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('text', { x: bx + hw - 22, y: bot - 11.8, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = (p.nc ? 'NC' : 'NO') + (p.low ? '↓' : '↑');   // (works as it gets colder, or hotter)
+  setTemp(v, p, editing ? 0 : lswPos(p), editing ? !!p.nc : lswClosed(p));
+}
+// a temperature switch pos of the way from at rest (0) to worked (1): the thermometer's column up from low to high,
+// its blade turned as the limit switch's; lit in its colour while closed
+// (a high temperature switch: its column from low up to high as it is worked; a low one's from the middle down to low)
+const TSW_HOT = '#FF3333', TSW_COLD = '#0073FF', TSW_LV = p => p.low ? [.55, .12] : [.25, .85];
+function setTemp(v, p, pos, cl) {
+  const k = pos.toFixed(3) + (cl ? 'c' : 'o');
+  if (v.k === k) return; v.k = k;
+  const [hx, hy] = v.hinge, [a0, a1] = lswAngles(p), ba = lerp(a0, a1, pos);
+  v.blade.setAttribute('transform', `rotate(${ba.toFixed(2)} ${hx} ${hy})`);
+  const c = cl ? p.color : BLADE_GREY;
+  v.bladeShape.setAttribute('fill', c); v.stem.setAttribute('stroke', c); v.posts.setAttribute('fill', cl ? p.color : GREY);
+  const [l0, l1] = TSW_LV(p), lv = v.cBot - (v.cBot - v.cTop) * lerp(l0, l1, pos);
+  v.col.setAttribute('y', lv.toFixed(2)); v.col.setAttribute('height', (v.cBot - lv + 2).toFixed(2));
 }
 // a limit switch pos of the way from at rest (0) to worked (1): its lever down, the arrow on its roller (coming down,
 // fading in), its blade lifted; lit in its colour while closed

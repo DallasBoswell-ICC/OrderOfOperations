@@ -1884,10 +1884,48 @@ const DEF_CIRCUIT = `
     if (pasted !== '1,2,3,4,5') out.push('after pasting LS1: ' + pasted);
     return out;
   });
+  await check('Temperature switches: NO and NC at rest and worked, apart from a limit switch of the same number, saved, renumbered when pasted', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    const iss = await page.evaluate(() => { W = 760; W_USER = 760;
+      ['tsw-no', 'tsw-nc', 'lsw-no'].forEach((k, i) => { const y = 140 + i * 200, h = TERM({ t: kindOf(k) }); parts.push(newPart(k, 280, y), P('lamp', 560, y, { L: '', color: '#00B050' })); wires.push(Wr(0, y, 280 - h, y), Wr(280 + h, y, 500, y), Wr(620, y, W, y)); });
+      normalize(); draw(); return [...wiringIssues(network()).keys()].join(); });
+    if (iss) out.push('wiring issues: ' + iss);
+    const nums = await page.evaluate(() => parts.filter(p => isLim(p)).map(p => p.t + p.L).join());
+    if (nums !== 'tsw1,tsw2,lsw1') out.push('numbered ' + nums);
+    const lamps = () => page.evaluate(() => parts.filter(p => p.t === 'lamp').map(p => +!!coilOn[p.id]).join(''));
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    let s = await lamps(); if (s !== '010') out.push('at rest (lamps lit): ' + s);
+    if (await page.evaluate(() => document.getElementById('mode-group').hidden)) out.push('no Click / Press and hold choice with only switches to work');
+    await page.evaluate(() => { press('T1', true); press('T2', true); }); await page.waitForTimeout(400);
+    s = await lamps(); if (s !== '100') out.push('TS1 and TS2 worked (lamps lit): ' + s);
+    const col = await page.evaluate(() => { const v = view.parts.get(parts.find(p => p.t === 'tsw').id); return +v.col.getAttribute('height'); });
+    if (!(col > 40)) out.push('worked: the thermometer column only ' + col + ' high');
+    await page.evaluate(() => { press('T1', false); press('T2', false); press('1', true); }); await page.waitForTimeout(400);
+    s = await lamps(); if (s !== '011') out.push('LS1 worked, the temperature switches let go (lamps lit): ' + s);
+    // clicked on the panel: it is worked by its own key
+    await page.evaluate(() => { press('1', false); mode = 'hold'; });
+    const g = await page.evaluate(() => { const r = view.parts.get(parts[0].id).col.closest('[data-part]').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+    await page.mouse.move(g[0], g[1]); await page.mouse.down(); await page.waitForTimeout(300);
+    s = await lamps(); if (s !== '110') out.push('TS1 held down with the mouse (lamps lit): ' + s);
+    await page.mouse.up(); await page.waitForTimeout(300);
+    await page.evaluate(() => { mode = 'click'; setSpeed(1); }); await page.click('#tab-edit');
+    const back = await page.evaluate(() => readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.filter(p => p.t === 'tsw').map(p => p.L + (p.nc ? 'nc' : 'no') + p.color).join());
+    if (back !== '1no#FF0032,2nc#FF0032') out.push('read back: ' + back);
+    // low temperature ones: the same, worked as it gets cold (the column falls), saved as low
+    const low = await page.evaluate(() => { const q = newPart('tsw-ncl', 900, 900); parts.push(q); const back = readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.find(z => z.t === 'tsw' && z.low); parts.pop(); return [q.nc, q.low, captionOf(q), back && back.nc].join(); });
+    if (low !== 'true,true,TS3 Low Temp. Switch (NC),true') out.push('a low temperature NC switch: ' + low);
+    const pasted = await page.evaluate(() => { sel = { parts: new Set(parts.filter(p => p.t === 'tsw' && p.L === '1').map(p => p.id)), wires: new Set() }; copySel(); pasteClip(); return parts.filter(p => p.t === 'tsw').map(p => p.L).join(); });
+    if (pasted !== '1,2,3') out.push('after pasting TS1: ' + pasted);
+    // every part's ends sit on the grid (or a wire drawn to them could never meet them)
+    const off = await page.evaluate(() => [...document.querySelectorAll('[data-part]')].map(b => b.dataset.part).filter(k => { const q = newPart(k, 400, 400); for (let r = 0; r < (turns(q) ? 4 : 1); r++) { q.rot = r; if (terms(q).some(([x, y]) => x % G || y % G)) return true; } return false; }).join());
+    if (off) out.push('ends off the grid: ' + off);
+    return out;
+  });
   await check('Ribbon menus: Buttons, Switches, Outputs and Contacts open and place their parts (momentary or maintained, instantaneous or timing)', async page => {
     const out = [];
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
-    for (const [btn, kinds] of [['bt', ['btn-no-mom', 'btn-nc-mom', 'btn-no-mnt', 'btn-nc-mnt']], ['sw', ['sel', 'lsw-no', 'lsw-nch']], ['out', ['coil', 'timer', 'timer-off', 'lamp', 'sol']], ['ct', ['con-no-i', 'con-nc-i', 'con-no-t', 'con-nc-t']]]) {
+    for (const [btn, kinds] of [['bt', ['btn-no-mom', 'btn-nc-mom', 'btn-no-mnt', 'btn-nc-mnt']], ['sw', ['sel', 'lsw-no', 'lsw-nch', 'tsw-no', 'tsw-nc', 'tsw-nol', 'tsw-ncl']], ['out', ['coil', 'timer', 'timer-off', 'lamp', 'sol']], ['ct', ['con-no-i', 'con-nc-i', 'con-no-t', 'con-nc-t']]]) {
       await page.click(`#${btn}-btn`);
       for (const k of kinds) if (!(await page.isVisible(`#${btn}-menu [data-part="${k}"]`))) out.push(`${k} not in the ${btn} menu`);
       await page.keyboard.press('Escape');

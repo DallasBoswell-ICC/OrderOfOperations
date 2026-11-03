@@ -61,6 +61,7 @@ function paintView(V) {
     let k;
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
     else if (p.t === 'lsw') setLimit(v, p, lswPos(p), lswClosed(p));
+    else if (p.t === 'tsw') setTemp(v, p, lswPos(p), lswClosed(p));
     else if (p.t === 'con' || p.t === 'olc') {
       const s = p.t === 'olc' ? olState(p.L) : CON[p.id]; if (!s) continue;
       const f = clamp01((simT - s.t0) / SWING), e = f * f * (3 - 2 * f);   // ease in and out
@@ -212,11 +213,12 @@ function paintLead(L, evs) {
 }
 function bindButton(g, p) {
   g.setAttribute('class', 'dev'); g.setAttribute('tabindex', '0'); g.setAttribute('role', 'button'); g.setAttribute('aria-label', captionOf(p));
+  const K = opKey(p);   // (a pushbutton's letter; a limit switch's number; a temperature switch's T and its number)
   const dn = () => {
-    if (p.maint) return press(p.L, !down[p.L]);
-    if (mode === 'click') { if (down[p.L]) return; press(p.L, true); autoRel[p.L] = true; } else press(p.L, true);
+    if (p.maint) return press(K, !down[K]);
+    if (mode === 'click') { if (down[K]) return; press(K, true); autoRel[K] = true; } else press(K, true);
   };
-  const up = () => { if (mode === 'hold' && !p.maint) press(p.L, false); };
+  const up = () => { if (mode === 'hold' && !p.maint) press(K, false); };
   g.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); try { g.setPointerCapture(e.pointerId); } catch (_) {} dn(); });
   g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up);
   g.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); dn(); } });
