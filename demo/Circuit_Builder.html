@@ -499,6 +499,13 @@ dialog#pv-dlg { width: min(760px, calc(100vw - 32px)); }
         <div class="tgroup"><span class="label">Number</span><select id="v-num" aria-label="Solenoid number"></select></div>
         <div class="tgroup"><span class="label">Colour</span><div class="swatches" id="v-colour" role="radiogroup" aria-label="Solenoid colour"></div></div>
       </div>
+      <div class="props" id="props-htr" hidden>
+        <div class="tgroup"><span class="label">Number</span><select id="h-num" aria-label="Heating element number"></select></div>
+        <div class="tgroup"><span class="label">Heats</span><select id="h-pv" aria-label="The temperature it heats"></select></div>
+        <div class="tgroup" id="h-rate-group"><span class="label">Heats at</span><input type="text" id="h-rate" class="labelbox pvnum" inputmode="decimal" autocomplete="off" aria-label="How fast it heats, a minute"><span class="unit h-unit"></span></div>
+        <div class="tgroup" id="h-cool-group"><span class="label">Cools at (off)</span><input type="text" id="h-cool" class="labelbox pvnum" inputmode="decimal" autocomplete="off" aria-label="How fast it cools while off, a minute"><span class="unit h-unit"></span></div>
+        <div class="tgroup"><span class="label">Colour</span><div class="swatches" id="h-colour" role="radiogroup" aria-label="Heating element colour"></div></div>
+      </div>
       <div class="props" id="props-coil" hidden>
         <div class="tgroup"><span class="label">Letter</span><select id="o-letter" aria-label="Coil letter"></select></div>
         <div class="tgroup"><span class="label">Label</span><input type="text" id="o-label" class="labelbox" maxlength="8" autocomplete="off" aria-label="Coil label" data-tip="What is written on the coil instead of its letter, such as Motor or Run (8 characters at most). Leave it empty to show the letter."></div>
@@ -648,7 +655,7 @@ dialog#pv-dlg { width: min(760px, calc(100vw - 32px)); }
 <div class="tp-menu" id="out-menu" role="menu" aria-label="Outputs" hidden>
   <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="coil" data-tip="Relay coil"><svg viewBox="0 0 30 26"><circle cx="15" cy="13" r="11.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="15" cy="13" r="7.5" fill="#555"/></svg><span>Control<br>relay</span></button><button type="button" class="tool big" data-part="timer" data-tip="On-delay timer: a relay coil whose contacts change only once it has been energized for its set time. Losing power resets it at once. Set the time in its settings."><svg viewBox="0 0 30 26"><circle cx="13" cy="14" r="10.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="13" cy="14" r="6.8" fill="#555"/><rect x="18" y="1" width="11" height="11" rx="2" fill="#222" stroke="#FFDC00" stroke-width="1.2"/><path d="M21 3.5h5l-2.5 3 2.5 3h-5l2.5-3z" fill="#d8d8d8"/></svg><span>On-delay<br>timer</span></button><button type="button" class="tool big" data-part="timer-off" data-tip="Off-delay timer: its timed contacts change as soon as it is energized, and go back only once its set time has run out after it loses power. Energized again before then, it stops timing. Set the time in its settings."><svg viewBox="0 0 30 26"><circle cx="13" cy="14" r="10.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="13" cy="14" r="6.8" fill="#555"/><rect x="18" y="1" width="11" height="11" rx="2" fill="#222" stroke="#FFDC00" stroke-width="1.2"/><path d="M21 3.5h5l-2.5 3 2.5 3h-5l2.5-3z" fill="#d8d8d8"/></svg><span>Off-delay<br>timer</span></button></div><div class="gname">Relays</div></div>
   <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="lamp" data-tip="Pilot light: lights while current flows through it, wired from L1 to L2 like a coil. In its settings it can be built into a pushbutton, so the button lights up with it."><svg viewBox="0 0 30 26"><g stroke="#00B050" stroke-width="1.6" stroke-linecap="round"><path d="M15 1v2.5M15 22.5V25M3 13h2.5M24.5 13H27M6.5 4.5l1.8 1.8M21.7 19.7l1.8 1.8M23.5 4.5l-1.8 1.8M8.3 19.7l-1.8 1.8"/></g><circle cx="15" cy="13" r="8" fill="#222" stroke="#00B050" stroke-width="1.6"/><circle cx="15" cy="13" r="5.2" fill="#00B050"/><path d="M12.8 10.8l4.4 4.4M17.2 10.8l-4.4 4.4" stroke="#fff" stroke-opacity=".85" stroke-width="1.3" stroke-linecap="round"/></svg><span>Pilot<br>light</span></button></div><div class="gname">Pilot light</div></div>
-  <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="sol" data-tip="Solenoid: pulls in while current flows through it, wired from L1 to L2 like a coil. It works a valve or something else outside the circuit, so it has no contacts. Numbered SOL1, SOL2 and so on."><svg viewBox="0 0 30 26"><rect x="6.2" y="4.2" width="17.6" height="17.6" rx="3.2" transform="rotate(45 15 13)" fill="#222" stroke="#1a1a1a" stroke-width="3.4"/><rect x="6.2" y="4.2" width="17.6" height="17.6" rx="3.2" transform="rotate(45 15 13)" fill="#222" stroke="#00D2BE" stroke-width="1.3"/><path d="M8.6 13H12.2L15 7.6V18.4L17.8 13H21.4" fill="none" stroke="#00D2BE" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8.6" cy="13" r="2.1" fill="#00D2BE"/><circle cx="21.4" cy="13" r="2.1" fill="#00D2BE"/></svg><span>Solenoid</span></button></div><div class="gname">Solenoid</div></div>
+  <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="sol" data-tip="Solenoid: pulls in while current flows through it, wired from L1 to L2 like a coil. It works a valve or something else outside the circuit, so it has no contacts. Numbered SOL1, SOL2 and so on."><svg viewBox="0 0 30 26"><rect x="6.2" y="4.2" width="17.6" height="17.6" rx="3.2" transform="rotate(45 15 13)" fill="#222" stroke="#1a1a1a" stroke-width="3.4"/><rect x="6.2" y="4.2" width="17.6" height="17.6" rx="3.2" transform="rotate(45 15 13)" fill="#222" stroke="#00D2BE" stroke-width="1.3"/><path d="M8.6 13H12.2L15 7.6V18.4L17.8 13H21.4" fill="none" stroke="#00D2BE" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8.6" cy="13" r="2.1" fill="#00D2BE"/><circle cx="21.4" cy="13" r="2.1" fill="#00D2BE"/></svg><span>Solenoid</span></button></div><div class="gname">Solenoid</div></div><div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="htr" data-tip="Heating element: heats while current flows through it, wired from L1 to L2 like a coil, and glows while it heats. On its tab, pick the temperature it heats and how fast. Numbered HTR1, HTR2 and so on."><svg viewBox="0 0 30 26"><circle cx="15" cy="13" r="10" fill="#FF5A1F" opacity=".35"/><rect x="6.2" y="4.2" width="17.6" height="17.6" rx="3.2" transform="rotate(45 15 13)" fill="#222" stroke="#1a1a1a" stroke-width="3.4"/><rect x="6.2" y="4.2" width="17.6" height="17.6" rx="3.2" transform="rotate(45 15 13)" fill="#222" stroke="#FF0032" stroke-width="1.3"/><path d="M8.6 13H10.9L11.8 9.8L13.1 16.2L14.4 9.8L15.6 16.2L16.9 9.8L18.2 16.2L19.1 13H21.4" fill="none" stroke="#FF0032" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8.6" cy="13" r="2.1" fill="#FF0032"/><circle cx="21.4" cy="13" r="2.1" fill="#FF0032"/></svg><span>Heating<br>element</span></button></div><div class="gname">Heat</div></div>
 </div>
 <div class="tp-menu" id="ct-menu" role="menu" aria-label="Contacts" hidden>
   <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="con-no-i" data-tip="Relay contact, normally open, instantaneous: closes as its coil picks up. Choose which coil works it in its settings."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="7" width="14" height="2.6" rx="1.3" fill="#a6a6a6"/><circle cx="10" cy="14" r="2.4" fill="#555"/><circle cx="20" cy="14" r="2.4" fill="#555"/></svg><span>NO<br>instantaneous</span></button><button type="button" class="tool big" data-part="con-nc-i" data-tip="Relay contact, normally closed, instantaneous: opens as its coil picks up. Choose which coil works it in its settings."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="12.7" width="14" height="2.6" rx="1.3" fill="#FFDC00"/><circle cx="10" cy="14" r="2.4" fill="#FFDC00"/><circle cx="20" cy="14" r="2.4" fill="#FFDC00"/></svg><span>NC<br>instantaneous</span></button><button type="button" class="tool big" data-part="con-no-t" data-tip="Timer contact, normally open, timing: changes over once its timer has timed out. Worked by the first timer (change it in its settings)."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="7" width="14" height="2.6" rx="1.3" fill="#a6a6a6"/><circle cx="10" cy="14" r="2.4" fill="#555"/><circle cx="20" cy="14" r="2.4" fill="#555"/><rect x="18" y="1" width="11" height="11" rx="2" fill="#222" stroke="#FFDC00" stroke-width="1.2"/><path d="M21 3.5h5l-2.5 3 2.5 3h-5l2.5-3z" fill="#d8d8d8"/></svg><span>NO<br>timing</span></button><button type="button" class="tool big" data-part="con-nc-t" data-tip="Timer contact, normally closed, timing: changes over once its timer has timed out. Worked by the first timer (change it in its settings)."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="12.7" width="14" height="2.6" rx="1.3" fill="#FFDC00"/><circle cx="10" cy="14" r="2.4" fill="#FFDC00"/><circle cx="20" cy="14" r="2.4" fill="#FFDC00"/><rect x="18" y="1" width="11" height="11" rx="2" fill="#222" stroke="#FFDC00" stroke-width="1.2"/><path d="M21 3.5h5l-2.5 3 2.5 3h-5l2.5-3z" fill="#d8d8d8"/></svg><span>NC<br>timing</span></button></div><div class="gname">Relay contacts</div></div>
@@ -694,7 +701,7 @@ const OPEN_LIFT = 15, BLADE_GREY = '#a6a6a6';   // how far an open contact's bar
 // loads: things current passes through to L2 (a relay coil, a pilot light or a solenoid). They take the same room and
 // are passed through the same way; only a coil works contacts. A solenoid works something outside the circuit (a
 // pneumatic or hydraulic valve): it is numbered (SOL1, SOL2 ...) rather than lettered, and solOn says if it has pulled in
-const LOADT = t => t === 'coil' || t === 'lamp' || t === 'sol' || t === 'xfm';
+const LOADT = t => t === 'coil' || t === 'lamp' || t === 'sol' || t === 'htr' || t === 'xfm';
 /* A control transformer (T1, T2 ...): its primary (H1, H2, on top) is a load across the supply; while current goes
    through it, its secondary (X1, X2, below) is a supply of its own for a control circuit: X1 like L1, X2 like L2, joined
    to them through two switches inside it that close when the primary is fed (see network.js). The box: XFM_W by XFM_H;
@@ -720,6 +727,15 @@ const SOL_DOT = 25.05, SOL_DR = 6.75, SOL_BW = 6.8, SOL_X = 11.4, SOL_P = 22.6;
 // left, [1] from the right: from the outer edge of one dot to the outer edge of the other), and that way's length
 const SOL_BOLT = `M ${-SOL_DOT} 0 H ${-SOL_X} L 0 ${-SOL_P} V ${SOL_P} L ${SOL_X} 0 H ${SOL_DOT}`;
 const SOL_D = [1, -1].map(k => `M ${-k * (SOL_DOT + SOL_DR)} 0 H ${-k * SOL_X} L 0 ${-k * SOL_P} V ${k * SOL_P} L ${k * SOL_X} 0 H ${k * (SOL_DOT + SOL_DR)}`);
+/* A heating element (htr): the solenoid's diamond and dots, the resistor's zigzag (three peaks each way) in place of its
+   bolt; red; glowing while it is energized. Numbered HTR1, HTR2... It heats a temperature process value (p.pv) at
+   p.rate a minute while energized, and the value drifts back to where it started at p.cool a minute while it is off. */
+const HTR_COL = '#FF0032', HTR_X = 17, HTR_A = 14, HTR_N = 3;
+const HTR_PTS = (() => { const q = [[-SOL_DOT, 0], [-HTR_X, 0]]; for (let k = 1; k <= 2 * HTR_N; k++) q.push([-HTR_X + k * 2 * HTR_X / (2 * HTR_N + 1), k % 2 ? -HTR_A : HTR_A]); q.push([HTR_X, 0], [SOL_DOT, 0]); return q; })();
+const HTR_BOLT = 'M ' + HTR_PTS.map(q => q.map(n => +n.toFixed(2)).join(' ')).join(' L ');
+const HTR_D = [1, -1].map(k => { const q = HTR_PTS.map(([a, b]) => [k * a, b]); q[0][0] = -k * (SOL_DOT + SOL_DR); q[q.length - 1][0] = k * (SOL_DOT + SOL_DR); return 'M ' + q.map(z => z.map(n => +n.toFixed(2)).join(' ')).join(' L '); });
+const HTR_LEN = HTR_PTS.reduce((s, q, i) => i ? s + Math.hypot(q[0] - HTR_PTS[i - 1][0], q[1] - HTR_PTS[i - 1][1]) : s, 0) + 2 * SOL_DR;
+const isSolT = t => t === 'sol' || t === 'htr';   // (drawn as a solenoid is)
 const SOL_LEN = 2 * (SOL_DOT + SOL_DR - SOL_X) + 2 * Math.hypot(SOL_X, SOL_P) + 2 * SOL_P;
 // a selector switch: a square body a little larger than a pushbutton's (room for its position numbers round the top)
 const SEL_BOX = 80;
@@ -2114,7 +2130,7 @@ function screw(x, y, g, bare) {
 }
 const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
-const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -2143,7 +2159,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -2301,14 +2317,17 @@ function drawPart(p, g, x, y, chan, onStation) {
       el('rect', { x: bx - 15, y: by - 11, width: 30, height: 22, rx: 6, fill: '#1f1f1f', stroke: edge, 'stroke-width': 1.6 }, g);
       el('text', { x: bx, y: by + 4.4, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 800, fill: chev }, g).textContent = 'L' + p.L;
     }
-  } else if (p.t === 'sol') {
+  } else if (isSolT(p.t)) {
     // a solenoid: see SOL_S. The bolt and its dots are the grey of a coil's middle; once it pulls in, the solenoid's
     // colour fills them from the end the current comes in at, as along a wire: one dot, the bolt, then the other (see paintSol)
-    const col = p.color || SOL_COL, h = SOL_SIDE / 2, id = 'solm' + (++solMaskN), b = el('g', { transform: `translate(${x} ${y})` }, g);
+    // (a heating element: the resistor's zigzag in place of the bolt, a little thinner; and a glow round it while it heats)
+    const htr = p.t === 'htr', BOLT = htr ? HTR_BOLT : SOL_BOLT, BW = htr ? SOL_BW * .8 : SOL_BW, D0 = (htr ? HTR_D : SOL_D)[0];
+    const col = p.color || (htr ? HTR_COL : SOL_COL), h = SOL_SIDE / 2, id = 'solm' + (++solMaskN), b = el('g', { transform: `translate(${x} ${y})` }, g);
+    if (htr) v.glow = el('circle', { cx: 0, cy: 0, r: 40, fill: '#FF5A1F', filter: 'url(#fGlow)', style: 'opacity:0;transition:opacity .6s' }, b);
     framed('rect', { x: -h, y: -h, width: SOL_SIDE, height: SOL_SIDE, rx: SOL_RAD, transform: 'rotate(45)', fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, b);
     const shape = (fill, grow, to) => {
       for (const k of [-1, 1]) el('circle', { cx: k * SOL_DOT, cy: 0, r: SOL_DR + grow, fill }, to);
-      el('path', { d: SOL_BOLT, fill: 'none', stroke: fill, 'stroke-width': SOL_BW + 2 * grow, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, to);
+      el('path', { d: BOLT, fill: 'none', stroke: fill, 'stroke-width': BW + 2 * grow, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, to);
     };
     shape('#111', .9, el('g', { filter: 'url(#fShadow)' }, b)); shape(SOL_GREY, 0, b);   // (raised off the well, casting a shadow, like a coil's middle)
     // the fill: along the bolt a line its own width (so the colour's front crosses it squarely, round its bends too),
@@ -2316,13 +2335,13 @@ function drawPart(p, g, x, y, chan, onStation) {
     const mk = (n, dots) => { const m = el('mask', { id: id + n, maskUnits: 'userSpaceOnUse', x: -SOL_S / 2, y: -SOL_S / 2, width: SOL_S, height: SOL_S }, b);
       if (dots) for (const k of [-1, 1]) el('circle', { cx: k * SOL_DOT, cy: 0, r: SOL_DR, fill: '#fff' }, m); else shape('#fff', 0, m);
       return el('g', { mask: `url(#${id + n})` }, b); };
-    const thin = mk('a', false), wide = mk('b', true), ln = (w, to) => el('path', { d: SOL_D[0], fill: 'none', stroke: 'transparent', 'stroke-width': w, 'stroke-linejoin': 'round' }, to);
-    v.old = [ln(SOL_BW, thin), ln(2 * SOL_DR + 2, wide)]; v.cur = [ln(SOL_BW, thin), ln(2 * SOL_DR + 2, wide)];
+    const thin = mk('a', false), wide = mk('b', true), ln = (w, to) => el('path', { d: D0, fill: 'none', stroke: 'transparent', 'stroke-width': w, 'stroke-linejoin': 'round' }, to);
+    v.old = [ln(BW, thin), ln(2 * SOL_DR + 2, wide)]; v.cur = [ln(BW, thin), ln(2 * SOL_DR + 2, wide)];
     // over it, grey or filled, the shading that makes it look rounded: lit from above (a shine along the top of the
     // bolt and on each dot, toward the upper left) and darker underneath, as the dome on a coil
     const sh = mk('c', false);
     el('rect', { x: -SOL_S / 2, y: -SOL_P - SOL_BW, width: SOL_S, height: 2 * (SOL_P + SOL_BW), fill: 'url(#gGloss)', opacity: .7 }, sh);
-    el('path', { d: SOL_BOLT, transform: 'translate(-.7 -1.1)', fill: 'none', stroke: '#fff', 'stroke-opacity': .22, 'stroke-width': SOL_BW * .38, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, sh);
+    el('path', { d: BOLT, transform: 'translate(-.7 -1.1)', fill: 'none', stroke: '#fff', 'stroke-opacity': .22, 'stroke-width': BW * .38, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, sh);
     for (const k of [-1, 1]) el('circle', { cx: k * SOL_DOT, cy: 0, r: SOL_DR, fill: 'url(#gDome)' }, sh);
     v.col = col;
   } else if (p.t === 'lamp') {
@@ -3042,7 +3061,7 @@ function drawPreview() {
 const LINK_STUB = 12;
 // where a link line leaves or meets part p on side s, and which way it heads off from there
 function linkEnd(p, s, m0) {
-  const h = BODYH(p.t) / 2, w = (p.t === 'sol' ? SOL_S : WIDE(p.t) ? BODYH(p.t) : p.t === 'sel' ? SEL_BOX : BOX) / 2, edge = p.nc ? 7 : 4;
+  const h = BODYH(p.t) / 2, w = (isSolT(p.t) ? SOL_S : WIDE(p.t) ? BODYH(p.t) : p.t === 'sel' ? SEL_BOX : BOX) / 2, edge = p.nc ? 7 : 4;
   if (s === 't') return [[p.x, p === m0 || p.t === 'lamp' ? p.y - capTop(p) - 16 : p.y - h - edge], [0, -1]];   // (over the caption, on the drawings that have one)
   if (s === 'b') return [[p.x, p.y + h + edge], [0, 1]];
   // the sides: high enough to clear the rung's wire (on a round part, on its edge there)
@@ -3134,7 +3153,7 @@ function dragLinkEnd(e, b, q, j) {
   let moved = false;
   document.body.classList.add('dragging');
   const mv = ev => {
-    const r = pt(ev), w = (q.t === 'sol' ? SOL_S : BODYH(q.t)) / 2, rx = (r.x - q.x) / w, ry = (r.y - q.y) / (BODYH(q.t) / 2);
+    const r = pt(ev), w = (isSolT(q.t) ? SOL_S : BODYH(q.t)) / 2, rx = (r.x - q.x) / w, ry = (r.y - q.y) / (BODYH(q.t) / 2);
     const s = Math.abs(rx) > Math.abs(ry) ? (rx < 0 ? 'l' : 'r') : (ry < 0 ? 't' : 'b'), ls = b.ls ? [...b.ls] : ['b', 't'];
     if (ls[j] === s) return;
     if (!moved) { snapshot(); moved = true; }
@@ -3172,6 +3191,7 @@ function frame(now) {
     const target = simT + dt * speed, ran = eventsRun, was = simT;
     tickRealTimers(real);   // (timers counting real time go by the clock; one timing out now is acted on below)
     if (runEvents(target, performance.now() + 12)) simT = target;
+    pvTick(was, simT);   // (heaters and the like moving their process values on)
     if (mode === 'click') for (const L in autoRel) if (!busyQueue() && simT > busyUntil + .5) { delete autoRel[L]; press(L, false); }
     // once the circuit has settled (nothing on its way, and the last coil, light and contact has finished changing)
     // nothing on the panel moves, so it is not painted again until something happens: an idle circuit costs nothing
@@ -3239,7 +3259,7 @@ function paintView(V) {
       v.posts.setAttribute('fill', s.shut ? v.col : GREY);
     } else if (p.t === 'sel') paintSel(p, v);
     else if (p.t === 'fu1') paintFu1(p, v);
-    else if (p.t === 'sol') paintSol(p, v);
+    else if (isSolT(p.t)) paintSol(p, v);
     else if (p.t === 'lamp') {
       const lit = litOf(p); k = lit.toFixed(3);
       if (k === v.k) continue; v.k = k;
@@ -3296,10 +3316,11 @@ function paintSol(p, v) {
   const show = !!coilOn[p.id] || !COND[p.id], c = e => show && e && e.col ? v.col : null;
   const cur = i >= 0 ? evs[i] : null, now = c(cur), prev = i > 0 ? c(evs[i - 1]) : null;
   const f = cur ? clamp01((simT - at(cur)) * V / BODYH(p.t)) : 0;
+  if (v.glow) { const o = coilOn[p.id] ? '.9' : '0'; if (v.glow.style.opacity !== o) v.glow.style.opacity = o; }   // (a heating element glows while it heats)
   const k = `${S}|${f.toFixed(3)}|${now}|${prev}`;
   if (k === v.k) return; v.k = k;
-  const d = SOL_D[S === 'A' ? 0 : 1], n = f * SOL_LEN;
-  for (const [lns, col, dash] of [[v.cur, now, `${n} ${SOL_LEN + 1}`], [v.old, prev, `0 ${n} ${SOL_LEN + 1}`]]) for (const ln of lns) {
+  const htr = p.t === 'htr', LEN = htr ? HTR_LEN : SOL_LEN, d = (htr ? HTR_D : SOL_D)[S === 'A' ? 0 : 1], n = f * LEN;
+  for (const [lns, col, dash] of [[v.cur, now, `${n} ${LEN + 1}`], [v.old, prev, `0 ${n} ${LEN + 1}`]]) for (const ln of lns) {
     if (ln.getAttribute('d') !== d) ln.setAttribute('d', d);
     ln.setAttribute('stroke', col || 'transparent'); ln.setAttribute('stroke-dasharray', dash);
   }
@@ -3629,12 +3650,29 @@ function pvSet(id, x, t = simT) {
   }
   showProcessValue(id);
 }
+/* While running: heating elements move the temperature they heat on, from t0 to t1 (simulation seconds): up at their
+   rate a minute while energized (several together: their rates added), up to the top of its range; with none of them
+   energized, back toward where it started at the quickest of their cooling rates. */
+function pvTick(t0, t1) {
+  const dt = t1 - t0; if (!(dt > 0) || !PV.length) return;
+  for (const v of PV) {
+    const hs = parts.filter(p => p.t === 'htr' && p.pv === v.id); if (!hs.length) continue;
+    const x = PVV[v.id] ?? v.start, top = Math.max(v.min, v.max), on = hs.filter(p => coilOn[p.id]);
+    let nx = x;
+    if (on.length) nx = Math.min(top, x + on.reduce((s, p) => s + Math.max(0, +p.rate || 0), 0) / 60 * dt);
+    else { const c = Math.max(...hs.map(p => Math.max(0, +p.cool || 0))) / 60 * dt, a = v.start; nx = x > a ? Math.max(a, x - c) : Math.min(a, x + c); }
+    if (Math.abs(nx - x) > 1e-9 && !pvHeld(v.id)) pvSet(v.id, nx, t1);
+  }
+}
+// (a value being dragged in the Process window is left where the slider is, until it is let go)
+const pvHeld = id => { const r = procEl && procEl.querySelector(`[data-pv="${id}"]`); return !!r && (document.activeElement === r.querySelector('.pvval') || r.dataset.drag === '1'); };
 // at the start of a run (and on Reset): every value back to where it starts, and the switches it works with it
 function pvStartRun() {
   PVV = {}; PVACT = {};
   for (const v of PV) PVV[v.id] = v.start;
   for (const p of parts) if (pvLinked(p)) PVACT[opKey(p)] = pvWorks(p, PVV[p.pv], false);
 }
+const pvHeatText = v => parts.filter(p => p.t === 'htr' && p.pv === v.id).map(p => `HTR${p.L} (+${pvFmt(v, +p.rate || 0)}${v.unit ? ' ' + v.unit : ''}/min)`).join(', ');
 const pvLinksText = v => parts.filter(p => isLim(p) && p.pv === v.id).sort((a, b) => a.t.localeCompare(b.t) || a.L - b.L).map(p => {
   const tag = (p.t === 'tsw' ? 'TS' : p.t === 'psw' ? 'PS' : 'LS') + p.L, u = v.unit ? ' ' + v.unit : '';
   if (p.t === 'lsw') return `${tag} at ${p.side === 'lo' ? '≤' : '≥'} ${pvFmt(v, +p.sp)}${u}`;
@@ -3660,10 +3698,11 @@ function buildProcess() {
     sl.min = lo; sl.max = hi; sl.step = pvStep(v); sl.setAttribute('aria-label', v.name);
     box.setAttribute('aria-label', `${v.name} (type a value and press Enter)`);
     sl.addEventListener('input', () => pvSet(v.id, +sl.value));
+    sl.addEventListener('pointerdown', () => { row.dataset.drag = '1'; }); for (const ev of ['pointerup', 'pointercancel', 'change']) sl.addEventListener(ev, () => { delete row.dataset.drag; });
     box.addEventListener('focus', () => box.select());
     box.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') box.blur(); else if (e.key === 'Escape') { box.dataset.cancel = '1'; box.blur(); } });
     box.addEventListener('blur', () => { const x = parseFloat(box.value.replace(',', '.')); if (!box.dataset.cancel && isFinite(x)) pvSet(v.id, x); delete box.dataset.cancel; showProcessValue(v.id); });
-    const ln = pvLinksText(v); row.querySelector('.pvlinks').textContent = ln ? 'Works ' + ln : 'Works no switch yet';
+    const ln = pvLinksText(v), ht = pvHeatText(v); row.querySelector('.pvlinks').textContent = [ht && 'Heated by ' + ht, ln ? 'Works ' + ln : !ht && 'Works no switch yet'].filter(Boolean).join(' · ');
     list.append(row); showProcessValue(v.id);
   }
   showProcess();
@@ -3753,6 +3792,7 @@ function newPart(kind, x, y) {
   if (kind.startsWith('timer')) { const u = new Set([...coilLetters(), ...opLetters()]); const L = [...'TUVRS' + ALL].find(c => !u.has(c)); const p = P('coil', x, y, { L, color: COIL_COL[L] || '#FFDC00', delay: 5 }); if (kind === 'timer-off') p.tof = true; return p; }   // a timer (on- or off-delay), set to 5 s
   if (kind === 'lamp') return P('lamp', x, y, { L: '', color: '#00B050' });
   if (kind === 'sol') return P('sol', x, y, { L: nextSol(), color: SOL_COL });
+  if (kind === 'htr') return P('htr', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'htr').map(q => q.L))), color: HTR_COL, rate: 30, cool: 10 });
   if (kind === 'xfm') return P('xfm', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'xfm').map(q => q.L))) });   // a control transformer: the next number   // the next solenoid number
   if (kind === 'jmp') {   // a continuation: the number of one still on its own (so the second one placed pairs with it), or a new one
     const n = {}; for (const q of parts) if (isJmp(q)) n[q.L] = (n[q.L] || 0) + 1;
@@ -3781,7 +3821,7 @@ function newPart(kind, x, y) {
   const L = [...'ABCDEFGH' + ALL].find(c => !u.has(c));
   return P('btn', x, y, { L, nc: kind.startsWith('btn-nc'), maint: !kind.endsWith('-mom'), color: kind.startsWith('btn-nc') ? '#FF0032' : '#00B050' });   // (normally open green, normally closed red)   // (-mom: momentary; otherwise maintained)
 }
-const kindOf = k => k.startsWith('lsw') ? 'lsw' : k.startsWith('tsw') ? 'tsw' : k.startsWith('psw') ? 'psw' : ['dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr'].includes(k) ? k : k.startsWith('ph-') ? 'ph' : k === 'jmp' ? 'jmp' : k === 'xfm' ? 'xfm' : k === 'src-l1' || k === 'src-l2' ? k.slice(4) : k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k === 'sol' ? 'sol' : k.startsWith('con') ? 'con' : k === 'sel' ? 'sel' : 'btn';
+const kindOf = k => k.startsWith('lsw') ? 'lsw' : k.startsWith('tsw') ? 'tsw' : k.startsWith('psw') ? 'psw' : ['dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr'].includes(k) ? k : k.startsWith('ph-') ? 'ph' : k === 'jmp' ? 'jmp' : k === 'xfm' ? 'xfm' : k === 'src-l1' || k === 'src-l2' ? k.slice(4) : k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k === 'sol' ? 'sol' : k === 'htr' ? 'htr' : k.startsWith('con') ? 'con' : k === 'sel' ? 'sel' : 'btn';
 // a horizontal wire running right through where a part's ends will be: the part goes into it
 function spliceTarget(x, y, t) { if (t === 'xfm' || t === 'ph' || isPwrT(t) || t === 'mtr') return null; const h = t === 'tsw' ? TSW_T : WIDE(t) ? 60 : 40; return wires.find(w => w.y1 === y && w.y2 === y && Math.min(w.x1, w.x2) <= x - h && Math.max(w.x1, w.x2) >= x + h); }
 function placePart(kind, x, y) {
@@ -4573,7 +4613,7 @@ function drawOverview() {
     c.strokeStyle = p.t === 'con' ? coilColour(p.L) : p.t === 'lamp' ? lampColour(p) : p.color; c.lineWidth = Math.max(3, 1 / s * dpr);
     if (isPwr3(p) || p.t === 'mtr') { const w = p.t === 'mtr' ? MTR_W : BOX; c.fillStyle = '#2a2a2a'; c.strokeStyle = p.t === 'mtr' ? MTR_COL : pwrEdge(p); c.fillRect(p.x - w / 2, p.y - h / 2, w, h); c.strokeRect(p.x - w / 2, p.y - h / 2, w, h); }
     else if (p.t === 'xfm') { c.fillRect(p.x - XFM_W / 2, p.y - XFM_H / 2, XFM_W, XFM_H); c.strokeRect(p.x - XFM_W / 2, p.y - XFM_H / 2, XFM_W, XFM_H); }
-    else if (LOADT(p.t) && p.t !== 'sol') { c.beginPath(); c.arc(p.x, p.y, h / 2, 0, 2 * Math.PI); c.fill(); c.stroke(); }
+    else if (LOADT(p.t) && !isSolT(p.t)) { c.beginPath(); c.arc(p.x, p.y, h / 2, 0, 2 * Math.PI); c.fill(); c.stroke(); }
     else { c.fillRect(p.x - h / 2, p.y - h / 2, h, h); c.strokeRect(p.x - h / 2, p.y - h / 2, h, h); }
   }
   if (barsOn()) { c.fillStyle = '#d9c27a'; c.fillRect(0, 0, BAR, H); c.fillRect(W - BAR, 0, BAR, H); }
@@ -4612,7 +4652,7 @@ document.querySelectorAll('.tool[data-part]').forEach(b => {
     if (e.button !== 0 || !editing) return;
     e.preventDefault();
     const sx = e.clientX, sy = e.clientY; let moved = false, ghost = null;
-    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('timer') ? { t: 'coil', L: '?', color: '#FFDC00', delay: 5, tof: kind === 'timer-off' } : kind === 'lamp' ? { t: 'lamp', L: '', color: '#00B050' } : kind === 'sol' ? { t: 'sol', L: '?', color: SOL_COL } : kind === 'jmp' ? { t: 'jmp', L: '?' } : kind === 'xfm' ? { t: 'xfm', L: '?' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind.startsWith('con-nc') } : kind === 'sel' ? { t: 'sel', L: '?', n: 3, closedIn: [0], pos: 1, color: '#0070C0' } : kind.startsWith('src-') ? { t: kind.slice(4), L: '' } : kind.startsWith('psw') ? { t: 'psw', L: '?', nc: kind === 'psw-nc', color: PSW_COL } : kind.startsWith('tsw') ? { t: 'tsw', L: '?', nc: kind.startsWith('tsw-nc'), low: kind.endsWith('l'), color: TSW_COL } : kind.startsWith('lsw') ? { t: 'lsw', L: '?', nc: kind === 'lsw-nc' || kind === 'lsw-nch', held: kind.endsWith('h'), color: LSW_COL } : kind.startsWith('ph-') ? { t: 'ph', L: kind.slice(3) } : ['dsc', 'fus', 'fu1', 'mst', 'olh', 'mtr'].includes(kind) ? { t: kind, L: kind === 'mst' ? 'M' : '?' } : kind === 'olc' ? { t: 'olc', L: '?', nc: true } : { t: 'btn', L: '?', nc: kind.startsWith('btn-nc'), color: '#9a9a9a' };
+    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('timer') ? { t: 'coil', L: '?', color: '#FFDC00', delay: 5, tof: kind === 'timer-off' } : kind === 'lamp' ? { t: 'lamp', L: '', color: '#00B050' } : kind === 'sol' ? { t: 'sol', L: '?', color: SOL_COL } : kind === 'htr' ? { t: 'htr', L: '?', color: HTR_COL } : kind === 'jmp' ? { t: 'jmp', L: '?' } : kind === 'xfm' ? { t: 'xfm', L: '?' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind.startsWith('con-nc') } : kind === 'sel' ? { t: 'sel', L: '?', n: 3, closedIn: [0], pos: 1, color: '#0070C0' } : kind.startsWith('src-') ? { t: kind.slice(4), L: '' } : kind.startsWith('psw') ? { t: 'psw', L: '?', nc: kind === 'psw-nc', color: PSW_COL } : kind.startsWith('tsw') ? { t: 'tsw', L: '?', nc: kind.startsWith('tsw-nc'), low: kind.endsWith('l'), color: TSW_COL } : kind.startsWith('lsw') ? { t: 'lsw', L: '?', nc: kind === 'lsw-nc' || kind === 'lsw-nch', held: kind.endsWith('h'), color: LSW_COL } : kind.startsWith('ph-') ? { t: 'ph', L: kind.slice(3) } : ['dsc', 'fus', 'fu1', 'mst', 'olh', 'mtr'].includes(kind) ? { t: kind, L: kind === 'mst' ? 'M' : '?' } : kind === 'olc' ? { t: 'olc', L: '?', nc: true } : { t: 'btn', L: '?', nc: kind.startsWith('btn-nc'), color: '#9a9a9a' };
     const mv = ev => {
       if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 5) { moved = true; closeMenus(); ghost = document.createElement('div'); ghost.className = 'ghost'; ghost.innerHTML = b.innerHTML; document.body.append(ghost); document.body.classList.add('dragging'); }
       if (!moved) return;
@@ -4818,6 +4858,7 @@ function pasteClip() {
     if (p.t === 'jmp') { if (!jm[p.L]) jm[p.L] = nextNum(new Set([...parts.filter(isJmp).map(q => q.L), ...Object.values(jm)])); q.L = jm[p.L]; }   // (pasted continuations pair among themselves)
     if (p.t === 'dsc' || p.t === 'fus' || p.t === 'mtr' || p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw') { q.L = nextNum(new Set([...parts.filter(z => z.t === p.t).map(z => z.L), ...xf.filter(([t]) => t === p.t).map(([, L]) => L)])); xf.push([p.t, q.L]); }
     if (p.t === 'xfm') { q.L = nextNum(new Set([...parts.filter(z => z.t === 'xfm').map(z => z.L), ...xf.filter(([t]) => t === 'xfm').map(([, L]) => L)])); xf.push(['xfm', q.L]); }   // (a pasted transformer gets a number of its own)
+    if (p.t === 'htr') { q.L = nextNum(new Set([...parts.filter(z => z.t === 'htr').map(z => z.L), ...xf.filter(([t]) => t === 'htr').map(([, L]) => L)])); xf.push(['htr', q.L]); }
     if (p.t === 'sol') { q.L = nextSol(new Set([...solNums(), ...np0])); np0.push(q.L); }   // (a pasted solenoid gets a number of its own)
     return q;
   });
@@ -4864,7 +4905,7 @@ const selGroup = () => {
   return ps.every(q => q.t === ps[0].t) ? ps : [];
 };
 const each = f => { const g = selGroup(); if (!g.length) return false; snapshot(); g.forEach(f); normalize(); draw(); return true; };
-const KIND_NAME = { xfm: 'transformers', btn: 'pushbuttons', coil: 'coils', con: 'contacts', lamp: 'pilot lights', sel: 'selector switches', sol: 'solenoids', jmp: 'continuations', lsw: 'limit switches', tsw: 'temperature switches', psw: 'pressure switches', l1: 'L1 supplies', l2: 'L2 returns', ph: 'phases', dsc: 'disconnects', fus: 'fuse blocks', mst: 'starters', olh: 'overloads', olc: 'overload contacts', mtr: 'motors' };
+const KIND_NAME = { xfm: 'transformers', btn: 'pushbuttons', coil: 'coils', con: 'contacts', lamp: 'pilot lights', sel: 'selector switches', sol: 'solenoids', jmp: 'continuations', lsw: 'limit switches', tsw: 'temperature switches', psw: 'pressure switches', htr: 'heating elements', l1: 'L1 supplies', l2: 'L2 returns', ph: 'phases', dsc: 'disconnects', fus: 'fuse blocks', mst: 'starters', olh: 'overloads', olc: 'overload contacts', mtr: 'motors' };
 const blocksOf = L => parts.filter(p => p.t === 'btn' && p.L === L);
 function renderProps() {
   const G = selGroup(), p = G[0] || null, multi = G.length > 1;
@@ -4989,6 +5030,21 @@ function renderProps() {
     const top = Math.max(20, ...[...taken].map(Number)) + 5;
     for (let n = 1; n <= top; n++) if (!taken.has(String(n))) ns.add(new Option('SOL' + n, String(n), false, String(n) === p.L));
     swatches(document.getElementById('v-colour'), p.color, hex => each(q => q.color = hex));
+  }
+  document.getElementById('props-htr').hidden = !(p && p.t === 'htr');
+  if (p && p.t === 'htr') {
+    // its number (one no other heating element has), the temperature it heats and how fast, and its colour
+    const ns = document.getElementById('h-num'), taken = new Set(parts.filter(q => q.t === 'htr' && q !== p).map(q => q.L));
+    groupOf('h-num').hidden = multi; ns.innerHTML = '';
+    for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n))) ns.add(new Option('HTR' + n, String(n), false, String(n) === p.L));
+    const hs = document.getElementById('h-pv'), opts = PV.filter(v => v.kind === 'temperature'); hs.innerHTML = '';
+    hs.add(new Option('Nothing (it only lights up)', '', false, !p.pv));
+    for (const v of opts) hs.add(new Option(v.name, v.id, false, v.id === p.pv));
+    if (!opts.length) { const o = new Option('(no temperature values yet: add one with Process values on the Home tab)', '__none'); o.disabled = true; hs.add(o); }
+    const v = pvOf(p);
+    document.getElementById('h-rate-group').hidden = document.getElementById('h-cool-group').hidden = !v;
+    if (v) { document.getElementById('h-rate').value = pvFmt(v, +p.rate || 0); document.getElementById('h-cool').value = pvFmt(v, +p.cool || 0); for (const u of document.querySelectorAll('.h-unit')) u.textContent = (v.unit || '') + ' a minute'; }
+    swatches(document.getElementById('h-colour'), p.color, hex => each(q => q.color = hex));
   }
   document.getElementById('props-sel').hidden = !(p && p.t === 'sel');
   if (p && p.t === 'sel') renderSelProps(p, multi);
@@ -5162,6 +5218,13 @@ document.getElementById('ph-custom').addEventListener('change', e => { const p =
 document.getElementById('box-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(turns)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
 document.getElementById('pw-num').addEventListener('change', e => { const G = selGroup(); if (G.length && G.every(p => isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'fu1')) each(p => p.L = e.target.value); });
 document.getElementById('ls-num').addEventListener('change', e => { const G = selGroup(); if (G.every(p => p.t === G[0].t && isLim(p))) each(p => p.L = e.target.value); });
+document.getElementById('h-num').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'htr') return; snapshot(); p.L = e.target.value; draw(); });
+document.getElementById('h-pv').addEventListener('change', e => { const id = e.target.value; if (!selGroup().every(q => q.t === 'htr')) return; each(p => { if (id) p.pv = id; else delete p.pv; }); });
+for (const [id, f] of [['h-rate', 'rate'], ['h-cool', 'cool']]) {
+  const box = document.getElementById(id);
+  box.addEventListener('change', () => { const x = parseFloat(box.value.replace(',', '.')); if (!isFinite(x) || x < 0) { renderProps(); return; } each(p => { if (p.t === 'htr') p[f] = x; }); });
+  box.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') box.blur(); });
+}
 document.getElementById('ls-pv').addEventListener('change', e => { const id = e.target.value, G = selGroup(); if (!G.length || !G.every(q => q.t === G[0].t && isLim(q))) return;
   each(p => { if (!id) unlinkPv(p); else { p.pv = id; if (p.t === 'lsw' && !p.side) p.side = 'hi'; pvDefaults(p, pvOf(p)); } }); });
 document.getElementById('ls-side').addEventListener('change', e => each(p => { if (p.t === 'lsw' && pvOf(p)) { p.side = e.target.value; pvDefaults(p, pvOf(p)); } }));
@@ -5199,7 +5262,7 @@ function circuitData() {
       return a; }),
     wires: wires.map(q => [x(q.x1), q.y1, x(q.x2), q.y2]),
     // (its process values: id, name, kind, unit, lowest, highest, start; and the switches they work: part, value, setting, reset, side)
-    ...(PV.length ? { pv: PV.map(v => [v.id, v.name, v.kind, v.unit, v.min, v.max, v.start]), pl: parts.map((p, i) => pvLinked(p) ? [i, p.pv, +p.sp, +(p.rs ?? p.sp), p.side === 'lo' ? 'lo' : 'hi'] : null).filter(Boolean) } : {}),
+    ...(PV.length ? { pv: PV.map(v => [v.id, v.name, v.kind, v.unit, v.min, v.max, v.start]), ph: parts.map((p, i) => p.t === 'htr' && pvOf(p) ? [i, p.pv, +p.rate, +p.cool] : null).filter(Boolean), pl: parts.map((p, i) => pvLinked(p) ? [i, p.pv, +p.sp, +(p.rs ?? p.sp), p.side === 'lo' ? 'lo' : 'hi'] : null).filter(Boolean) } : {}),
   };
 }
 // check a circuit read from a file or code, and turn it back into parts and wires (throws a readable message)
@@ -5210,8 +5273,8 @@ function readCircuit(d) {
   const num = v => { const n = Number(v); if (!Number.isFinite(n)) throw new Error('The circuit is damaged (a position is not a number).'); return snap(n); };
   const hex = c => /^[0-9a-f]{6}$/i.test(c || '') ? '#' + c.toUpperCase() : null;
   const ps = d.parts.slice(0, 200).map(a => {
-    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
-    const p = P(t, num(a[1]), num(a[2]), { L: ['dsc', 'fus', 'fu1', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1))) : t === 'sol' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : t === 'lsw' ? LSW_COL : t === 'tsw' ? TSW_COL : t === 'psw' ? PSW_COL : BTN_COL[L] || '#FF0032') });
+    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'htr' ? 'htr' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
+    const p = P(t, num(a[1]), num(a[2]), { L: ['dsc', 'fus', 'fu1', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1))) : t === 'sol' || t === 'htr' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'htr' ? HTR_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : t === 'lsw' ? LSW_COL : t === 'tsw' ? TSW_COL : t === 'psw' ? PSW_COL : BTN_COL[L] || '#FF0032') });
     if (t === 'lsw') { p.nc = !!a[4]; if (a[7] === 1) p.held = true; }
     if (t === 'psw') p.nc = !!a[4];   // (a pressure switch: NO or NC)
     if (t === 'tsw') { p.nc = !!a[4]; if (a[7] === 1) p.low = true; }   // (a temperature switch: NO or NC, high or low temperature)   // (a limit switch: NO or NC, held or not)
@@ -5238,6 +5301,7 @@ function readCircuit(d) {
     if (v.max === v.min) v.max = v.min + 1; return v; });
   for (const a of Array.isArray(d.pl) ? d.pl : []) { const p = Array.isArray(a) && ps[a[0]], v = p && pv.find(q => q.id === a[1]);
     if (p && v && isLim(p) && PV_FOR[p.t] === v.kind) { p.pv = v.id; p.sp = fin(a[2], v.max); p.rs = fin(a[3], p.sp); if (p.t === 'lsw') p.side = a[4] === 'lo' ? 'lo' : 'hi'; } }
+  for (const a of Array.isArray(d.ph) ? d.ph : []) { const p = Array.isArray(a) && ps[a[0]], v = p && pv.find(q => q.id === a[1]); if (p && v && p.t === 'htr' && v.kind === 'temperature') { p.pv = v.id; p.rate = Math.max(0, fin(a[2], 30)); p.cool = Math.max(0, fin(a[3], 10)); } }
   const w = Math.max(d.fw ? BAR_MIN : W_MIN, Math.min(20000, d.w === undefined ? W_MIN : num(d.w)));
   const ws = d.wires.slice(0, 2000).map(a => [num(a[0]), num(a[1]), num(a[2]), num(a[3])])
     .filter(([x1, y1, x2, y2]) => (x1 === x2 || y1 === y2) && (x1 !== x2 || y1 !== y2))
