@@ -145,7 +145,22 @@ function paintSol(p, v) {
    end just as the change sets off along the lead beyond (so it flows on without a pause). */
 // a stretch of a fuse's way through, from a to b (0 at the end its current comes in at, 1 at the other) in colour c
 function fuseSpan(v, S, L, a, b, c) { if (S === 'B') [a, b] = [1 - b, 1 - a]; L.r.setAttribute('x', (v.x0 + a * v.span).toFixed(2)); L.r.setAttribute('width', (Math.max(0, b - a) * v.span).toFixed(2)); L.g.setAttribute('fill', c || 'transparent'); }
+/* a fuse on a line of the three-phase supply (a pole of the three-pole fuses, or a single fuse on a line): the phase
+   crossing it from its line side as it arrives there (over the time it takes to cross the pole); blown, the load half
+   going dark from the break; put back, on from the break */
+function paintPhaseFuse(q, k, cl) {
+  const ln = PLINE.get(k) ?? k._a, S = ln === k._a ? 'A' : 'B', lc = colAt(ln, simT), at = PARR.get(ln);
+  const T0 = FU1T[k.id], g = T0 === undefined ? 1 : clamp01((simT - T0) * V / (q.span / 2));
+  const f = !lc ? 0 : at ? clamp01((simT - at.t) * V / 80) : 1;
+  const key = `${lc}|${f.toFixed(3)}|${cl}|${g.toFixed(3)}`; if (key === q.k) return; q.k = key;
+  if (!cl) { fuseSpan(q, S, q.cur, 0, .5, lc); fuseSpan(q, S, q.old, .5 + .5 * g, 1, g < 1 ? lc : null); }
+  else if (g < 1) { fuseSpan(q, S, q.cur, 0, .5 + .5 * g, lc); fuseSpan(q, S, q.old, .5 + .5 * g, 1, null); }
+  else { fuseSpan(q, S, q.cur, 0, f, lc); fuseSpan(q, S, q.old, f, 1, null); }
+  q.mark.setAttribute('display', cl ? 'none' : '');
+}
 function paintFu1(p, v) {
+  // (on a line of the three-phase supply, the phase reaching it: as a pole of the three-pole fuses)
+  const pl = PLINE.get(p); if (pl !== undefined && [p._a, p._b].some(n => PARR.has(n) || PDARK.has(n))) return paintPhaseFuse(v, p, closed(p));
   const cl = closed(p), d = DIRS.find(x => x.e.part === p), S = d && d.from === p._b ? 'B' : 'A', outS = S === 'A' ? 'B' : 'A';
   const inN = S === 'A' ? p._a : p._b, outN = S === 'A' ? p._b : p._a;
   // (spans along it, from the end the current comes in at: 0 there, 1 at the other)
@@ -260,16 +275,7 @@ function paintPwr(p, v) {
       q.bg.setAttribute('transform', `rotate(${(-32 * lev).toFixed(2)} ${q.px} ${q.py})`);
       q.blade.setAttribute('fill', cl && c ? c : BLADE_GREY); q.pa.setAttribute('fill', a || GREY); q.pb.setAttribute('fill', b || GREY);
     } else if (p.t === 'fus') {
-      // as a single fuse does (see paintFu1), the phase crossing it from its line side as it arrives there (over the
-      // time it takes to cross the pole); blown, the load half going dark from the break; put back, on from the break
-      const ln = PLINE.get(k) ?? k._a, S = ln === k._a ? 'A' : 'B', lc = colAt(ln, simT), at = PARR.get(ln);
-      const T0 = FU1T[k.id], g = T0 === undefined ? 1 : clamp01((simT - T0) * V / (q.span / 2));
-      const f = !lc ? 0 : at ? clamp01((simT - at.t) * V / 80) : 1;
-      key = `${lc}|${f.toFixed(3)}|${cl}|${g.toFixed(3)}`; if (key === q.k) return; q.k = key;
-      if (!cl) { fuseSpan(q, S, q.cur, 0, .5, lc); fuseSpan(q, S, q.old, .5 + .5 * g, 1, g < 1 ? lc : null); }
-      else if (g < 1) { fuseSpan(q, S, q.cur, 0, .5 + .5 * g, lc); fuseSpan(q, S, q.old, .5 + .5 * g, 1, null); }
-      else { fuseSpan(q, S, q.cur, 0, f, lc); fuseSpan(q, S, q.old, f, 1, null); }
-      q.mark.setAttribute('display', cl ? 'none' : '');
+      paintPhaseFuse(q, k, cl);
     } else if (p.t === 'mst') {
       const s = CON[p.id] || { t0: -1e9, closing: false, shut: false }, e = ease(s.t0), lift = (s.closing ? lerp(OPEN_LIFT, 0, e) : lerp(0, OPEN_LIFT, e)).toFixed(2);
       key = `${lift}|${s.shut}`; if (key === q.k) return; q.k = key;   // (exactly as a NO relay contact: its coil's colour once shut)

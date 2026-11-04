@@ -508,7 +508,9 @@ function phasesNow(t) {
   // what has been cut off goes dark from where it was cut, outwards
   if (lost.length) {
     const L = new Set(lost), d = new Map(), h = heap();
-    for (const n of lost) for (const i of NET.adj[n]) { const e = NET.edges[i], w = e.a === n ? e.b : e.a; if (!L.has(w) && want(w)) { d.set(n, t); h.push(t, n); break; } }   // (from where it is still lit)
+    // (from where it is still lit, across a wire or a switch, open or shut: never across a load, such as a
+    // transformer's primary, whose other end is on another phase)
+    for (const n of lost) for (const i of NET.adj[n]) { const e = NET.edges[i], w = e.a === n ? e.b : e.a; if (!L.has(w) && want(w) && (e.kind !== 'part' || isSw(e.part))) { d.set(n, t); h.push(t, n); break; } }
     walk(h, d, n => L.has(n));
     for (const n of lost) { const off = Math.max(t, d.get(n) ?? t), o = PARR.get(n); put(n, off, null); PDARK.set(n, { k: o.k, t: o.t, off }); PARR.delete(n); }
   }
@@ -623,7 +625,8 @@ let PLINE = new Map(), PUSE = new Set(), PSUB = new Map(), PJE = new Map();
 function phaseWays() {
   PLINE = new Map(); PUSE = new Set(); PSUB = new Map(); PJE = new Map();
   if (!NET.PH || !Object.keys(NET.PH).length) return;
-  const J = NET.jadj, srcs = [], isP = e => e.kind === 'part' && e.part.t === 'pp', passable = e => e.kind === 'seg' || (e.part && !LOADT(e.part.t));
+  const J = NET.jadj, srcs = [], isP = e => e.kind === 'part' && (e.part.t === 'pp' || e.part.t === 'fu1'),   // (a single fuse on a line: a pole of its own)
+    passable = e => e.kind === 'seg' || (e.part && !LOADT(e.part.t));
   for (const p of parts) if (isPh(p) && p._t) srcs.push(...p._t);
   for (const pe of NET.jedges) if (isP(pe)) {
     PJE.set(pe.part, pe);
@@ -651,7 +654,7 @@ function phaseWays() {
 function phStep(e, u) {
   if (!conducts(e)) return false;
   if (e.kind === 'part') {
-    if (e.part.t !== 'pp') return true;
+    if (e.part.t !== 'pp' && e.part.t !== 'fu1') return true;
     const je = PJE.get(e.part); return PLINE.get(e.part) === u && !!je && PUSE.has(je.i + (u === je.a ? 'a' : 'b'));
   }
   const m = PSUB.get(Math.min(e.a, e.b) + ',' + Math.max(e.a, e.b)); if (!m) return true;

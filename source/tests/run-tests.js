@@ -1992,6 +1992,26 @@ const DEF_CIRCUIT = `
     const r = await page.evaluate(() => parts[0].rot || 0); if (r !== 2) out.push('R turned it to ' + r);
     return out;
   });
+  await check('Single fuses on the phases: lit by the phase through them, and blown, the dark runs from the fuse to the load', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    await page.evaluate(() => { POWER = 'boxes';
+      const x = newPart('xfm', 600, 500); parts.push(x); const [[h1x, h1y], [h2x, h2y]] = terms(x);
+      const pa = newPart('ph-2', 200, 100), pb = newPart('ph-3', 1000, 100); parts.push(pa, pb);
+      const fa = newPart('fu1', h1x, 300); fa.rot = 1; parts.push(fa); const fb = newPart('fu1', h2x, 300); fb.rot = 1; parts.push(fb);
+      const T = TERM(pa);
+      wires.push(Wr(200 + T, 100, h1x, 100), Wr(h1x, 100, h1x, 260), Wr(h1x, 340, h1x, h1y), Wr(1000 - T, 100, h2x, 100), Wr(h2x, 100, h2x, 260), Wr(h2x, 340, h2x, h2y));
+      normalize(); draw(); });
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(500);
+    const lit = await page.evaluate(() => parts.filter(p => p.t === 'fu1').map(p => { const v = view.parts.get(p.id); return v.cur.g.getAttribute('fill') + '/' + Math.round(+v.cur.r.getAttribute('width')); }).join());
+    const want = await page.evaluate(() => [PH_COL[1], PH_COL[2]].map(c => c + '/66').join());
+    if (lit !== want) out.push('the fuses on L2 and L3: ' + lit + ' (want ' + want + ')');
+    const offs = await page.evaluate(() => { const f = parts.find(p => p.t === 'fu1'); workPower(f);
+      const [hx, hy] = terms(parts[0])[0]; return NET.nodes.map((n, i) => [n, i]).filter(([n]) => n.x === hx && n.y >= 340 && n.y <= hy).sort((a, b) => a[0].y - b[0].y).map(([, i]) => PDARK.get(i) ? PDARK.get(i).off : null); });
+    if (offs.some(o => o === null) || offs.some((o, i) => i && o < offs[i - 1] - 1e-9)) out.push('dark down the wire from the blown fuse to H1 (top first): ' + offs.map(o => o === null ? '-' : o.toFixed(3)).join(' '));
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    return out;
+  });
   await check('Operator station: its speed controls set the speed, in step with the Simulation tab', async page => {
     const out = [];
     await page.selectOption('#preset', 'seal'); await page.waitForTimeout(60);
