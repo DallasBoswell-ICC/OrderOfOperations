@@ -229,7 +229,16 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
 .station.min .st-min svg { transform: rotate(180deg); }
 .station.min .st-body { display: none; }
 .station.min .st-head { border-radius: 9px; }
-.st-body { position: relative; padding: 10px 26px 16px; max-height: calc(100vh - 60px); overflow: auto; }
+.st-body { position: relative; padding: 10px 26px 16px; overflow: auto; }
+/* the grips for resizing the floating windows: along each side and at each corner, just over the edge */
+.rz { position: absolute; z-index: 3; touch-action: none; }
+.rz-n, .rz-s { left: 10px; right: 10px; height: 8px; cursor: ns-resize; }
+.rz-e, .rz-w { top: 10px; bottom: 10px; width: 8px; cursor: ew-resize; }
+.rz-n { top: -4px; } .rz-s { bottom: -4px; } .rz-e { right: -4px; } .rz-w { left: -4px; }
+.rz-ne, .rz-nw, .rz-se, .rz-sw { width: 16px; height: 16px; }
+.rz-nw { left: -5px; top: -5px; cursor: nwse-resize; } .rz-se { right: -5px; bottom: -5px; cursor: nwse-resize; }
+.rz-ne { right: -5px; top: -5px; cursor: nesw-resize; } .rz-sw { left: -5px; bottom: -5px; cursor: nesw-resize; }
+.station.min .rz { display: none; }   /* (folded, it has nothing to resize) */
 .st-screw { position: absolute; width: 13px; height: 13px; }
 .st-name { width: max-content; max-width: 100%; margin: 0 auto 10px; padding: 3px 14px; background: #f2f2f2; border: 1px solid #888; border-radius: 3px; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .st-grid { display: grid; gap: 12px 16px; justify-content: center; align-items: end; }
@@ -3532,15 +3541,48 @@ function spinFan(v, how) {
    circuit on it (each one once, however many rungs it is drawn in), in the order they come down the ladder, drawn
    as on the circuit, in chrome bezels, each with a legend plate. Pressing a button on it presses it in the circuit,
    so a button at the top of a long ladder can be worked while watching the rungs at the bottom. Drag it by its title
-   bar; the arrow folds it to its title bar; Station on the Simulation tab shows or hides it (it starts off). Where it is, and whether it is folded
-   or hidden, is remembered in the browser.
+   bar; drag a side or corner to make it bigger or smaller (everything on it grows with it; double-click one to put it back to its usual
+   size); the arrow folds it to its title bar; Station on the Simulation tab shows or hides it (it starts off). Where it is, how big, and
+   whether it is folded or hidden, is remembered in the browser.
    ===================================================================== */
 const STATION_KEY = 'oo-circuit-builder-demo:station';
-let ST = { x: null, y: null, min: false, hidden: true },   // (off until it is first turned on with Station on the Simulation tab)
+let ST = { x: null, y: null, z: 1, min: false, hidden: true },   // (z: how much bigger than usual it is drawn)
+      // (off until it is first turned on with Station on the Simulation tab)
     STV = [];   // STV: the station's operators, { p, v }
 try { Object.assign(ST, JSON.parse(localStorage.getItem(STATION_KEY) || '{}')); } catch (_) {}
 const saveStation = () => { try { localStorage.setItem(STATION_KEY, JSON.stringify(ST)); } catch (_) {} };
-const stationEl = document.getElementById('station');
+const stationEl = document.getElementById('station'), stBody = stationEl.querySelector('.st-body');
+
+/* ---------------- resizing the floating windows (the operator station, the Process window) ----------------
+   Each has a grip along every side and at every corner. Dragging one makes the window bigger or smaller, the far side holding
+   still; how it does is up to the window (size(d, w, h, s): d the grip, as 'e' or 'nw'; w, h the width and height asked for; s what
+   start() gave). Double-clicking a grip puts the window back to its usual size. */
+function addGrips(win, { start, size, move, done, reset }) {
+  for (const d of ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']) {
+    const g = document.createElement('div'); g.className = 'rz rz-' + d; g.setAttribute('aria-hidden', 'true');
+    win.append(g);
+    g.addEventListener('dblclick', e => { e.preventDefault(); reset(); });
+    g.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
+      e.preventDefault(); e.stopPropagation();
+      const r0 = win.getBoundingClientRect(), x0 = e.clientX, y0 = e.clientY, s = start(r0);
+      try { g.setPointerCapture(e.pointerId); } catch (_) {}
+      document.body.style.cursor = getComputedStyle(g).cursor; document.body.classList.add('dragging');
+      let ev = null, raf = 0;
+      const go = () => {
+        raf = 0; const dx = ev.clientX - x0, dy = ev.clientY - y0;
+        size(d, r0.width + (d.includes('e') ? dx : d.includes('w') ? -dx : 0), r0.height + (d.includes('s') ? dy : d.includes('n') ? -dy : 0), s);
+        const r = win.getBoundingClientRect();
+        move(d.includes('w') ? r0.right - r.width : r0.left, d.includes('n') ? r0.bottom - r.height : r0.top);
+      };
+      const mv = q => { ev = q; if (!raf) raf = requestAnimationFrame(go); };   // (once a frame at most, for slower computers)
+      const up = () => { g.removeEventListener('pointermove', mv); g.removeEventListener('pointerup', up); g.removeEventListener('pointercancel', up);
+        if (raf) { cancelAnimationFrame(raf); go(); }
+        document.body.style.cursor = ''; document.body.classList.remove('dragging'); done(); };
+      g.addEventListener('pointermove', mv); g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up);
+    });
+  }
+}
 // the operators: the main drawing of each pushbutton and selector switch, top of the ladder first
 const operators = () => {
   const seen = new Set(), out = [];
@@ -3592,7 +3634,24 @@ function placeStation() {
   x = Math.max(0, Math.min(x, window.innerWidth - Math.min(r.width, window.innerWidth)));
   y = Math.max(0, Math.min(y, window.innerHeight - 34));
   stationEl.style.left = x + 'px'; stationEl.style.top = y + 'px';
+  // (drawn bigger or smaller by its zoom; it scrolls rather than running off the bottom of the window)
+  const z = ST.z || 1; stBody.style.zoom = z === 1 ? '' : z;
+  stBody.style.maxHeight = Math.max(80, (window.innerHeight - y - stationEl.querySelector('.st-head').offsetHeight - 8) / z) + 'px';
 }
+// its size: one zoom for all of it (a side changes it by that side's stretch, a corner by the larger of the two)
+const ST_ZMIN = .7, ST_ZMAX = 3;
+addGrips(stationEl, {
+  start: r => { const b = stBody.getBoundingClientRect(); return { z: ST.z || 1, w: r.width, bh: b.height, hh: r.height - b.height }; },
+  size: (d, w, h, s) => {
+    const zw = s.z * w / s.w, zh = s.z * (h - s.hh) / s.bh;
+    let z = d === 'e' || d === 'w' ? zw : d === 'n' || d === 's' ? zh : Math.max(zw, zh);
+    z = Math.max(ST_ZMIN, Math.min(z, ST_ZMAX, s.z * (window.innerWidth - 8) / s.w));
+    ST.z = Math.round(z * 100) / 100; placeStation();
+  },
+  move: (x, y) => { ST.x = x; ST.y = y; placeStation(); },
+  done: () => { const q = stationEl.getBoundingClientRect(); ST.x = q.left; ST.y = q.top; saveStation(); },
+  reset: () => { ST.z = 1; placeStation(); saveStation(); }
+});
 function paintStation() { if (stationEl.hidden) return; for (const { p, v } of STV) if (p.t === 'btn') paintBtn(p, v, 0, 0); else paintSel(p, v); }
 document.getElementById('st-head').addEventListener('pointerdown', e => {
   if (e.button !== 0 || e.target.closest('button')) return;
@@ -3725,10 +3784,11 @@ const pvLinksText = v => parts.filter(p => isLim(p) && p.pv === v.id).sort((a, b
 
 /* ---------------- the Process window (Run) ---------------- */
 const PROC_KEY = 'oo-circuit-builder-demo:process';
-let PW = { x: null, y: null, min: false, hidden: false };
+let PW = { x: null, y: null, w: null, h: null, min: false, hidden: false };   // (w, h: its size, when it has been resized; its contents grow with its width)
+const PW_W = 600;   // (its usual width)
 try { Object.assign(PW, JSON.parse(localStorage.getItem(PROC_KEY) || '{}')); } catch (_) {}
 const savePW = () => { try { localStorage.setItem(PROC_KEY, JSON.stringify(PW)); } catch (_) {} };
-const procEl = document.getElementById('procwin');
+const procEl = document.getElementById('procwin'), pwBody = procEl.querySelector('.pw-body');
 function buildProcess() {
   const list = document.getElementById('pw-list'); list.innerHTML = '';
   for (const v of PV) {
@@ -3770,14 +3830,31 @@ function showProcess() {
   if (!procEl.hidden) placeProcess();
 }
 function placeProcess() {
+  // its width (everything inside drawn bigger or smaller with it), then where it is
+  const w = Math.max(360, Math.min(PW.w ?? PW_W, window.innerWidth - 8)), z = w / PW_W;
+  procEl.style.width = w + 'px'; pwBody.style.zoom = Math.abs(z - 1) < .001 ? '' : z;
   const r = procEl.getBoundingClientRect(), st = svg.getBoundingClientRect();
   let x = PW.x ?? st.left + 16, y = PW.y ?? st.top + 16;   // (first time: the top left of the panel, clear of the station)
   x = Math.max(0, Math.min(x, window.innerWidth - Math.min(r.width, window.innerWidth))); y = Math.max(0, Math.min(y, window.innerHeight - 34));
   procEl.style.left = x + 'px'; procEl.style.top = y + 'px';
-  // (its list scrolls rather than running off the bottom of the window)
-  const list = document.getElementById('pw-list'), foot = procEl.querySelector('.pw-foot'), head = document.getElementById('pw-head');
-  list.style.maxHeight = Math.max(120, window.innerHeight - y - head.offsetHeight - foot.offsetHeight - 52) + 'px';
+  // its height: the list as tall as asked, or as its values; either way it scrolls rather than running off the bottom of the window
+  const list = document.getElementById('pw-list'), head = document.getElementById('pw-head').offsetHeight,
+        rest = pwBody.getBoundingClientRect().height - list.getBoundingClientRect().height,   // (the screen's frame and the foot, as drawn)
+        room = Math.max(60, (window.innerHeight - y - head - rest - 8) / z);
+  list.style.height = PW.h != null ? Math.max(60, Math.min((PW.h - head - rest) / z, room)) + 'px' : '';
+  list.style.maxHeight = room + 'px';
 }
+addGrips(procEl, {
+  start: () => ({}),
+  size: (d, w, h) => {
+    if (/[ew]/.test(d)) PW.w = Math.round(Math.max(360, Math.min(w, window.innerWidth - 8)));
+    if (/[ns]/.test(d)) PW.h = Math.round(Math.max(160, h));
+    placeProcess();
+  },
+  move: (x, y) => { PW.x = x; PW.y = y; placeProcess(); },
+  done: () => { const q = procEl.getBoundingClientRect(); PW.x = q.left; PW.y = q.top; savePW(); },
+  reset: () => { PW.w = PW.h = null; placeProcess(); savePW(); }
+});
 document.getElementById('pw-head').addEventListener('pointerdown', e => {
   if (e.button !== 0 || e.target.closest('button')) return;
   e.preventDefault();
