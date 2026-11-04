@@ -16,6 +16,7 @@ function hexPath(cx, cy, R, r) {
 const DEFS = `
   <linearGradient id="gWell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#303030"/><stop offset="1" stop-color="#1f1f1f"/></linearGradient>
   <linearGradient id="gGloss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".38"/><stop offset=".45" stop-color="#fff" stop-opacity=".06"/><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></linearGradient>
+  <radialGradient id="gFace" cx=".42" cy=".38" r=".7"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d2d2d2"/></radialGradient>
   <radialGradient id="gDome" cx=".38" cy=".3" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient>
   <linearGradient id="gWin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000"/><stop offset=".35" stop-color="#0b0b0b"/><stop offset="1" stop-color="#161616"/></linearGradient>
   <filter id="fShadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="2.2" stdDeviation="2.2" flood-color="#000" flood-opacity=".55"/></filter>
@@ -43,7 +44,7 @@ function screw(x, y, g, bare) {
 }
 const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
-const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -72,7 +73,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : p.t === 'sol' ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -176,6 +177,8 @@ function drawPart(p, g, x, y, chan, onStation) {
     drawLimit(p, g, x, y, v);
   } else if (p.t === 'tsw') {
     drawTemp(p, g, x, y, v);
+  } else if (p.t === 'psw') {
+    drawPress(p, g, x, y, v);
   } else if (p.t === 'xfm') {
     drawXfm(p, g, x, y, v, chan);
   } else if (p.t === 'fu1') {
@@ -228,14 +231,17 @@ function drawPart(p, g, x, y, chan, onStation) {
       el('rect', { x: bx - 15, y: by - 11, width: 30, height: 22, rx: 6, fill: '#1f1f1f', stroke: edge, 'stroke-width': 1.6 }, g);
       el('text', { x: bx, y: by + 4.4, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 800, fill: chev }, g).textContent = 'L' + p.L;
     }
-  } else if (p.t === 'sol') {
+  } else if (isSolT(p.t)) {
     // a solenoid: see SOL_S. The bolt and its dots are the grey of a coil's middle; once it pulls in, the solenoid's
     // colour fills them from the end the current comes in at, as along a wire: one dot, the bolt, then the other (see paintSol)
-    const col = p.color || SOL_COL, h = SOL_SIDE / 2, id = 'solm' + (++solMaskN), b = el('g', { transform: `translate(${x} ${y})` }, g);
+    // (a heating element: the resistor's zigzag in place of the bolt, a little thinner; and a glow round it while it heats)
+    const htr = p.t === 'htr', BOLT = htr ? HTR_BOLT : SOL_BOLT, BW = htr ? SOL_BW * .8 : SOL_BW, D0 = (htr ? HTR_D : SOL_D)[0];
+    const col = p.color || (htr ? HTR_COL : SOL_COL), h = SOL_SIDE / 2, id = 'solm' + (++solMaskN), b = el('g', { transform: `translate(${x} ${y})` }, g);
+    if (htr) v.glow = el('circle', { cx: 0, cy: 0, r: 40, fill: '#FF5A1F', filter: 'url(#fGlow)', style: 'opacity:0;transition:opacity .6s' }, b);
     framed('rect', { x: -h, y: -h, width: SOL_SIDE, height: SOL_SIDE, rx: SOL_RAD, transform: 'rotate(45)', fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, b);
     const shape = (fill, grow, to) => {
       for (const k of [-1, 1]) el('circle', { cx: k * SOL_DOT, cy: 0, r: SOL_DR + grow, fill }, to);
-      el('path', { d: SOL_BOLT, fill: 'none', stroke: fill, 'stroke-width': SOL_BW + 2 * grow, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, to);
+      el('path', { d: BOLT, fill: 'none', stroke: fill, 'stroke-width': BW + 2 * grow, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, to);
     };
     shape('#111', .9, el('g', { filter: 'url(#fShadow)' }, b)); shape(SOL_GREY, 0, b);   // (raised off the well, casting a shadow, like a coil's middle)
     // the fill: along the bolt a line its own width (so the colour's front crosses it squarely, round its bends too),
@@ -243,13 +249,13 @@ function drawPart(p, g, x, y, chan, onStation) {
     const mk = (n, dots) => { const m = el('mask', { id: id + n, maskUnits: 'userSpaceOnUse', x: -SOL_S / 2, y: -SOL_S / 2, width: SOL_S, height: SOL_S }, b);
       if (dots) for (const k of [-1, 1]) el('circle', { cx: k * SOL_DOT, cy: 0, r: SOL_DR, fill: '#fff' }, m); else shape('#fff', 0, m);
       return el('g', { mask: `url(#${id + n})` }, b); };
-    const thin = mk('a', false), wide = mk('b', true), ln = (w, to) => el('path', { d: SOL_D[0], fill: 'none', stroke: 'transparent', 'stroke-width': w, 'stroke-linejoin': 'round' }, to);
-    v.old = [ln(SOL_BW, thin), ln(2 * SOL_DR + 2, wide)]; v.cur = [ln(SOL_BW, thin), ln(2 * SOL_DR + 2, wide)];
+    const thin = mk('a', false), wide = mk('b', true), ln = (w, to) => el('path', { d: D0, fill: 'none', stroke: 'transparent', 'stroke-width': w, 'stroke-linejoin': 'round' }, to);
+    v.old = [ln(BW, thin), ln(2 * SOL_DR + 2, wide)]; v.cur = [ln(BW, thin), ln(2 * SOL_DR + 2, wide)];
     // over it, grey or filled, the shading that makes it look rounded: lit from above (a shine along the top of the
     // bolt and on each dot, toward the upper left) and darker underneath, as the dome on a coil
     const sh = mk('c', false);
     el('rect', { x: -SOL_S / 2, y: -SOL_P - SOL_BW, width: SOL_S, height: 2 * (SOL_P + SOL_BW), fill: 'url(#gGloss)', opacity: .7 }, sh);
-    el('path', { d: SOL_BOLT, transform: 'translate(-.7 -1.1)', fill: 'none', stroke: '#fff', 'stroke-opacity': .22, 'stroke-width': SOL_BW * .38, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, sh);
+    el('path', { d: BOLT, transform: 'translate(-.7 -1.1)', fill: 'none', stroke: '#fff', 'stroke-opacity': .22, 'stroke-width': BW * .38, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, sh);
     for (const k of [-1, 1]) el('circle', { cx: k * SOL_DOT, cy: 0, r: SOL_DR, fill: 'url(#gDome)' }, sh);
     v.col = col;
   } else if (p.t === 'lamp') {
@@ -687,14 +693,82 @@ function drawTemp(p, g, x, y, v) {
 // (a high temperature switch: its column from low up to high as it is worked; a low one's from the middle down to low)
 const TSW_HOT = '#FF3333', TSW_COLD = '#0073FF', TSW_LV = p => p.low ? [.55, .12] : [.25, .85];
 function setTemp(v, p, pos, cl) {
-  const k = pos.toFixed(3) + (cl ? 'c' : 'o');
+  const f = pvFrac(p), k = pos.toFixed(3) + (cl ? 'c' : 'o') + (f === null ? '' : f.toFixed(3));   // (f: linked to a process value, where it stands in its range)
   if (v.k === k) return; v.k = k;
   const [hx, hy] = v.hinge, [a0, a1] = lswAngles(p), ba = lerp(a0, a1, pos);
   v.blade.setAttribute('transform', `rotate(${ba.toFixed(2)} ${hx} ${hy})`);
   const c = cl ? p.color : BLADE_GREY;
   v.bladeShape.setAttribute('fill', c); v.stem.setAttribute('stroke', c); v.posts.setAttribute('fill', cl ? p.color : GREY);
-  const [l0, l1] = TSW_LV(p), lv = v.cBot - (v.cBot - v.cTop) * lerp(l0, l1, pos);
+  const [l0, l1] = TSW_LV(p), lv = v.cBot - (v.cBot - v.cTop) * (f === null ? lerp(l0, l1, pos) : f);
   v.col.setAttribute('y', lv.toFixed(2)); v.col.setAttribute('height', (v.cBot - lv + 2).toFixed(2));
+}
+/* A pressure switch (Dallas's design): the limit switch's body and contact; on a neck on top of the body, right of the
+   middle, a pressure gauge (chrome bezel, white face, a scale, the red needle low at rest and swinging up as it is
+   worked); under the blade, the NEMA pressure switch's diaphragm (a dome) and its stem, pushed up as the pressure rises
+   so as to close a normally open blade, or lift a normally closed one off its post. Its number and NO or NC in the
+   body's bottom corners. (Dallas's drawing was 190 wide: k scales it to the limit switch's 110.) */
+const PSW_K = 110 / 190;
+function drawPress(p, g, x, y, v) {
+  const k = PSW_K, col = p.color, r = BOX * .105, sy = BOX * .045, hw = LSW_W / 2, top = y - LSW_TOP, bot = y + LSW_BOT, px1 = x - 30, px2 = x + 30;
+  // the gauge, on its stem out of the neck
+  const gx = x + 44 * k, gy = top - (164.4 - 77) * k, R = 40 * k;
+  el('rect', { x: gx - 10 * k, y: gy + 13, width: 20 * k, height: top - gy - 9, fill: 'url(#gTerm)', stroke: '#111', 'stroke-width': 1 }, g);
+  el('rect', { x: gx - 10 * k, y: gy + 13, width: 20 * k, height: top - gy - 9, fill: 'url(#gGloss)' }, g);
+  const nb = top + 2.5, nt = top - 30 * k, w1 = 30 * k, w0 = 25 * k;
+  framed('path', { d: `M${gx - w1} ${nb}L${gx - w0} ${nt}H${gx + w0}L${gx + w1} ${nb}Z`, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8, 'stroke-linejoin': 'round' }, g);
+  el('circle', { cx: gx, cy: gy, r: R + 1, fill: '#111', filter: 'url(#fShadow)' }, g);
+  el('circle', { cx: gx, cy: gy, r: R, fill: 'url(#gChrome)', stroke: '#4a4a4a', 'stroke-width': 1 }, g);
+  el('circle', { cx: gx, cy: gy, r: 35.5 * k, fill: '#242424' }, g);
+  el('circle', { cx: gx, cy: gy, r: 33 * k, fill: 'url(#gFace)' }, g);
+  for (const a of [-135, -90, -45, 0, 45, 135, 180]) { const t = a * Math.PI / 180;   // (the scale: none at the foot)
+    el('line', { x1: gx + 23 * k * Math.cos(t), y1: gy + 23 * k * Math.sin(t), x2: gx + 31 * k * Math.cos(t), y2: gy + 31 * k * Math.sin(t), stroke: '#1c1c1c', 'stroke-width': 1.3 }, g); }
+  v.needle = el('g', { filter: 'url(#fShadow)' }, g); v.gc = [gx, gy];
+  const nl = 22 * k;
+  el('line', { x1: gx, y1: gy, x2: gx + nl, y2: gy, stroke: '#CC0000', 'stroke-width': 1.8, 'stroke-linecap': 'round' }, v.needle);
+  el('path', { d: `M${gx + nl + 1.5} ${gy}L${gx + nl - 4.2} ${gy - 2.6}L${gx + nl - 4.2} ${gy + 2.6}Z`, fill: '#CC0000' }, v.needle);
+  el('circle', { cx: gx, cy: gy, r: 2.2, fill: '#CC0000' }, v.needle); el('circle', { cx: gx, cy: gy, r: 2.2, fill: 'url(#gDome)' }, g);
+  el('circle', { cx: gx, cy: gy, r: 33 * k, fill: 'url(#gGloss)', opacity: .35 }, g);
+  // the body
+  framed('rect', { x: x - hw, y: top, width: LSW_W, height: LSW_TOP + LSW_BOT, rx: 15, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
+  // the diaphragm and its stem (they rise together; the stem reaches up to the blade's underside)
+  const dTop = y + 61 * k, dBot = y + 86 * k, dw = 23 * k, sw = 12 * k;
+  const dome = `M${x - dw} ${dBot}V${dBot - 2}C${x - dw} ${dTop + 1} ${x - dw * .55} ${dTop} ${x} ${dTop}C${x + dw * .55} ${dTop} ${x + dw} ${dTop + 1} ${x + dw} ${dBot - 2}V${dBot}Z`;
+  v.dg = el('g', {}, g);
+  v.stemSh = el('line', { x1: x, y1: y, x2: x, y2: dTop + 2, stroke: '#111', 'stroke-width': sw, 'stroke-linecap': 'round', filter: 'url(#fShadow)' }, v.dg);
+  el('path', { d: dome, fill: '#111', filter: 'url(#fShadow)' }, v.dg);
+  v.stem = el('line', { x1: x, y1: y, x2: x, y2: dTop + 2, stroke: BLADE_GREY, 'stroke-width': sw, 'stroke-linecap': 'round' }, v.dg);
+  v.dome = el('path', { d: dome, fill: BLADE_GREY }, v.dg);
+  el('path', { d: dome, fill: 'url(#gGloss)', opacity: .8 }, v.dg);
+  v.dTop = dTop;
+  // the blade, hinged on the left post, and the posts
+  v.blade = el('g', {}, g); const len = 60 + r * .6;
+  v.bladeShape = el('rect', { x: px1, y: y - 3.5, width: len, height: 7, rx: 3.5, fill: BLADE_GREY, stroke: 'rgba(0,0,0,.35)', 'stroke-width': .6 }, v.blade);
+  el('rect', { x: px1, y: y - 3.5, width: len, height: 7, rx: 3.5, fill: 'url(#gGloss)' }, v.blade);
+  v.hinge = [px1, y];
+  v.posts = el('g', { fill: GREY }, g);
+  el('rect', { x: x - hw + 4.5, y: y - sy, width: px1 - (x - hw + 4.5), height: 2 * sy }, v.posts); el('circle', { cx: px1, cy: y, r }, v.posts);
+  el('rect', { x: px2, y: y - sy, width: x + hw - 4.5 - px2, height: 2 * sy }, v.posts); el('circle', { cx: px2, cy: y, r }, v.posts);
+  for (const cx of [px1, px2]) el('circle', { cx, cy: y, r, fill: 'url(#gDome)' }, g);
+  el('rect', { x: x - hw + 7, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('text', { x: x - hw + 23, y: bot - 11.8, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = 'PS' + p.L;
+  el('rect', { x: x + hw - 37, y: bot - 25, width: 30, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('text', { x: x + hw - 22, y: bot - 11.8, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = p.nc ? 'NC' : 'NO';
+  setPress(v, p, editing ? 0 : lswPos(p), editing ? !!p.nc : lswClosed(p));
+}
+// a pressure switch pos of the way from at rest (0) to worked (1): the needle from low to high, the diaphragm and stem
+// pushed up, the blade turned as the limit switch's; lit in its colour while closed
+function setPress(v, p, pos, cl) {
+  const f = pvFrac(p), k = pos.toFixed(3) + (cl ? 'c' : 'o') + (f === null ? '' : f.toFixed(3));
+  if (v.k === k) return; v.k = k;
+  const [hx, hy] = v.hinge, [a0, a1] = lswAngles(p), ba = lerp(a0, a1, pos), at = a => Math.tan(a * Math.PI / 180) * 30;
+  v.blade.setAttribute('transform', `rotate(${ba.toFixed(2)} ${hx} ${hy})`);
+  // (the stem's top just under the blade, at the middle; the diaphragm lifted by however far the blade has risen)
+  const lift = Math.max(0, at(lswAngles({ nc: false })[0]) - at(ba)), sTop = hy + at(ba) + 2 + lift;
+  v.dg.setAttribute('transform', `translate(0 ${(-lift).toFixed(2)})`);
+  for (const s of [v.stem, v.stemSh]) s.setAttribute('y1', sTop.toFixed(2));
+  const c = cl ? p.color : BLADE_GREY;
+  v.bladeShape.setAttribute('fill', c); v.stem.setAttribute('stroke', c); v.dome.setAttribute('fill', c); v.posts.setAttribute('fill', cl ? p.color : GREY);
+  const [gx, gy] = v.gc; v.needle.setAttribute('transform', `rotate(${(f === null ? lerp(135, 340, pos) : 135 + 270 * f).toFixed(2)} ${gx} ${gy})`);   // (linked: the value, round its whole scale)
 }
 // a limit switch pos of the way from at rest (0) to worked (1): its lever down, the arrow on its roller (coming down,
 // fading in), its blade lifted; lit in its colour while closed

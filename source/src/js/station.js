@@ -4,15 +4,48 @@
    circuit on it (each one once, however many rungs it is drawn in), in the order they come down the ladder, drawn
    as on the circuit, in chrome bezels, each with a legend plate. Pressing a button on it presses it in the circuit,
    so a button at the top of a long ladder can be worked while watching the rungs at the bottom. Drag it by its title
-   bar; the arrow folds it to its title bar; Station on the Simulation tab shows or hides it (it starts off). Where it is, and whether it is folded
-   or hidden, is remembered in the browser.
+   bar; drag a side or corner to make it bigger or smaller (everything on it grows with it; double-click one to put it back to its usual
+   size); the arrow folds it to its title bar; Station on the Simulation tab shows or hides it (it starts off). Where it is, how big, and
+   whether it is folded or hidden, is remembered in the browser.
    ===================================================================== */
 const STATION_KEY = 'oo-circuit-builder:station';
-let ST = { x: null, y: null, min: false, hidden: true },   // (off until it is first turned on with Station on the Simulation tab)
+let ST = { x: null, y: null, z: 1, min: false, hidden: true },   // (z: how much bigger than usual it is drawn)
+      // (off until it is first turned on with Station on the Simulation tab)
     STV = [];   // STV: the station's operators, { p, v }
 try { Object.assign(ST, JSON.parse(localStorage.getItem(STATION_KEY) || '{}')); } catch (_) {}
 const saveStation = () => { try { localStorage.setItem(STATION_KEY, JSON.stringify(ST)); } catch (_) {} };
-const stationEl = document.getElementById('station');
+const stationEl = document.getElementById('station'), stBody = stationEl.querySelector('.st-body');
+
+/* ---------------- resizing the floating windows (the operator station, the Process window) ----------------
+   Each has a grip along every side and at every corner. Dragging one makes the window bigger or smaller, the far side holding
+   still; how it does is up to the window (size(d, w, h, s): d the grip, as 'e' or 'nw'; w, h the width and height asked for; s what
+   start() gave). Double-clicking a grip puts the window back to its usual size. */
+function addGrips(win, { start, size, move, done, reset }) {
+  for (const d of ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']) {
+    const g = document.createElement('div'); g.className = 'rz rz-' + d; g.setAttribute('aria-hidden', 'true');
+    win.append(g);
+    g.addEventListener('dblclick', e => { e.preventDefault(); reset(); });
+    g.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
+      e.preventDefault(); e.stopPropagation();
+      const r0 = win.getBoundingClientRect(), x0 = e.clientX, y0 = e.clientY, s = start(r0);
+      try { g.setPointerCapture(e.pointerId); } catch (_) {}
+      document.body.style.cursor = getComputedStyle(g).cursor; document.body.classList.add('dragging');
+      let ev = null, raf = 0;
+      const go = () => {
+        raf = 0; const dx = ev.clientX - x0, dy = ev.clientY - y0;
+        size(d, r0.width + (d.includes('e') ? dx : d.includes('w') ? -dx : 0), r0.height + (d.includes('s') ? dy : d.includes('n') ? -dy : 0), s);
+        const r = win.getBoundingClientRect();
+        move(d.includes('w') ? r0.right - r.width : r0.left, d.includes('n') ? r0.bottom - r.height : r0.top);
+      };
+      const mv = q => { ev = q; if (!raf) raf = requestAnimationFrame(go); };   // (once a frame at most, for slower computers)
+      const up = () => { g.removeEventListener('pointermove', mv); g.removeEventListener('pointerup', up); g.removeEventListener('pointercancel', up);
+        if (raf) { cancelAnimationFrame(raf); go(); }
+        document.body.style.cursor = ''; document.body.classList.remove('dragging'); done(); };
+      g.addEventListener('pointermove', mv); g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up);
+    });
+  }
+}
 // the operators: the main drawing of each pushbutton and selector switch, top of the ladder first
 const operators = () => {
   const seen = new Set(), out = [];
@@ -64,7 +97,24 @@ function placeStation() {
   x = Math.max(0, Math.min(x, window.innerWidth - Math.min(r.width, window.innerWidth)));
   y = Math.max(0, Math.min(y, window.innerHeight - 34));
   stationEl.style.left = x + 'px'; stationEl.style.top = y + 'px';
+  // (drawn bigger or smaller by its zoom; it scrolls rather than running off the bottom of the window)
+  const z = ST.z || 1; stBody.style.zoom = z === 1 ? '' : z;
+  stBody.style.maxHeight = Math.max(80, (window.innerHeight - y - stationEl.querySelector('.st-head').offsetHeight - 8) / z) + 'px';
 }
+// its size: one zoom for all of it (a side changes it by that side's stretch, a corner by the larger of the two)
+const ST_ZMIN = .7, ST_ZMAX = 3;
+addGrips(stationEl, {
+  start: r => { const b = stBody.getBoundingClientRect(); return { z: ST.z || 1, w: r.width, bh: b.height, hh: r.height - b.height }; },
+  size: (d, w, h, s) => {
+    const zw = s.z * w / s.w, zh = s.z * (h - s.hh) / s.bh;
+    let z = d === 'e' || d === 'w' ? zw : d === 'n' || d === 's' ? zh : Math.max(zw, zh);
+    z = Math.max(ST_ZMIN, Math.min(z, ST_ZMAX, s.z * (window.innerWidth - 8) / s.w));
+    ST.z = Math.round(z * 100) / 100; placeStation();
+  },
+  move: (x, y) => { ST.x = x; ST.y = y; placeStation(); },
+  done: () => { const q = stationEl.getBoundingClientRect(); ST.x = q.left; ST.y = q.top; saveStation(); },
+  reset: () => { ST.z = 1; placeStation(); saveStation(); }
+});
 function paintStation() { if (stationEl.hidden) return; for (const { p, v } of STV) if (p.t === 'btn') paintBtn(p, v, 0, 0); else paintSel(p, v); }
 document.getElementById('st-head').addEventListener('pointerdown', e => {
   if (e.button !== 0 || e.target.closest('button')) return;

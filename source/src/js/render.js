@@ -158,7 +158,7 @@ function drawPreview() {
 const LINK_STUB = 12;
 // where a link line leaves or meets part p on side s, and which way it heads off from there
 function linkEnd(p, s, m0) {
-  const h = BODYH(p.t) / 2, w = (p.t === 'sol' ? SOL_S : WIDE(p.t) ? BODYH(p.t) : p.t === 'sel' ? SEL_BOX : BOX) / 2, edge = p.nc ? 7 : 4;
+  const h = BODYH(p.t) / 2, w = (isSolT(p.t) ? SOL_S : WIDE(p.t) ? BODYH(p.t) : p.t === 'sel' ? SEL_BOX : BOX) / 2, edge = p.nc ? 7 : 4;
   if (s === 't') return [[p.x, p === m0 || p.t === 'lamp' ? p.y - capTop(p) - 16 : p.y - h - edge], [0, -1]];   // (over the caption, on the drawings that have one)
   if (s === 'b') return [[p.x, p.y + h + edge], [0, 1]];
   // the sides: high enough to clear the rung's wire (on a round part, on its edge there)
@@ -250,7 +250,7 @@ function dragLinkEnd(e, b, q, j) {
   let moved = false;
   document.body.classList.add('dragging');
   const mv = ev => {
-    const r = pt(ev), w = (q.t === 'sol' ? SOL_S : BODYH(q.t)) / 2, rx = (r.x - q.x) / w, ry = (r.y - q.y) / (BODYH(q.t) / 2);
+    const r = pt(ev), w = (isSolT(q.t) ? SOL_S : BODYH(q.t)) / 2, rx = (r.x - q.x) / w, ry = (r.y - q.y) / (BODYH(q.t) / 2);
     const s = Math.abs(rx) > Math.abs(ry) ? (rx < 0 ? 'l' : 'r') : (ry < 0 ? 't' : 'b'), ls = b.ls ? [...b.ls] : ['b', 't'];
     if (ls[j] === s) return;
     if (!moved) { snapshot(); moved = true; }

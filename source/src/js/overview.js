@@ -52,7 +52,7 @@ function drawOverview() {
     c.strokeStyle = p.t === 'con' ? coilColour(p.L) : p.t === 'lamp' ? lampColour(p) : p.color; c.lineWidth = Math.max(3, 1 / s * dpr);
     if (isPwr3(p) || p.t === 'mtr') { const w = p.t === 'mtr' ? MTR_W : BOX; c.fillStyle = '#2a2a2a'; c.strokeStyle = p.t === 'mtr' ? MTR_COL : pwrEdge(p); c.fillRect(p.x - w / 2, p.y - h / 2, w, h); c.strokeRect(p.x - w / 2, p.y - h / 2, w, h); }
     else if (p.t === 'xfm') { c.fillRect(p.x - XFM_W / 2, p.y - XFM_H / 2, XFM_W, XFM_H); c.strokeRect(p.x - XFM_W / 2, p.y - XFM_H / 2, XFM_W, XFM_H); }
-    else if (LOADT(p.t) && p.t !== 'sol') { c.beginPath(); c.arc(p.x, p.y, h / 2, 0, 2 * Math.PI); c.fill(); c.stroke(); }
+    else if (LOADT(p.t) && !isSolT(p.t)) { c.beginPath(); c.arc(p.x, p.y, h / 2, 0, 2 * Math.PI); c.fill(); c.stroke(); }
     else { c.fillRect(p.x - h / 2, p.y - h / 2, h, h); c.strokeRect(p.x - h / 2, p.y - h / 2, h, h); }
   }
   if (barsOn()) { c.fillStyle = '#d9c27a'; c.fillRect(0, 0, BAR, H); c.fillRect(W - BAR, 0, BAR, H); }

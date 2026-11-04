@@ -1922,10 +1922,207 @@ const DEF_CIRCUIT = `
     if (off) out.push('ends off the grid: ' + off);
     return out;
   });
+  await check('Pressure switches: NO and NC at rest and worked, apart from limit and temperature switches of the same number, saved, renumbered when pasted', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    const iss = await page.evaluate(() => { W = 760; W_USER = 760;
+      ['psw-no', 'psw-nc', 'lsw-no', 'tsw-no'].forEach((k, i) => { const y = 160 + i * 260, h = TERM({ t: kindOf(k) }); parts.push(newPart(k, 280, y), P('lamp', 560, y, { L: '', color: '#00B050' })); wires.push(Wr(0, y, 280 - h, y), Wr(280 + h, y, 500, y), Wr(620, y, W, y)); });
+      normalize(); draw(); return [...wiringIssues(network()).keys()].join(); });
+    if (iss) out.push('wiring issues: ' + iss);
+    const lamps = () => page.evaluate(() => parts.filter(p => p.t === 'lamp').map(p => +!!coilOn[p.id]).join(''));
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    let s = await lamps(); if (s !== '0100') out.push('at rest (lamps lit): ' + s);
+    await page.evaluate(() => { press('P1', true); press('P2', true); }); await page.waitForTimeout(400);
+    s = await lamps(); if (s !== '1000') out.push('PS1 and PS2 worked (lamps lit): ' + s);
+    const lift = await page.evaluate(() => view.parts.get(parts.find(p => p.t === 'psw').id).dg.getAttribute('transform'));
+    if (!/translate\(0 -[1-9]/.test(lift)) out.push('worked: the diaphragm ' + lift);
+    await page.evaluate(() => { press('P1', false); press('P2', false); setSpeed(1); }); await page.click('#tab-edit');
+    const back = await page.evaluate(() => readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.filter(p => p.t === 'psw').map(p => p.L + (p.nc ? 'nc' : 'no') + p.color).join());
+    if (back !== '1no#FF9C37,2nc#FF9C37') out.push('read back: ' + back);
+    const pasted = await page.evaluate(() => { sel = { parts: new Set(parts.filter(p => p.t === 'psw' && p.L === '1').map(p => p.id)), wires: new Set() }; copySel(); pasteClip(); return parts.filter(p => p.t === 'psw').map(p => p.L).join(); });
+    if (pasted !== '1,2,3') out.push('after pasting PS1: ' + pasted);
+    return out;
+  });
+  await check('Process values: switches worked by a position, a pressure and a temperature (with their deadbands), the Process window, saved and undone', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    await page.evaluate(() => { W = 760; W_USER = 760;
+      const pos = pvNew('position'), pr = pvNew('pressure'), tp = pvNew('temperature'); pos.name = 'Cylinder A'; pr.name = 'Air receiver'; tp.name = 'Oven'; PV.push(pos, pr, tp);
+      const ks = [['lsw-no', pos, { side: 'hi', sp: 11.5 }], ['lsw-no', pos, { side: 'lo', sp: 0.5 }], ['psw-no', pr, { sp: 120, rs: 100 }], ['tsw-nol', tp, { sp: 40, rs: 50 }]];
+      ks.forEach(([k, v, o], i) => { const y = 140 + i * 260, h = TERM({ t: kindOf(k) }), q = newPart(k, 280, y); parts.push(q, P('lamp', 560, y, { L: '', color: '#00B050' })); Object.assign(q, { pv: v.id }, o); if (q.rs === undefined) q.rs = q.sp; wires.push(Wr(0, y, 280 - h, y), Wr(280 + h, y, 500, y), Wr(620, y, W, y)); });
+      normalize(); draw(); });
+    const lamps = () => page.evaluate(() => parts.filter(p => p.t === 'lamp').map(p => +!!coilOn[p.id]).join(''));
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    // at the start: the cylinder home (0 in: LS2 worked), no pressure, the oven at 70 °F
+    let s = await lamps(); if (s !== '0100') out.push('at the start (lamps lit): ' + s);
+    const rows = await page.evaluate(() => [...document.querySelectorAll('#pw-list .pv')].map(r => r.querySelector('.pvname').textContent + '=' + r.querySelector('.pvval').value).join());
+    if (rows !== 'Cylinder A=0,Air receiver=0,Oven=70') out.push('the Process window: ' + rows);
+    if (await page.evaluate(() => document.getElementById('procwin').hidden)) out.push('the Process window not shown');
+    const set = (n, x) => page.evaluate(([n, x]) => pvSet(PV.find(v => v.name === n).id, x), [n, x]);
+    await set('Cylinder A', 12); await page.waitForTimeout(300); s = await lamps(); if (s !== '1000') out.push('cylinder out (lamps lit): ' + s);
+    await set('Air receiver', 125); await page.waitForTimeout(300); s = await lamps(); if (s !== '1010') out.push('125 psi (lamps lit): ' + s);
+    await set('Air receiver', 110); await page.waitForTimeout(300); s = await lamps(); if (s !== '1010') out.push('down to 110 psi, inside the deadband (lamps lit): ' + s);
+    await set('Air receiver', 95); await page.waitForTimeout(300); s = await lamps(); if (s !== '1000') out.push('down to 95 psi, reset (lamps lit): ' + s);
+    await set('Oven', 35); await page.waitForTimeout(300); s = await lamps(); if (s !== '1001') out.push('oven down to 35 °F (lamps lit): ' + s);
+    await set('Oven', 45); await page.waitForTimeout(300); s = await lamps(); if (s !== '1001') out.push('oven back up to 45 °F, inside the deadband (lamps lit): ' + s);
+    await set('Oven', 55); await page.waitForTimeout(300); s = await lamps(); if (s !== '1000') out.push('oven up to 55 °F, reset (lamps lit): ' + s);
+    // the slider in the window works it too; a switch worked by a value is not worked by clicking it
+    await page.evaluate(() => { const sl = document.querySelector('#pw-list .pv .pvslide'); sl.value = 6; sl.dispatchEvent(new Event('input')); });
+    await page.waitForTimeout(300); s = await lamps(); if (s !== '0000') out.push('cylinder halfway, by the slider (lamps lit): ' + s);
+    await page.evaluate(() => { mode = 'click'; press(opKey(parts[0]), true); }); await page.waitForTimeout(300);
+    s = await lamps(); if (s !== '0000') out.push('LS1 pressed by hand while worked by a value (lamps lit): ' + s);
+    await page.evaluate(() => { press(opKey(parts[0]), false); });
+    const needle = await page.evaluate(() => view.parts.get(parts.find(p => p.t === 'psw').id).needle.getAttribute('transform'));
+    if (!/rotate\(306\.00 /.test(needle)) out.push('the gauge at 95 psi of 150 (135° + 95/150 of 270°): ' + needle);
+    await page.click('#reset-btn'); await page.waitForTimeout(300); s = await lamps(); if (s !== '0100') out.push('after Reset (lamps lit): ' + s);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    const back = await page.evaluate(() => { const c = readCircuit(JSON.parse(JSON.stringify(circuitData()))); return c.pv.map(v => `${v.name}/${v.kind}/${v.unit}/${v.min}-${v.max}@${v.start}`).join() + ' | ' + c.parts.filter(p => p.pv).map(p => `${p.t}:${c.pv.find(v => v.id === p.pv).name}:${p.sp}/${p.rs}${p.side ? '/' + p.side : ''}`).join(); });
+    if (back !== 'Cylinder A/position/in/0-12@0,Air receiver/pressure/psi/0-150@0,Oven/temperature/°F/32-400@70 | lsw:Cylinder A:11.5/11.5/hi,lsw:Cylinder A:0.5/0.5/lo,psw:Air receiver:120/100,tsw:Oven:40/50')
+      out.push('read back: ' + back);
+    const undone = await page.evaluate(() => { snapshot(); PV = []; for (const p of parts) unlinkPv(p); undo(); return PV.length + '/' + parts.filter(p => p.pv).length; });
+    if (undone !== '3/4') out.push('values and links after Undo: ' + undone);
+    return out;
+  });
+  await check('Heating element: lights and glows while energized, heats its temperature (working a temperature switch), cools back while off, saved', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    await page.evaluate(() => { W = 760; W_USER = 760;
+      const oven = pvNew('temperature'); oven.name = 'Oven'; PV.push(oven);
+      const a = P('btn', 200, 140, { L: 'A', color: '#00B050', nc: false, maint: true }), h = newPart('htr', 480, 140); Object.assign(h, { pv: oven.id, rate: 600, cool: 600 });
+      const t = newPart('tsw-no', 280, 400); Object.assign(t, { pv: oven.id, sp: 150, rs: 140 });
+      parts.push(a, h, t, P('lamp', 560, 400, { L: '', color: '#00B050' }));
+      wires.push(Wr(0, 140, 160, 140), Wr(240, 140, 420, 140), Wr(540, 140, W, 140), Wr(0, 400, 200, 400), Wr(360, 400, 500, 400), Wr(620, 400, W, 400));
+      normalize(); draw(); });
+    const st = () => page.evaluate(() => { const h = parts.find(p => p.t === 'htr'), v = view.parts.get(h.id); return { on: !!coilOn[h.id], glow: v.glow.style.opacity, T: PVV[PV[0].id], lamp: !!coilOn[parts.find(p => p.t === 'lamp').id] }; });
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(10)); await page.waitForTimeout(300);
+    let s = await st(); if (s.on || s.T !== 70 || s.lamp) out.push('at the start: ' + JSON.stringify(s));
+    await page.evaluate(() => press('A', true)); await page.waitForTimeout(250);
+    s = await st(); if (!s.on || s.glow !== '0.9') out.push('A pressed, the heater: ' + JSON.stringify(s));
+    await page.waitForFunction(() => PVV[PV[0].id] > 160, null, { timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(300);
+    s = await st(); if (!(s.T > 150) || !s.lamp) out.push('heated (TS1 over 150 °F): ' + JSON.stringify(s));
+    if (s.T > 400) out.push('heated past the top of its range: ' + s.T);
+    await page.evaluate(() => press('A', false));
+    await page.waitForFunction(() => PVV[PV[0].id] < 130, null, { timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(300);
+    s = await st(); if (s.on || s.glow !== '0' || s.lamp || !(s.T < 140)) out.push('A let go, cooled: ' + JSON.stringify(s));
+    await page.waitForFunction(() => PVV[PV[0].id] <= 70, null, { timeout: 8000 }).catch(() => {});
+    s = await st(); if (s.T !== 70) out.push('cooled no further than where it started: ' + s.T);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    const back = await page.evaluate(() => { const c = readCircuit(JSON.parse(JSON.stringify(circuitData()))), h = c.parts.find(p => p.t === 'htr'); return [h.L, h.color, h.pv === c.pv[0].id, h.rate, h.cool, captionOf(h)].join(); });
+    if (back !== '1,#FF0032,true,600,600,HTR1 Heating Element') out.push('read back: ' + back);
+    return out;
+  });
+  await check('Outputs driving values: a solenoid strokes a cylinder (spring return) to a limit switch, a motor pumps up a pressure (holding when off) to a pressure switch', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    await page.evaluate(() => { W = 1100; W_USER = 1100;
+      const cyl = pvNew('position'), air = pvNew('pressure'); cyl.name = 'Cylinder'; air.name = 'Air'; PV.push(cyl, air);
+      const a = P('btn', 200, 140, { L: 'A', color: '#00B050', nc: false, maint: true }), sol = newPart('sol', 480, 140); sol.pv = cyl.id; drvDefaults(sol, cyl);
+      const ls = newPart('lsw-no', 300, 380); Object.assign(ls, { pv: cyl.id, side: 'hi', sp: 11.8, rs: 11.8 });
+      const ps = newPart('psw-no', 300, 640); Object.assign(ps, { pv: air.id, sp: 120, rs: 100 });
+      parts.push(a, sol, ls, P('lamp', 560, 380, { L: '', color: '#00B050' }), ps, P('lamp', 560, 640, { L: '', color: '#00B050' }));
+      wires.push(Wr(0, 140, 160, 140), Wr(240, 140, 420, 140), Wr(540, 140, W, 140));
+      for (const y of [380, 640]) wires.push(Wr(0, y, 240, y), Wr(360, y, 500, y), Wr(620, y, W, y));
+      // the compressor: three phases through a disconnect to a motor, below
+      const ys = [880, 1000, 1120]; ys.forEach((y, i) => parts.push(newPart('ph-' + (i + 1), 120, y)));
+      const ds = newPart('dsc', 420, 1000), m = newPart('mtr', 900, 1000); parts.push(ds, m); m.pv = air.id; drvDefaults(m, air); m.rate = 900;
+      const T = TERM(parts.find(p => p.t === 'ph')); ys.forEach(y => wires.push(Wr(120 + T, y, 380, y), Wr(460, y, 900 - 160, y)));
+      normalize(); draw(); });
+    const cfg = await page.evaluate(() => { const sol = parts.find(p => p.t === 'sol'), m = parts.find(p => p.t === 'mtr'); return [sol.rate, sol.per, sol.off, sol.cool, m.per, m.off].join(); });
+    if (cfg !== '4,s,back,4,min,hold') out.push('the settings an output starts with (solenoid on a 12 in cylinder; motor on a 150 psi receiver): ' + cfg);
+    const st = () => page.evaluate(() => ({ cyl: +PVV[PV[0].id].toFixed(2), air: +PVV[PV[1].id].toFixed(1), lamps: parts.filter(p => p.t === 'lamp').map(p => +!!coilOn[p.id]).join('') }));
+    await page.click('#tab-run'); await page.evaluate(() => { setSpeed(10); workPower(parts.find(p => p.t === 'dsc')); }); await page.waitForTimeout(300);
+    let s = await st(); if (s.cyl !== 0 || s.lamps !== '00') out.push('at the start (the disconnect off): ' + JSON.stringify(s));
+    await page.evaluate(() => press('A', true));
+    await page.waitForFunction(() => PVV[PV[0].id] >= 12, null, { timeout: 8000 }).catch(() => {}); await page.waitForTimeout(300);
+    s = await st(); if (s.cyl !== 12 || s.lamps[0] !== '1') out.push('SOL1 energized: out to the end of its stroke, LS1 made: ' + JSON.stringify(s));
+    await page.evaluate(() => press('A', false));
+    await page.waitForFunction(() => PVV[PV[0].id] <= 0, null, { timeout: 8000 }).catch(() => {}); await page.waitForTimeout(300);
+    s = await st(); if (s.cyl !== 0 || s.lamps[0] !== '0') out.push('SOL1 off: sprung back home, LS1 let go: ' + JSON.stringify(s));
+    await page.evaluate(() => workPower(parts.find(p => p.t === 'dsc')));   // (the disconnect on: the motor runs)
+    await page.waitForFunction(() => PVV[PV[1].id] > 125, null, { timeout: 8000 }).catch(() => {}); await page.waitForTimeout(300);
+    s = await st(); if (!(s.air > 125) || s.lamps[1] !== '1') out.push('the motor running: pressure up, PS1 made: ' + JSON.stringify(s));
+    await page.evaluate(() => workPower(parts.find(p => p.t === 'dsc'))); await page.waitForTimeout(200);
+    const a1 = (await st()).air; await page.waitForTimeout(700); const a2 = (await st()).air;
+    if (a1 !== a2) out.push('the motor stopped: the pressure should hold, went ' + a1 + ' → ' + a2);
+    const txt = await page.evaluate(() => document.querySelector('#pw-list .pv .pvlinks').textContent);
+    if (!/Driven by SOL1 \(\+4 in\/s, back 4 in\/s when off\)/.test(txt)) out.push('the Process window: ' + txt);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    const back = await page.evaluate(() => readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.filter(p => p.pv && (p.t === 'sol' || p.t === 'mtr')).map(p => [p.t, p.rate, p.per, p.dir, p.off, p.cool].join('/')).join());
+    if (back !== 'sol/4/s/up/back/4,mtr/900/min/up/hold/15') out.push('read back: ' + back);
+    return out;
+  });
+  await check('Process values in real time: at 300x a cylinder still takes its seconds to stroke (and following the speed, it does not)', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    await page.evaluate(() => { W = 760; W_USER = 760; const cyl = pvNew('position'); PV.push(cyl);
+      const a = P('btn', 200, 140, { L: 'A', color: '#00B050', nc: false, maint: true }), sol = newPart('sol', 480, 140); sol.pv = cyl.id; drvDefaults(sol, cyl);
+      parts.push(a, sol); wires.push(Wr(0, 140, 160, 140), Wr(240, 140, 420, 140), Wr(540, 140, W, 140)); normalize(); draw(); });
+    await page.click('#tab-run');
+    if (await page.evaluate(() => document.getElementById('pv-time-group').hidden)) out.push('no Process values choice on the Simulation tab');
+    await page.click('#pv-time-group [data-preal="1"]');
+    if (await page.evaluate(() => document.querySelector('#procwin [data-preal="1"]').getAttribute('aria-pressed')) !== 'true') out.push('the Process window\'s choice not in step');
+    await page.evaluate(() => { setSpeed(300); press('A', true); }); await page.waitForTimeout(1000);
+    const x = await page.evaluate(() => PVV[PV[0].id]);
+    if (!(x > 1.5 && x < 8)) out.push('real time, 1 s at 300x and 4 in/s: the cylinder at ' + x.toFixed(2) + ' in (want about 4)');
+    await page.click('#pv-time-group [data-preal="0"]'); await page.waitForTimeout(300);
+    const y = await page.evaluate(() => PVV[PV[0].id]);
+    if (y !== 12) out.push('following the speed at 300x: the cylinder at ' + y + ' in (want all the way out)');
+    await page.evaluate(() => { press('A', false); setSpeed(1); setPvReal(false); }); await page.click('#tab-edit');
+    return out;
+  });
+  await check('Resizing the floating windows: the station and the Process window grow by their sides and corners, and are remembered', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    await page.evaluate(() => { W = 760; W_USER = 760; const cyl = pvNew('position'); PV.push(cyl); const ls = newPart('lsw', 480, 300); ls.pv = cyl.id;
+      parts.push(P('btn', 200, 140, { L: 'A', color: '#00B050', nc: false, maint: false, label: 'START' }), P('lamp', 480, 140, { L: '', color: '#FF0032' }), ls);
+      wires.push(Wr(0, 140, 160, 140), Wr(240, 140, 420, 140), Wr(540, 140, W, 140)); normalize(); draw(); });
+    await page.click('#tab-run'); await page.waitForTimeout(100);
+    if (await page.evaluate(() => ST.hidden)) await page.click('#st-toggle');
+    await page.evaluate(() => { ST.x = 760; ST.y = 120; placeStation(); }); await page.waitForTimeout(80);
+    const box = sel => page.evaluate(s => { const r = document.querySelector(s).getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, r: r.right, b: r.bottom }; }, sel);
+    const pull = async (sel, x, y, dx, dy) => { const g = await box(sel), X = g.x + x(g), Y = g.y + y(g); await page.mouse.move(X, Y); await page.mouse.down(); await page.mouse.move(X + dx, Y + dy, { steps: 8 }); await page.waitForTimeout(40); await page.mouse.up(); await page.waitForTimeout(80); };
+    // the station: its corner makes all of it bigger, buttons and all
+    const s0 = await box('#station'), b0 = await box('#st-grid .st-dev');
+    await pull('#station .rz-se', g => g.w / 2, g => g.h / 2, 120, 120);
+    const s1 = await box('#station'), b1 = await box('#st-grid .st-dev');
+    if (!(s1.w > s0.w * 1.2 && s1.h > s0.h * 1.2)) out.push('the station by its corner: ' + JSON.stringify([s0, s1]));
+    if (!(b1.w > b0.w * 1.2)) out.push('the station\'s buttons did not grow with it: ' + b0.w + ' → ' + b1.w);
+    if (Math.abs(s1.x - s0.x) > 1 || Math.abs(s1.y - s0.y) > 1) out.push('the station moved as its far corner was dragged');
+    // its left side: grows to the left, the right side holding still
+    await pull('#station .rz-w', g => g.w / 2, g => g.h / 2, -60, 0);
+    const s2 = await box('#station');
+    if (!(s2.w > s1.w + 20) || Math.abs(s2.r - s1.r) > 2) out.push('the station by its left side: ' + JSON.stringify([s1, s2]));
+    // pressing a button on it still works, bigger
+    const g = await box('#st-grid g.dev'); await page.mouse.move(g.x + g.w / 2, g.y + g.h / 2); await page.mouse.down(); await page.waitForTimeout(80);
+    if (!(await page.evaluate(() => down.A))) out.push('a button on the bigger station does not press');
+    await page.mouse.up();
+    if (!(await page.evaluate(() => JSON.parse(localStorage.getItem(STATION_KEY)).z > 1.2))) out.push('the station\'s size not remembered');
+    // double-clicking a grip: back to its usual size
+    const c = await box('#station .rz-se'); await page.mouse.dblclick(c.x + c.w / 2, c.y + c.h / 2); await page.waitForTimeout(80);
+    if (await page.evaluate(() => ST.z) !== 1) out.push('double-clicking a grip did not put the station back to its usual size');
+    // the Process window: its right side makes it wider and everything in it bigger; its bottom, taller
+    await page.evaluate(() => { ST.hidden = true; showStation(); });
+    const p0 = await box('#procwin'), v0 = await box('#pw-list .pvvis');
+    await pull('#procwin .rz-e', g => g.w / 2, g => g.h / 2, 150, 0);
+    const p1 = await box('#procwin'), v1 = await box('#pw-list .pvvis');
+    if (!(p1.w > p0.w + 100) || Math.abs(p1.x - p0.x) > 1) out.push('the Process window by its right side: ' + JSON.stringify([p0, p1]));
+    if (!(v1.w > v0.w * 1.15)) out.push('the Process window\'s picture did not grow with it: ' + v0.w + ' → ' + v1.w);
+    await pull('#procwin .rz-s', g => g.w / 2, g => g.h / 2, 0, 160);
+    const p2 = await box('#procwin');
+    if (!(Math.abs(p2.h - (p1.h + 160)) < 4) || Math.abs(p2.w - p1.w) > 1) out.push('the Process window by its bottom: ' + JSON.stringify([p1, p2]));
+    if (p2.b > 1000) out.push('the Process window ran off the bottom of the window');
+    const kept = await page.evaluate(() => JSON.parse(localStorage.getItem(PROC_KEY)));
+    if (!(kept.w > 700 && kept.h > 200)) out.push('the Process window\'s size not remembered: ' + JSON.stringify(kept));
+    const d = await box('#procwin .rz-sw'); await page.mouse.dblclick(d.x + d.w / 2, d.y + d.h / 2); await page.waitForTimeout(80);
+    if (Math.abs((await box('#procwin')).w - 600) > 1) out.push('double-clicking a grip did not put the Process window back to 600 wide');
+    return out;
+  });
   await check('Ribbon menus: Buttons, Switches, Outputs and Contacts open and place their parts (momentary or maintained, instantaneous or timing)', async page => {
     const out = [];
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
-    for (const [btn, kinds] of [['bt', ['btn-no-mom', 'btn-nc-mom', 'btn-no-mnt', 'btn-nc-mnt']], ['sw', ['sel', 'lsw-no', 'lsw-nch', 'tsw-no', 'tsw-nc', 'tsw-nol', 'tsw-ncl']], ['out', ['coil', 'timer', 'timer-off', 'lamp', 'sol']], ['ct', ['con-no-i', 'con-nc-i', 'con-no-t', 'con-nc-t']]]) {
+    for (const [btn, kinds] of [['bt', ['btn-no-mom', 'btn-nc-mom', 'btn-no-mnt', 'btn-nc-mnt']], ['sw', ['sel', 'lsw-no', 'lsw-nch', 'tsw-no', 'tsw-nc', 'tsw-nol', 'tsw-ncl', 'psw-no', 'psw-nc']], ['out', ['coil', 'timer', 'timer-off', 'lamp', 'sol', 'htr']], ['ct', ['con-no-i', 'con-nc-i', 'con-no-t', 'con-nc-t']]]) {
       await page.click(`#${btn}-btn`);
       for (const k of kinds) if (!(await page.isVisible(`#${btn}-menu [data-part="${k}"]`))) out.push(`${k} not in the ${btn} menu`);
       await page.keyboard.press('Escape');

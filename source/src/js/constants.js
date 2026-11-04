@@ -30,7 +30,7 @@ const OPEN_LIFT = 15, BLADE_GREY = '#a6a6a6';   // how far an open contact's bar
 // loads: things current passes through to L2 (a relay coil, a pilot light or a solenoid). They take the same room and
 // are passed through the same way; only a coil works contacts. A solenoid works something outside the circuit (a
 // pneumatic or hydraulic valve): it is numbered (SOL1, SOL2 ...) rather than lettered, and solOn says if it has pulled in
-const LOADT = t => t === 'coil' || t === 'lamp' || t === 'sol' || t === 'xfm';
+const LOADT = t => t === 'coil' || t === 'lamp' || t === 'sol' || t === 'htr' || t === 'xfm';
 /* A control transformer (T1, T2 ...): its primary (H1, H2, on top) is a load across the supply; while current goes
    through it, its secondary (X1, X2, below) is a supply of its own for a control circuit: X1 like L1, X2 like L2, joined
    to them through two switches inside it that close when the primary is fed (see network.js). The box: XFM_W by XFM_H;
@@ -43,7 +43,7 @@ const XFM_W = 210, XFM_H = 148, XFM_TX = 60, XFM_TY = 80, XFM_EDGE = '#9aa7b5';
 const isPwr3 = p => p.t === 'dsc' || p.t === 'fus' || p.t === 'mst' || p.t === 'olh', isPwrT = t => t === 'dsc' || t === 'fus' || t === 'mst' || t === 'olh';
 const DSC_HEAD = 50, DSC_HANDLE = '#E8413C';   // (a disconnect's head on top, with its handle)
 const PWR_DY = 120, PWR_H = 2 * PWR_DY + 66, MTR_W = 280, MTR_H = 280, MTR_COL = '#9aa7b5', OL_COL = '#FF6F59', DSC_COL = '#c9d2dd', FUS_COL = '#c8c8c8';
-const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : t === 'tsw' ? TSW_T : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : t === 'lsw' || t === 'tsw' ? LSW_S / 2 : t === 'mtr' ? MTR_H / 2 : t === 'dsc' ? PWR_H / 2 + DSC_HEAD : isPwrT(t) ? PWR_H / 2 : 40;   // (the room a part takes)
+const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : t === 'tsw' ? TSW_T : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : t === 'psw' ? PSW_UP : t === 'lsw' || t === 'tsw' ? LSW_S / 2 : t === 'mtr' ? MTR_H / 2 : t === 'dsc' ? PWR_H / 2 + DSC_HEAD : isPwrT(t) ? PWR_H / 2 : 40;   // (the room a part takes)
 const SOL_COL = '#00D2BE';
 /* a solenoid (as on Dallas's drawing): a diamond (a rounded square on its corner) as tall and wide as a coil, with a
    dot at each end where the rung comes in, joined by the lightning bolt: along the rung, up to a peak, straight down and
@@ -56,19 +56,32 @@ const SOL_DOT = 25.05, SOL_DR = 6.75, SOL_BW = 6.8, SOL_X = 11.4, SOL_P = 22.6;
 // left, [1] from the right: from the outer edge of one dot to the outer edge of the other), and that way's length
 const SOL_BOLT = `M ${-SOL_DOT} 0 H ${-SOL_X} L 0 ${-SOL_P} V ${SOL_P} L ${SOL_X} 0 H ${SOL_DOT}`;
 const SOL_D = [1, -1].map(k => `M ${-k * (SOL_DOT + SOL_DR)} 0 H ${-k * SOL_X} L 0 ${-k * SOL_P} V ${k * SOL_P} L ${k * SOL_X} 0 H ${k * (SOL_DOT + SOL_DR)}`);
+/* A heating element (htr): the solenoid's diamond and dots, the resistor's zigzag (three peaks each way) in place of its
+   bolt; red; glowing while it is energized. Numbered HTR1, HTR2... It heats a temperature process value (p.pv) at
+   p.rate a minute while energized, and the value drifts back to where it started at p.cool a minute while it is off. */
+const HTR_COL = '#FF0032', HTR_X = 17, HTR_A = 14, HTR_N = 3;
+const HTR_PTS = (() => { const q = [[-SOL_DOT, 0], [-HTR_X, 0]]; for (let k = 1; k <= 2 * HTR_N; k++) q.push([-HTR_X + k * 2 * HTR_X / (2 * HTR_N + 1), k % 2 ? -HTR_A : HTR_A]); q.push([HTR_X, 0], [SOL_DOT, 0]); return q; })();
+const HTR_BOLT = 'M ' + HTR_PTS.map(q => q.map(n => +n.toFixed(2)).join(' ')).join(' L ');
+const HTR_D = [1, -1].map(k => { const q = HTR_PTS.map(([a, b]) => [k * a, b]); q[0][0] = -k * (SOL_DOT + SOL_DR); q[q.length - 1][0] = k * (SOL_DOT + SOL_DR); return 'M ' + q.map(z => z.map(n => +n.toFixed(2)).join(' ')).join(' L '); });
+const HTR_LEN = HTR_PTS.reduce((s, q, i) => i ? s + Math.hypot(q[0] - HTR_PTS[i - 1][0], q[1] - HTR_PTS[i - 1][1]) : s, 0) + 2 * SOL_DR;
+const isSolT = t => t === 'sol' || t === 'htr';   // (drawn as a solenoid is)
 const SOL_LEN = 2 * (SOL_DOT + SOL_DR - SOL_X) + 2 * Math.hypot(SOL_X, SOL_P) + 2 * SOL_P;
 // a selector switch: a square body a little larger than a pushbutton's (room for its position numbers round the top)
 const SEL_BOX = 80;
-const WIDE = t => LOADT(t) || t === 'sel' || t === 'lsw';                                // parts whose ends sit 60 either side of their centre
-const BODYH = t => t === 'lsw' || t === 'tsw' ? LSW_S : t === 'xfm' ? XFM_H : t === 'mtr' ? MTR_H : isPwrT(t) ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
+const WIDE = t => LOADT(t) || t === 'sel' || t === 'lsw' || t === 'psw';                                // parts whose ends sit 60 either side of their centre
+const BODYH = t => t === 'lsw' || t === 'tsw' || t === 'psw' ? LSW_S : t === 'xfm' ? XFM_H : t === 'mtr' ? MTR_H : isPwrT(t) ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
 const TERM = p => p.t === 'mtr' ? MTR_W / 2 + 20 : p.t === 'tsw' ? TSW_T : WIDE(p.t) ? 60 : 40;
-const isOp = p => p.t === 'btn' || p.t === 'sel' || p.t === 'lsw' || p.t === 'tsw';
+const isOp = p => p.t === 'btn' || p.t === 'sel' || p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw';
 /* A temperature switch (tsw): numbered (TS1, TS2...), the limit switch's body without its head, the NEMA temperature
    switch's stepped stem under its blade, and joined to its right side a sensing bulb's box with a thermometer in it.
    For now it is worked as a limit switch is (as a momentary pushbutton), by its own key (opKey: 'T' and its number,
    so TS1 and LS1 are two switches); the thermometer rises as it is worked and falls back as it is let go. NO or NC. */
 const TSW_COL = '#FF0032', TSW_T = 80, TSW_SB = 30, TSW_HALF = 70;   // (its ends; its bulb box's width; how far out its body and box reach)
-const isLim = p => p.t === 'lsw' || p.t === 'tsw', opKey = p => p.t === 'tsw' ? 'T' + p.L : p.L;
+/* A pressure switch (psw, Dallas's design): numbered (PS1, PS2...), the limit switch's body with, on a neck on top, a
+   pressure gauge, and under its blade the NEMA pressure switch's diaphragm and stem, which push the blade up as the
+   pressure rises. Worked for now as a limit switch is, by its own key ('P' and its number). NO or NC. */
+const PSW_COL = '#FF9C37', PSW_UP = 116;   // (its colour; how far its gauge reaches above the wire)
+const isLim = p => p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw', opKey = p => p.t === 'tsw' ? 'T' + p.L : p.t === 'psw' ? 'P' + p.L : p.L;
 /* A limit switch (lsw): numbered (p.L '1', '2'... : LS1, LS2), worked like a momentary pushbutton (down[p.L]) and
    tinting the current with its colour as one does. Normally open or closed (p.nc); held (p.held): actuated by the
    machine at rest, so working it lets it go. A square body, roomier than a contact's, its ends 60 either side. */
@@ -102,5 +115,5 @@ let PH_COL = [...PH_DEFAULT];
 const phCol = p => PH_COL[(+p.L || 1) - 1];
 const lighten = (c, f) => { const n = parseInt(c.slice(1), 16), m = k => Math.round(((n >> k) & 255) + (255 - ((n >> k) & 255)) * f); return '#' + ((1 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)).toString(16).slice(1).toUpperCase(); };
 const JMP_EDGE = '#b8c2cf';
-const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel' || p.t === 'lsw' || p.t === 'tsw' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc' || p.t === 'fu1';
+const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel' || p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc' || p.t === 'fu1';
 const isCon = p => p.t === 'con' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc' || p.t === 'fu1';   // (a relay contact, or a transformer's switch inside it: passes on what it is given)   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre

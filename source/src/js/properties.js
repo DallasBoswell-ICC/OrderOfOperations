@@ -17,7 +17,7 @@ const selGroup = () => {
   return ps.every(q => q.t === ps[0].t) ? ps : [];
 };
 const each = f => { const g = selGroup(); if (!g.length) return false; snapshot(); g.forEach(f); normalize(); draw(); return true; };
-const KIND_NAME = { xfm: 'transformers', btn: 'pushbuttons', coil: 'coils', con: 'contacts', lamp: 'pilot lights', sel: 'selector switches', sol: 'solenoids', jmp: 'continuations', lsw: 'limit switches', tsw: 'temperature switches', l1: 'L1 supplies', l2: 'L2 returns', ph: 'phases', dsc: 'disconnects', fus: 'fuse blocks', mst: 'starters', olh: 'overloads', olc: 'overload contacts', mtr: 'motors' };
+const KIND_NAME = { xfm: 'transformers', btn: 'pushbuttons', coil: 'coils', con: 'contacts', lamp: 'pilot lights', sel: 'selector switches', sol: 'solenoids', jmp: 'continuations', lsw: 'limit switches', tsw: 'temperature switches', psw: 'pressure switches', htr: 'heating elements', l1: 'L1 supplies', l2: 'L2 returns', ph: 'phases', dsc: 'disconnects', fus: 'fuse blocks', mst: 'starters', olh: 'overloads', olc: 'overload contacts', mtr: 'motors' };
 const blocksOf = L => parts.filter(p => p.t === 'btn' && p.L === L);
 function renderProps() {
   const G = selGroup(), p = G[0] || null, multi = G.length > 1;
@@ -83,12 +83,27 @@ function renderProps() {
     // its number (one no other switch of its kind has), its kind and its colour (a temperature switch: NO or NC only)
     const ns = document.getElementById('ls-num'), taken = new Set(parts.filter(q => q.t === p.t && q !== p).map(q => q.L));
     groupOf('ls-num').hidden = multi; ns.innerHTML = '';
-    for (const o of document.querySelectorAll('#ls-kind option')) { o.hidden = p.t === 'tsw' ? o.value.endsWith('h') : o.value.endsWith('l');
+    for (const o of document.querySelectorAll('#ls-kind option')) { o.hidden = p.t === 'tsw' ? o.value.endsWith('h') : p.t === 'psw' ? o.value.length > 2 : o.value.endsWith('l');
       if (p.t === 'tsw') o.textContent = { no: 'High temp., NO', nc: 'High temp., NC', nol: 'Low temp., NO', ncl: 'Low temp., NC' }[o.value] || o.textContent;
       else o.textContent = { no: 'Normally open', nc: 'Normally closed' }[o.value] || o.textContent; }
-    for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n))) ns.add(new Option((p.t === 'tsw' ? 'TS' : 'LS') + n, String(n), false, String(n) === p.L));
+    for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n))) ns.add(new Option(({ tsw: 'TS', psw: 'PS' }[p.t] || 'LS') + n, String(n), false, String(n) === p.L));
     document.getElementById('ls-kind').value = (p.nc ? 'nc' : 'no') + (p.held ? 'h' : '') + (p.low ? 'l' : '');
     swatches(document.getElementById('ls-colour'), p.color, hex => each(q => q.color = hex));
+    // what works it: by hand, or a process value of its kind (and then where it acts, and resets)
+    const kind = PV_FOR[p.t], opts = PV.filter(v => v.kind === kind), pvs = document.getElementById('ls-pv'), same = G.every(q => q.t === p.t);
+    document.getElementById('ls-pv-group').hidden = !same;
+    pvs.innerHTML = ''; pvs.add(new Option('Clicked by hand', '', false, !p.pv));
+    for (const v of opts) pvs.add(new Option(v.name, v.id, false, v.id === p.pv));
+    if (!opts.length) { const o = new Option(`(no ${PV_KINDS[kind][0].toLowerCase()} values yet: add one with Process values on the Home tab)`, '__none'); o.disabled = true; pvs.add(o); }
+    const v = same ? pvOf(p) : null;
+    document.getElementById('ls-side-group').hidden = !(v && p.t === 'lsw');
+    document.getElementById('ls-sp-group').hidden = !v; document.getElementById('ls-rs-group').hidden = !v || p.t === 'lsw';
+    if (v) {
+      document.getElementById('ls-side').value = p.side === 'lo' ? 'lo' : 'hi';
+      document.getElementById('ls-sp-label').textContent = p.t === 'lsw' ? 'At' : pvFalls(p) ? 'Acts at (falling)' : 'Acts at (rising)';
+      document.getElementById('ls-sp').value = pvFmt(v, +p.sp); document.getElementById('ls-rs').value = pvFmt(v, +p.rs);
+      for (const u of document.querySelectorAll('.ls-unit')) u.textContent = v.unit;
+    }
   }
   const pw = p && (isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'fu1');
   document.getElementById('props-pwr').hidden = !pw;
@@ -127,6 +142,35 @@ function renderProps() {
     const top = Math.max(20, ...[...taken].map(Number)) + 5;
     for (let n = 1; n <= top; n++) if (!taken.has(String(n))) ns.add(new Option('SOL' + n, String(n), false, String(n) === p.L));
     swatches(document.getElementById('v-colour'), p.color, hex => each(q => q.color = hex));
+  }
+  document.getElementById('props-htr').hidden = !(p && p.t === 'htr');
+  if (p && p.t === 'htr') {
+    // its number (one no other heating element has), the temperature it heats and how fast, and its colour
+    const ns = document.getElementById('h-num'), taken = new Set(parts.filter(q => q.t === 'htr' && q !== p).map(q => q.L));
+    groupOf('h-num').hidden = multi; ns.innerHTML = '';
+    for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n))) ns.add(new Option('HTR' + n, String(n), false, String(n) === p.L));
+    swatches(document.getElementById('h-colour'), p.color, hex => each(q => q.color = hex));
+  }
+  // what it drives: a solenoid, a motor or a heating element and a process value (a heater: a temperature)
+  const dr = p && isDrv(p) && G.every(q => q.t === p.t);
+  document.getElementById('props-drive').hidden = !dr;
+  if (dr) {
+    const ds = document.getElementById('d-pv'), opts = PV.filter(v => p.t === 'htr' ? v.kind === 'temperature' : true); ds.innerHTML = '';
+    document.getElementById('d-pv-label').textContent = p.t === 'htr' ? 'Heats' : 'Drives';
+    ds.add(new Option('Nothing', '', false, !p.pv));
+    for (const v of opts) ds.add(new Option(v.name, v.id, false, v.id === p.pv));
+    if (!opts.length) { const o = new Option(`(no ${p.t === 'htr' ? 'temperature ' : ''}values yet: add one with Process values on the Home tab)`, '__none'); o.disabled = true; ds.add(o); }
+    const v = pvOf(p);
+    document.getElementById('d-dir-group').hidden = !v || p.t === 'htr';
+    for (const g of ['d-rate-group', 'd-off-group']) document.getElementById(g).hidden = !v;
+    document.getElementById('d-cool-group').hidden = !v || drvOff(p) !== 'back';
+    if (v) {
+      const dir = document.getElementById('d-dir'); dir.options[0].text = p.t === 'mtr' ? 'Forward raises it' : 'Raises it'; dir.options[1].text = p.t === 'mtr' ? 'Forward lowers it' : 'Lowers it'; dir.value = p.dir === 'down' ? 'down' : 'up';
+      document.getElementById('d-rate-label').textContent = p.t === 'htr' ? 'Heats at' : p.t === 'mtr' ? 'While it runs, at' : 'While energized, at';
+      document.getElementById('d-rate').value = pvFmt(v, +p.rate || 0); document.getElementById('d-cool').value = pvFmt(v, +p.cool || 0);
+      document.getElementById('d-per').value = drvPer(p); document.getElementById('d-off').value = drvOff(p);
+      for (const u of document.querySelectorAll('.d-unit')) u.textContent = (v.unit || '') + (u.classList.contains('d-unit-per') ? (drvPer(p) === 'min' ? ' a minute' : ' a second') : '');
+    }
   }
   document.getElementById('props-sel').hidden = !(p && p.t === 'sel');
   if (p && p.t === 'sel') renderSelProps(p, multi);
@@ -300,4 +344,23 @@ document.getElementById('ph-custom').addEventListener('change', e => { const p =
 document.getElementById('box-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(turns)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
 document.getElementById('pw-num').addEventListener('change', e => { const G = selGroup(); if (G.length && G.every(p => isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'fu1')) each(p => p.L = e.target.value); });
 document.getElementById('ls-num').addEventListener('change', e => { const G = selGroup(); if (G.every(p => p.t === G[0].t && isLim(p))) each(p => p.L = e.target.value); });
+document.getElementById('h-num').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'htr') return; snapshot(); p.L = e.target.value; draw(); });
+// what an output drives (one panel for solenoids, motors and heating elements)
+document.getElementById('d-pv').addEventListener('change', e => { const id = e.target.value, G = selGroup(); if (!G.length || !G.every(q => isDrv(q) && q.t === G[0].t)) return;
+  each(p => { if (!id) { delete p.pv; return; } p.pv = id; drvDefaults(p, pvOf(p)); }); });
+for (const [id, f] of [['d-dir', 'dir'], ['d-per', 'per'], ['d-off', 'off']]) document.getElementById(id).addEventListener('change', e => each(p => { if (isDrv(p)) p[f] = e.target.value; }));
+for (const [id, f] of [['d-rate', 'rate'], ['d-cool', 'cool']]) {
+  const box = document.getElementById(id);
+  box.addEventListener('change', () => { const x = parseFloat(box.value.replace(',', '.')); if (!isFinite(x) || x < 0) { renderProps(); return; } each(p => { if (isDrv(p)) p[f] = x; }); });
+  box.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') box.blur(); });
+}
+document.getElementById('ls-pv').addEventListener('change', e => { const id = e.target.value, G = selGroup(); if (!G.length || !G.every(q => q.t === G[0].t && isLim(q))) return;
+  each(p => { if (!id) unlinkPv(p); else { p.pv = id; if (p.t === 'lsw' && !p.side) p.side = 'hi'; pvDefaults(p, pvOf(p)); } }); });
+document.getElementById('ls-side').addEventListener('change', e => each(p => { if (p.t === 'lsw' && pvOf(p)) { p.side = e.target.value; pvDefaults(p, pvOf(p)); } }));
+// a setting typed in: the reset kept on the right side of it (below the setting for a switch that acts as its value rises, above it otherwise)
+for (const [id, f] of [['ls-sp', 'sp'], ['ls-rs', 'rs']]) document.getElementById(id).addEventListener('change', e => {
+  const x = parseFloat(e.target.value.replace(',', '.')); if (!isFinite(x)) { renderProps(); return; }
+  each(p => { if (!pvOf(p)) return; p[f] = x; if (p.t === 'lsw') { p.rs = p.sp; return; } const fall = pvFalls(p); if (fall ? p.rs < p.sp : p.rs > p.sp) { if (f === 'sp') p.rs = p.sp; else p.sp = p.rs; } });
+});
+for (const id of ['ls-sp', 'ls-rs']) document.getElementById(id).addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') e.target.blur(); });
 document.getElementById('ls-kind').addEventListener('change', e => { const k = e.target.value; if (selGroup().every(isLim)) each(p => { p.nc = k.startsWith('nc'); if (k.endsWith('h') && p.t === 'lsw') p.held = true; else delete p.held; if (k.endsWith('l') && p.t === 'tsw') p.low = true; else delete p.low; }); });

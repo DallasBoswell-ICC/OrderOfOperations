@@ -1,10 +1,10 @@
 /* ---------------- build / run ---------------- */
-function afterRunStart() { buildStation(); document.getElementById('mode-group').hidden = !parts.some(p => (p.t === 'btn' && !p.maint) || isLim(p)); document.getElementById('timer-group').hidden = !parts.some(isTimer); paint(); }
+function afterRunStart() { buildStation(); buildProcess(); document.getElementById('mode-group').hidden = !parts.some(p => (p.t === 'btn' && !p.maint) || isLim(p)); document.getElementById('timer-group').hidden = !parts.some(isTimer); paint(); }
 function setMode(run) {
   editing = !run;
   document.getElementById('tab-edit').setAttribute('aria-selected', String(!run));
   document.getElementById('tab-run').setAttribute('aria-selected', String(run));
-  closeMenus(); showRibbon(); if (!run) buildStation();
+  closeMenus(); showRibbon(); if (!run) { buildStation(); showProcess(); }
   showViewMode(); showOverview(); if (run && viewMode === 'split') splitStart();
   document.getElementById('fault').hidden = true;
   sel = null; preview = null; setTool('select');
@@ -13,7 +13,7 @@ function setMode(run) {
 }
 document.getElementById('tab-edit').addEventListener('click', () => setMode(false));
 document.getElementById('tab-run').addEventListener('click', () => setMode(true));
-document.getElementById('reset-btn').addEventListener('click', () => { startRun(); paint(); });
+document.getElementById('reset-btn').addEventListener('click', () => { startRun(); buildProcess(); paint(); });
 /* Speed: the preset buttons, or the slider for any speed from 0.1× to 300× (on a log scale: every step along it
    makes the circuit the same proportion faster). Turned right up, a change runs through the whole circuit in a
    blink, as it does in a real panel. */
@@ -92,7 +92,7 @@ window.addEventListener('resize', () => { if (fit(editing && !dragging())) { if 
 
 if (LOCKED) {
   // a locked simulator: its own circuit, straight into Run mode, with its name as the title
-  try { const c = readCircuit(LOCKED.circuit); parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; normalize(); }
+  try { const c = readCircuit(LOCKED.circuit); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; normalize(); }
   catch (_) { loadPreset('blank'); }
   document.body.classList.add('locked');
   document.querySelector('h1 span').textContent = circuitName || 'Circuit';

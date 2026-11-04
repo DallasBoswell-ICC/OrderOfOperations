@@ -127,7 +127,8 @@ const coilColour = L => (parts.find(q => q.t === 'coil' && q.L === L) || {}).col
 let DSC = {}, BLOWN = {}, OLTRIP = {}, MOT = {};
 const poleClosed = k => { const p = k.x; return p.t === 'dsc' ? !DSC[p.id] : p.t === 'fus' ? !BLOWN[k.id] : p.t === 'mst' ? !!(CON[p.id] && CON[p.id].shut) : true; };
 // a limit switch: actuated while worked (a held one: while not), and closed accordingly
-const lswAct = p => !!down[opKey(p)] !== !!p.held, lswClosed = p => p.nc ? !lswAct(p) : lswAct(p);
+const lswAct = p => (pvLinked(p) ? !!PVACT[opKey(p)] : !!down[opKey(p)]) !== !!p.held,   // (worked by hand, or by its process value)
+      lswClosed = p => p.nc ? !lswAct(p) : lswAct(p);
 // how far a limit switch has moved from at rest (0) to worked (1): easing in and out over LSW_MOVE after it was last
 // worked or let go
 const LSW_MOVE = .3;

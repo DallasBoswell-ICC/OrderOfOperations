@@ -216,7 +216,16 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
 .station.min .st-min svg { transform: rotate(180deg); }
 .station.min .st-body { display: none; }
 .station.min .st-head { border-radius: 9px; }
-.st-body { position: relative; padding: 10px 26px 16px; max-height: calc(100vh - 60px); overflow: auto; }
+.st-body { position: relative; padding: 10px 26px 16px; overflow: auto; }
+/* the grips for resizing the floating windows: along each side and at each corner, just over the edge */
+.rz { position: absolute; z-index: 3; touch-action: none; }
+.rz-n, .rz-s { left: 10px; right: 10px; height: 8px; cursor: ns-resize; }
+.rz-e, .rz-w { top: 10px; bottom: 10px; width: 8px; cursor: ew-resize; }
+.rz-n { top: -4px; } .rz-s { bottom: -4px; } .rz-e { right: -4px; } .rz-w { left: -4px; }
+.rz-ne, .rz-nw, .rz-se, .rz-sw { width: 16px; height: 16px; }
+.rz-nw { left: -5px; top: -5px; cursor: nwse-resize; } .rz-se { right: -5px; bottom: -5px; cursor: nwse-resize; }
+.rz-ne { right: -5px; top: -5px; cursor: nesw-resize; } .rz-sw { left: -5px; bottom: -5px; cursor: nesw-resize; }
+.station.min .rz { display: none; }   /* (folded, it has nothing to resize) */
 .st-screw { position: absolute; width: 13px; height: 13px; }
 .st-name { width: max-content; max-width: 100%; margin: 0 auto 10px; padding: 3px 14px; background: #f2f2f2; border: 1px solid #888; border-radius: 3px; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .st-grid { display: grid; gap: 12px 16px; justify-content: center; align-items: end; }
@@ -298,3 +307,39 @@ body.fs .wrap { padding-top: 8px; }
 .st-sout { font: 700 .82rem var(--ui); color: #ffc000; background: #1e1f22; border: 1px solid #55585c; border-radius: 5px; padding: 3px 7px; width: 4.6em; text-align: center; font-variant-numeric: tabular-nums; }
 .st-sout:hover { border-color: #8a8d91; }
 .st-sout:focus { outline: none; border-color: #ffc000; }
+
+/* the Process window: the operator station's frame, a dark screen inside, as an HMI panel */
+.procwin { min-width: 300px; width: 600px; max-width: calc(100vw - 8px); }
+.pw-screen .pv { display: grid; grid-template-columns: 160px 1fr; gap: 14px; align-items: center; }
+.pvvis { width: 160px; height: 93px; background: #0e1013; border: 1px solid #23272d; border-radius: 5px; }
+.pvmain { min-width: 0; }
+.pw-body { padding: 12px 14px 12px; }
+.pw-screen { background: #14161a; border: 2px solid #0b0c0e; border-radius: 6px; box-shadow: inset 0 2px 8px rgba(0,0,0,.6); padding: 4px 10px; overflow: auto; }
+.pw-screen .pv { padding: 12px 2px 13px; border-bottom: 1px solid #262a30; }
+.pw-screen .pv:last-child { border-bottom: 0; }
+.pvtop { display: flex; align-items: center; gap: 8px; }
+.pvname { flex: 1; font-size: 1.05rem; font-weight: 600; color: #cfd6df; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pvval { font: 700 1.45rem "Cascadia Mono", Consolas, Menlo, monospace; color: #5ee08a; background: #0b0d10; border: 1px solid #2b3038; border-radius: 4px; padding: 1px 8px; width: 5.2em; text-align: right; }
+.pvval:focus { outline: none; border-color: #5ee08a; }
+.pvunit { font-size: 1rem; color: #9aa6b2; min-width: 2.8em; }
+.pvbar { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.pvbar span { font-size: .82rem; color: #6d7884; min-width: 2.4em; text-align: center; }
+.pvslide { flex: 1; accent-color: #5ee08a; cursor: pointer; min-width: 0; }
+.pvlinks { font-size: .82rem; color: #8a96a3; margin-top: 4px; }
+.pw-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.pw-time { display: flex; align-items: center; gap: 8px; font-size: .8rem; font-weight: 600; color: #3a3d41; }
+.pw-time .seg { background: #2c2d30; }
+.pw-time .seg button { padding: 4px 10px; font-size: .8rem; }
+#pv-time-group .seg { flex-direction: column; }
+#pv-time-group .seg button { padding: 3px 10px; text-align: left; }
+.pw-reset { font: 600 .76rem var(--ui); color: #222; background: #e8e8e8; border: 1px solid #888; border-radius: 5px; padding: 4px 12px; cursor: pointer; }
+.pw-reset:hover { background: #fff; }
+/* the Process values dialog */
+dialog#pv-dlg { width: min(760px, calc(100vw - 32px)); }
+.pvtable { border-collapse: collapse; width: 100%; font-size: .84rem; }
+.pvtable th { text-align: left; font-weight: 600; color: var(--faint); font-size: .74rem; padding: 4px 5px; border-bottom: 1px solid var(--line); }
+.pvtable td { padding: 4px 5px; border-bottom: 1px solid #303135; }
+.pvin { font: inherit; font-size: .84rem; color: var(--ink); background: #1c1d1f; border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
+.pvin.w12 { width: 12em; } .pvin.w5 { width: 4.6em; }
+.pvdel { color: #ff9a9a !important; background: none !important; border: 0 !important; font-size: 1rem; padding: 2px 6px !important; }
+.rpanel .pvnum { width: 5.4em; }

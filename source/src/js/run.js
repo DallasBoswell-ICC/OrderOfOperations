@@ -8,6 +8,7 @@ function frame(now) {
     const target = simT + dt * speed, ran = eventsRun, was = simT;
     tickRealTimers(real);   // (timers counting real time go by the clock; one timing out now is acted on below)
     if (runEvents(target, performance.now() + 12)) simT = target;
+    pvTick(was, simT, dt);   // (heaters and the like moving their process values on: by the circuit's time, or in real time)
     if (mode === 'click') for (const L in autoRel) if (!busyQueue() && simT > busyUntil + .5) { delete autoRel[L]; press(L, false); }
     // once the circuit has settled (nothing on its way, and the last coil, light and contact has finished changing)
     // nothing on the panel moves, so it is not painted again until something happens: an idle circuit costs nothing
@@ -62,6 +63,7 @@ function paintView(V) {
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
     else if (p.t === 'lsw') setLimit(v, p, lswPos(p), lswClosed(p));
     else if (p.t === 'tsw') setTemp(v, p, lswPos(p), lswClosed(p));
+    else if (p.t === 'psw') setPress(v, p, lswPos(p), lswClosed(p));
     else if (p.t === 'con' || p.t === 'olc') {
       const s = p.t === 'olc' ? olState(p.L) : CON[p.id]; if (!s) continue;
       const f = clamp01((simT - s.t0) / SWING), e = f * f * (3 - 2 * f);   // ease in and out
@@ -74,7 +76,7 @@ function paintView(V) {
       v.posts.setAttribute('fill', s.shut ? v.col : GREY);
     } else if (p.t === 'sel') paintSel(p, v);
     else if (p.t === 'fu1') paintFu1(p, v);
-    else if (p.t === 'sol') paintSol(p, v);
+    else if (isSolT(p.t)) paintSol(p, v);
     else if (p.t === 'lamp') {
       const lit = litOf(p); k = lit.toFixed(3);
       if (k === v.k) continue; v.k = k;
@@ -131,10 +133,11 @@ function paintSol(p, v) {
   const show = !!coilOn[p.id] || !COND[p.id], c = e => show && e && e.col ? v.col : null;
   const cur = i >= 0 ? evs[i] : null, now = c(cur), prev = i > 0 ? c(evs[i - 1]) : null;
   const f = cur ? clamp01((simT - at(cur)) * V / BODYH(p.t)) : 0;
+  if (v.glow) { const o = coilOn[p.id] ? '.9' : '0'; if (v.glow.style.opacity !== o) v.glow.style.opacity = o; }   // (a heating element glows while it heats)
   const k = `${S}|${f.toFixed(3)}|${now}|${prev}`;
   if (k === v.k) return; v.k = k;
-  const d = SOL_D[S === 'A' ? 0 : 1], n = f * SOL_LEN;
-  for (const [lns, col, dash] of [[v.cur, now, `${n} ${SOL_LEN + 1}`], [v.old, prev, `0 ${n} ${SOL_LEN + 1}`]]) for (const ln of lns) {
+  const htr = p.t === 'htr', LEN = htr ? HTR_LEN : SOL_LEN, d = (htr ? HTR_D : SOL_D)[S === 'A' ? 0 : 1], n = f * LEN;
+  for (const [lns, col, dash] of [[v.cur, now, `${n} ${LEN + 1}`], [v.old, prev, `0 ${n} ${LEN + 1}`]]) for (const ln of lns) {
     if (ln.getAttribute('d') !== d) ln.setAttribute('d', d);
     ln.setAttribute('stroke', col || 'transparent'); ln.setAttribute('stroke-dasharray', dash);
   }
@@ -229,11 +232,13 @@ function paintLead(L, evs) {
 function bindButton(g, p) {
   g.setAttribute('class', 'dev'); g.setAttribute('tabindex', '0'); g.setAttribute('role', 'button'); g.setAttribute('aria-label', captionOf(p));
   const K = opKey(p);   // (a pushbutton's letter; a limit switch's number; a temperature switch's T and its number)
+  const linkedSay = () => { const v = pvOf(p); say(`${captionOf(p)} is worked by ${v.name}: set it in the Process window.`); };
   const dn = () => {
+    if (pvLinked(p)) return linkedSay();   // (worked by its process value, not by hand)
     if (p.maint) return press(K, !down[K]);
     if (mode === 'click') { if (down[K]) return; press(K, true); autoRel[K] = true; } else press(K, true);
   };
-  const up = () => { if (mode === 'hold' && !p.maint) press(K, false); };
+  const up = () => { if (mode === 'hold' && !p.maint && !pvLinked(p)) press(K, false); };
   g.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); try { g.setPointerCapture(e.pointerId); } catch (_) {} dn(); });
   g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up);
   g.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); dn(); } });
