@@ -986,7 +986,9 @@ const workW = () => editing && !barsOn() && typeof cam !== 'undefined' ? Math.ma
 function overlaps(p, x, y, t) {
   return parts.some(q => q !== p && Math.abs(q.x - x) < halfW(t) + halfW(q.t) && Math.abs(q.y - y) < halfH(t) + halfH(q.t));
 }
-const clampPart = (x, y, t) => { const h = halfW(t); return [Math.min(rightEdge() - h - 40, Math.max(h + 40, snap(x))), Math.max(halfH(t) + 20, snap(y))]; };   // (clear of the bars)
+// a part's spot: on the grid (or its ends would be off it, and no wire could meet them), clear of the bars and the top
+const clampPart = (x, y, t) => { const h = halfW(t), up = n => Math.ceil(n / G) * G, down = n => Math.floor(n / G) * G;
+  return [Math.min(down(rightEdge() - h - 40), Math.max(up(h + 40), snap(x))), Math.max(up(halfH(t) + 20), snap(y))]; };
 const clampX = x => Math.min(rightEdge(), Math.max(0, snap(x))), clampY = y => Math.max(40, snap(y));
 
 /* ---- js/network.js ---- */
@@ -5489,7 +5491,8 @@ function readCircuit(d) {
   const hex = c => /^[0-9a-f]{6}$/i.test(c || '') ? '#' + c.toUpperCase() : null;
   const ps = d.parts.slice(0, 200).map(a => {
     const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'htr' ? 'htr' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
-    const p = P(t, num(a[1]), num(a[2]), { L: ['dsc', 'fus', 'fu1', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1))) : t === 'sol' || t === 'htr' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'htr' ? HTR_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : t === 'lsw' ? LSW_COL : t === 'tsw' ? TSW_COL : t === 'psw' ? PSW_COL : BTN_COL[L] || '#FF0032') });
+    const p = P(t, snap(num(a[1])), snap(num(a[2])), {   // (on the grid: a part saved off it, by an older version, could never be wired)
+      L: ['dsc', 'fus', 'fu1', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1))) : t === 'sol' || t === 'htr' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'htr' ? HTR_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : t === 'lsw' ? LSW_COL : t === 'tsw' ? TSW_COL : t === 'psw' ? PSW_COL : BTN_COL[L] || '#FF0032') });
     if (t === 'lsw') { p.nc = !!a[4]; if (a[7] === 1) p.held = true; }
     if (t === 'psw') p.nc = !!a[4];   // (a pressure switch: NO or NC)
     if (t === 'tsw') { p.nc = !!a[4]; if (a[7] === 1) p.low = true; }   // (a temperature switch: NO or NC, high or low temperature)   // (a limit switch: NO or NC, held or not)
