@@ -6,5 +6,6 @@ the installed app, is always `Circuit_Builder.html` at the top of the repository
 | Folder | What it is |
 |---|---|
 | `2026-10-23/` | The Circuit Builder as of Oct 23, 2026 (before timers): pushbuttons, relay coils and contacts, pilot lights (can be built into a button), copy/paste, speed slider up to 300×, O³ icon. `Circuit_Builder.html` is the complete program (open it in a browser); `Circuit_Builder_source.zip` is its source. |
+| `2026-11-04/` | The Circuit Builder as of Nov 4, 2026 (before process values): timers, limit switches, selector switches, motors and solenoids, 3-phase power with single and phase fuses, temperature switches (high and low), the operator station with its speed controls. `Circuit_Builder.html` is the complete program; `Circuit_Builder_source.zip` is its source. |
 
 To go back to a backup, copy its `Circuit_Builder.html` up over the one at the top of the repository.
