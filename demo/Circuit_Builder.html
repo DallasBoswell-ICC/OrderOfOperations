@@ -312,6 +312,34 @@ body.fs .wrap { padding-top: 8px; }
 .st-sout:hover { border-color: #8a8d91; }
 .st-sout:focus { outline: none; border-color: #ffc000; }
 
+/* the Process window: the operator station's frame, a dark screen inside, as an HMI panel */
+.procwin { min-width: 300px; max-width: min(380px, calc(100vw - 8px)); }
+.pw-body { padding: 12px 14px 12px; }
+.pw-screen { background: #14161a; border: 2px solid #0b0c0e; border-radius: 6px; box-shadow: inset 0 2px 8px rgba(0,0,0,.6); padding: 4px 10px; max-height: calc(100vh - 170px); overflow: auto; }
+.pw-screen .pv { padding: 9px 2px 10px; border-bottom: 1px solid #262a30; }
+.pw-screen .pv:last-child { border-bottom: 0; }
+.pvtop { display: flex; align-items: center; gap: 8px; }
+.pvname { flex: 1; font-size: .82rem; font-weight: 600; color: #cfd6df; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pvval { font: 700 1.05rem "Cascadia Mono", Consolas, Menlo, monospace; color: #5ee08a; background: #0b0d10; border: 1px solid #2b3038; border-radius: 4px; padding: 1px 8px; width: 5.2em; text-align: right; }
+.pvval:focus { outline: none; border-color: #5ee08a; }
+.pvunit { font-size: .78rem; color: #9aa6b2; min-width: 2.8em; }
+.pvbar { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.pvbar span { font-size: .68rem; color: #6d7884; min-width: 2.4em; text-align: center; }
+.pvslide { flex: 1; accent-color: #5ee08a; cursor: pointer; min-width: 0; }
+.pvlinks { font-size: .68rem; color: #8a96a3; margin-top: 4px; }
+.pw-foot { display: flex; justify-content: center; margin-top: 10px; }
+.pw-reset { font: 600 .76rem var(--ui); color: #222; background: #e8e8e8; border: 1px solid #888; border-radius: 5px; padding: 4px 12px; cursor: pointer; }
+.pw-reset:hover { background: #fff; }
+/* the Process values dialog */
+dialog#pv-dlg { width: min(760px, calc(100vw - 32px)); }
+.pvtable { border-collapse: collapse; width: 100%; font-size: .84rem; }
+.pvtable th { text-align: left; font-weight: 600; color: var(--faint); font-size: .74rem; padding: 4px 5px; border-bottom: 1px solid var(--line); }
+.pvtable td { padding: 4px 5px; border-bottom: 1px solid #303135; }
+.pvin { font: inherit; font-size: .84rem; color: var(--ink); background: #1c1d1f; border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
+.pvin.w12 { width: 12em; } .pvin.w5 { width: 4.6em; }
+.pvdel { color: #ff9a9a !important; background: none !important; border: 0 !important; font-size: 1rem; padding: 2px 6px !important; }
+.rpanel .pvnum { width: 5.4em; }
+
 .demo-badge { font-style: normal; font-size: .7rem; font-weight: 800; letter-spacing: .08em; color: #1c1d1f; background: #9be03a; border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }
 </style>
 </head>
@@ -402,6 +430,7 @@ body.fs .wrap { padding-top: 8px; }
           <button type="button" class="tool small" data-show="rungs" aria-pressed="true" data-tip="Numbers down the L1 bar for every line, branches included; after each coil's name, the lines its contacts are on (normally closed underlined); on each contact, the line its coil is on. Press a number to go there."><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="3" width="6" height="5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="2" y="12" width="6" height="5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10 5.5h8M10 14.5h8" stroke="currentColor" stroke-width="1.4"/></svg><span>Rung numbers</span></button>
           <button type="button" class="tool small" data-show="overview" aria-pressed="true" data-tip="The overview strip: the whole circuit, small, down the right of the panel (when it is too long to fit). Press or drag on it to move the view."><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="2" width="11" height="16" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="15" y="2" width="3" height="16" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="15" y="5" width="3" height="5" fill="currentColor"/></svg><span>Overview</span></button>
         </div></div><div class="gname">Show</div></div>
+      <div class="rgrp" id="pv-group"><div class="gbody"><button type="button" class="tool big" id="pv-btn" data-tip="Process values: numbers the simulation keeps in the background (positions, pressures, temperatures...). Set them up here, then link limit, pressure and temperature switches to them on each switch's tab. While running, set them in the Process window."><svg viewBox="0 0 30 26"><rect x="3" y="3" width="24" height="20" rx="3" fill="#14161a" stroke="#8a96a3" stroke-width="1.3"/><g stroke-linecap="round"><path d="M7 9h11" stroke="#5ee08a" stroke-width="2"/><path d="M7 15h7" stroke="#5ee08a" stroke-width="2"/><path d="M18 9h5M14 15h9" stroke="#3a414a" stroke-width="2"/></g><circle cx="18" cy="9" r="2.2" fill="#e8e8e8"/><circle cx="14" cy="15" r="2.2" fill="#e8e8e8"/><path d="M7 19.5h5" stroke="#8a96a3" stroke-width="1.2"/></svg><span>Process<br>values</span></button></div><div class="gname">Process</div></div>
     </div>
     <div class="rpanel" id="editpanel" aria-label="Settings of the selected part" hidden>
       <div class="props">
@@ -452,6 +481,10 @@ body.fs .wrap { padding-top: 8px; }
       <div class="props" id="props-lsw" hidden>
         <div class="tgroup"><span class="label">Number</span><select id="ls-num" aria-label="Limit switch number"></select></div>
         <div class="tgroup"><span class="label">Kind</span><select id="ls-kind" aria-label="Kind of limit switch"><option value="no">Normally open</option><option value="nc">Normally closed</option><option value="noh">NO held closed</option><option value="nch">NC held open</option><option value="nol">Low temp., NO</option><option value="ncl">Low temp., NC</option></select></div>
+        <div class="tgroup" id="ls-pv-group"><span class="label">Worked by</span><select id="ls-pv" aria-label="What works this switch"></select></div>
+        <div class="tgroup" id="ls-side-group"><span class="label">Acts</span><select id="ls-side" aria-label="Which side of its setting it acts on"><option value="hi">At or above</option><option value="lo">At or below</option></select></div>
+        <div class="tgroup" id="ls-sp-group"><span class="label" id="ls-sp-label">Acts at</span><input type="text" id="ls-sp" class="labelbox pvnum" inputmode="decimal" autocomplete="off" aria-label="The value it acts at"><span class="unit ls-unit"></span></div>
+        <div class="tgroup" id="ls-rs-group"><span class="label">Resets at</span><input type="text" id="ls-rs" class="labelbox pvnum" inputmode="decimal" autocomplete="off" aria-label="The value it resets at"><span class="unit ls-unit"></span></div>
         <div class="tgroup"><span class="label">Colour</span><div class="swatches" id="ls-colour" role="radiogroup" aria-label="Limit switch colour"></div></div>
       </div>
       <div class="props" id="props-xfm" hidden>
@@ -508,6 +541,7 @@ body.fs .wrap { padding-top: 8px; }
           <button type="button" class="tool small" data-show="rungs" aria-pressed="true" data-tip="Numbers down the L1 bar for every line, branches included; after each coil's name, the lines its contacts are on (normally closed underlined); on each contact, the line its coil is on. Press a number to go there."><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="3" width="6" height="5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="2" y="12" width="6" height="5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10 5.5h8M10 14.5h8" stroke="currentColor" stroke-width="1.4"/></svg><span>Rung numbers</span></button>
           <button type="button" class="tool small" data-show="overview" aria-pressed="true" data-tip="The overview strip: the whole circuit, small, down the right of the panel (when it is too long to fit). Press or drag on it to move the view."><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="2" width="11" height="16" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="15" y="2" width="3" height="16" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="15" y="5" width="3" height="5" fill="currentColor"/></svg><span>Overview</span></button>
         </div></div>
+      <div class="tgroup" id="pv-run-group" hidden><span class="label">Process</span><button type="button" class="tool big" id="pv-toggle" aria-pressed="false" data-tip="Show or hide the Process window: every process value, to set while the circuit runs"><svg viewBox="0 0 30 26"><rect x="3" y="3" width="24" height="20" rx="3" fill="#14161a" stroke="#8a96a3" stroke-width="1.3"/><g stroke-linecap="round"><path d="M7 9h11" stroke="#5ee08a" stroke-width="2"/><path d="M7 15h7" stroke="#5ee08a" stroke-width="2"/><path d="M18 9h5M14 15h9" stroke="#3a414a" stroke-width="2"/></g><circle cx="18" cy="9" r="2.2" fill="#e8e8e8"/><circle cx="14" cy="15" r="2.2" fill="#e8e8e8"/><path d="M7 19.5h5" stroke="#8a96a3" stroke-width="1.2"/></svg><span>Process</span></button></div>
       <div class="tgroup" id="st-group"><span class="label">Operator station</span><button type="button" class="tool big" id="st-toggle" aria-pressed="false" data-tip="Show or hide the operator station: every pushbutton and selector switch of the circuit in one panel you can drag anywhere, so you can work them while watching any part of the ladder"><svg viewBox="0 0 30 26" aria-hidden="true"><rect x="2" y="2" width="26" height="22" rx="3" fill="#c4c7ca" stroke="#8f9396" stroke-width="1.2"/><rect x="5" y="6" width="8" height="8" rx="2" fill="#FF0032" stroke="#9a9a9a" stroke-width="1.2"/><rect x="17" y="6" width="8" height="8" rx="2" fill="#00B050" stroke="#9a9a9a" stroke-width="1.2"/><rect x="5" y="17" width="8" height="3" rx=".6" fill="#111"/><rect x="17" y="17" width="8" height="3" rx=".6" fill="#111"/></svg><span>Station</span></button></div>
       <div class="tgroup"><span class="label">Simulation</span><button type="button" class="tool big reset" id="reset-btn" data-tip="Turn everything off and start over">
       <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M15.5 10a5.5 5.5 0 1 1-1.6-3.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14.4 2.8l.1 3.9-3.9.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reset</span></button></div>
@@ -558,6 +592,24 @@ body.fs .wrap { padding-top: 8px; }
     </div>
   </div>
 </div>
+<div class="station procwin" id="procwin" role="region" aria-label="Process values" hidden>
+  <div class="st-head" id="pw-head" data-tip="Drag to move the Process window"><svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true"><g fill="#8d8d8d"><circle cx="4" cy="3" r="1.3"/><circle cx="10" cy="3" r="1.3"/><circle cx="4" cy="7" r="1.3"/><circle cx="10" cy="7" r="1.3"/><circle cx="4" cy="11" r="1.3"/><circle cx="10" cy="11" r="1.3"/></g></svg><span>Process</span>
+    <button type="button" class="st-min" id="pw-min" aria-label="Fold the Process window to its title bar"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M3.5 10l4.5-4.5 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+  <div class="st-body pw-body">
+    <div class="pw-screen" id="pw-list"></div>
+    <div class="pw-foot"><button type="button" class="pw-reset" id="pw-reset" data-tip="Put every value back to where it starts">Back to start values</button></div>
+  </div>
+</div>
+<dialog id="pv-dlg" aria-labelledby="pv-title">
+  <form method="dialog" class="dlg pvdlg">
+    <h2 id="pv-title">Process values</h2>
+    <p class="hint">Numbers the simulation keeps in the background. Link limit, pressure and temperature switches to them on each switch's tab; while running, set them in the Process window.</p>
+    <table class="pvtable"><thead><tr><th>Name</th><th>Kind</th><th>Unit</th><th>Lowest</th><th>Highest</th><th>Starts at</th><th></th></tr></thead><tbody id="pv-rows"></tbody></table>
+    <p class="hint" id="pv-none">No values yet.</p>
+    <div class="dlg-row"><select id="pv-add-kind" aria-label="Kind of value to add"><option value="position">Position</option><option value="pressure">Pressure</option><option value="temperature">Temperature</option><option value="level">Level</option><option value="flow">Flow</option><option value="speed">Speed</option><option value="other">Other</option></select><button type="button" id="pv-add">＋ Add a value</button></div>
+    <div class="dlg-end"><button value="close" class="primary">Done</button></div>
+  </form>
+</dialog>
 <div class="toast" id="toast" role="status" hidden></div>
 <dialog id="save-dlg" aria-labelledby="save-title">
   <form method="dialog" class="dlg">
@@ -831,7 +883,7 @@ PRESETS.stress = () => {
 // G and S follow one another through their contacts, and each lights its own lamp
 const TRAFFIC = {"app":"order-of-operations-circuit-builder","v":1,"name":"Traffic light","w":800,"fw":1,"parts":[["btn",340,200,"A",0,0,"00B050"],["con",340,300,"R",0,1,""],["coil",640,200,"R",0,1,"FFFFFF"],["lamp",640,400,"",0,1,"FF0032"],["lamp",640,500,"",0,1,"FFDC00"],["lamp",640,600,"",0,1,"00B050"],["con",340,400,"R",0,1,""],["con",340,500,"Y",0,1,""],["con",340,600,"G",0,1,""],["con",340,1000,"R",0,1,""],["con",340,1100,"Y",0,1,""],["coil",640,1000,"Y",0,1,"FFFFFF"],["coil",640,1100,"G",0,1,"FFFFFF"],["con",140,200,"M",0,1,""],["coil",640,80,"M",0,1,"0070C0"],["btn",140,80,"B",1,0,"0070C0"],["con",140,400,"M",0,1,""],["con",140,500,"M",0,1,""],["con",140,600,"M",0,1,""],["con",140,1000,"M",0,1,""],["con",140,1100,"M",0,1,""],["lamp",640,700,"",0,1,"0070C0"],["con",140,700,"M",0,1,""],["con",340,700,"S",0,1,""],["con",140,1200,"M",0,1,""],["con",340,1200,"G",0,1,""],["coil",640,1200,"S",0,1,"FFFFFF"]],"wires":[[0,200,100,200],[180,200,300,200],[380,200,580,200],[700,200,800,200],[260,300,300,300],[380,300,420,300],[0,400,100,400],[180,400,300,400],[380,400,580,400],[700,400,800,400],[0,500,100,500],[180,500,300,500],[380,500,580,500],[700,500,800,500],[0,600,100,600],[180,600,300,600],[380,600,580,600],[700,600,800,600],[0,1000,100,1000],[180,1000,300,1000],[380,1000,580,1000],[700,1000,800,1000],[0,1100,100,1100],[180,1100,300,1100],[380,1100,580,1100],[700,1100,800,1100],[0,80,100,80],[180,80,580,80],[700,80,800,80],[0,700,100,700],[180,700,300,700],[380,700,580,700],[700,700,800,700],[0,1200,100,1200],[180,1200,300,1200],[380,1200,580,1200],[700,1200,800,1200],[420,200,420,300],[260,200,260,300]]};
 PRESETS.traffic = () => { const c = readCircuit(TRAFFIC); return [c.parts, c.wires, c.w, c.fixed]; };
-function loadPreset(k) { W = W_MIN; W_USER = null; POWER = 'bars'; SRC_COL = SRC_DEFAULT; PH_COL = [...PH_DEFAULT]; const r = PRESETS[k](); [parts, wires] = r; if (r[2]) W = r[2]; if (r[3]) W_USER = W; normalize(); }
+function loadPreset(k) { W = W_MIN; W_USER = null; POWER = 'bars'; PV = []; SRC_COL = SRC_DEFAULT; PH_COL = [...PH_DEFAULT]; const r = PRESETS[k](); [parts, wires] = r; if (r[2]) W = r[2]; if (r[3]) W_USER = W; normalize(); }
 
 /* ---- js/geometry.js ---- */
 /* ---------------- geometry ---------------- */
@@ -1222,7 +1274,8 @@ const coilColour = L => (parts.find(q => q.t === 'coil' && q.L === L) || {}).col
 let DSC = {}, BLOWN = {}, OLTRIP = {}, MOT = {};
 const poleClosed = k => { const p = k.x; return p.t === 'dsc' ? !DSC[p.id] : p.t === 'fus' ? !BLOWN[k.id] : p.t === 'mst' ? !!(CON[p.id] && CON[p.id].shut) : true; };
 // a limit switch: actuated while worked (a held one: while not), and closed accordingly
-const lswAct = p => !!down[opKey(p)] !== !!p.held, lswClosed = p => p.nc ? !lswAct(p) : lswAct(p);
+const lswAct = p => (pvLinked(p) ? !!PVACT[opKey(p)] : !!down[opKey(p)]) !== !!p.held,   // (worked by hand, or by its process value)
+      lswClosed = p => p.nc ? !lswAct(p) : lswAct(p);
 // how far a limit switch has moved from at rest (0) to worked (1): easing in and out over LSW_MOVE after it was last
 // worked or let go
 const LSW_MOVE = .3;
@@ -1398,7 +1451,7 @@ function startRun() {
   NET = network();
   simT = 0; queue = []; seq = 0; busyUntil = 0; autoRel = {}; down = {}; coilOn = {}; TIMER = {}; SELPOS = {}; SELTURN = {};
   FED_AT = {}; COMP = null; LV = null; COND = {}; needPaint = true; PTL = new Map(); PARR = new Map(); PDARK = new Map(); phFault = '';
-  LSW_T = {};
+  LSW_T = {}; pvStartRun();   // (the process values back to where they start, and the switches they work)
   CON = {}; for (const p of parts) if (p.t === 'con' || p.t === 'mst') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };
   DSC = {}; BLOWN = {}; FU1T = {}; OLTRIP = {}; MOT = {}; DSC_T = {}; OLRESET = {};   // every coil starts off
   tl = NET.nodes.map(() => [[-1e9, null]]);
@@ -2707,13 +2760,13 @@ function drawTemp(p, g, x, y, v) {
 // (a high temperature switch: its column from low up to high as it is worked; a low one's from the middle down to low)
 const TSW_HOT = '#FF3333', TSW_COLD = '#0073FF', TSW_LV = p => p.low ? [.55, .12] : [.25, .85];
 function setTemp(v, p, pos, cl) {
-  const k = pos.toFixed(3) + (cl ? 'c' : 'o');
+  const f = pvFrac(p), k = pos.toFixed(3) + (cl ? 'c' : 'o') + (f === null ? '' : f.toFixed(3));   // (f: linked to a process value, where it stands in its range)
   if (v.k === k) return; v.k = k;
   const [hx, hy] = v.hinge, [a0, a1] = lswAngles(p), ba = lerp(a0, a1, pos);
   v.blade.setAttribute('transform', `rotate(${ba.toFixed(2)} ${hx} ${hy})`);
   const c = cl ? p.color : BLADE_GREY;
   v.bladeShape.setAttribute('fill', c); v.stem.setAttribute('stroke', c); v.posts.setAttribute('fill', cl ? p.color : GREY);
-  const [l0, l1] = TSW_LV(p), lv = v.cBot - (v.cBot - v.cTop) * lerp(l0, l1, pos);
+  const [l0, l1] = TSW_LV(p), lv = v.cBot - (v.cBot - v.cTop) * (f === null ? lerp(l0, l1, pos) : f);
   v.col.setAttribute('y', lv.toFixed(2)); v.col.setAttribute('height', (v.cBot - lv + 2).toFixed(2));
 }
 /* A pressure switch (Dallas's design): the limit switch's body and contact; on a neck on top of the body, right of the
@@ -2772,7 +2825,7 @@ function drawPress(p, g, x, y, v) {
 // a pressure switch pos of the way from at rest (0) to worked (1): the needle from low to high, the diaphragm and stem
 // pushed up, the blade turned as the limit switch's; lit in its colour while closed
 function setPress(v, p, pos, cl) {
-  const k = pos.toFixed(3) + (cl ? 'c' : 'o');
+  const f = pvFrac(p), k = pos.toFixed(3) + (cl ? 'c' : 'o') + (f === null ? '' : f.toFixed(3));
   if (v.k === k) return; v.k = k;
   const [hx, hy] = v.hinge, [a0, a1] = lswAngles(p), ba = lerp(a0, a1, pos), at = a => Math.tan(a * Math.PI / 180) * 30;
   v.blade.setAttribute('transform', `rotate(${ba.toFixed(2)} ${hx} ${hy})`);
@@ -2782,7 +2835,7 @@ function setPress(v, p, pos, cl) {
   for (const s of [v.stem, v.stemSh]) s.setAttribute('y1', sTop.toFixed(2));
   const c = cl ? p.color : BLADE_GREY;
   v.bladeShape.setAttribute('fill', c); v.stem.setAttribute('stroke', c); v.dome.setAttribute('fill', c); v.posts.setAttribute('fill', cl ? p.color : GREY);
-  const [gx, gy] = v.gc; v.needle.setAttribute('transform', `rotate(${lerp(135, 340, pos).toFixed(2)} ${gx} ${gy})`);
+  const [gx, gy] = v.gc; v.needle.setAttribute('transform', `rotate(${(f === null ? lerp(135, 340, pos) : 135 + 270 * f).toFixed(2)} ${gx} ${gy})`);   // (linked: the value, round its whole scale)
 }
 // a limit switch pos of the way from at rest (0) to worked (1): its lever down, the arrow on its roller (coming down,
 // fading in), its blade lifted; lit in its colour while closed
@@ -3341,11 +3394,13 @@ function paintLead(L, evs) {
 function bindButton(g, p) {
   g.setAttribute('class', 'dev'); g.setAttribute('tabindex', '0'); g.setAttribute('role', 'button'); g.setAttribute('aria-label', captionOf(p));
   const K = opKey(p);   // (a pushbutton's letter; a limit switch's number; a temperature switch's T and its number)
+  const linkedSay = () => { const v = pvOf(p); say(`${captionOf(p)} is worked by ${v.name}: set it in the Process window.`); };
   const dn = () => {
+    if (pvLinked(p)) return linkedSay();   // (worked by its process value, not by hand)
     if (p.maint) return press(K, !down[K]);
     if (mode === 'click') { if (down[K]) return; press(K, true); autoRel[K] = true; } else press(K, true);
   };
-  const up = () => { if (mode === 'hold' && !p.maint) press(K, false); };
+  const up = () => { if (mode === 'hold' && !p.maint && !pvLinked(p)) press(K, false); };
   g.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); try { g.setPointerCapture(e.pointerId); } catch (_) {} dn(); });
   g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up);
   g.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); dn(); } });
@@ -3519,6 +3574,168 @@ document.getElementById('st-toggle').addEventListener('click', () => { ST.hidden
 window.addEventListener('resize', () => { if (!stationEl.hidden) placeStation(); });
 // the corner screws: the heads of the screws that fasten the wires to L1 and L2
 document.querySelectorAll('.st-screw').forEach(s => screw(0, 0, el('g', {}, s), true));
+
+/* ---- js/process.js ---- */
+/* =====================================================================
+   process values
+   Numbers the simulation keeps in the background (a cylinder's position, a receiver's pressure, an oven's
+   temperature...), each with a kind, a unit, a range and a value to start at (PV, kept with the circuit). Limit,
+   pressure and temperature switches can be worked by one (p.pv, its id) instead of by hand: a pressure or high
+   temperature switch acts as its value rises to p.sp and resets once it falls back to p.rs; a low temperature switch
+   the other way round; a limit switch acts at or above p.sp (p.side 'hi', end of travel out), or at or below it
+   ('lo', home). While running, the Process window floats over the panel: each value, a slider and a readout to set it
+   by. (For now the values change only as they are set there; later, outputs of the circuit will drive them.)
+   ===================================================================== */
+const PV_KINDS = {
+  position: ['Position', ['in', 'ft', '%']], pressure: ['Pressure', ['psi', 'inHg', 'inH₂O']], temperature: ['Temperature', ['°F']],
+  level: ['Level', ['in', 'ft', 'gal', '%']], flow: ['Flow', ['gpm', 'cfm']], speed: ['Speed', ['rpm', 'ft/min']], other: ['Other', []],
+};
+const PV_FOR = { lsw: 'position', psw: 'pressure', tsw: 'temperature' };   // (the kind of value each switch is worked by)
+let PV = [], PVV = {}, PVACT = {};   // the values (with the circuit); while running, each one's value now, and which switches they are working
+const pvOf = p => p && p.pv ? PV.find(v => v.id === p.pv) || null : null;
+const pvLinked = p => isLim(p) && !!pvOf(p);
+// (a switch that acts as its value falls: a low temperature switch, or a limit switch set to act at or below its setting)
+const pvFalls = p => p.t === 'tsw' ? !!p.low : p.t === 'lsw' ? p.side === 'lo' : false;
+const pvStep = v => { const r = Math.abs(v.max - v.min) || 1; return Math.pow(10, Math.floor(Math.log10(r)) - 2); };
+const pvFmt = (v, x) => { const s = pvStep(v); return (s >= 1 ? Math.round(x) : +x.toFixed(Math.min(3, Math.round(-Math.log10(s))))).toString(); };   // (to the slider's step: 0.1 in on a 12 in stroke, 1 psi on 150 psi)
+const pvFrac = p => { const v = isLim(p) ? pvOf(p) : null; if (!v) return null; const x = editing ? v.start : PVV[v.id] ?? v.start; return clamp01((x - v.min) / ((v.max - v.min) || 1)); };
+// a new value: named after its kind, a range to suit it
+function pvNew(kind = 'position') {
+  const n = PV.filter(v => v.kind === kind).length + 1, name = PV_KINDS[kind][0] + (n > 1 ? ' ' + n : '');
+  const R = { position: [0, 12, 0], pressure: [0, 150, 0], temperature: [32, 400, 70], level: [0, 100, 0], flow: [0, 50, 0], speed: [0, 1800, 0], other: [0, 100, 0] }[kind];
+  return { id: 'v' + Math.random().toString(36).slice(2, 8), name, kind, unit: PV_KINDS[kind][1][0] || '', min: R[0], max: R[1], start: R[2] };
+}
+// a switch first linked to a value: settings to suit it (acting near the top of the range, or near the bottom)
+function pvDefaults(p, v) {
+  const r = v.max - v.min, s = pvStep(v), q = x => Math.round(x / s) * s;
+  if (p.t === 'lsw') { p.sp = q(p.side === 'lo' ? v.min + r * .02 : v.max - r * .02); p.rs = p.sp; return; }
+  if (pvFalls(p)) { p.sp = q(v.min + r * .2); p.rs = q(v.min + r * .25); } else { p.sp = q(v.min + r * .8); p.rs = q(v.min + r * .7); }
+}
+// is switch p worked, with its value at x (and having been worked or not until now)?
+function pvWorks(p, x, was) {
+  const sp = +p.sp, rs = p.t === 'lsw' ? sp : +p.rs;
+  return pvFalls(p) ? (was ? x < rs : x <= sp) : (was ? x > rs : x >= sp);
+}
+// set value id to x (kept in its range): the switches it works act or reset as it passes their settings
+function pvSet(id, x, t = simT) {
+  const v = PV.find(q => q.id === id); if (!v) return;
+  const lo = Math.min(v.min, v.max), hi = Math.max(v.min, v.max);
+  PVV[id] = Math.max(lo, Math.min(hi, x)); needPaint = true;
+  for (const p of parts) if (isLim(p) && p.pv === id) {
+    const K = opKey(p), was = !!PVACT[K], now = pvWorks(p, PVV[id], was);
+    if (now === was) continue;
+    PVACT[K] = now; LSW_T[K] = t; if (t + LSW_MOVE > busyUntil) busyUntil = t + LSW_MOVE;
+    switched(parts.filter(q => isLim(q) && opKey(q) === K), t);
+  }
+  showProcessValue(id);
+}
+// at the start of a run (and on Reset): every value back to where it starts, and the switches it works with it
+function pvStartRun() {
+  PVV = {}; PVACT = {};
+  for (const v of PV) PVV[v.id] = v.start;
+  for (const p of parts) if (pvLinked(p)) PVACT[opKey(p)] = pvWorks(p, PVV[p.pv], false);
+}
+const pvLinksText = v => parts.filter(p => isLim(p) && p.pv === v.id).sort((a, b) => a.t.localeCompare(b.t) || a.L - b.L).map(p => {
+  const tag = (p.t === 'tsw' ? 'TS' : p.t === 'psw' ? 'PS' : 'LS') + p.L, u = v.unit ? ' ' + v.unit : '';
+  if (p.t === 'lsw') return `${tag} at ${p.side === 'lo' ? '≤' : '≥'} ${pvFmt(v, +p.sp)}${u}`;
+  return `${tag} at ${pvFalls(p) ? '≤' : '≥'} ${pvFmt(v, +p.sp)}${u}, resets at ${pvFmt(v, +p.rs)}${u}`;
+}).join(' · ');
+
+/* ---------------- the Process window (Run) ---------------- */
+const PROC_KEY = 'oo-circuit-builder-demo:process';
+let PW = { x: null, y: null, min: false, hidden: false };
+try { Object.assign(PW, JSON.parse(localStorage.getItem(PROC_KEY) || '{}')); } catch (_) {}
+const savePW = () => { try { localStorage.setItem(PROC_KEY, JSON.stringify(PW)); } catch (_) {} };
+const procEl = document.getElementById('procwin');
+function buildProcess() {
+  const list = document.getElementById('pw-list'); list.innerHTML = '';
+  for (const v of PV) {
+    const row = document.createElement('div'); row.className = 'pv'; row.dataset.pv = v.id;
+    const lo = Math.min(v.min, v.max), hi = Math.max(v.min, v.max);
+    row.innerHTML = `<div class="pvtop"><span class="pvname"></span><input type="text" class="pvval" inputmode="decimal" autocomplete="off" spellcheck="false"><span class="pvunit"></span></div>
+      <div class="pvbar"><span class="pvlo"></span><input type="range" class="pvslide"><span class="pvhi"></span></div><div class="pvlinks"></div>`;
+    row.querySelector('.pvname').textContent = v.name; row.querySelector('.pvunit').textContent = v.unit;
+    row.querySelector('.pvlo').textContent = pvFmt(v, lo); row.querySelector('.pvhi').textContent = pvFmt(v, hi);
+    const sl = row.querySelector('.pvslide'), box = row.querySelector('.pvval');
+    sl.min = lo; sl.max = hi; sl.step = pvStep(v); sl.setAttribute('aria-label', v.name);
+    box.setAttribute('aria-label', `${v.name} (type a value and press Enter)`);
+    sl.addEventListener('input', () => pvSet(v.id, +sl.value));
+    box.addEventListener('focus', () => box.select());
+    box.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') box.blur(); else if (e.key === 'Escape') { box.dataset.cancel = '1'; box.blur(); } });
+    box.addEventListener('blur', () => { const x = parseFloat(box.value.replace(',', '.')); if (!box.dataset.cancel && isFinite(x)) pvSet(v.id, x); delete box.dataset.cancel; showProcessValue(v.id); });
+    const ln = pvLinksText(v); row.querySelector('.pvlinks').textContent = ln ? 'Works ' + ln : 'Works no switch yet';
+    list.append(row); showProcessValue(v.id);
+  }
+  showProcess();
+}
+function showProcessValue(id) {
+  const row = procEl.querySelector(`[data-pv="${id}"]`), v = PV.find(q => q.id === id); if (!row || !v) return;
+  const x = PVV[id] ?? v.start, sl = row.querySelector('.pvslide'), box = row.querySelector('.pvval');
+  if (document.activeElement !== sl) sl.value = x;
+  if (document.activeElement !== box) box.value = pvFmt(v, x);
+}
+function showProcess() {
+  const on = !editing && PV.length > 0;
+  procEl.hidden = !on || PW.hidden;
+  procEl.classList.toggle('min', !!PW.min);
+  const t = document.getElementById('pv-toggle');
+  t.setAttribute('aria-pressed', String(on && !PW.hidden)); document.getElementById('pv-run-group').hidden = editing || !PV.length;
+  document.getElementById('pw-min').setAttribute('aria-label', PW.min ? 'Open the Process window' : 'Fold the Process window to its title bar');
+  if (!procEl.hidden) placeProcess();
+}
+function placeProcess() {
+  const r = procEl.getBoundingClientRect(), st = svg.getBoundingClientRect();
+  let x = PW.x ?? st.left + 16, y = PW.y ?? st.top + 16;   // (first time: the top left of the panel, clear of the station)
+  x = Math.max(0, Math.min(x, window.innerWidth - Math.min(r.width, window.innerWidth))); y = Math.max(0, Math.min(y, window.innerHeight - 34));
+  procEl.style.left = x + 'px'; procEl.style.top = y + 'px';
+}
+document.getElementById('pw-head').addEventListener('pointerdown', e => {
+  if (e.button !== 0 || e.target.closest('button')) return;
+  e.preventDefault();
+  const r = procEl.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top, h = e.currentTarget;
+  try { h.setPointerCapture(e.pointerId); } catch (_) {}
+  const mv = ev => { PW.x = ev.clientX - dx; PW.y = ev.clientY - dy; placeProcess(); };
+  const up = () => { h.removeEventListener('pointermove', mv); h.removeEventListener('pointerup', up); h.removeEventListener('pointercancel', up); const q = procEl.getBoundingClientRect(); PW.x = q.left; PW.y = q.top; savePW(); };
+  h.addEventListener('pointermove', mv); h.addEventListener('pointerup', up); h.addEventListener('pointercancel', up);
+});
+document.getElementById('pw-min').addEventListener('click', () => { PW.min = !PW.min; savePW(); showProcess(); });
+document.getElementById('pv-toggle').addEventListener('click', () => { PW.hidden = !PW.hidden; savePW(); showProcess(); });
+document.getElementById('pw-reset').addEventListener('click', () => { for (const v of PV) pvSet(v.id, v.start); });
+window.addEventListener('resize', () => { if (!procEl.hidden) placeProcess(); });
+
+/* ---------------- setting the values up (Build: Process values on the Home tab) ---------------- */
+const pvDlg = document.getElementById('pv-dlg');
+function buildPvDialog() {
+  const tb = document.getElementById('pv-rows'); tb.innerHTML = '';
+  for (const v of PV) {
+    const tr = document.createElement('tr');
+    const units = PV_KINDS[v.kind][1];
+    tr.innerHTML = `<td><input class="pvin w12" data-f="name" maxlength="30"></td>
+      <td><select class="pvin" data-f="kind">${Object.entries(PV_KINDS).map(([k, [n]]) => `<option value="${k}">${n}</option>`).join('')}</select></td>
+      <td>${units.length ? `<select class="pvin" data-f="unit">${units.map(u => `<option>${u}</option>`).join('')}</select>` : '<input class="pvin w5" data-f="unit" maxlength="8" placeholder="unit">'}</td>
+      <td><input class="pvin w5" data-f="min" inputmode="decimal"></td><td><input class="pvin w5" data-f="max" inputmode="decimal"></td><td><input class="pvin w5" data-f="start" inputmode="decimal"></td>
+      <td><button type="button" class="pvdel" aria-label="Remove ${v.name.replace(/"/g, '')}" data-tip="Remove this value (switches it worked go back to being clicked by hand)">✕</button></td>`;
+    for (const f of tr.querySelectorAll('[data-f]')) {
+      f.value = v[f.dataset.f];
+      f.addEventListener('change', () => {
+        const k = f.dataset.f;
+        if (k === 'name') v.name = f.value.trim() || PV_KINDS[v.kind][0];
+        else if (k === 'kind') { v.kind = f.value; v.unit = PV_KINDS[v.kind][1][0] || ''; for (const p of parts) if (p.pv === v.id && PV_FOR[p.t] !== v.kind) unlinkPv(p); }
+        else if (k === 'unit') v.unit = f.value.trim().slice(0, 8);
+        else { const x = parseFloat(f.value.replace(',', '.')); if (isFinite(x)) v[k] = x; }
+        if (k === 'min' || k === 'max') v.start = Math.max(Math.min(v.min, v.max), Math.min(Math.max(v.min, v.max), v.start));
+        buildPvDialog(); draw(); if (sel) renderProps();
+      });
+    }
+    tr.querySelector('.pvdel').addEventListener('click', () => { snapshot(); PV = PV.filter(q => q !== v); for (const p of parts) if (p.pv === v.id) unlinkPv(p); buildPvDialog(); draw(); if (sel) renderProps(); });
+    tb.append(tr);
+  }
+  document.getElementById('pv-none').hidden = PV.length > 0;
+}
+function unlinkPv(p) { delete p.pv; delete p.sp; delete p.rs; delete p.side; }
+document.getElementById('pv-btn').addEventListener('click', () => { snapshot(); buildPvDialog(); pvDlg.showModal(); });
+document.getElementById('pv-add').addEventListener('click', () => { PV.push(pvNew(document.getElementById('pv-add-kind').value)); buildPvDialog(); const r = document.querySelectorAll('#pv-rows tr'); r[r.length - 1]?.querySelector('[data-f="name"]')?.focus(); });
+pvDlg.addEventListener('close', () => { draw(); if (sel) renderProps(); });
 
 /* ---- js/parts-edit.js ---- */
 /* =====================================================================
@@ -3711,8 +3928,8 @@ function movedGroup1(partIds, wireIds, dx, dy, termIds) {
   return { wires: wires.filter(w => !used.has(w)).concat(add.map(q => q.id ? { id: q.id, x1: q[0], y1: q[1], x2: q[2], y2: q[3] } : Wr(...q))), hits };
 }
 function movedWires(p, nx, ny) { return movedGroup(new Set([p.id]), new Set(), nx - p.x, ny - p.y); }
-const stateOf = () => JSON.stringify({ parts, wires, W, WU: W_USER, PW: POWER, SC: SRC_COL, PC: PH_COL }, (k, v) => k.startsWith('_') ? undefined : v);
-function restore(st) { const o = JSON.parse(st); parts = o.parts; wires = o.wires; if (o.W) W = o.W; W_USER = o.WU ?? null; POWER = o.PW || 'bars'; SRC_COL = o.SC || SRC_DEFAULT; PH_COL = o.PC || [...PH_DEFAULT]; }
+const stateOf = () => JSON.stringify({ parts, wires, W, WU: W_USER, PW: POWER, SC: SRC_COL, PC: PH_COL, PV }, (k, v) => k.startsWith('_') ? undefined : v);
+function restore(st) { const o = JSON.parse(st); parts = o.parts; wires = o.wires; if (o.W) W = o.W; W_USER = o.WU ?? null; POWER = o.PW || 'bars'; SRC_COL = o.SC || SRC_DEFAULT; PH_COL = o.PC || [...PH_DEFAULT]; PV = o.PV || []; }
 
 // a wire running across a part's body (other than the run it sits in, along its own line): a part can't go there, as
 // the wire would be hidden under it and cut
@@ -4719,6 +4936,21 @@ function renderProps() {
     for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n))) ns.add(new Option(({ tsw: 'TS', psw: 'PS' }[p.t] || 'LS') + n, String(n), false, String(n) === p.L));
     document.getElementById('ls-kind').value = (p.nc ? 'nc' : 'no') + (p.held ? 'h' : '') + (p.low ? 'l' : '');
     swatches(document.getElementById('ls-colour'), p.color, hex => each(q => q.color = hex));
+    // what works it: by hand, or a process value of its kind (and then where it acts, and resets)
+    const kind = PV_FOR[p.t], opts = PV.filter(v => v.kind === kind), pvs = document.getElementById('ls-pv'), same = G.every(q => q.t === p.t);
+    document.getElementById('ls-pv-group').hidden = !same;
+    pvs.innerHTML = ''; pvs.add(new Option('Clicked by hand', '', false, !p.pv));
+    for (const v of opts) pvs.add(new Option(v.name, v.id, false, v.id === p.pv));
+    if (!opts.length) { const o = new Option(`(no ${PV_KINDS[kind][0].toLowerCase()} values yet: add one with Process values on the Home tab)`, '__none'); o.disabled = true; pvs.add(o); }
+    const v = same ? pvOf(p) : null;
+    document.getElementById('ls-side-group').hidden = !(v && p.t === 'lsw');
+    document.getElementById('ls-sp-group').hidden = !v; document.getElementById('ls-rs-group').hidden = !v || p.t === 'lsw';
+    if (v) {
+      document.getElementById('ls-side').value = p.side === 'lo' ? 'lo' : 'hi';
+      document.getElementById('ls-sp-label').textContent = p.t === 'lsw' ? 'At' : pvFalls(p) ? 'Acts at (falling)' : 'Acts at (rising)';
+      document.getElementById('ls-sp').value = pvFmt(v, +p.sp); document.getElementById('ls-rs').value = pvFmt(v, +p.rs);
+      for (const u of document.querySelectorAll('.ls-unit')) u.textContent = v.unit;
+    }
   }
   const pw = p && (isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'fu1');
   document.getElementById('props-pwr').hidden = !pw;
@@ -4930,6 +5162,15 @@ document.getElementById('ph-custom').addEventListener('change', e => { const p =
 document.getElementById('box-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(turns)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
 document.getElementById('pw-num').addEventListener('change', e => { const G = selGroup(); if (G.length && G.every(p => isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'fu1')) each(p => p.L = e.target.value); });
 document.getElementById('ls-num').addEventListener('change', e => { const G = selGroup(); if (G.every(p => p.t === G[0].t && isLim(p))) each(p => p.L = e.target.value); });
+document.getElementById('ls-pv').addEventListener('change', e => { const id = e.target.value, G = selGroup(); if (!G.length || !G.every(q => q.t === G[0].t && isLim(q))) return;
+  each(p => { if (!id) unlinkPv(p); else { p.pv = id; if (p.t === 'lsw' && !p.side) p.side = 'hi'; pvDefaults(p, pvOf(p)); } }); });
+document.getElementById('ls-side').addEventListener('change', e => each(p => { if (p.t === 'lsw' && pvOf(p)) { p.side = e.target.value; pvDefaults(p, pvOf(p)); } }));
+// a setting typed in: the reset kept on the right side of it (below the setting for a switch that acts as its value rises, above it otherwise)
+for (const [id, f] of [['ls-sp', 'sp'], ['ls-rs', 'rs']]) document.getElementById(id).addEventListener('change', e => {
+  const x = parseFloat(e.target.value.replace(',', '.')); if (!isFinite(x)) { renderProps(); return; }
+  each(p => { if (!pvOf(p)) return; p[f] = x; if (p.t === 'lsw') { p.rs = p.sp; return; } const fall = pvFalls(p); if (fall ? p.rs < p.sp : p.rs > p.sp) { if (f === 'sp') p.rs = p.sp; else p.sp = p.rs; } });
+});
+for (const id of ['ls-sp', 'ls-rs']) document.getElementById(id).addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') e.target.blur(); });
 document.getElementById('ls-kind').addEventListener('change', e => { const k = e.target.value; if (selGroup().every(isLim)) each(p => { p.nc = k.startsWith('nc'); if (k.endsWith('h') && p.t === 'lsw') p.held = true; else delete p.held; if (k.endsWith('l') && p.t === 'tsw') p.low = true; else delete p.low; }); });
 
 /* ---- js/storage.js ---- */
@@ -4957,6 +5198,8 @@ function circuitData() {
       if (p.lk || p.ls) { while (a.length < 12) a.push(null); a.push(p.lk ? p.lk[0] : 0, p.lk ? p.lk[1] : 0); if (p.ls) a.push(p.ls.join('')); }   // (its dashed link line, moved out of the way; the sides its ends join)
       return a; }),
     wires: wires.map(q => [x(q.x1), q.y1, x(q.x2), q.y2]),
+    // (its process values: id, name, kind, unit, lowest, highest, start; and the switches they work: part, value, setting, reset, side)
+    ...(PV.length ? { pv: PV.map(v => [v.id, v.name, v.kind, v.unit, v.min, v.max, v.start]), pl: parts.map((p, i) => pvLinked(p) ? [i, p.pv, +p.sp, +(p.rs ?? p.sp), p.side === 'lo' ? 'lo' : 'hi'] : null).filter(Boolean) } : {}),
   };
 }
 // check a circuit read from a file or code, and turn it back into parts and wires (throws a readable message)
@@ -4989,15 +5232,21 @@ function readCircuit(d) {
     if ((t === 'btn' || t === 'coil') && typeof a[9] === 'string' && a[9].trim()) p.label = a[9].replace(/\s+/g, ' ').trim().slice(0, 8);   // (a label written on it)
     return p;
   });
+  const fin = (x, d0) => Number.isFinite(Number(x)) ? Number(x) : d0;
+  const pv = (Array.isArray(d.pv) ? d.pv.slice(0, 50) : []).filter(a => Array.isArray(a) && typeof a[0] === 'string' && PV_KINDS[a[2]]).map(a => {
+    const v = { id: a[0].slice(0, 16), name: String(a[1] || PV_KINDS[a[2]][0]).slice(0, 30), kind: a[2], unit: String(a[3] ?? '').slice(0, 8), min: fin(a[4], 0), max: fin(a[5], 100), start: fin(a[6], 0) };
+    if (v.max === v.min) v.max = v.min + 1; return v; });
+  for (const a of Array.isArray(d.pl) ? d.pl : []) { const p = Array.isArray(a) && ps[a[0]], v = p && pv.find(q => q.id === a[1]);
+    if (p && v && isLim(p) && PV_FOR[p.t] === v.kind) { p.pv = v.id; p.sp = fin(a[2], v.max); p.rs = fin(a[3], p.sp); if (p.t === 'lsw') p.side = a[4] === 'lo' ? 'lo' : 'hi'; } }
   const w = Math.max(d.fw ? BAR_MIN : W_MIN, Math.min(20000, d.w === undefined ? W_MIN : num(d.w)));
   const ws = d.wires.slice(0, 2000).map(a => [num(a[0]), num(a[1]), num(a[2]), num(a[3])])
     .filter(([x1, y1, x2, y2]) => (x1 === x2 || y1 === y2) && (x1 !== x2 || y1 !== y2))
     .map(([x1, y1, x2, y2]) => Wr(Math.min(w, Math.max(0, x1)), Math.max(0, y1), Math.min(w, Math.max(0, x2)), Math.max(0, y2)));
-  return { w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', src: SRC_PAL.some(([, h]) => h === d.sc) ? d.sc : SRC_DEFAULT, ph: Array.isArray(d.pc) && d.pc.length === 3 && d.pc.every(hex) ? d.pc.map(hex) : [...PH_DEFAULT], parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
+  return { w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', src: SRC_PAL.some(([, h]) => h === d.sc) ? d.sc : SRC_DEFAULT, ph: Array.isArray(d.pc) && d.pc.length === 3 && d.pc.every(hex) ? d.pc.map(hex) : [...PH_DEFAULT], pv, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
 }
 function useCircuit(c, how) {
   snapshot();
-  parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; normalize(); sel = null;
+  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; normalize(); sel = null;
   fitView(); fit(true);
   say(how);
   if (editing) draw(); else { NET = network(); draw(); startRun(); afterRunStart(); }
@@ -5105,7 +5354,7 @@ function scheduleAutosave() {
   autosaveTimer = setTimeout(() => { try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(circuitData())); } catch (_) {} }, 400);
 }
 function restoreAutosave() {
-  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; normalize(); return true; }
+  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; normalize(); return true; }
   catch (_) { return false; }
 }
 
@@ -5228,12 +5477,12 @@ document.getElementById('save-sim').addEventListener('click', async () => { cons
 
 /* ---- js/main.js ---- */
 /* ---------------- build / run ---------------- */
-function afterRunStart() { buildStation(); document.getElementById('mode-group').hidden = !parts.some(p => (p.t === 'btn' && !p.maint) || isLim(p)); document.getElementById('timer-group').hidden = !parts.some(isTimer); paint(); }
+function afterRunStart() { buildStation(); buildProcess(); document.getElementById('mode-group').hidden = !parts.some(p => (p.t === 'btn' && !p.maint) || isLim(p)); document.getElementById('timer-group').hidden = !parts.some(isTimer); paint(); }
 function setMode(run) {
   editing = !run;
   document.getElementById('tab-edit').setAttribute('aria-selected', String(!run));
   document.getElementById('tab-run').setAttribute('aria-selected', String(run));
-  closeMenus(); showRibbon(); if (!run) buildStation();
+  closeMenus(); showRibbon(); if (!run) { buildStation(); showProcess(); }
   showViewMode(); showOverview(); if (run && viewMode === 'split') splitStart();
   document.getElementById('fault').hidden = true;
   sel = null; preview = null; setTool('select');
@@ -5242,7 +5491,7 @@ function setMode(run) {
 }
 document.getElementById('tab-edit').addEventListener('click', () => setMode(false));
 document.getElementById('tab-run').addEventListener('click', () => setMode(true));
-document.getElementById('reset-btn').addEventListener('click', () => { startRun(); paint(); });
+document.getElementById('reset-btn').addEventListener('click', () => { startRun(); buildProcess(); paint(); });
 /* Speed: the preset buttons, or the slider for any speed from 0.1× to 300× (on a log scale: every step along it
    makes the circuit the same proportion faster). Turned right up, a change runs through the whole circuit in a
    blink, as it does in a real panel. */
@@ -5321,7 +5570,7 @@ window.addEventListener('resize', () => { if (fit(editing && !dragging())) { if 
 
 if (LOCKED) {
   // a locked simulator: its own circuit, straight into Run mode, with its name as the title
-  try { const c = readCircuit(LOCKED.circuit); parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; normalize(); }
+  try { const c = readCircuit(LOCKED.circuit); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; normalize(); }
   catch (_) { loadPreset('blank'); }
   document.body.classList.add('locked');
   document.querySelector('h1 span').textContent = circuitName || 'Circuit';
