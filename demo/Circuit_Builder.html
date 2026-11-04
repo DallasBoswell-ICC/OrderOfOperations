@@ -313,24 +313,29 @@ body.fs .wrap { padding-top: 8px; }
 .st-sout:focus { outline: none; border-color: #ffc000; }
 
 /* the Process window: the operator station's frame, a dark screen inside, as an HMI panel */
-.procwin { min-width: 300px; width: 430px; max-width: calc(100vw - 8px); }
-.pw-screen .pv { display: grid; grid-template-columns: 96px 1fr; gap: 10px; align-items: center; }
-.pvvis { width: 96px; height: 56px; background: #0e1013; border: 1px solid #23272d; border-radius: 5px; }
+.procwin { min-width: 300px; width: 600px; max-width: calc(100vw - 8px); }
+.pw-screen .pv { display: grid; grid-template-columns: 160px 1fr; gap: 14px; align-items: center; }
+.pvvis { width: 160px; height: 93px; background: #0e1013; border: 1px solid #23272d; border-radius: 5px; }
 .pvmain { min-width: 0; }
 .pw-body { padding: 12px 14px 12px; }
-.pw-screen { background: #14161a; border: 2px solid #0b0c0e; border-radius: 6px; box-shadow: inset 0 2px 8px rgba(0,0,0,.6); padding: 4px 10px; max-height: calc(100vh - 170px); overflow: auto; }
-.pw-screen .pv { padding: 9px 2px 10px; border-bottom: 1px solid #262a30; }
+.pw-screen { background: #14161a; border: 2px solid #0b0c0e; border-radius: 6px; box-shadow: inset 0 2px 8px rgba(0,0,0,.6); padding: 4px 10px; overflow: auto; }
+.pw-screen .pv { padding: 12px 2px 13px; border-bottom: 1px solid #262a30; }
 .pw-screen .pv:last-child { border-bottom: 0; }
 .pvtop { display: flex; align-items: center; gap: 8px; }
-.pvname { flex: 1; font-size: .82rem; font-weight: 600; color: #cfd6df; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pvval { font: 700 1.05rem "Cascadia Mono", Consolas, Menlo, monospace; color: #5ee08a; background: #0b0d10; border: 1px solid #2b3038; border-radius: 4px; padding: 1px 8px; width: 5.2em; text-align: right; }
+.pvname { flex: 1; font-size: 1.05rem; font-weight: 600; color: #cfd6df; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pvval { font: 700 1.45rem "Cascadia Mono", Consolas, Menlo, monospace; color: #5ee08a; background: #0b0d10; border: 1px solid #2b3038; border-radius: 4px; padding: 1px 8px; width: 5.2em; text-align: right; }
 .pvval:focus { outline: none; border-color: #5ee08a; }
-.pvunit { font-size: .78rem; color: #9aa6b2; min-width: 2.8em; }
+.pvunit { font-size: 1rem; color: #9aa6b2; min-width: 2.8em; }
 .pvbar { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
-.pvbar span { font-size: .68rem; color: #6d7884; min-width: 2.4em; text-align: center; }
+.pvbar span { font-size: .82rem; color: #6d7884; min-width: 2.4em; text-align: center; }
 .pvslide { flex: 1; accent-color: #5ee08a; cursor: pointer; min-width: 0; }
-.pvlinks { font-size: .68rem; color: #8a96a3; margin-top: 4px; }
-.pw-foot { display: flex; justify-content: center; margin-top: 10px; }
+.pvlinks { font-size: .82rem; color: #8a96a3; margin-top: 4px; }
+.pw-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.pw-time { display: flex; align-items: center; gap: 8px; font-size: .8rem; font-weight: 600; color: #3a3d41; }
+.pw-time .seg { background: #2c2d30; }
+.pw-time .seg button { padding: 4px 10px; font-size: .8rem; }
+#pv-time-group .seg { flex-direction: column; }
+#pv-time-group .seg button { padding: 3px 10px; text-align: left; }
 .pw-reset { font: 600 .76rem var(--ui); color: #222; background: #e8e8e8; border: 1px solid #888; border-radius: 5px; padding: 4px 12px; cursor: pointer; }
 .pw-reset:hover { background: #fff; }
 /* the Process values dialog */
@@ -556,6 +561,9 @@ dialog#pv-dlg { width: min(760px, calc(100vw - 32px)); }
           <button type="button" class="tool small" data-show="overview" aria-pressed="true" data-tip="The overview strip: the whole circuit, small, down the right of the panel (when it is too long to fit). Press or drag on it to move the view."><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="2" width="11" height="16" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="15" y="2" width="3" height="16" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="15" y="5" width="3" height="5" fill="currentColor"/></svg><span>Overview</span></button>
         </div></div>
       <div class="tgroup" id="pv-run-group" hidden><span class="label">Process</span><button type="button" class="tool big" id="pv-toggle" aria-pressed="false" data-tip="Show or hide the Process window: every process value, to set while the circuit runs"><svg viewBox="0 0 30 26"><rect x="3" y="3" width="24" height="20" rx="3" fill="#14161a" stroke="#8a96a3" stroke-width="1.3"/><g stroke-linecap="round"><path d="M7 9h11" stroke="#5ee08a" stroke-width="2"/><path d="M7 15h7" stroke="#5ee08a" stroke-width="2"/><path d="M18 9h5M14 15h9" stroke="#3a414a" stroke-width="2"/></g><circle cx="18" cy="9" r="2.2" fill="#e8e8e8"/><circle cx="14" cy="15" r="2.2" fill="#e8e8e8"/><path d="M7 19.5h5" stroke="#8a96a3" stroke-width="1.2"/></svg><span>Process</span></button></div>
+      <div class="row" id="pv-time-group" hidden><span class="label">Process values</span>
+        <div class="seg" role="group" aria-label="How process values change"><button type="button" data-preal="0" aria-pressed="true" data-tip="Process values change at the simulation's speed, sped up or slowed down with everything else">Follow speed</button><button type="button" data-preal="1" data-tip="Process values change in real time whatever the speed: speed the circuit up and a cylinder still takes its 3 seconds, an oven its minutes">Real time</button></div>
+      </div>
       <div class="tgroup" id="st-group"><span class="label">Operator station</span><button type="button" class="tool big" id="st-toggle" aria-pressed="false" data-tip="Show or hide the operator station: every pushbutton and selector switch of the circuit in one panel you can drag anywhere, so you can work them while watching any part of the ladder"><svg viewBox="0 0 30 26" aria-hidden="true"><rect x="2" y="2" width="26" height="22" rx="3" fill="#c4c7ca" stroke="#8f9396" stroke-width="1.2"/><rect x="5" y="6" width="8" height="8" rx="2" fill="#FF0032" stroke="#9a9a9a" stroke-width="1.2"/><rect x="17" y="6" width="8" height="8" rx="2" fill="#00B050" stroke="#9a9a9a" stroke-width="1.2"/><rect x="5" y="17" width="8" height="3" rx=".6" fill="#111"/><rect x="17" y="17" width="8" height="3" rx=".6" fill="#111"/></svg><span>Station</span></button></div>
       <div class="tgroup"><span class="label">Simulation</span><button type="button" class="tool big reset" id="reset-btn" data-tip="Turn everything off and start over">
       <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M15.5 10a5.5 5.5 0 1 1-1.6-3.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14.4 2.8l.1 3.9-3.9.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reset</span></button></div>
@@ -611,7 +619,7 @@ dialog#pv-dlg { width: min(760px, calc(100vw - 32px)); }
     <button type="button" class="st-min" id="pw-min" aria-label="Fold the Process window to its title bar"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M3.5 10l4.5-4.5 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
   <div class="st-body pw-body">
     <div class="pw-screen" id="pw-list"></div>
-    <div class="pw-foot"><button type="button" class="pw-reset" id="pw-reset" data-tip="Put every value back to where it starts">Back to start values</button></div>
+    <div class="pw-foot"><div class="pw-time"><span>Values change</span><div class="seg" role="group" aria-label="How process values change"><button type="button" data-preal="0" aria-pressed="true" data-tip="Process values change at the simulation's speed, sped up or slowed down with everything else">Following speed</button><button type="button" data-preal="1" data-tip="Process values change in real time whatever the speed: speed the circuit up and a cylinder still takes its 3 seconds, an oven its minutes">Real time</button></div></div><button type="button" class="pw-reset" id="pw-reset" data-tip="Put every value back to where it starts">Back to start values</button></div>
   </div>
 </div>
 <dialog id="pv-dlg" aria-labelledby="pv-title">
@@ -3198,7 +3206,7 @@ function frame(now) {
     const target = simT + dt * speed, ran = eventsRun, was = simT;
     tickRealTimers(real);   // (timers counting real time go by the clock; one timing out now is acted on below)
     if (runEvents(target, performance.now() + 12)) simT = target;
-    pvTick(was, simT);   // (heaters and the like moving their process values on)
+    pvTick(was, simT, dt);   // (heaters and the like moving their process values on: by the circuit's time, or in real time)
     if (mode === 'click') for (const L in autoRel) if (!busyQueue() && simT > busyUntil + .5) { delete autoRel[L]; press(L, false); }
     // once the circuit has settled (nothing on its way, and the last coil, light and contact has finished changing)
     // nothing on the panel moves, so it is not painted again until something happens: an idle circuit costs nothing
@@ -3674,9 +3682,11 @@ function drvNow(p) {
 }
 // while running: every driven value moved on from t0 to t1 (simulation seconds): by all its working outputs together,
 // within its range; with none of them working, back toward its start at the quickest of the ones that go back
-function pvTick(t0, t1) {
+// (real: the seconds that have really gone by, for values that change in real time whatever the circuit's speed)
+let pvReal = false;
+function pvTick(t0, t1, real) {
   pvVisAnim();
-  const dt = t1 - t0; if (!(dt > 0) || !PV.length) return;
+  const dt = pvReal ? real : t1 - t0; if (!(dt > 0) || !PV.length) return;
   for (const v of PV) {
     const ds = parts.filter(p => isDrv(p) && p.pv === v.id); if (!ds.length) continue;
     const x = PVV[v.id] ?? v.start, lo = Math.min(v.min, v.max), hi = Math.max(v.min, v.max), work = ds.map(drvNow);
@@ -3755,6 +3765,7 @@ function showProcess() {
   procEl.classList.toggle('min', !!PW.min);
   const t = document.getElementById('pv-toggle');
   t.setAttribute('aria-pressed', String(on && !PW.hidden)); document.getElementById('pv-run-group').hidden = editing || !PV.length;
+  document.getElementById('pv-time-group').hidden = editing || !PV.length;
   document.getElementById('pw-min').setAttribute('aria-label', PW.min ? 'Open the Process window' : 'Fold the Process window to its title bar');
   if (!procEl.hidden) placeProcess();
 }
@@ -3763,6 +3774,9 @@ function placeProcess() {
   let x = PW.x ?? st.left + 16, y = PW.y ?? st.top + 16;   // (first time: the top left of the panel, clear of the station)
   x = Math.max(0, Math.min(x, window.innerWidth - Math.min(r.width, window.innerWidth))); y = Math.max(0, Math.min(y, window.innerHeight - 34));
   procEl.style.left = x + 'px'; procEl.style.top = y + 'px';
+  // (its list scrolls rather than running off the bottom of the window)
+  const list = document.getElementById('pw-list'), foot = procEl.querySelector('.pw-foot'), head = document.getElementById('pw-head');
+  list.style.maxHeight = Math.max(120, window.innerHeight - y - head.offsetHeight - foot.offsetHeight - 52) + 'px';
 }
 document.getElementById('pw-head').addEventListener('pointerdown', e => {
   if (e.button !== 0 || e.target.closest('button')) return;
@@ -3775,6 +3789,10 @@ document.getElementById('pw-head').addEventListener('pointerdown', e => {
 });
 document.getElementById('pw-min').addEventListener('click', () => { PW.min = !PW.min; savePW(); showProcess(); });
 document.getElementById('pv-toggle').addEventListener('click', () => { PW.hidden = !PW.hidden; savePW(); showProcess(); });
+// how the values change: at the circuit's speed, or in real time (remembered in this browser)
+function setPvReal(v) { pvReal = v; for (const b of document.querySelectorAll('[data-preal]')) b.setAttribute('aria-pressed', String(+b.dataset.preal === +v)); try { localStorage.setItem('oo-circuit-builder-demo:process-real', v ? '1' : '0'); } catch (_) {} }
+for (const b of document.querySelectorAll('[data-preal]')) b.addEventListener('click', () => setPvReal(b.dataset.preal === '1'));
+try { if (localStorage.getItem('oo-circuit-builder-demo:process-real') === '1') setPvReal(true); } catch (_) {}
 document.getElementById('pw-reset').addEventListener('click', () => { for (const v of PV) pvSet(v.id, v.start); });
 window.addEventListener('resize', () => { if (!procEl.hidden) placeProcess(); });
 
