@@ -501,10 +501,14 @@ dialog#pv-dlg { width: min(760px, calc(100vw - 32px)); }
       </div>
       <div class="props" id="props-htr" hidden>
         <div class="tgroup"><span class="label">Number</span><select id="h-num" aria-label="Heating element number"></select></div>
-        <div class="tgroup"><span class="label">Heats</span><select id="h-pv" aria-label="The temperature it heats"></select></div>
-        <div class="tgroup" id="h-rate-group"><span class="label">Heats at</span><input type="text" id="h-rate" class="labelbox pvnum" inputmode="decimal" autocomplete="off" aria-label="How fast it heats, a minute"><span class="unit h-unit"></span></div>
-        <div class="tgroup" id="h-cool-group"><span class="label">Cools at (off)</span><input type="text" id="h-cool" class="labelbox pvnum" inputmode="decimal" autocomplete="off" aria-label="How fast it cools while off, a minute"><span class="unit h-unit"></span></div>
         <div class="tgroup"><span class="label">Colour</span><div class="swatches" id="h-colour" role="radiogroup" aria-label="Heating element colour"></div></div>
+      </div>
+      <div class="props" id="props-drive" hidden>
+        <div class="tgroup"><span class="label" id="d-pv-label">Drives</span><select id="d-pv" aria-label="The process value it drives"></select></div>
+        <div class="tgroup" id="d-dir-group"><span class="label">Way</span><select id="d-dir" aria-label="Which way it moves the value"><option value="up">Raises it</option><option value="down">Lowers it</option></select></div>
+        <div class="tgroup" id="d-rate-group"><span class="label" id="d-rate-label">At</span><input type="text" id="d-rate" class="labelbox pvnum" inputmode="decimal" autocomplete="off" aria-label="How fast it moves the value"><span class="unit d-unit"></span><select id="d-per" aria-label="A second or a minute"><option value="s">a second</option><option value="min">a minute</option></select></div>
+        <div class="tgroup" id="d-off-group"><span class="label">When off</span><select id="d-off" aria-label="What the value does once it stops"><option value="hold">Holds where it is</option><option value="back">Goes back to its start</option></select></div>
+        <div class="tgroup" id="d-cool-group"><span class="label">Goes back at</span><input type="text" id="d-cool" class="labelbox pvnum" inputmode="decimal" autocomplete="off" aria-label="How fast it goes back once it stops"><span class="unit d-unit d-unit-per"></span></div>
       </div>
       <div class="props" id="props-coil" hidden>
         <div class="tgroup"><span class="label">Letter</span><select id="o-letter" aria-label="Coil letter"></select></div>
@@ -3650,20 +3654,46 @@ function pvSet(id, x, t = simT) {
   }
   showProcessValue(id);
 }
-/* While running: heating elements move the temperature they heat on, from t0 to t1 (simulation seconds): up at their
-   rate a minute while energized (several together: their rates added), up to the top of its range; with none of them
-   energized, back toward where it started at the quickest of their cooling rates. */
+/* Outputs that drive a value (isDrv): a solenoid (a valve: a cylinder moving, a tank filling or venting), a motor (a
+   pump or compressor, a conveyor or lead screw: forward one way, reverse the other) and a heating element. Each one:
+   p.pv the value, p.rate how fast while it works (p.per: 's' a second, 'min' a minute), p.dir 'up' (raises it; a
+   motor, going forward) or 'down', and once it stops p.off 'hold' (the value stays where it is) or 'back' (back toward
+   where it started, at p.cool: a spring return, a leak, an oven cooling). */
+const isDrv = p => p.t === 'sol' || p.t === 'mtr' || p.t === 'htr';
+const drvPer = p => p.per || (p.t === 'htr' ? 'min' : 's');
+const drvOff = p => p.off || (p.t === 'htr' ? 'back' : 'hold');
+const perSec = (p, x) => Math.max(0, +x || 0) / (drvPer(p) === 'min' ? 60 : 1);
+// how fast p is moving its value right now (a second; + up, - down), or 0 while it is not working
+function drvNow(p) {
+  const sign = p.dir === 'down' ? -1 : 1;
+  if (p.t === 'mtr') { const m = MOT[p.id]; return m && m.st === 'run' && m.dir ? sign * m.dir * perSec(p, p.rate) : 0; }
+  return coilOn[p.id] ? (p.t === 'htr' ? 1 : sign) * perSec(p, p.rate) : 0;
+}
+// while running: every driven value moved on from t0 to t1 (simulation seconds): by all its working outputs together,
+// within its range; with none of them working, back toward its start at the quickest of the ones that go back
 function pvTick(t0, t1) {
   const dt = t1 - t0; if (!(dt > 0) || !PV.length) return;
   for (const v of PV) {
-    const hs = parts.filter(p => p.t === 'htr' && p.pv === v.id); if (!hs.length) continue;
-    const x = PVV[v.id] ?? v.start, top = Math.max(v.min, v.max), on = hs.filter(p => coilOn[p.id]);
+    const ds = parts.filter(p => isDrv(p) && p.pv === v.id); if (!ds.length) continue;
+    const x = PVV[v.id] ?? v.start, lo = Math.min(v.min, v.max), hi = Math.max(v.min, v.max), work = ds.map(drvNow);
     let nx = x;
-    if (on.length) nx = Math.min(top, x + on.reduce((s, p) => s + Math.max(0, +p.rate || 0), 0) / 60 * dt);
-    else { const c = Math.max(...hs.map(p => Math.max(0, +p.cool || 0))) / 60 * dt, a = v.start; nx = x > a ? Math.max(a, x - c) : Math.min(a, x + c); }
+    if (work.some(r => r)) nx = Math.max(lo, Math.min(hi, x + work.reduce((a, r) => a + r, 0) * dt));
+    else { const bk = ds.filter(p => drvOff(p) === 'back'); if (bk.length) { const c = Math.max(...bk.map(p => perSec(p, p.cool))) * dt, a = v.start; nx = x > a ? Math.max(a, x - c) : Math.min(a, x + c); } }
     if (Math.abs(nx - x) > 1e-9 && !pvHeld(v.id)) pvSet(v.id, nx, t1);
   }
 }
+// an output first set to drive a value: settings to suit it (a stroke in about three seconds, a spring return; a
+// compressor that fills its range in a minute and holds; an oven at 30 a minute, cooling at 10)
+function drvDefaults(p, v) {
+  const r = Math.abs(v.max - v.min) || 1, s = pvStep(v), q = x => Math.max(s, Math.round(x / s) * s);
+  if (p.t === 'htr') { p.rate = 30; p.cool = 10; p.per = 'min'; p.off = 'back'; return; }
+  if (p.t === 'sol') { p.per = 's'; p.rate = q(r / 3); p.cool = p.rate; p.off = v.kind === 'position' ? 'back' : 'hold'; }
+  else { p.per = v.kind === 'position' ? 's' : 'min'; p.rate = q(v.kind === 'position' ? r / 5 : r); p.cool = q(r / 10); p.off = 'hold'; }
+  p.dir = 'up';
+}
+const drvText = (p, v) => { const u = v.unit ? ' ' + v.unit : '', per = drvPer(p) === 'min' ? '/min' : '/s', tag = (p.t === 'htr' ? 'HTR' : p.t === 'mtr' ? 'MTR' : 'SOL') + p.L;
+  const how = p.t === 'mtr' ? (p.dir === 'down' ? 'forward −, reverse +' : 'forward +, reverse −') : (p.t !== 'htr' && p.dir === 'down' ? '−' : '+');
+  return `${tag} (${p.t === 'mtr' ? how + ' ' : how}${pvFmt(v, +p.rate || 0)}${u}${per}${drvOff(p) === 'back' ? `, back ${pvFmt(v, +p.cool || 0)}${u}${per} when off` : ''})`; };
 // (a value being dragged in the Process window is left where the slider is, until it is let go)
 const pvHeld = id => { const r = procEl && procEl.querySelector(`[data-pv="${id}"]`); return !!r && (document.activeElement === r.querySelector('.pvval') || r.dataset.drag === '1'); };
 // at the start of a run (and on Reset): every value back to where it starts, and the switches it works with it
@@ -3672,7 +3702,7 @@ function pvStartRun() {
   for (const v of PV) PVV[v.id] = v.start;
   for (const p of parts) if (pvLinked(p)) PVACT[opKey(p)] = pvWorks(p, PVV[p.pv], false);
 }
-const pvHeatText = v => parts.filter(p => p.t === 'htr' && p.pv === v.id).map(p => `HTR${p.L} (+${pvFmt(v, +p.rate || 0)}${v.unit ? ' ' + v.unit : ''}/min)`).join(', ');
+const pvDrvText = v => parts.filter(p => isDrv(p) && p.pv === v.id).sort((a, b) => a.t.localeCompare(b.t) || a.L - b.L).map(p => drvText(p, v)).join(', ');
 const pvLinksText = v => parts.filter(p => isLim(p) && p.pv === v.id).sort((a, b) => a.t.localeCompare(b.t) || a.L - b.L).map(p => {
   const tag = (p.t === 'tsw' ? 'TS' : p.t === 'psw' ? 'PS' : 'LS') + p.L, u = v.unit ? ' ' + v.unit : '';
   if (p.t === 'lsw') return `${tag} at ${p.side === 'lo' ? '≤' : '≥'} ${pvFmt(v, +p.sp)}${u}`;
@@ -3702,7 +3732,7 @@ function buildProcess() {
     box.addEventListener('focus', () => box.select());
     box.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') box.blur(); else if (e.key === 'Escape') { box.dataset.cancel = '1'; box.blur(); } });
     box.addEventListener('blur', () => { const x = parseFloat(box.value.replace(',', '.')); if (!box.dataset.cancel && isFinite(x)) pvSet(v.id, x); delete box.dataset.cancel; showProcessValue(v.id); });
-    const ln = pvLinksText(v), ht = pvHeatText(v); row.querySelector('.pvlinks').textContent = [ht && 'Heated by ' + ht, ln ? 'Works ' + ln : !ht && 'Works no switch yet'].filter(Boolean).join(' · ');
+    const ln = pvLinksText(v), ht = pvDrvText(v); row.querySelector('.pvlinks').textContent = [ht && 'Driven by ' + ht, ln ? 'Works ' + ln : !ht && 'Works no switch yet'].filter(Boolean).join(' · ');
     list.append(row); showProcessValue(v.id);
   }
   showProcess();
@@ -3759,7 +3789,7 @@ function buildPvDialog() {
       f.addEventListener('change', () => {
         const k = f.dataset.f;
         if (k === 'name') v.name = f.value.trim() || PV_KINDS[v.kind][0];
-        else if (k === 'kind') { v.kind = f.value; v.unit = PV_KINDS[v.kind][1][0] || ''; for (const p of parts) if (p.pv === v.id && PV_FOR[p.t] !== v.kind) unlinkPv(p); }
+        else if (k === 'kind') { v.kind = f.value; v.unit = PV_KINDS[v.kind][1][0] || ''; for (const p of parts) if (p.pv === v.id && (isLim(p) ? PV_FOR[p.t] !== v.kind : p.t === 'htr' && v.kind !== 'temperature')) unlinkPv(p); }
         else if (k === 'unit') v.unit = f.value.trim().slice(0, 8);
         else { const x = parseFloat(f.value.replace(',', '.')); if (isFinite(x)) v[k] = x; }
         if (k === 'min' || k === 'max') v.start = Math.max(Math.min(v.min, v.max), Math.min(Math.max(v.min, v.max), v.start));
@@ -5037,14 +5067,28 @@ function renderProps() {
     const ns = document.getElementById('h-num'), taken = new Set(parts.filter(q => q.t === 'htr' && q !== p).map(q => q.L));
     groupOf('h-num').hidden = multi; ns.innerHTML = '';
     for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n))) ns.add(new Option('HTR' + n, String(n), false, String(n) === p.L));
-    const hs = document.getElementById('h-pv'), opts = PV.filter(v => v.kind === 'temperature'); hs.innerHTML = '';
-    hs.add(new Option('Nothing (it only lights up)', '', false, !p.pv));
-    for (const v of opts) hs.add(new Option(v.name, v.id, false, v.id === p.pv));
-    if (!opts.length) { const o = new Option('(no temperature values yet: add one with Process values on the Home tab)', '__none'); o.disabled = true; hs.add(o); }
-    const v = pvOf(p);
-    document.getElementById('h-rate-group').hidden = document.getElementById('h-cool-group').hidden = !v;
-    if (v) { document.getElementById('h-rate').value = pvFmt(v, +p.rate || 0); document.getElementById('h-cool').value = pvFmt(v, +p.cool || 0); for (const u of document.querySelectorAll('.h-unit')) u.textContent = (v.unit || '') + ' a minute'; }
     swatches(document.getElementById('h-colour'), p.color, hex => each(q => q.color = hex));
+  }
+  // what it drives: a solenoid, a motor or a heating element and a process value (a heater: a temperature)
+  const dr = p && isDrv(p) && G.every(q => q.t === p.t);
+  document.getElementById('props-drive').hidden = !dr;
+  if (dr) {
+    const ds = document.getElementById('d-pv'), opts = PV.filter(v => p.t === 'htr' ? v.kind === 'temperature' : true); ds.innerHTML = '';
+    document.getElementById('d-pv-label').textContent = p.t === 'htr' ? 'Heats' : 'Drives';
+    ds.add(new Option('Nothing', '', false, !p.pv));
+    for (const v of opts) ds.add(new Option(v.name, v.id, false, v.id === p.pv));
+    if (!opts.length) { const o = new Option(`(no ${p.t === 'htr' ? 'temperature ' : ''}values yet: add one with Process values on the Home tab)`, '__none'); o.disabled = true; ds.add(o); }
+    const v = pvOf(p);
+    document.getElementById('d-dir-group').hidden = !v || p.t === 'htr';
+    for (const g of ['d-rate-group', 'd-off-group']) document.getElementById(g).hidden = !v;
+    document.getElementById('d-cool-group').hidden = !v || drvOff(p) !== 'back';
+    if (v) {
+      const dir = document.getElementById('d-dir'); dir.options[0].text = p.t === 'mtr' ? 'Forward raises it' : 'Raises it'; dir.options[1].text = p.t === 'mtr' ? 'Forward lowers it' : 'Lowers it'; dir.value = p.dir === 'down' ? 'down' : 'up';
+      document.getElementById('d-rate-label').textContent = p.t === 'htr' ? 'Heats at' : p.t === 'mtr' ? 'While it runs, at' : 'While energized, at';
+      document.getElementById('d-rate').value = pvFmt(v, +p.rate || 0); document.getElementById('d-cool').value = pvFmt(v, +p.cool || 0);
+      document.getElementById('d-per').value = drvPer(p); document.getElementById('d-off').value = drvOff(p);
+      for (const u of document.querySelectorAll('.d-unit')) u.textContent = (v.unit || '') + (u.classList.contains('d-unit-per') ? (drvPer(p) === 'min' ? ' a minute' : ' a second') : '');
+    }
   }
   document.getElementById('props-sel').hidden = !(p && p.t === 'sel');
   if (p && p.t === 'sel') renderSelProps(p, multi);
@@ -5219,10 +5263,13 @@ document.getElementById('box-rot').addEventListener('click', () => { const G = s
 document.getElementById('pw-num').addEventListener('change', e => { const G = selGroup(); if (G.length && G.every(p => isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'fu1')) each(p => p.L = e.target.value); });
 document.getElementById('ls-num').addEventListener('change', e => { const G = selGroup(); if (G.every(p => p.t === G[0].t && isLim(p))) each(p => p.L = e.target.value); });
 document.getElementById('h-num').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'htr') return; snapshot(); p.L = e.target.value; draw(); });
-document.getElementById('h-pv').addEventListener('change', e => { const id = e.target.value; if (!selGroup().every(q => q.t === 'htr')) return; each(p => { if (id) p.pv = id; else delete p.pv; }); });
-for (const [id, f] of [['h-rate', 'rate'], ['h-cool', 'cool']]) {
+// what an output drives (one panel for solenoids, motors and heating elements)
+document.getElementById('d-pv').addEventListener('change', e => { const id = e.target.value, G = selGroup(); if (!G.length || !G.every(q => isDrv(q) && q.t === G[0].t)) return;
+  each(p => { if (!id) { delete p.pv; return; } p.pv = id; drvDefaults(p, pvOf(p)); }); });
+for (const [id, f] of [['d-dir', 'dir'], ['d-per', 'per'], ['d-off', 'off']]) document.getElementById(id).addEventListener('change', e => each(p => { if (isDrv(p)) p[f] = e.target.value; }));
+for (const [id, f] of [['d-rate', 'rate'], ['d-cool', 'cool']]) {
   const box = document.getElementById(id);
-  box.addEventListener('change', () => { const x = parseFloat(box.value.replace(',', '.')); if (!isFinite(x) || x < 0) { renderProps(); return; } each(p => { if (p.t === 'htr') p[f] = x; }); });
+  box.addEventListener('change', () => { const x = parseFloat(box.value.replace(',', '.')); if (!isFinite(x) || x < 0) { renderProps(); return; } each(p => { if (isDrv(p)) p[f] = x; }); });
   box.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') box.blur(); });
 }
 document.getElementById('ls-pv').addEventListener('change', e => { const id = e.target.value, G = selGroup(); if (!G.length || !G.every(q => q.t === G[0].t && isLim(q))) return;
@@ -5262,7 +5309,7 @@ function circuitData() {
       return a; }),
     wires: wires.map(q => [x(q.x1), q.y1, x(q.x2), q.y2]),
     // (its process values: id, name, kind, unit, lowest, highest, start; and the switches they work: part, value, setting, reset, side)
-    ...(PV.length ? { pv: PV.map(v => [v.id, v.name, v.kind, v.unit, v.min, v.max, v.start]), ph: parts.map((p, i) => p.t === 'htr' && pvOf(p) ? [i, p.pv, +p.rate, +p.cool] : null).filter(Boolean), pl: parts.map((p, i) => pvLinked(p) ? [i, p.pv, +p.sp, +(p.rs ?? p.sp), p.side === 'lo' ? 'lo' : 'hi'] : null).filter(Boolean) } : {}),
+    ...(PV.length ? { pv: PV.map(v => [v.id, v.name, v.kind, v.unit, v.min, v.max, v.start]), pd: parts.map((p, i) => isDrv(p) && pvOf(p) ? [i, p.pv, +p.rate || 0, +p.cool || 0, drvPer(p), p.dir === 'down' ? 'down' : 'up', drvOff(p)] : null).filter(Boolean), pl: parts.map((p, i) => pvLinked(p) ? [i, p.pv, +p.sp, +(p.rs ?? p.sp), p.side === 'lo' ? 'lo' : 'hi'] : null).filter(Boolean) } : {}),
   };
 }
 // check a circuit read from a file or code, and turn it back into parts and wires (throws a readable message)
@@ -5301,6 +5348,8 @@ function readCircuit(d) {
     if (v.max === v.min) v.max = v.min + 1; return v; });
   for (const a of Array.isArray(d.pl) ? d.pl : []) { const p = Array.isArray(a) && ps[a[0]], v = p && pv.find(q => q.id === a[1]);
     if (p && v && isLim(p) && PV_FOR[p.t] === v.kind) { p.pv = v.id; p.sp = fin(a[2], v.max); p.rs = fin(a[3], p.sp); if (p.t === 'lsw') p.side = a[4] === 'lo' ? 'lo' : 'hi'; } }
+  for (const a of Array.isArray(d.pd) ? d.pd : []) { const p = Array.isArray(a) && ps[a[0]], v = p && pv.find(q => q.id === a[1]);
+    if (p && v && isDrv(p) && (p.t !== 'htr' || v.kind === 'temperature')) Object.assign(p, { pv: v.id, rate: Math.max(0, fin(a[2], 1)), cool: Math.max(0, fin(a[3], 1)), per: a[4] === 'min' ? 'min' : 's', dir: a[5] === 'down' ? 'down' : 'up', off: a[6] === 'back' ? 'back' : 'hold' }); }
   for (const a of Array.isArray(d.ph) ? d.ph : []) { const p = Array.isArray(a) && ps[a[0]], v = p && pv.find(q => q.id === a[1]); if (p && v && p.t === 'htr' && v.kind === 'temperature') { p.pv = v.id; p.rate = Math.max(0, fin(a[2], 30)); p.cool = Math.max(0, fin(a[3], 10)); } }
   const w = Math.max(d.fw ? BAR_MIN : W_MIN, Math.min(20000, d.w === undefined ? W_MIN : num(d.w)));
   const ws = d.wires.slice(0, 2000).map(a => [num(a[0]), num(a[1]), num(a[2]), num(a[3])])
