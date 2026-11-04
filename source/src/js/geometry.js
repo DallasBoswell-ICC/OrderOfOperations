@@ -58,5 +58,7 @@ const workW = () => editing && !barsOn() && typeof cam !== 'undefined' ? Math.ma
 function overlaps(p, x, y, t) {
   return parts.some(q => q !== p && Math.abs(q.x - x) < halfW(t) + halfW(q.t) && Math.abs(q.y - y) < halfH(t) + halfH(q.t));
 }
-const clampPart = (x, y, t) => { const h = halfW(t); return [Math.min(rightEdge() - h - 40, Math.max(h + 40, snap(x))), Math.max(halfH(t) + 20, snap(y))]; };   // (clear of the bars)
+// a part's spot: on the grid (or its ends would be off it, and no wire could meet them), clear of the bars and the top
+const clampPart = (x, y, t) => { const h = halfW(t), up = n => Math.ceil(n / G) * G, down = n => Math.floor(n / G) * G;
+  return [Math.min(down(rightEdge() - h - 40), Math.max(up(h + 40), snap(x))), Math.max(up(halfH(t) + 20), snap(y))]; };
 const clampX = x => Math.min(rightEdge(), Math.max(0, snap(x))), clampY = y => Math.max(40, snap(y));

@@ -2119,6 +2119,20 @@ const DEF_CIRCUIT = `
     if (Math.abs((await box('#procwin')).w - 600) > 1) out.push('double-clicking a grip did not put the Process window back to 600 wide');
     return out;
   });
+  await check('Every part lands on the grid wherever it is put, even pushed clear of the edges (so wires can meet its ends); one saved off it is put back on', async page => {
+    const out = [];
+    for (const bars of ['bars', 'boxes']) {
+      const bad = await page.evaluate(bars => { POWER = bars;
+        const kinds = [...new Set([...document.querySelectorAll('[data-part]')].map(b => b.dataset.part))], bad = new Set();
+        for (const k of kinds) { const t = kindOf(k); for (let x = -50; x < W + 500; x += 13) for (let y = -50; y < 320; y += 11) { const [cx, cy] = clampPart(x, y, t), q = newPart(k, cx, cy);
+          for (let r = 0; r < (turns(q) ? 4 : 1); r++) { q.rot = r || undefined; if (terms(q).some(([a, c]) => a % G || c % G)) bad.add(k); } } }
+        POWER = 'bars'; return [...bad].join(); }, bars);
+      if (bad) out.push('off the grid near an edge (' + bars + '): ' + bad);
+    }
+    const back = await page.evaluate(() => { const d = circuitData(); d.parts = [['lsw', 103, 102, 1, 0]]; const c = readCircuit(d).parts[0]; return [c.x, c.y].join(); });
+    if (back !== '100,100') out.push('a limit switch saved at 103,102 opened at ' + back + ' (want 100,100)');
+    return out;
+  });
   await check('Ribbon menus: Buttons, Switches, Outputs and Contacts open and place their parts (momentary or maintained, instantaneous or timing)', async page => {
     const out = [];
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
