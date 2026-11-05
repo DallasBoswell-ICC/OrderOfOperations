@@ -103,9 +103,9 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 .dlg input[type=text], .dlg textarea { font: inherit; font-size: .9rem; color: var(--ink); background: #1c1d1f; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; }
 .dlg textarea { font-family: "Cascadia Mono", Consolas, Menlo, monospace; font-size: .78rem; resize: vertical; word-break: break-all; }
 .dlg input:focus-visible, .dlg textarea:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
-.dlg button { font: inherit; font-size: .88rem; color: var(--ink); background: var(--chip); border: 1px solid var(--line); border-radius: 8px; padding: 7px 14px; cursor: pointer; }
-.dlg button:hover { background: var(--chip-on); }
-.dlg button.primary { background: #4d462e; border-color: var(--gold); }
+.dlg button, .pd-bar button { font: inherit; font-size: .88rem; color: var(--ink); background: var(--chip); border: 1px solid var(--line); border-radius: 8px; padding: 7px 14px; cursor: pointer; }
+.dlg button:hover, .pd-bar button:hover { background: var(--chip-on); }
+.dlg button.primary, .pd-bar button.primary { background: #4d462e; border-color: var(--gold); }
 .dlg-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .dlg-row .hint { flex: 1 1 200px; }
 .dlg-sep { height: 1px; background: var(--line); margin: 4px 0; }
@@ -357,6 +357,40 @@ dialog#pv-dlg { width: min(760px, calc(100vw - 32px)); }
 .pvdel { color: #ff9a9a !important; background: none !important; border: 0 !important; font-size: 1rem; padding: 2px 6px !important; }
 .rpanel .pvnum { width: 5.4em; }
 
+/* ---------- Print Diagram: the preview, the sheet, and printing it ---------- */
+dialog.printdlg { width: min(1100px, calc(100vw - 24px)); height: calc(100vh - 24px); max-height: none; display: none; }
+dialog.printdlg[open] { display: flex; flex-direction: column; }
+.pd-bar { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.pd-bar h2 { margin: 0 8px 0 0; font-size: 1rem; }
+.pd-field { display: flex; align-items: center; gap: 6px; font-size: .85rem; }
+.pd-field input { font: inherit; padding: 4px 8px; border-radius: 5px; border: 1px solid var(--line); background: #1c1d20; color: var(--ink); width: 13em; }
+.pd-note { flex: 1; font-size: .76rem; color: #9a9da2; min-width: 12em; }
+.pd-view { flex: 1; min-height: 0; overflow: auto; display: grid; place-items: center; background: #3a3b3f; padding: 16px; }
+.pd-view .pr-page { box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+/* the sheet: letter paper, a border, the drawing, the title block */
+.pr-page { width: 8.5in; height: 11in; position: relative; box-sizing: border-box; background: #fff; color: #000; font-family: "Liberation Sans", Arial, Helvetica, sans-serif; flex: none; }
+.pr-page.land { width: 11in; height: 8.5in; }
+.pr-frame { position: absolute; inset: .4in; border: 2px solid #000; display: flex; flex-direction: column; }
+.pr-draw { flex: 1; display: flex; padding: .12in; min-height: 0; }
+.pr-draw > svg { width: 100%; height: 100%; }
+.pr-draw text { fill: #000; stroke: none; font-family: "Liberation Sans", Arial, Helvetica, sans-serif; }
+.pr-tb { border-top: 2px solid #000; display: grid; grid-template-columns: 2fr 1.15fr 1fr .8fr .5fr; font-size: 8pt; }
+.pr-tb > div { border-left: 1px solid #000; padding: 4px 6px; }
+.pr-tb > div:first-child { border-left: 0; }
+.pr-tb .k { font-size: 6pt; text-transform: uppercase; letter-spacing: .06em; color: #333; }
+.pr-tb .v { font-size: 10pt; font-weight: 700; margin-top: 2px; min-height: 13pt; }
+.pr-tb .big .v { font-size: 13pt; }
+.pr-tb .row { grid-column: 1 / -1; border-left: 0; border-top: 1px solid #000; display: grid; grid-template-columns: 2fr 1.15fr 1.8fr .5fr; padding: 0; }
+.pr-tb .row > div { border-left: 1px solid #000; padding: 4px 6px; } .pr-tb .row > div:first-child { border-left: 0; }
+.pr-tb .notes { grid-column: 1 / -1; border-left: 0; border-top: 1px solid #000; display: flex; flex-wrap: wrap; gap: 2px 14px; align-items: baseline; font-size: 7pt; padding: 3px 6px; }
+#print-host { display: none; }
+@media print {
+  body > *:not(#print-host) { display: none !important; }
+  html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; height: auto !important; overflow: visible !important; }
+  #print-host { display: block !important; }
+  #print-host .pr-page { break-after: avoid; }
+}
+
 .demo-badge { font-style: normal; font-size: .7rem; font-weight: 800; letter-spacing: .08em; color: #1c1d1f; background: #9be03a; border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }
 </style>
 </head>
@@ -388,6 +422,8 @@ dialog#pv-dlg { width: min(760px, calc(100vw - 32px)); }
             <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M4 3h9l3 3v11H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 3v4h6V3M7 17v-5h6v5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>Save</button><button type="button" class="filebtn more" id="save-more" aria-label="More ways to save" data-tip="Save as a new file, rename, or copy a code">
             <svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true"><path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </span>
+      <button type="button" class="filebtn" id="print-btn" data-tip="Print Diagram: this circuit as a NEMA ladder diagram, with wire numbers, line numbers and a title block, on 8.5 × 11 in paper (or saved as a PDF) (Ctrl+P)">
+          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M6 7V3h8v4M6 14H4V8h12v6h-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M6 11h8v6H6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Print</button>
       <span class="qsep" aria-hidden="true"></span>
       <button type="button" class="qbtn" id="undo" aria-label="Undo" data-tip="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
       <button type="button" class="qbtn" id="redo" aria-label="Redo" data-tip="Redo (Ctrl+Y)" disabled><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
@@ -622,6 +658,18 @@ dialog#pv-dlg { width: min(760px, calc(100vw - 32px)); }
     <div class="pw-foot"><div class="pw-time"><span>Values change</span><div class="seg" role="group" aria-label="How process values change"><button type="button" data-preal="0" aria-pressed="true" data-tip="Process values change at the simulation's speed, sped up or slowed down with everything else">Following speed</button><button type="button" data-preal="1" data-tip="Process values change in real time whatever the speed: speed the circuit up and a cylinder still takes its 3 seconds, an oven its minutes">Real time</button></div></div><button type="button" class="pw-reset" id="pw-reset" data-tip="Put every value back to where it starts">Back to start values</button></div>
   </div>
 </div>
+<div id="print-host" aria-hidden="true"></div>
+<style id="print-page">@page { size: 8.5in 11in; margin: 0; }</style>
+<dialog id="print-dlg" class="printdlg" aria-labelledby="pd-title">
+  <div class="pd-bar">
+    <h2 id="pd-title">Print Diagram</h2>
+    <label class="pd-field">Drawn by <input id="pd-name" maxlength="40" autocomplete="off" spellcheck="false"></label>
+    <span class="pd-note">Letter paper, 8.5 × 11 in. To save a PDF, choose “Save as PDF” in the print window.</span>
+    <button type="button" class="primary" id="pd-print">Print…</button>
+    <button type="button" id="pd-close">Close</button>
+  </div>
+  <div class="pd-view" id="pd-view"></div>
+</dialog>
 <dialog id="pv-dlg" aria-labelledby="pv-title">
   <form method="dialog" class="dlg pvdlg">
     <h2 id="pv-title">Process values</h2>
@@ -3977,6 +4025,267 @@ function unlinkPv(p) { delete p.pv; delete p.sp; delete p.rs; delete p.side; }
 document.getElementById('pv-btn').addEventListener('click', () => { snapshot(); buildPvDialog(); pvDlg.showModal(); });
 document.getElementById('pv-add').addEventListener('click', () => { PV.push(pvNew(document.getElementById('pv-add-kind').value)); buildPvDialog(); const r = document.querySelectorAll('#pv-rows tr'); r[r.length - 1]?.querySelector('[data-f="name"]')?.focus(); });
 pvDlg.addEventListener('close', () => { draw(); if (sel) renderProps(); });
+
+/* ---- js/print-symbols.js ---- */
+/* =====================================================================
+   the print symbols: Dallas's Symbol Design set, redrawn for the wire diagram print (the originals' Print Symbol-*.svg
+   in "Circuit Builder Print Symbols"). Each in the builder's own units, its middle at 0,0, its lines the wires' weight
+   (drawn inside a group that sets the stroke): b its drawing, t where its wires attach, y0..y1 its height.
+   ===================================================================== */
+const PSYM = {"3PH Disconnect":{"b":"<g transform=\"translate(0 -120)\"><circle cx=\"31.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/></g><g transform=\"translate(0 -120)\"><circle cx=\"31.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/></g><g transform=\"translate(0 -120)\"><path d=\"M 1.6,19 31.6,4\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/></g><g transform=\"translate(0 -120)\"><circle cx=\"1.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/></g><g transform=\"translate(0 -120)\"><circle cx=\"1.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/></g><g transform=\"translate(0 0)\"><circle cx=\"31.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/></g><g transform=\"translate(0 0)\"><circle cx=\"31.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/></g><g transform=\"translate(0 0)\"><path d=\"M 1.6,19 31.6,4\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/></g><g transform=\"translate(0 0)\"><circle cx=\"1.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/></g><g transform=\"translate(0 0)\"><circle cx=\"1.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/></g><g transform=\"translate(0 120)\"><circle cx=\"31.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/></g><g transform=\"translate(0 120)\"><circle cx=\"31.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/></g><g transform=\"translate(0 120)\"><path d=\"M 1.6,19 31.6,4\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/></g><g transform=\"translate(0 120)\"><circle cx=\"1.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/></g><g transform=\"translate(0 120)\"><circle cx=\"1.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/></g><line x1=\"4\" y1=\"-140\" x2=\"4\" y2=\"108\" stroke-dasharray=\"10 8\"/>","t":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"y0":-156.0,"y1":136.0},"3PH Fuses":{"b":"<g transform=\"translate(0 -120)\"><line x1=\"12\" y1=\"0\" x2=\"40\" y2=\"0\"/></g><g transform=\"translate(0 -120)\"><line x1=\"-40\" y1=\"0\" x2=\"-12\" y2=\"0\"/></g><g transform=\"translate(0 -120)\"><polygon points=\"-26,-10 26,-10 26,10 -26,10\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/></g><g transform=\"translate(0 -120)\"><polygon points=\"-18,-10 18,-10 18,10 -18,10\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/></g><g transform=\"translate(0 0)\"><line x1=\"12\" y1=\"0\" x2=\"40\" y2=\"0\"/></g><g transform=\"translate(0 0)\"><line x1=\"-40\" y1=\"0\" x2=\"-12\" y2=\"0\"/></g><g transform=\"translate(0 0)\"><polygon points=\"-26,-10 26,-10 26,10 -26,10\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/></g><g transform=\"translate(0 0)\"><polygon points=\"-18,-10 18,-10 18,10 -18,10\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/></g><g transform=\"translate(0 120)\"><line x1=\"12\" y1=\"0\" x2=\"40\" y2=\"0\"/></g><g transform=\"translate(0 120)\"><line x1=\"-40\" y1=\"0\" x2=\"-12\" y2=\"0\"/></g><g transform=\"translate(0 120)\"><polygon points=\"-26,-10 26,-10 26,10 -26,10\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/></g><g transform=\"translate(0 120)\"><polygon points=\"-18,-10 18,-10 18,10 -18,10\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/></g>","t":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"y0":-136.0,"y1":136.0},"3PH Fusible Disconnect":{"b":"<line x1=\"-60\" y1=\"-30\" x2=\"-60\" y2=\"-21\"/><line x1=\"78\" y1=\"120\" x2=\"120\" y2=\"120\"/><line x1=\"-12\" y1=\"120\" x2=\"42\" y2=\"120\"/><polygon points=\"21,105 99,105 99,135 21,135\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/><polygon points=\"33,105 87,105 87,135 33,135\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/><circle cx=\"33.5\" cy=\"99.5\" r=\"5\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"33.5\" cy=\"99.5\" r=\"3\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 3.5,99.5 30,-15\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><circle cx=\"3.5\" cy=\"99.5\" r=\"5\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"3.5\" cy=\"99.5\" r=\"3\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#fff\" stroke=\"none\"/><line x1=\"78\" y1=\"0\" x2=\"120\" y2=\"0\"/><line x1=\"-12\" y1=\"0\" x2=\"42\" y2=\"0\"/><polygon points=\"21,-15 99,-15 99,15 21,15\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/><polygon points=\"33,-15 87,-15 87,15 33,15\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/><line x1=\"78\" y1=\"-120\" x2=\"120\" y2=\"-120\"/><line x1=\"-12\" y1=\"-120\" x2=\"42\" y2=\"-120\"/><polygon points=\"21,-135 99,-135 99,-105 21,-105\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/><polygon points=\"33,-135 87,-135 87,-105 33,-105\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/><line x1=\"-60\" y1=\"-135\" x2=\"-60\" y2=\"-126\"/><line x1=\"-60\" y1=\"-120\" x2=\"-60\" y2=\"-111\"/><line x1=\"-60\" y1=\"-105\" x2=\"-60\" y2=\"-96\"/><line x1=\"-60\" y1=\"-90\" x2=\"-60\" y2=\"-81\"/><line x1=\"-60\" y1=\"-75\" x2=\"-60\" y2=\"-66\"/><line x1=\"-60\" y1=\"-60\" x2=\"-60\" y2=\"-51\"/><line x1=\"-60\" y1=\"-45\" x2=\"-60\" y2=\"-36\"/><line x1=\"-60\" y1=\"90\" x2=\"-60\" y2=\"99\"/><line x1=\"-60\" y1=\"-15\" x2=\"-60\" y2=\"-6\"/><line x1=\"-60\" y1=\"0\" x2=\"-60\" y2=\"9\"/><line x1=\"-60\" y1=\"15\" x2=\"-60\" y2=\"24\"/><line x1=\"-60\" y1=\"30\" x2=\"-60\" y2=\"39\"/><line x1=\"-60\" y1=\"45\" x2=\"-60\" y2=\"54\"/><line x1=\"-60\" y1=\"60\" x2=\"-60\" y2=\"69\"/><line x1=\"-60\" y1=\"75\" x2=\"-60\" y2=\"84\"/><circle cx=\"33.5\" cy=\"59.5\" r=\"5\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"33.5\" cy=\"59.5\" r=\"3\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 3.5,59.5 30,-15\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><circle cx=\"3.5\" cy=\"59.5\" r=\"5\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"3.5\" cy=\"59.5\" r=\"3\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"33.5\" cy=\"19.5\" r=\"5\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"33.5\" cy=\"19.5\" r=\"3\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 3.5,19.5 30,-15\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><circle cx=\"3.5\" cy=\"19.5\" r=\"5\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"3.5\" cy=\"19.5\" r=\"3\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-120,-120],[120,-120],[-120,0],[120,0],[-120,120],[120,120]],"y0":-171.0,"y1":141.0},"3PH Starter Contacts":{"b":"<g transform=\"translate(0 -120)\"><line x1=\"12\" y1=\"0\" x2=\"40\" y2=\"0\"/></g><g transform=\"translate(0 -120)\"><line x1=\"-40\" y1=\"0\" x2=\"-12\" y2=\"0\"/></g><g transform=\"translate(0 -120)\"><line x1=\"12\" y1=\"-24\" x2=\"12\" y2=\"24\"/></g><g transform=\"translate(0 -120)\"><line x1=\"-12\" y1=\"-24\" x2=\"-12\" y2=\"24\"/></g><g transform=\"translate(0 0)\"><line x1=\"12\" y1=\"0\" x2=\"40\" y2=\"0\"/></g><g transform=\"translate(0 0)\"><line x1=\"-40\" y1=\"0\" x2=\"-12\" y2=\"0\"/></g><g transform=\"translate(0 0)\"><line x1=\"12\" y1=\"-24\" x2=\"12\" y2=\"24\"/></g><g transform=\"translate(0 0)\"><line x1=\"-12\" y1=\"-24\" x2=\"-12\" y2=\"24\"/></g><g transform=\"translate(0 120)\"><line x1=\"12\" y1=\"0\" x2=\"40\" y2=\"0\"/></g><g transform=\"translate(0 120)\"><line x1=\"-40\" y1=\"0\" x2=\"-12\" y2=\"0\"/></g><g transform=\"translate(0 120)\"><line x1=\"12\" y1=\"-24\" x2=\"12\" y2=\"24\"/></g><g transform=\"translate(0 120)\"><line x1=\"-12\" y1=\"-24\" x2=\"-12\" y2=\"24\"/></g>","t":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"y0":-150.0,"y1":150.0},"3PH Thermal Overload":{"b":"<g transform=\"translate(0 -120)\"><line x1=\"22\" y1=\"0\" x2=\"40\" y2=\"0\"/></g><g transform=\"translate(0 -120)\"><line x1=\"-40\" y1=\"0\" x2=\"-22\" y2=\"0\"/></g><g transform=\"translate(0 -120)\"><path d=\"m 8.45,11.6 c 3.31,0 6,2.69 6,6 0,3.31 -2.69,6 -6,6 -3.31,0 -6,-2.69 -6,-6\" transform=\"matrix(2 0 0 2 -28.9 -35.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/></g><g transform=\"translate(0 -120)\"><path d=\"m 20.45,11.6 c 3.31,0 6,2.69 6,6 0,3.31 -2.69,6 -6,6 -3.31,0 -6,-2.69 -6,-6\" transform=\"matrix(-2 0 0 -2 52.9 35.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/></g><g transform=\"translate(0 0)\"><line x1=\"22\" y1=\"0\" x2=\"40\" y2=\"0\"/></g><g transform=\"translate(0 0)\"><line x1=\"-40\" y1=\"0\" x2=\"-22\" y2=\"0\"/></g><g transform=\"translate(0 0)\"><path d=\"m 8.45,11.6 c 3.31,0 6,2.69 6,6 0,3.31 -2.69,6 -6,6 -3.31,0 -6,-2.69 -6,-6\" transform=\"matrix(2 0 0 2 -28.9 -35.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/></g><g transform=\"translate(0 0)\"><path d=\"m 20.45,11.6 c 3.31,0 6,2.69 6,6 0,3.31 -2.69,6 -6,6 -3.31,0 -6,-2.69 -6,-6\" transform=\"matrix(-2 0 0 -2 52.9 35.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/></g><g transform=\"translate(0 120)\"><line x1=\"22\" y1=\"0\" x2=\"40\" y2=\"0\"/></g><g transform=\"translate(0 120)\"><line x1=\"-40\" y1=\"0\" x2=\"-22\" y2=\"0\"/></g><g transform=\"translate(0 120)\"><path d=\"m 8.45,11.6 c 3.31,0 6,2.69 6,6 0,3.31 -2.69,6 -6,6 -3.31,0 -6,-2.69 -6,-6\" transform=\"matrix(2 0 0 2 -28.9 -35.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/></g><g transform=\"translate(0 120)\"><path d=\"m 20.45,11.6 c 3.31,0 6,2.69 6,6 0,3.31 -2.69,6 -6,6 -3.31,0 -6,-2.69 -6,-6\" transform=\"matrix(-2 0 0 -2 52.9 35.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/></g>","t":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"y0":-138.0,"y1":138.0},"Control Transformer":{"b":"<path d=\"m 18.5,46.66 c -0.05,-1.81 0.87,-3.5 2.41,-4.44 1.54,-0.93 3.47,-0.96 5.04,-0.08 1.58,0.89 2.55,2.55 2.55,4.36\" transform=\"matrix(3 0 0 3 -115.5 -118.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><path d=\"m 18.5,32.5 c 0,-1.81 0.97,-3.47 2.55,-4.36 1.57,-0.88 3.5,-0.85 5.04,0.08 1.54,0.94 2.46,2.63 2.41,4.44\" transform=\"matrix(-3 0 0 -3 25.5 76.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><path d=\"m 28.5,46.5 c 0,-2.76 2.24,-5 5,-5 2.76,0 5,2.24 5,5\" transform=\"matrix(3 0 0 3 -115.5 -118.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><path d=\"m 28.5,32.5 c 0,-2.76 2.24,-5 5,-5 2.76,0 5,2.24 5,5\" transform=\"matrix(-3 0 0 -3 85.5 76.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><path d=\"m 38.5,46.5 c 0,-2.76 2.24,-5 5,-5 2.76,0 5,2.24 5,5\" transform=\"matrix(3 0 0 3 -115.5 -118.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><path d=\"m 38.5,32.5 c 0,-2.76 2.24,-5 5,-5 2.76,0 5,2.24 5,5\" transform=\"matrix(-3 0 0 -3 145.5 76.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><path d=\"m 48.5,46.5 c 0,-1.81 0.97,-3.47 2.55,-4.36 1.57,-0.88 3.5,-0.85 5.04,0.08 1.54,0.94 2.46,2.63 2.41,4.44\" transform=\"matrix(3 0 0 3 -115.5 -118.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><path d=\"m 48.5,32.66 c -0.05,-1.81 0.87,-3.5 2.41,-4.44 1.54,-0.93 3.47,-0.96 5.04,-0.08 1.58,0.89 2.55,2.55 2.55,4.36\" transform=\"matrix(-3 0 0 -3 205.5 76.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><line x1=\"-60\" y1=\"-60\" x2=\"-60\" y2=\"-21\"/><line x1=\"60\" y1=\"-60\" x2=\"60\" y2=\"-21\"/><line x1=\"-60\" y1=\"21\" x2=\"-60\" y2=\"60\"/><line x1=\"60\" y1=\"21\" x2=\"60\" y2=\"60\"/>","t":[[-60,-60],[60,-60],[-60,60],[60,60]],"y0":-66.0,"y1":66.0},"DC Power Supply":{"b":"<polygon points=\"-60,-60 60,-60 60,60 -60,60\" fill=\"#000\" stroke=\"none\"/><polygon points=\"-56,-56 56,-56 56,56 -56,56\" fill=\"#fff\" stroke=\"none\"/><path d=\"M 1,45 59,15\" transform=\"matrix(2 0 0 2 -60 -60)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"10\" cy=\"50\" r=\"5\" transform=\"matrix(2 0 0 2 -60 -60)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"10\" cy=\"50\" r=\"3\" transform=\"matrix(2 0 0 2 -60 -60)\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"50\" cy=\"50\" r=\"5\" transform=\"matrix(2 0 0 2 -60 -60)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"50\" cy=\"50\" r=\"3\" transform=\"matrix(2 0 0 2 -60 -60)\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"10\" cy=\"10\" r=\"5\" transform=\"matrix(2 0 0 2 -60 -60)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"10\" cy=\"10\" r=\"3\" transform=\"matrix(2 0 0 2 -60 -60)\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"50\" cy=\"10\" r=\"5\" transform=\"matrix(2 0 0 2 -60 -60)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"50\" cy=\"10\" r=\"3\" transform=\"matrix(2 0 0 2 -60 -60)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 5,24.98 c 4.07,-4.95 5.99,-4.98 10,0 4.01,4.99 5.89,5.02 10,0\" transform=\"matrix(2 0 0 2 -60 -60)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><line x1=\"10\" y1=\"12\" x2=\"50\" y2=\"12\"/><line x1=\"10\" y1=\"22\" x2=\"22\" y2=\"22\"/><line x1=\"24\" y1=\"22\" x2=\"36\" y2=\"22\"/><line x1=\"38\" y1=\"22\" x2=\"50\" y2=\"22\"/>","t":[[-40,-50],[40,-50],[-40,50],[40,50]],"y0":-66.0,"y1":66.0},"Fuse":{"b":"<line x1=\"12\" y1=\"0\" x2=\"40\" y2=\"0\"/><line x1=\"-40\" y1=\"0\" x2=\"-12\" y2=\"0\"/><polygon points=\"-26,-10 26,-10 26,10 -26,10\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/><polygon points=\"-18,-10 18,-10 18,10 -18,10\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/>","t":[[-40,0],[40,0]],"y0":-16.0,"y1":16.0},"Heating Element":{"b":"<line x1=\"-40\" y1=\"0\" x2=\"-26\" y2=\"0\"/><polyline points=\"-26,0 -20,-13 -10,13 0,-13 10,13 20,-13 26,0\"/><line x1=\"26\" y1=\"0\" x2=\"40\" y2=\"0\"/>","t":[[-40,0],[40,0]],"y0":-19.0,"y1":19.0},"Motor":{"b":"<circle cx=\"0\" cy=\"0\" r=\"60\"/>","t":[[-42.426,-42.426],[-60,0],[-42.426,42.426]],"y0":-66.0,"y1":66.0},"NC Contact":{"b":"<line x1=\"12\" y1=\"0\" x2=\"40\" y2=\"0\"/><line x1=\"-40\" y1=\"0\" x2=\"-12\" y2=\"0\"/><line x1=\"12\" y1=\"-24\" x2=\"12\" y2=\"24\"/><line x1=\"-12\" y1=\"-24\" x2=\"-12\" y2=\"24\"/><line x1=\"21.213\" y1=\"-21.213\" x2=\"-21.213\" y2=\"21.213\"/>","t":[[-40,0],[40,0]],"y0":-30.0,"y1":30.0},"NC EStop Pushbutton":{"b":"<line x1=\"0\" y1=\"-38\" x2=\"0\" y2=\"12\"/><path d=\"m 4.5,10.5 c 0,-5.52 6.27,-10 14,-10 7.73,0 14,4.48 14,10\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><line x1=\"-40\" y1=\"12\" x2=\"40\" y2=\"12\"/><circle cx=\"33.5\" cy=\"19.5\" r=\"5\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"33.5\" cy=\"19.5\" r=\"3\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"3.5\" cy=\"19.5\" r=\"5\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"3.5\" cy=\"19.5\" r=\"3\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-44.0,"y1":18.0},"NC FD Switch":{"b":"<line x1=\"0\" y1=\"-6\" x2=\"0\" y2=\"16\"/><circle cx=\"31.65\" cy=\"11.45\" r=\"5\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"31.65\" cy=\"11.45\" r=\"3\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 1.65,11.45 30,-6\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"1.65\" cy=\"11.45\" r=\"5\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"1.65\" cy=\"11.45\" r=\"3\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 16.65,20.45 5,-5\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 11.65,15.45 5,5\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/>","t":[[-40,0],[40,0]],"y0":-18.0,"y1":25.0},"NC Float Switch":{"b":"<line x1=\"0\" y1=\"-6\" x2=\"0\" y2=\"8\"/><circle cx=\"33\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"33\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#fff\" stroke=\"none\"/><path d=\"M 3,19 33,13\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"3\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"3\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"18\" cy=\"27\" r=\"6\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"18\" cy=\"27\" r=\"4\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-18.0,"y1":34.0},"NC Flow Switch":{"b":"<line x1=\"0\" y1=\"-6\" x2=\"0\" y2=\"8\"/><circle cx=\"33\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"33\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#fff\" stroke=\"none\"/><path d=\"M 3,19 33,13\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"3\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"3\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 18,28 v -8 l 6,8 z\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"2\"/>","t":[[-40,0],[40,0]],"y0":-18.0,"y1":24.0},"NC HO Limit Switch":{"b":"<path d=\"m 5.28,18.2 -3.68,-10 23,10 z\" transform=\"matrix(-2 0 0 2 21.2 -37.2)\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"30.6\" cy=\"18.6\" r=\"5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30.6\" cy=\"18.6\" r=\"3\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 0.6,18.6 30,-13\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"0.60000002\" cy=\"18.6\" r=\"5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"0.60000002\" cy=\"18.6\" r=\"3\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-32.0,"y1":16.0},"NC Limit Switch":{"b":"<path d=\"m 6.28,21.75 -3.68,-10 23,10 z\" transform=\"matrix(-1.956 -0.416 -0.416 1.956 29.549 -31.405)\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"31.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"31.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 1.6,19 30,-6\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"1.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"1.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-26.0,"y1":17.0},"NC ND Switch":{"b":"<line x1=\"0\" y1=\"-6\" x2=\"0\" y2=\"10\"/><circle cx=\"31.65\" cy=\"11.45\" r=\"5\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"31.65\" cy=\"11.45\" r=\"3\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 1.65,11.45 30,-6\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"1.65\" cy=\"11.45\" r=\"5\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"1.65\" cy=\"11.45\" r=\"3\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 16.65,15.45 5,5\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 11.65,20.45 5,-5\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/>","t":[[-40,0],[40,0]],"y0":-18.0,"y1":25.0},"NC Pressure Switch":{"b":"<line x1=\"0\" y1=\"-6\" x2=\"0\" y2=\"8\"/><circle cx=\"30.15\" cy=\"16.25\" r=\"5\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30.15\" cy=\"16.25\" r=\"3\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 0.15,16.25 30,-6\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"0.15000001\" cy=\"16.25\" r=\"5\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"0.15000001\" cy=\"16.25\" r=\"3\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 10.15,20.25 c 0,2.76 2.24,5 5,5 2.76,0 5,-2.24 5,-5 z\" transform=\"matrix(-2 0 0 -2 30.3 58.5)\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"2\"/>","t":[[-40,0],[40,0]],"y0":-18.0,"y1":24.0},"NC Proximity Switch":{"b":"<path d=\"m 38.5,7.5 32,32 -32,32 -32,-32 z\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 28.18,42.25 -3.68,-10 23,10 z\" transform=\"matrix(-1.956 -0.416 -0.416 1.956 80.916 -62.402)\" fill=\"#000\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 23.5,39.5 30,-6\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"M 23.5,39.5 H 7.5\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"23.5\" cy=\"39.5\" r=\"5\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"23.5\" cy=\"39.5\" r=\"3\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 53.5,39.5 h 16\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"53.5\" cy=\"39.5\" r=\"5\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"53.5\" cy=\"39.5\" r=\"3\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-64,0],[64,0]],"y0":-70.0,"y1":70.0},"NC Pushbutton":{"b":"<line x1=\"-40\" y1=\"12\" x2=\"40\" y2=\"12\"/><circle cx=\"33\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"33\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"3\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"3\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#fff\" stroke=\"none\"/><line x1=\"0\" y1=\"-40\" x2=\"0\" y2=\"12\"/>","t":[[-40,0],[40,0]],"y0":-46.0,"y1":18.0},"NC Temperature Switch":{"b":"<line x1=\"0\" y1=\"-6\" x2=\"0\" y2=\"8\"/><circle cx=\"33.5\" cy=\"19.5\" r=\"5\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"33.5\" cy=\"19.5\" r=\"3\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 3.5,19.5 30,-6\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"3.5\" cy=\"19.5\" r=\"5\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"3.5\" cy=\"19.5\" r=\"3\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#fff\" stroke=\"none\"/><line x1=\"-2\" y1=\"6\" x2=\"10\" y2=\"6\"/><line x1=\"8\" y1=\"4\" x2=\"8\" y2=\"16\"/><line x1=\"-2\" y1=\"14\" x2=\"10\" y2=\"14\"/><line x1=\"0\" y1=\"12\" x2=\"0\" y2=\"20\"/>","t":[[-40,0],[40,0]],"y0":-18.0,"y1":26.0},"NO Contact":{"b":"<line x1=\"12\" y1=\"0\" x2=\"40\" y2=\"0\"/><line x1=\"-40\" y1=\"0\" x2=\"-12\" y2=\"0\"/><line x1=\"12\" y1=\"-24\" x2=\"12\" y2=\"24\"/><line x1=\"-12\" y1=\"-24\" x2=\"-12\" y2=\"24\"/>","t":[[-40,0],[40,0]],"y0":-30.0,"y1":30.0},"NO FD Switch":{"b":"<line x1=\"0\" y1=\"12\" x2=\"0\" y2=\"34\"/><circle cx=\"30.6\" cy=\"18.6\" r=\"5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30.6\" cy=\"18.6\" r=\"3\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 0.6,18.6 30,13\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"0.60000002\" cy=\"18.6\" r=\"5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"0.60000002\" cy=\"18.6\" r=\"3\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 15.6,36.6 5,-5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 10.6,31.6 5,5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/>","t":[[-40,0],[40,0]],"y0":-16.0,"y1":42.0},"NO Float Switch":{"b":"<line x1=\"0\" y1=\"12\" x2=\"0\" y2=\"26\"/><circle cx=\"30.6\" cy=\"18.6\" r=\"5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30.6\" cy=\"18.6\" r=\"3\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 0.6,18.6 30,13\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"0.60000002\" cy=\"18.6\" r=\"5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"0.60000002\" cy=\"18.6\" r=\"3\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"15.6\" cy=\"35.599998\" r=\"6\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"15.6\" cy=\"35.599998\" r=\"4\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-16.0,"y1":52.0},"NO Flow Switch":{"b":"<line x1=\"0\" y1=\"12\" x2=\"0\" y2=\"26\"/><circle cx=\"30.15\" cy=\"16.25\" r=\"5\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30.15\" cy=\"16.25\" r=\"3\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 0.15,16.25 30,13\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"0.15000001\" cy=\"16.25\" r=\"5\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"0.15000001\" cy=\"16.25\" r=\"3\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 15.15,34.25 v -8 l 6,8 z\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"2\"/>","t":[[-40,0],[40,0]],"y0":-16.0,"y1":42.0},"NO HC Limit Switch":{"b":"<path d=\"m 6.28,26.5 -3.68,-10 23,10 z\" transform=\"matrix(-1.638 -1.147 -1.147 1.638 42.764 -14.049)\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"31.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"31.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 1.6,19 30,6\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"1.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"1.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-23.0,"y1":33.0},"NO Limit Switch":{"b":"<path d=\"m 7.18,29.75 -3.68,-10 23,10 z\" transform=\"matrix(-1.364 -1.463 -1.463 1.364 49.662 -1.318)\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"33.5\" cy=\"19.5\" r=\"5\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"33.5\" cy=\"19.5\" r=\"3\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 3.5,19.5 30,13\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"3.5\" cy=\"19.5\" r=\"5\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"3.5\" cy=\"19.5\" r=\"3\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-20.0,"y1":41.0},"NO ND Switch":{"b":"<line x1=\"0\" y1=\"12\" x2=\"0\" y2=\"28\"/><circle cx=\"30.6\" cy=\"18.6\" r=\"5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30.6\" cy=\"18.6\" r=\"3\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 0.6,18.6 30,13\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"0.60000002\" cy=\"18.6\" r=\"5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"0.60000002\" cy=\"18.6\" r=\"3\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 15.6,31.6 5,5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 10.6,36.6 5,-5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/>","t":[[-40,0],[40,0]],"y0":-16.0,"y1":42.0},"NO Pressure Switch":{"b":"<line x1=\"0\" y1=\"12\" x2=\"0\" y2=\"26\"/><circle cx=\"30.15\" cy=\"16.25\" r=\"5\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30.15\" cy=\"16.25\" r=\"3\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 0.15,16.25 30,13\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"0.15000001\" cy=\"16.25\" r=\"5\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"0.15000001\" cy=\"16.25\" r=\"3\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 10.15,28.25 c 0,2.76 2.24,5 5,5 2.76,0 5,-2.24 5,-5 z\" transform=\"matrix(-2 0 0 -2 30.3 90.5)\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"2\"/>","t":[[-40,0],[40,0]],"y0":-16.0,"y1":40.0},"NO Proximity Switch":{"b":"<path d=\"m 38.5,7.5 32,32 -32,32 -32,-32 z\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 27.18,49.75 -3.68,-10 23,10 z\" transform=\"matrix(-1.364 -1.463 -1.463 1.364 106.196 0.656)\" fill=\"#000\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 23.5,39.5 30,13\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 53.5,39.5 h 16\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"53.5\" cy=\"39.5\" r=\"5\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"53.5\" cy=\"39.5\" r=\"3\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"#fff\" stroke=\"none\"/><path d=\"M 23.5,39.5 H 7.5\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"23.5\" cy=\"39.5\" r=\"5\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"23.5\" cy=\"39.5\" r=\"3\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-64,0],[64,0]],"y0":-70.0,"y1":70.0},"NO Pushbutton":{"b":"<line x1=\"-40\" y1=\"-18\" x2=\"40\" y2=\"-18\"/><ellipse cx=\"35\" cy=\"20\" rx=\"5\" ry=\"5\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"#000\" stroke=\"none\"/><ellipse cx=\"35\" cy=\"20\" rx=\"3\" ry=\"3\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"#fff\" stroke=\"none\"/><ellipse cx=\"5\" cy=\"20\" rx=\"5\" ry=\"5\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"#000\" stroke=\"none\"/><ellipse cx=\"5\" cy=\"20\" rx=\"3\" ry=\"3\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"#fff\" stroke=\"none\"/><line x1=\"0\" y1=\"-40\" x2=\"0\" y2=\"-18\"/>","t":[[-40,0],[40,0]],"y0":-46.0,"y1":16.0},"NO Temperature Switch":{"b":"<line x1=\"0\" y1=\"12\" x2=\"0\" y2=\"26\"/><circle cx=\"33.5\" cy=\"19.5\" r=\"5\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"33.5\" cy=\"19.5\" r=\"3\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 3.5,19.5 30,13\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"3.5\" cy=\"19.5\" r=\"5\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"3.5\" cy=\"19.5\" r=\"3\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#fff\" stroke=\"none\"/><line x1=\"-2\" y1=\"24\" x2=\"10\" y2=\"24\"/><line x1=\"8\" y1=\"22\" x2=\"8\" y2=\"34\"/><line x1=\"-2\" y1=\"32\" x2=\"10\" y2=\"32\"/><line x1=\"0\" y1=\"30\" x2=\"0\" y2=\"38\"/>","t":[[-40,0],[40,0]],"y0":-16.0,"y1":44.0},"Pilot Light":{"b":"<circle cx=\"14.45\" cy=\"17.6\" r=\"20\" transform=\"matrix(1.4 0 0 1.4 -20.23 -24.64)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"14.45\" cy=\"17.6\" r=\"18\" transform=\"matrix(1.4 0 0 1.4 -20.23 -24.64)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 1.45,30.6 26,-26\" transform=\"matrix(1.4 0 0 1.4 -20.23 -24.64)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2.857\"/><path d=\"m 27.45,30.6 -26,-26\" transform=\"matrix(1.4 0 0 1.4 -20.23 -24.64)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2.857\"/>","t":[[-28,0],[28,0]],"y0":-34.0,"y1":34.0},"Relay":{"b":"<circle cx=\"18\" cy=\"19\" r=\"20\" transform=\"matrix(1.6 0 0 1.6 -28.8 -30.4)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"18\" cy=\"19\" r=\"18\" transform=\"matrix(1.6 0 0 1.6 -28.8 -30.4)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-32,0],[32,0]],"y0":-38.0,"y1":38.0},"SPST Switch":{"b":"<circle cx=\"31.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"31.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/><path d=\"M 1.6,19 31.6,4\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"1.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"1.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-36.0,"y1":16.0},"Solenoid":{"b":"<path d=\"m 25.25,15.5 h 7\" transform=\"matrix(2 0 0 2 -34.5 -31)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 17.25,-1.5 v 34\" transform=\"matrix(2 0 0 2 -34.5 -31)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 17.25,32.5 8,-17\" transform=\"matrix(2 0 0 2 -34.5 -31)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 2.25,15.5 h 7\" transform=\"matrix(2 0 0 2 -34.5 -31)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"2.25\" cy=\"15.5\" r=\"5\" transform=\"matrix(2 0 0 2 -34.5 -31)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"2.25\" cy=\"15.5\" r=\"3\" transform=\"matrix(2 0 0 2 -34.5 -31)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 9.25,15.5 8,-17\" transform=\"matrix(2 0 0 2 -34.5 -31)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"32.25\" cy=\"15.5\" r=\"5\" transform=\"matrix(2 0 0 2 -34.5 -31)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"32.25\" cy=\"15.5\" r=\"3\" transform=\"matrix(2 0 0 2 -34.5 -31)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-40.0,"y1":40.0},"Thermal Overload":{"b":"<line x1=\"22\" y1=\"0\" x2=\"40\" y2=\"0\"/><line x1=\"-40\" y1=\"0\" x2=\"-22\" y2=\"0\"/><path d=\"m 8.45,11.6 c 3.31,0 6,2.69 6,6 0,3.31 -2.69,6 -6,6 -3.31,0 -6,-2.69 -6,-6\" transform=\"matrix(2 0 0 2 -28.9 -35.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 20.45,11.6 c 3.31,0 6,2.69 6,6 0,3.31 -2.69,6 -6,6 -3.31,0 -6,-2.69 -6,-6\" transform=\"matrix(-2 0 0 -2 52.9 35.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/>","t":[[-40,0],[40,0]],"y0":-18.0,"y1":18.0}};
+
+/* ---- js/print.js ---- */
+/* =====================================================================
+   Print Diagram: the circuit as a NEMA ladder diagram on a sheet of letter paper (8.5 x 11 in), with wire numbers,
+   line numbers, cross-references, device tags and a title block. Drawn in the builder's own coordinates, with the
+   print symbols (print-symbols.js). Opened from Print on the quick access toolbar (or Ctrl+P): a preview, with who
+   it was drawn by (remembered in the browser), then the browser's print window (which can also save a PDF).
+
+   Wire numbers
+     control: L1 off the control transformer's secondary (after its fuse, if it has one), or the L1 bar or L1 Supply
+       box, is 1; L2 is 2; every other control wire the next number, left to right, top to bottom.
+     power: up to the starters' contacts each wire is its phase, L1, L2 or L3, with a letter for each part it has
+       come through (L1, L1A, L1B...); from the contacts on, it is its motor lead, T1-T3 for the first motor, T4-T6
+       for the second..., with a letter for each part after the contacts (T1, T1A...).
+   Line numbers: each row of the control circuit, top to bottom. To the right of each coil, the lines its contacts
+   are on (underlined: normally closed; PWR: its starter's power contacts).
+   ===================================================================== */
+const PRINT_NAME_KEY = 'oo-circuit-builder-demo:print-drawn-by';
+const PRINT_W = 4;   // (the wires' weight: the symbols' lines are drawn to it)
+const PRINT_POWER = new Set(['ph', 'dsc', 'fus', 'mst', 'olh', 'mtr', 'xfm']);
+
+function printSheet(drawnBy) {
+  const kp = (x, y) => x + ',' + y;
+  const P = parts.map(p => ({ p, t: p.t, x: p.x, y: p.y, L: p.L, terms: terms(p) }));
+  const bars = barsOn();
+  // (on the bars, L2 drawn just past the last part, however wide the sheet is in the builder, so the rungs print large)
+  const inner = [...parts.flatMap(p => terms(p).map(t => t[0])), ...wires.flatMap(w => [w.x1, w.x2]).filter(x => x !== W)];
+  const RX = bars && inner.length ? Math.min(W, Math.ceil((Math.max(...inner) + 120) / G) * G) : W;
+  const Wr = wires.map(w => ({ x1: Math.min(w.x1, w.x2), y1: Math.min(w.y1, w.y2), x2: Math.max(w.x1, w.x2), y2: Math.max(w.y1, w.y2) })).map(w => bars ? { ...w, x1: w.x1 === W ? RX : w.x1, x2: w.x2 === W ? RX : w.x2 } : w);
+
+  /* ---------- nets ---------- */
+  // (wires joined end to end, or an end on another's run; a part's end on a wire, or on another's end; a box's
+  // connection points all one; continuations with the same number one; the bars, L1 and L2. A crossing is no joint.)
+  const par = [], id = new Map(), mk = k => { if (!id.has(k)) { id.set(k, par.length); par.push(par.length); } return id.get(k); };
+  const find = i => par[i] === i ? i : (par[i] = find(par[i])), join = (a, b) => { a = find(a); b = find(b); if (a !== b) par[a] = b; };
+  const on = (w, x, y) => w.x1 === w.x2 ? x === w.x1 && y >= w.y1 && y <= w.y2 : y === w.y1 && x >= w.x1 && x <= w.x2;
+  const ends = w => [[w.x1, w.y1], [w.x2, w.y2]];
+  Wr.forEach((w, i) => { w.n = mk('w' + i); });
+  Wr.forEach(w => ends(w).forEach(([x, y]) => { join(w.n, mk('p' + kp(x, y))); for (const v of Wr) if (v !== w && on(v, x, y)) join(w.n, v.n); }));
+  for (const q of P) for (const [x, y] of q.terms) { const t = mk('p' + kp(x, y)); for (const w of Wr) if (on(w, x, y)) join(t, w.n); }
+  if (bars) for (const w of Wr) for (const [x] of ends(w)) { if (x === 0) join(w.n, mk('BAR1')); if (x === RX) join(w.n, mk('BAR2')); }
+  const jl = {};
+  for (const q of P) if (isBox(q.p)) { const c = mk('box' + q.p.id); q.terms.forEach(t => join(c, mk('p' + kp(...t)))); if (isJmp(q.p)) (jl[q.L] = jl[q.L] || []).push(c); }
+  for (const k in jl) jl[k].forEach(c => join(c, jl[k][0]));
+  const netAt = (x, y) => id.has('p' + kp(x, y)) ? find(id.get('p' + kp(x, y))) : null, wNet = w => find(w.n);
+  // (joints: where three or more wire ends meet, or one ends on another's run)
+  const dots = new Map();
+  Wr.forEach(w => ends(w).forEach(([x, y]) => {
+    const mid = Wr.some(v => v !== w && on(v, x, y) && !ends(v).some(([a, b]) => a === x && b === y));
+    const cnt = Wr.filter(v => ends(v).some(([a, b]) => a === x && b === y)).length + (bars && (x === 0 || x === RX) ? 1 : 0);
+    if (mid || cnt >= 3) dots.set(kp(x, y), [x, y]);
+  }));
+
+  /* ---------- wire numbers ---------- */
+  const NUM = new Map(), PHASE = new Set(), ctrl = new Set();
+  const xf = P.find(q => q.t === 'xfm'), s1 = P.find(q => q.t === 'l1'), s2 = P.find(q => q.t === 'l2');
+  let n1 = null, n2 = null, xfFuse = null;
+  if (xf) {
+    const nX1 = netAt(...xf.terms[2]); n2 = netAt(...xf.terms[3]);
+    const fuse = P.find(q => q.t === 'fu1' && q.terms.some(t => netAt(...t) === nX1 && nX1 != null));
+    n1 = fuse ? netAt(...fuse.terms.find(t => netAt(...t) !== nX1)) : nX1;
+    if (fuse && nX1 != null) { NUM.set(nX1, 'X1'); ctrl.add(nX1); xfFuse = fuse; }
+  } else if (bars) { n1 = find(mk('BAR1')); n2 = find(mk('BAR2')); }
+  else { n1 = s1 ? netAt(...s1.terms[0]) : null; n2 = s2 ? netAt(...s2.terms[0]) : null; }
+  if (n1 != null) { NUM.set(n1, '1'); ctrl.add(n1); } if (n2 != null && n2 !== n1) { NUM.set(n2, '2'); ctrl.add(n2); }
+  // (the control circuit: everything reached from 1 and 2 through control parts)
+  const ctrlPart = q => !PRINT_POWER.has(q.t) && !isSrc(q.p) && !isPh(q.p);
+  for (let grew = true; grew;) { grew = false;
+    for (const q of P) if (ctrlPart(q)) { const ns = q.terms.map(t => netAt(...t)).filter(n => n != null);
+      if (ns.some(n => ctrl.has(n))) for (const n of ns) if (!ctrl.has(n)) { ctrl.add(n); grew = true; } } }
+  // (and any control part's wires not reached from them, wired to nothing yet)
+  for (const q of P) if (ctrlPart(q) && !isJmp(q.p)) for (const t of q.terms) { const n = netAt(...t); if (n != null) ctrl.add(n); }
+  const anchor = n => { let b = null; for (const q of P) for (const t of q.terms) if (netAt(...t) === n && (!b || t[1] < b[1] || t[1] === b[1] && t[0] < b[0])) b = t;
+    if (!b) for (const w of Wr) if (wNet(w) === n && (!b || w.y1 < b[1] || w.y1 === b[1] && w.x1 < b[0])) b = [w.x1, w.y1]; return b || [1e9, 1e9]; };
+  const byReading = (a, b) => { const A = anchor(a), B = anchor(b); return A[1] - B[1] || A[0] - B[0]; };
+  let next = 3;
+  [...ctrl].filter(n => !NUM.has(n)).sort(byReading).forEach(n => NUM.set(n, String(next++)));
+  // power: traced pole by pole from the phases
+  const LET = d => d > 0 ? String.fromCharCode(64 + d) : '';
+  const POLED = new Set(['dsc', 'fus', 'mst', 'olh']);
+  const across = n => { const o = []; for (const q of P) if (POLED.has(q.t) && q.t !== 'mst') for (let i = 0; i < 6; i += 2) {
+    const a = netAt(...q.terms[i]), b = netAt(...q.terms[i + 1]); if (a === n && b != null) o.push(b); else if (b === n && a != null) o.push(a); } return o; };
+  const mstLoad = new Set(); for (const q of P) if (q.t === 'mst') for (let i = 1; i < 6; i += 2) { const n = netAt(...q.terms[i]); if (n != null) mstLoad.add(n); }
+  const lineQ = [];
+  for (const q of P) if (q.t === 'ph') { const n = netAt(...q.terms[0]); if (n != null && !NUM.has(n)) { NUM.set(n, 'L' + q.L); PHASE.add(n); lineQ.push([n, q.L, 0]); } }
+  while (lineQ.length) { const [n, L, d] = lineQ.shift(); for (const m of across(n)) if (!NUM.has(m) && !mstLoad.has(m)) { NUM.set(m, 'L' + L + LET(d + 1)); lineQ.push([m, L, d + 1]); } }
+  const motors = P.filter(q => q.t === 'mtr').sort((a, b) => +a.L - +b.L || a.y - b.y || a.x - b.x);
+  motors.forEach((m, k) => m.terms.forEach((t, i) => {
+    const chain = [netAt(...t)]; if (chain[0] == null) return;
+    for (let g = 0; g < 20 && !mstLoad.has(chain[chain.length - 1]); g++) { const nx = across(chain[chain.length - 1]).find(q => !chain.includes(q)); if (nx == null) break; chain.push(nx); }
+    chain.reverse().forEach((n, j) => { if (!NUM.has(n)) NUM.set(n, 'T' + (3 * k + i + 1) + LET(j)); });
+  }));
+
+  /* ---------- line numbers and cross-references ---------- */
+  const rowParts = P.filter(q => ctrlPart(q) && !isJmp(q.p) && q.t !== 'fu1' && q.terms.some(t => ctrl.has(netAt(...t))));
+  const rows = [...new Set(rowParts.map(q => q.y))].sort((a, b) => a - b), LINE = new Map(rows.map((y, i) => [y, i + 1]));
+  const cw = Wr.filter(w => ctrl.has(wNet(w))), cxs = cw.flatMap(w => [w.x1, w.x2]).concat(rowParts.flatMap(q => q.terms.map(t => t[0])));
+  const xLeft = bars ? 0 : cxs.length ? Math.min(...cxs) : 0, xRight = bars ? RX : cxs.length ? Math.max(...cxs) : RX;
+  const xref = c => { const r = [];
+    for (const q of P) if (q.t === 'con' && q.L === c.L && LINE.has(q.y)) r.push({ n: LINE.get(q.y), nc: !!q.p.nc });
+    r.sort((a, b) => a.n - b.n); if (P.some(q => q.t === 'mst' && q.L === c.L)) r.push({ n: 'PWR', nc: false }); return r; };
+
+  /* ---------- tags ---------- */
+  const lampN = new Map(); P.filter(q => q.t === 'lamp').sort((a, b) => a.y - b.y || a.x - b.x).forEach((q, i) => lampN.set(q, i + 1));
+  const tag = q => ({ btn: 'PB-' + q.L, sel: 'SS-' + q.L, coil: q.L, con: q.L, olc: 'OL' + q.L, lamp: 'PL' + lampN.get(q), sol: 'SOL' + q.L, htr: 'HTR' + q.L, tsw: 'TS' + q.L,
+    psw: 'PS' + q.L, lsw: 'LS' + q.L, fu1: 'FU' + q.L, fus: 'FU' + q.L, dsc: 'DS' + q.L, mst: q.L, olh: 'OL' + q.L, mtr: 'M' + q.L, xfm: 'CPT' + q.L })[q.t] || '';
+  const COLOURS = { '#00B050': 'GREEN', '#FF0032': 'RED', '#FF9600': 'AMBER', '#FFDC00': 'YELLOW', '#0070C0': 'BLUE', '#FFFFFF': 'WHITE', '#7030A0': 'PURPLE' };
+  const colourName = c => COLOURS[(c || '').toUpperCase()] || '';
+
+  /* ---------- drawing ---------- */
+  let g = '';
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const line = (x1, y1, x2, y2, w = PRINT_W) => { if (x1 !== x2 || y1 !== y2) g += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke-width="${w}"/>`; };
+  const text = (x, y, s, size = 26, anchor = 'middle', weight = 700, extra = '') => { if (s !== '' && s != null) g += `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}" font-weight="${weight}"${extra}>${esc(s)}</text>`; };
+  // a symbol, its middle at x, y (turned a quarter when its part stands upright); returns it
+  const put = (name, x, y, up = false) => { const s = PSYM[name]; g += `<g class="sym" transform="translate(${x} ${y})${up ? ' rotate(90)' : ''}">${s.b}</g>`; return s; };
+  // (a symbol's own wire points, on the sheet)
+  const pts = (s, x, y, up) => s.t.map(([a, b]) => up ? [x - b, y + a] : [x + a, y + b]);
+  // a two-ended part: leads from its ends in to the symbol's, the symbol; tag above, its name below (beside, upright)
+  const two = (q, name, below = '', noTag = false) => {
+    const up = q.terms[0][0] === q.terms[1][0], s = put(name, q.x, q.y, up), sp = pts(s, q.x, q.y, up);
+    q.terms.forEach(t => { const m = sp.reduce((a, b) => Math.hypot(b[0] - t[0], b[1] - t[1]) < Math.hypot(a[0] - t[0], a[1] - t[1]) ? b : a); line(t[0], t[1], m[0], m[1]); });
+    if (up) { if (!noTag) text(q.x - s.y0 + 8, q.y + 9, tag(q), 26, 'start'); if (below) text(q.x - s.y0 + 8, q.y + 34, below, 21, 'start', 500); }
+    else { if (!noTag) text(q.x, q.y + s.y0 - 4, tag(q), 26); if (below) text(q.x, q.y + s.y1 + 20, below, 21, 'middle', 500); } };
+  const three = (q, name) => { const s = put(name, q.x, q.y), sp = pts(s, q.x, q.y, false);
+    q.terms.forEach((t, i) => line(t[0], t[1], sp[i][0], sp[i][1])); text(q.x, q.y + s.y0 - 4, tag(q), 26); };
+  const timerOf = L => P.find(q => q.t === 'coil' && q.L === L && isTimer(q.p));
+  const wired = t => Wr.some(w => on(w, ...t));
+
+  // the bars, then the wires, then the joints
+  if (bars) { const ys = Wr.flatMap(w => ends(w)).filter(([x]) => x === 0 || x === RX).map(e => e[1]);
+    if (ys.length) { const y0 = Math.min(...ys), y1 = Math.max(...ys); line(0, y0 - 40, 0, y1, PRINT_W + 2); line(RX, y0 - 40, RX, y1, PRINT_W + 2); text(0, y0 - 52, 'L1', 28); text(RX, y0 - 52, 'L2', 28); } }
+  for (const w of Wr) line(w.x1, w.y1, w.x2, w.y2);
+  for (const [x, y] of dots.values()) g += `<circle cx="${x}" cy="${y}" r="8" fill="#000" stroke="none"/>`;
+
+  for (const q of P) {
+    const { x, y, p } = q;
+    switch (q.t) {
+      case 'ph': case 'l1': case 'l2': text(x, y + 10, q.t === 'ph' ? 'L' + q.L : q.t.toUpperCase(), 28); break;
+      case 'jmp': { g += `<circle cx="${x}" cy="${y}" r="16" stroke-width="${PRINT_W}" fill="#fff"/>`; text(x, y + 8, q.L, 22);
+        q.terms.forEach(t => { if (wired(t)) { const dx = Math.sign(t[0] - x) * 16, dy = Math.sign(t[1] - y) * 16; line(t[0], t[1], x + dx, y + dy); } }); break; }
+      case 'btn': two(q, p.nc ? 'NC Pushbutton' : 'NO Pushbutton', p.label || ''); break;
+      case 'sel': { // (no symbol of Dallas's yet: two contact circles bridged, the positions it is closed in above)
+        const [[ax], [bx]] = q.terms; line(ax, y, x - 30, y); line(x + 30, y, bx, y);
+        g += `<circle cx="${x - 24}" cy="${y}" r="6" stroke-width="${PRINT_W}" fill="#fff"/><circle cx="${x + 24}" cy="${y}" r="6" stroke-width="${PRINT_W}" fill="#fff"/>`; line(x - 32, y - 14, x + 32, y - 14);
+        const names = (p.names || []).slice(0, p.n), n = p.n || 2, closed = new Set(p.closedIn || []), step = 34;
+        for (let i = 0; i < n; i++) { const cx = x + (i - (n - 1) / 2) * step; text(cx, y - 52, (names[i] || String(i + 1)).slice(0, 5), 15, 'middle', 600); text(cx, y - 26, closed.has(i) ? 'X' : '', 18); }
+        text(x, y - 76, tag(q), 26); break; }
+      case 'con': { const tm = timerOf(q.L), timed = tm && !p.inst; two(q, timed ? `${p.nc ? 'NC' : 'NO'} ${tm.p.tof ? 'FD' : 'ND'} Switch` : `${p.nc ? 'NC' : 'NO'} Contact`); break; }
+      case 'olc': two(q, 'NC Contact'); break;
+      case 'coil': two(q, 'Relay', [p.label, isTimer(p) ? `${p.tof ? 'OFF' : 'ON'}-DELAY ${p.delay} s` : ''].filter(Boolean).join(' · '), true); text(x, y + 9, q.L, 26); break;
+      case 'lamp': two(q, 'Pilot Light', colourName(p.color)); break;
+      case 'sol': two(q, 'Solenoid'); break;
+      case 'htr': two(q, 'Heating Element'); break;
+      case 'fu1': two(q, 'Fuse'); break;
+      case 'tsw': two(q, `${p.nc ? 'NC' : 'NO'} Temperature Switch`, p.low ? 'LOW TEMP' : 'HIGH TEMP'); break;
+      case 'psw': two(q, `${p.nc ? 'NC' : 'NO'} Pressure Switch`); break;
+      case 'lsw': two(q, p.held ? (p.nc ? 'NC HO Limit Switch' : 'NO HC Limit Switch') : `${p.nc ? 'NC' : 'NO'} Limit Switch`); break;
+      case 'dsc': three(q, '3PH Disconnect'); break;
+      case 'fus': three(q, '3PH Fuses'); break;
+      case 'mst': three(q, '3PH Starter Contacts'); break;
+      case 'olh': three(q, '3PH Thermal Overload'); break;
+      case 'mtr': { // the circle level with T2, the leads in to it, T1 and T3 bending in
+        const cy = q.terms[1][1], s = put('Motor', x, cy), bend = x - 130;
+        q.terms.forEach(([ax, yy], i) => { const [ex, ey] = s.t[i]; if (i === 1) line(ax, yy, x + ex, cy); else { line(ax, yy, bend, yy); line(bend, yy, x + ex, cy + ey); } });
+        text(x, cy + 10, 'M' + q.L, 28); break; }
+      case 'xfm': { const [H1, H2, X1, X2] = q.terms, cx = (H1[0] + H2[0]) / 2, cy = (H1[1] + X1[1]) / 2, s = put('Control Transformer', cx, cy);
+        [H1, H2, X1, X2].forEach(([tx, ty], i) => line(tx, ty, cx + s.t[i][0], cy + s.t[i][1]));
+        text(H1[0] - 12, H1[1] + 26, 'H1', 20, 'end', 600); text(H2[0] + 12, H2[1] + 26, 'H2', 20, 'start', 600); text(X1[0] - 12, X1[1] - 10, 'X1', 20, 'end', 600); text(X2[0] + 12, X2[1] - 10, 'X2', 20, 'start', 600);
+        text(H2[0] + 40, cy + 9, tag(q), 26, 'start'); break; }
+    }
+  }
+
+  // wire numbers: once on each straight run of a wire between parts (runs split at a joint count as one), above it
+  const termSet = new Set(P.flatMap(q => q.terms.map(t => kp(...t))));
+  const runs = new Map();
+  for (const w of Wr) { const n = wNet(w); if (!NUM.has(n) || PHASE.has(n) || w.y1 !== w.y2) continue; const k = n + '@' + w.y1; if (!runs.has(k)) runs.set(k, []); runs.get(k).push([w.x1, w.x2]); }
+  for (const [k, segs] of runs) {
+    const [n, y] = k.split('@').map(Number); segs.sort((a, b) => a[0] - b[0]);
+    const spans = []; for (const [a, b] of segs) { const L = spans[spans.length - 1]; if (L && a <= L[1]) L[1] = Math.max(L[1], b); else spans.push([a, b]); }
+    for (const [a, b] of spans) {
+      let touches = (bars && (a === 0 || b === RX)); for (let x = a; x <= b && !touches; x += 20) if (termSet.has(kp(x, y))) touches = true;
+      if (!touches || b - a < 40) continue;
+      const stops = [a, b, ...[...dots.values()].filter(([dx, dy]) => dy === y && dx > a && dx < b).map(([dx]) => dx)].sort((p, q) => p - q);
+      let best = [a, b], bl = -1; for (let i = 0; i < stops.length - 1; i++) if (stops[i + 1] - stops[i] > bl) { bl = stops[i + 1] - stops[i]; best = [stops[i], stops[i + 1]]; }
+      g += `<text class="wn" x="${(best[0] + best[1]) / 2}" y="${y - 9}" font-size="20" text-anchor="middle" font-weight="700">${esc(NUM.get(n))}</text>`;
+    }
+  }
+  for (const [y, n] of LINE) g += `<text class="ln" x="${xLeft - 34}" y="${y + 8}" font-size="24" text-anchor="end" font-weight="700">${n}</text>`;
+  for (const c of P.filter(q => q.t === 'coil').sort((a, b) => a.y - b.y || a.x - b.x)) {
+    const xs = xref(c); let tx = xRight + 22;
+    xs.forEach((r, i) => { const s = String(r.n) + (i < xs.length - 1 ? ',' : ''); g += `<text class="xr" x="${tx}" y="${c.y + 8}" font-size="22" font-weight="600"${r.nc ? ' text-decoration="underline"' : ''}>${s}</text>`; tx += s.length * 12.5 + 6; });
+  }
+
+  /* ---------- the sheet ---------- */
+  const allX = Wr.flatMap(w => [w.x1, w.x2]).concat(P.flatMap(q => q.terms.map(t => t[0])), P.map(q => q.x + (q.t === 'mtr' ? 70 : 0))), allY = Wr.flatMap(w => [w.y1, w.y2]).concat(P.flatMap(q => q.terms.map(t => t[1])));
+  if (!allX.length) { allX.push(0, 400); allY.push(0, 300); }
+  const bx0 = Math.min(...allX, xLeft) - 110, bx1 = Math.max(...allX, xRight + (P.some(q => q.t === 'coil') ? 190 : 0)) + 60, by0 = Math.min(...allY) - 110, by1 = Math.max(...allY) + 70;
+  const landscape = (bx1 - bx0) / (by1 - by0) > 1.15;
+  const notes = [xf ? `1 = control L1 (X1${xfFuse ? ', after FU' + xfFuse.L : ''}); 2 = control L2 (X2).` : n1 != null ? '1 = L1; 2 = L2.' : '',
+    PHASE.size ? 'Power: L1-L3 up to the starters, T after them; A, B... after each part.' : '',
+    P.some(q => q.t === 'coil') ? 'Numbers right of a coil: the lines its contacts are on. Underlined = NC; PWR = power contacts.' : ''].filter(Boolean);
+  const today = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+  const title = esc(circuitName || 'Untitled circuit');
+  const html = `<div class="pr-page${landscape ? ' land' : ''}"><div class="pr-frame">
+<div class="pr-draw"><svg viewBox="${bx0} ${by0} ${bx1 - bx0} ${by1 - by0}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#000" stroke-width="${PRINT_W}" stroke-linecap="round" stroke-linejoin="round">${g}</g></svg></div>
+<div class="pr-tb">
+  <div class="big"><div class="k">Drawing title</div><div class="v">${title}</div></div>
+  <div><div class="k">Drawing type</div><div class="v">Ladder diagram</div></div>
+  <div><div class="k">Drawn by</div><div class="v">${esc(drawnBy || '')}</div></div>
+  <div><div class="k">Date</div><div class="v">${today}</div></div>
+  <div><div class="k">Rev</div><div class="v">A</div></div>
+  <div class="row">
+    <div><div class="k">Program / school</div><div class="v">Illinois Central College</div></div>
+    <div><div class="k">Course</div><div class="v">Electrical Troubleshooting</div></div>
+    <div><div class="k">Made with</div><div class="v">O³ Circuit Builder</div></div>
+    <div><div class="k">Sheet</div><div class="v">1 of 1</div></div>
+  </div>
+  ${notes.length ? `<div class="notes"><span class="k">Notes</span>${notes.map((n, i) => `<span>${i + 1}. ${esc(n)}</span>`).join('')}</div>` : ''}
+</div></div></div>`;
+  return { html, landscape, numbers: NUM, lines: LINE };
+}
+
+/* ---------------- the preview, and printing ---------------- */
+const printDlg = document.getElementById('print-dlg'), printHost = document.getElementById('print-host');
+let printLand = false;
+function showPrint() {
+  const name = document.getElementById('pd-name').value;
+  const s = printSheet(name); printLand = s.landscape;
+  const view = document.getElementById('pd-view'); view.innerHTML = s.html;
+  // (the sheet, scaled to fit the preview)
+  requestAnimationFrame(() => { const pg = view.firstElementChild; if (!pg) return; const r = view.getBoundingClientRect();
+    pg.style.zoom = Math.min((r.width - 32) / pg.offsetWidth, (r.height - 32) / pg.offsetHeight, 1.4).toFixed(3); });
+  return s;
+}
+function openPrint() {
+  if (!parts.length && !wires.length) { say('Nothing to print yet: build a circuit first.'); return; }
+  closeMenus(); const box = document.getElementById('pd-name');
+  try { box.value = localStorage.getItem(PRINT_NAME_KEY) ?? 'Student Name'; } catch (_) { box.value = 'Student Name'; }
+  printDlg.showModal(); showPrint();
+}
+document.getElementById('print-btn').addEventListener('click', openPrint);
+document.getElementById('pd-name').addEventListener('input', e => { try { localStorage.setItem(PRINT_NAME_KEY, e.target.value); } catch (_) {} showPrint(); });
+document.getElementById('pd-close').addEventListener('click', () => printDlg.close());
+document.getElementById('pd-print').addEventListener('click', () => {
+  // (the sheet, alone, on the page the right way round; the browser's print window can save it as a PDF too)
+  printHost.innerHTML = printSheet(document.getElementById('pd-name').value).html;
+  document.getElementById('print-page').textContent = `@page { size: ${printLand ? '11in 8.5in' : '8.5in 11in'}; margin: 0; }`;
+  printDlg.close(); setTimeout(() => window.print(), 30);
+});
+window.addEventListener('afterprint', () => { printHost.innerHTML = ''; });
+// Ctrl+P: the diagram, not a printout of the builder's screen
+document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'p') { e.preventDefault(); if (!printDlg.open) openPrint(); } });
 
 /* ---- js/parts-edit.js ---- */
 /* =====================================================================
