@@ -365,7 +365,9 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
 .pd-field { display: flex; align-items: center; gap: 6px; font-size: .85rem; }
 .pd-field input { font: inherit; padding: 4px 8px; border-radius: 5px; border: 1px solid var(--line); background: #1c1d20; color: var(--ink); width: 13em; }
 .pd-note { flex: 1; font-size: .76rem; color: #9a9da2; min-width: 12em; }
-.pd-view { flex: 1; min-height: 0; overflow: auto; display: grid; place-items: center; background: #3a3b3f; padding: 16px; }
+.pd-view { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; align-items: center; gap: 18px; background: #3a3b3f; padding: 16px; }
+.pd-count { color: #9a9da2; font-size: .78rem; }
+.pd-bar .seg button { padding: 4px 10px; border-radius: 6px; font-size: .8rem; }
 .pd-view .pr-page { box-shadow: 0 6px 24px rgba(0,0,0,.5); }
 /* the sheet: letter paper, a border, the drawing, the title block */
 .pr-page { width: 8.5in; height: 11in; position: relative; box-sizing: border-box; background: #fff; color: #000; font-family: "Liberation Sans", Arial, Helvetica, sans-serif; flex: none; }
@@ -388,7 +390,8 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
   body > *:not(#print-host) { display: none !important; }
   html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; height: auto !important; overflow: visible !important; }
   #print-host { display: block !important; }
-  #print-host .pr-page { break-after: avoid; }
+  #print-host .pr-page { break-after: page; }
+  #print-host .pr-page:last-child { break-after: auto; }
 }
 
 .demo-badge { font-style: normal; font-size: .7rem; font-weight: 800; letter-spacing: .08em; color: #1c1d1f; background: #9be03a; border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }
@@ -664,6 +667,7 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
   <div class="pd-bar">
     <h2 id="pd-title">Print Diagram</h2>
     <label class="pd-field">Drawn by <input id="pd-name" maxlength="40" autocomplete="off" spellcheck="false"></label>
+    <span class="pd-field">Size <span class="seg" role="group" aria-label="How big to print it"><button type="button" data-psize="large" aria-pressed="true" data-tip="Printed large enough to read easily, on as many sheets as it takes">Large</button><button type="button" data-psize="fit" aria-pressed="false" data-tip="The whole circuit on one sheet (smaller)">Fit on one sheet</button></span> <span class="pd-count" id="pd-count"></span></span>
     <span class="pd-note">Letter paper, 8.5 × 11 in. To save a PDF, choose “Save as PDF” in the print window.</span>
     <button type="button" class="primary" id="pd-print">Print…</button>
     <button type="button" id="pd-close">Close</button>
@@ -769,6 +773,12 @@ const PALETTE = [['Red', '#FF0032'], ['Orange', '#FF9600'], ['Yellow', '#FFDC00'
 const BTN_COL = { A: '#FF0032', B: '#0070C0', C: '#00B050', D: '#FF9600', E: '#00D2BE', F: '#7030A0', G: '#EC008C', H: '#FFDC00' };
 const COIL_COL = { X: '#FFDC00', Y: '#EC008C', Z: '#7030A0', W: '#00D2BE' };
 const ALL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+// the letters buttons, selector switches and coils are given: A to Z, then AA, AB ... ZZ (so a 27th is never left without one)
+const LETTERS = [...ALL, ...[...ALL].flatMap(a => [...ALL].map(b => a + b))];
+// (the letters a drop-down offers: A to Z, every letter in use, and the next few free ones after Z)
+const letterChoices = () => { const used = new Set(parts.map(p => p.L)), out = [...ALL]; let spare = 0;
+  for (const c of LETTERS.slice(26)) { if (used.has(c)) out.push(c); else if (spare < 4) { out.push(c); spare++; } }
+  return out; };
 const CON_H = BOX;                   // a relay contact's box is square, the size of a button's (room for a timed contact's arrow)
 const CT = 0.2, SWING = 0.4;         // relay contacts start to move this long after their coil changes, and take this long to swing
 const OPEN_LIFT = 15, BLADE_GREY = '#a6a6a6';   // how far an open contact's bar lifts off its posts
@@ -2206,7 +2216,13 @@ function screw(x, y, g, bare) {
 }
 const BAR = 22;   // the L1 and L2 connection bars along the left and right edges
 const BAR_HANDLE_Y = 14, BAR_HANDLE_H = 46;   // the grab handle at the top of each bar (Build mode)
-const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${p.L} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${p.L} Coil`) : p.t === 'lamp' ? (p.L ? `${p.L} Button Light` : 'Pilot Light') : p.t === 'con' ? `${p.L} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${p.L} Button (${p.nc ? 'NC' : 'NO'})`;
+// a button's or coil's own label, when no other button or coil has it (then it names the part in place of its
+// letter: on its caption, its contacts' and its light's, and on the print); otherwise ''
+const devLabel = (t, L) => { const q = parts.find(p => p.t === t && p.L === L && p.label && p.label.trim()); return q ? q.label.trim() : ''; };
+const uniqueLabel = (t, L) => { const s = devLabel(t, L); if (!s) return ''; const k = s.toUpperCase();
+  return parts.some(p => (p.t === 'btn' || p.t === 'coil') && p.label && p.label.trim().toUpperCase() === k && !(p.t === t && p.L === L)) ? '' : s; };
+const idOf = p => uniqueLabel(p.t === 'con' ? 'coil' : p.t === 'lamp' ? 'btn' : p.t, p.L) || p.L;
+const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -3096,6 +3112,7 @@ function renderInto(target, V, L) {
     else if (p.t === 'sel') bindSelector(g, p);
   }
   if (SHOW.rungs) drawRefs(V, B, net);
+  fitCaps(V);
   if (editing && V === view) {
     const f = document.getElementById('fault');
     f.hidden = !issues.has('short') && !issues.has('phshort');
@@ -3103,6 +3120,36 @@ function renderInto(target, V, L) {
       : `Warning: ${issues.get('phshort')} (with every switch but the starters closed). That is a short circuit.`;
   }
   if (V === view) { V.overlay = el('g', { 'pointer-events': 'none' }); if (preview) drawPreview(); }
+}
+/* captions kept apart: where two parts sit close together on a row, their names shrink to fit the room between them
+   (down to 8 px), and a name that still will not fit is cut short with "…" (the whole name shows on hover). The width
+   of a name is reckoned from its letters rather than measured, so a redraw stays quick on a slower computer. */
+const CAP_PX = 12.5, CAP_MIN = 8;
+const capWidth = (s, px) => { let w = 0; for (const c of s) w += c === ' ' ? .28 : /[A-Z]/.test(c) ? .66 : /[0-9]/.test(c) ? .56 : /[,.()·]/.test(c) ? .3 : .5; return w * px; };
+function fitCaps(V) {
+  const caps = [];
+  for (const v of V.parts.values()) { const t = v.cap; if (!t || !t.isConnected) continue;
+    const s = t.textContent, x = +t.getAttribute('x'), y = +t.getAttribute('y'), a = t.getAttribute('text-anchor') || 'start', w = capWidth(s, CAP_PX);
+    caps.push({ t, s, x, y, w, c: a === 'middle' ? x : a === 'end' ? x - w / 2 : x + w / 2 }); }
+  for (const q of caps) {
+    let room = Infinity;
+    // (two names side by side are clear when their half-widths add up to no more than the distance between them: each
+    // gets half that room, or more where its neighbour is shorter)
+    for (const o of caps) if (o !== q && Math.abs(o.y - q.y) < 13) { const d = Math.abs(o.c - q.c); room = Math.min(room, Math.max(d - 6, 2 * (d - o.w / 2) - 10)); }
+    if (!(q.w > room)) continue;
+    const px = Math.max(CAP_MIN, CAP_PX * room / q.w), halo = q.t.previousSibling && q.t.previousSibling.classList && q.t.previousSibling.classList.contains('caphalo') ? q.t.previousSibling : null;
+    for (const e of [q.t, halo]) if (e) e.style.fontSize = px.toFixed(1) + 'px';
+    if (capWidth(q.s, px) > room && !q.t.querySelector('tspan')) {
+      // (still too long at the smallest: cut short, the whole name on hover)
+      let s = q.s; while (s.length > 2 && capWidth(s + '…', px) > room) s = s.slice(0, -1);
+      q.t.textContent = s.trimEnd() + '…'; q.t.dataset.tip = q.s; q.t.style.pointerEvents = 'auto';
+    } else if (q.t.querySelector('tspan[data-nc]')) {
+      // (a coil's normally closed contacts' rungs, underlined: the lines put back under the smaller numbers)
+      const par = q.t.parentNode; par.querySelectorAll('.xline').forEach(l => l.remove());
+      for (const n of q.t.querySelectorAll('tspan[data-nc]')) { let x1, x2; try { const k = n.getNumberOfChars(); x1 = n.getStartPositionOfChar(0).x; x2 = n.getEndPositionOfChar(k - 1).x; } catch (_) { continue; }
+        if (x2 > x1) el('line', { x1, y1: q.y + 2.6, x2, y2: q.y + 2.6, class: 'xline', 'stroke-width': 1.4 }, par); }
+    }
+  }
 }
 // the dashed outline round a selected part (a single fuse standing upright: its outline stands upright too, its name beside it)
 function selRect(p) { return vert(p) ? { x: p.x - BOX / 2 - 12, y: p.y - TERM(p) - 12, width: BOX + 120, height: 2 * TERM(p) + 24 } : { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 32, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44 }; }
@@ -4052,9 +4099,11 @@ const PSYM = {"3PH Disconnect":{"b":"<g transform=\"translate(0 -120)\"><circle 
    ===================================================================== */
 const PRINT_NAME_KEY = 'oo-circuit-builder-demo:print-drawn-by';
 const PRINT_W = 4;   // (the wires' weight: the symbols' lines are drawn to it)
+const PRINT_SCALE = .0055;   // (inches a unit, at most: a wire number about 8 pt, a tag about 10 pt)
+const PRINT_SIZE_KEY = 'oo-circuit-builder-demo:print-size';
 const PRINT_POWER = new Set(['ph', 'dsc', 'fus', 'mst', 'olh', 'mtr', 'xfm']);
 
-function printSheet(drawnBy) {
+function printSheet(drawnBy, fit = false) {
   const kp = (x, y) => x + ',' + y;
   const P = parts.map(p => ({ p, t: p.t, x: p.x, y: p.y, L: p.L, terms: terms(p) }));
   const bars = barsOn();
@@ -4137,7 +4186,8 @@ function printSheet(drawnBy) {
 
   /* ---------- tags ---------- */
   const lampN = new Map(); P.filter(q => q.t === 'lamp').sort((a, b) => a.y - b.y || a.x - b.x).forEach((q, i) => lampN.set(q, i + 1));
-  const tag = q => ({ btn: 'PB-' + q.L, sel: 'SS-' + q.L, coil: q.L, con: q.L, olc: 'OL' + q.L, lamp: 'PL' + lampN.get(q), sol: 'SOL' + q.L, htr: 'HTR' + q.L, tsw: 'TS' + q.L,
+  // (a button or coil with a label of its own, that no other has, goes by it: no PB-A, its contacts named by it too)
+  const tag = q => ({ btn: uniqueLabel('btn', q.L) || 'PB-' + q.L, sel: 'SS-' + q.L, coil: uniqueLabel('coil', q.L) || q.L, con: uniqueLabel('coil', q.L) || q.L, olc: 'OL' + q.L, lamp: 'PL' + lampN.get(q), sol: 'SOL' + q.L, htr: 'HTR' + q.L, tsw: 'TS' + q.L,
     psw: 'PS' + q.L, lsw: 'LS' + q.L, fu1: 'FU' + q.L, fus: 'FU' + q.L, dsc: 'DS' + q.L, mst: q.L, olh: 'OL' + q.L, mtr: 'M' + q.L, xfm: 'CPT' + q.L })[q.t] || '';
   const COLOURS = { '#00B050': 'GREEN', '#FF0032': 'RED', '#FF9600': 'AMBER', '#FFDC00': 'YELLOW', '#0070C0': 'BLUE', '#FFFFFF': 'WHITE', '#7030A0': 'PURPLE' };
   const colourName = c => COLOURS[(c || '').toUpperCase()] || '';
@@ -4174,7 +4224,7 @@ function printSheet(drawnBy) {
       case 'ph': case 'l1': case 'l2': text(x, y + 10, q.t === 'ph' ? 'L' + q.L : q.t.toUpperCase(), 28); break;
       case 'jmp': { g += `<circle cx="${x}" cy="${y}" r="16" stroke-width="${PRINT_W}" fill="#fff"/>`; text(x, y + 8, q.L, 22);
         q.terms.forEach(t => { if (wired(t)) { const dx = Math.sign(t[0] - x) * 16, dy = Math.sign(t[1] - y) * 16; line(t[0], t[1], x + dx, y + dy); } }); break; }
-      case 'btn': two(q, p.nc ? 'NC Pushbutton' : 'NO Pushbutton', p.label || ''); break;
+      case 'btn': two(q, p.nc ? 'NC Pushbutton' : 'NO Pushbutton', uniqueLabel('btn', q.L) ? '' : p.label || ''); break;
       case 'sel': { // (no symbol of Dallas's yet: two contact circles bridged, the positions it is closed in above)
         const [[ax], [bx]] = q.terms; line(ax, y, x - 30, y); line(x + 30, y, bx, y);
         g += `<circle cx="${x - 24}" cy="${y}" r="6" stroke-width="${PRINT_W}" fill="#fff"/><circle cx="${x + 24}" cy="${y}" r="6" stroke-width="${PRINT_W}" fill="#fff"/>`; line(x - 32, y - 14, x + 32, y - 14);
@@ -4183,7 +4233,8 @@ function printSheet(drawnBy) {
         text(x, y - 76, tag(q), 26); break; }
       case 'con': { const tm = timerOf(q.L), timed = tm && !p.inst; two(q, timed ? `${p.nc ? 'NC' : 'NO'} ${tm.p.tof ? 'FD' : 'ND'} Switch` : `${p.nc ? 'NC' : 'NO'} Contact`); break; }
       case 'olc': two(q, 'NC Contact'); break;
-      case 'coil': two(q, 'Relay', [p.label, isTimer(p) ? `${p.tof ? 'OFF' : 'ON'}-DELAY ${p.delay} s` : ''].filter(Boolean).join(' · '), true); text(x, y + 9, q.L, 26); break;
+      case 'coil': { const ul = uniqueLabel('coil', q.L);   // (labelled: its name over it; otherwise its letter in it, any label under it)
+        two(q, 'Relay', [ul ? '' : p.label, isTimer(p) ? `${p.tof ? 'OFF' : 'ON'}-DELAY ${p.delay} s` : ''].filter(Boolean).join(' · '), !ul); if (!ul) text(x, y + 9, q.L, q.L.length > 1 ? 21 : 26); break; }
       case 'lamp': two(q, 'Pilot Light', colourName(p.color)); break;
       case 'sol': two(q, 'Solenoid'); break;
       case 'htr': two(q, 'Heating Element'); break;
@@ -4227,18 +4278,51 @@ function printSheet(drawnBy) {
     xs.forEach((r, i) => { const s = String(r.n) + (i < xs.length - 1 ? ',' : ''); g += `<text class="xr" x="${tx}" y="${c.y + 8}" font-size="22" font-weight="600"${r.nc ? ' text-decoration="underline"' : ''}>${s}</text>`; tx += s.length * 12.5 + 6; });
   }
 
-  /* ---------- the sheet ---------- */
+  /* ---------- the sheets ---------- */
   const allX = Wr.flatMap(w => [w.x1, w.x2]).concat(P.flatMap(q => q.terms.map(t => t[0])), P.map(q => q.x + (q.t === 'mtr' ? 70 : 0))), allY = Wr.flatMap(w => [w.y1, w.y2]).concat(P.flatMap(q => q.terms.map(t => t[1])));
   if (!allX.length) { allX.push(0, 400); allY.push(0, 300); }
   const bx0 = Math.min(...allX, xLeft) - 110, bx1 = Math.max(...allX, xRight + (P.some(q => q.t === 'coil') ? 190 : 0)) + 60, by0 = Math.min(...allY) - 110, by1 = Math.max(...allY) + 70;
-  const landscape = (bx1 - bx0) / (by1 - by0) > 1.15;
+  const dw = bx1 - bx0, dh = by1 - by0;
+  // the room for the drawing on a sheet, in inches (the sheet less its margins, frame and title block)
   const notes = [xf ? `1 = control L1 (X1${xfFuse ? ', after FU' + xfFuse.L : ''}); 2 = control L2 (X2).` : n1 != null ? '1 = L1; 2 = L2.' : '',
     PHASE.size ? 'Power: L1-L3 up to the starters, T after them; A, B... after each part.' : '',
     P.some(q => q.t === 'coil') ? 'Numbers right of a coil: the lines its contacts are on. Underlined = NC; PWR = power contacts.' : ''].filter(Boolean);
-  const today = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
-  const title = esc(circuitName || 'Untitled circuit');
-  const html = `<div class="pr-page${landscape ? ' land' : ''}"><div class="pr-frame">
-<div class="pr-draw"><svg viewBox="${bx0} ${by0} ${bx1 - bx0} ${by1 - by0}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#000" stroke-width="${PRINT_W}" stroke-linecap="round" stroke-linejoin="round">${g}</g></svg></div>
+  const TB = notes.length ? 1.12 : .98, room = land => land ? [11 - .8 - .24, 8.5 - .8 - .24 - TB] : [8.5 - .8 - .24, 11 - .8 - .24 - TB];
+  // the scale (inches a unit): Large, at most PRINT_SCALE (wire numbers about 8 pt), as many sheets as it takes,
+  // the sheet turned whichever way draws it bigger; Fit, the whole circuit on one sheet
+  const plan = land => { const [rw, rh] = room(land), s = fit ? Math.min(rw / dw, rh / dh) : Math.min(PRINT_SCALE, rw / dw); return { land, s, rw, rh, n: Math.ceil(dh * s / rh - 1e-6) }; };
+  const A = plan(false), B = plan(true), pl = B.s > A.s * 1.04 || (Math.abs(B.s - A.s) <= A.s * .04 && B.n < A.n) ? B : A;
+  const landscape = pl.land, s = pl.s, Wu = pl.rw / s, Hu = pl.rh / s;
+  // where a sheet may end: in a gap between rows of parts (never through a part, its name, or a wire's number)
+  const busy = [];
+  for (const q of P) { const [t, b] = PRINT_POWER.has(q.t) && q.t !== 'xfm' ? (q.t === 'mtr' ? [130, 130] : [190, 150]) : q.t === 'xfm' ? [q.y - q.terms[0][1] + 30, q.terms[2][1] - q.y + 20] : isBox(q.p) ? [40, 40] : [74, 48]; busy.push([q.y - t, q.y + b]); }
+  for (const w of Wr) if (w.y1 === w.y2) busy.push([w.y1 - 32, w.y1 + 8]);
+  busy.sort((a, b) => a[0] - b[0]);
+  const free = y => !busy.some(([a, b]) => y > a && y < b);
+  // (best of all just above a rung that starts at L1, so a rung and its branches stay together; the control circuit's
+  // first rung counts as one, so the power circuit can have a sheet to itself)
+  const starts = [...new Set([rows[0], ...Wr.filter(w => w.y1 === w.y2 && wNet(w) === n1 && LINE.has(w.y1)).map(w => w.y1)])].filter(y => y != null).sort((a, b) => a - b);
+  const allRows = [...new Set([...P.map(q => q.y), ...Wr.filter(w => w.y1 === w.y2).map(w => w.y1)])].sort((a, b) => a - b);
+  const above = y => { const prev = allRows.filter(r => r < y).pop() ?? y - 400; for (let c = y - 20; c > prev + 10; c -= 5) if (free(c)) return c; return null; };
+  const good = starts.map(above).filter(c => c != null);
+  const cuts = [by0];
+  while (cuts[cuts.length - 1] + Hu < by1 - 1) {
+    const top = cuts[cuts.length - 1], lim = top + Hu;
+    let c = good.filter(y => y > top + Hu * .25 && y <= lim).pop() ?? null;
+    if (c == null) for (let y = Math.floor(lim); y > top + Hu * .35; y -= 5) if (free(y)) { c = y; break; }
+    cuts.push(c ?? lim);
+  }
+  cuts.push(by1);
+  const n = cuts.length - 1, today = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }), title = esc(circuitName || 'Untitled circuit');
+  const x0 = bx0 - (Wu - dw) / 2, uid = Math.random().toString(36).slice(2, 7);
+  const pages = [];
+  for (let k = 0; k < n; k++) {
+    const top = cuts[k], bot = cuts[k + 1], more = k < n - 1;
+    // (each sheet the same scale: its own band of the drawing, the rest clipped off; where it carries on, said so)
+    const cont = (k ? `<text x="${x0 + Wu - 10}" y="${top + 26}" font-size="20" text-anchor="end" font-weight="700">CONTINUED FROM SHEET ${k}</text>` : '')
+      + (more ? `<line x1="${x0 + 10}" y1="${bot}" x2="${x0 + Wu - 10}" y2="${bot}" stroke-width="1.5" stroke-dasharray="10 8"/><text x="${x0 + Wu - 10}" y="${bot - 12}" font-size="20" text-anchor="end" font-weight="700">CONTINUED ON SHEET ${k + 2}</text>` : '');
+    pages.push(`<div class="pr-page${landscape ? ' land' : ''}"><div class="pr-frame">
+<div class="pr-draw"><svg viewBox="${x0} ${top} ${Wu} ${Hu}" preserveAspectRatio="xMidYMin meet" xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="pc${uid}${k}"><rect x="${x0}" y="${top}" width="${Wu}" height="${bot - top + 1}"/></clipPath></defs><g fill="none" stroke="#000" stroke-width="${PRINT_W}" stroke-linecap="round" stroke-linejoin="round"><g clip-path="url(#pc${uid}${k})">${g}</g>${cont}</g></svg></div>
 <div class="pr-tb">
   <div class="big"><div class="k">Drawing title</div><div class="v">${title}</div></div>
   <div><div class="k">Drawing type</div><div class="v">Ladder diagram</div></div>
@@ -4249,23 +4333,26 @@ function printSheet(drawnBy) {
     <div><div class="k">Program / school</div><div class="v">Illinois Central College</div></div>
     <div><div class="k">Course</div><div class="v">Electrical Troubleshooting</div></div>
     <div><div class="k">Made with</div><div class="v">O³ Circuit Builder</div></div>
-    <div><div class="k">Sheet</div><div class="v">1 of 1</div></div>
+    <div><div class="k">Sheet</div><div class="v">${k + 1} of ${n}</div></div>
   </div>
-  ${notes.length ? `<div class="notes"><span class="k">Notes</span>${notes.map((n, i) => `<span>${i + 1}. ${esc(n)}</span>`).join('')}</div>` : ''}
-</div></div></div>`;
-  return { html, landscape, numbers: NUM, lines: LINE };
+  ${notes.length ? `<div class="notes"><span class="k">Notes</span>${notes.map((t, i) => `<span>${i + 1}. ${esc(t)}</span>`).join('')}</div>` : ''}
+</div></div></div>`);
+  }
+  return { html: pages.join(''), pages: n, landscape, scale: s, numbers: NUM, lines: LINE };
 }
 
 /* ---------------- the preview, and printing ---------------- */
 const printDlg = document.getElementById('print-dlg'), printHost = document.getElementById('print-host');
-let printLand = false;
+let printLand = false, printFit = false;
+try { printFit = localStorage.getItem(PRINT_SIZE_KEY) === 'fit'; } catch (_) {}
 function showPrint() {
-  const name = document.getElementById('pd-name').value;
-  const s = printSheet(name); printLand = s.landscape;
+  const s = printSheet(document.getElementById('pd-name').value, printFit); printLand = s.landscape;
+  for (const b of document.querySelectorAll('[data-psize]')) b.setAttribute('aria-pressed', String((b.dataset.psize === 'fit') === printFit));
+  document.getElementById('pd-count').textContent = s.pages > 1 ? `${s.pages} sheets` : '1 sheet';
   const view = document.getElementById('pd-view'); view.innerHTML = s.html;
-  // (the sheet, scaled to fit the preview)
+  // (each sheet scaled to fit the preview's height; more than one, they stack, and the preview scrolls)
   requestAnimationFrame(() => { const pg = view.firstElementChild; if (!pg) return; const r = view.getBoundingClientRect();
-    pg.style.zoom = Math.min((r.width - 32) / pg.offsetWidth, (r.height - 32) / pg.offsetHeight, 1.4).toFixed(3); });
+    const z = Math.min((r.width - 32) / pg.offsetWidth, (r.height - 32) / pg.offsetHeight, 1.4).toFixed(3); for (const e of view.children) e.style.zoom = z; });
   return s;
 }
 function openPrint() {
@@ -4276,10 +4363,11 @@ function openPrint() {
 }
 document.getElementById('print-btn').addEventListener('click', openPrint);
 document.getElementById('pd-name').addEventListener('input', e => { try { localStorage.setItem(PRINT_NAME_KEY, e.target.value); } catch (_) {} showPrint(); });
+for (const b of document.querySelectorAll('[data-psize]')) b.addEventListener('click', () => { printFit = b.dataset.psize === 'fit'; try { localStorage.setItem(PRINT_SIZE_KEY, printFit ? 'fit' : 'large'); } catch (_) {} showPrint(); });
 document.getElementById('pd-close').addEventListener('click', () => printDlg.close());
 document.getElementById('pd-print').addEventListener('click', () => {
-  // (the sheet, alone, on the page the right way round; the browser's print window can save it as a PDF too)
-  printHost.innerHTML = printSheet(document.getElementById('pd-name').value).html;
+  // (the sheets, alone, each on a page the right way round; the browser's print window can save them as a PDF too)
+  printHost.innerHTML = printSheet(document.getElementById('pd-name').value, printFit).html;
   document.getElementById('print-page').textContent = `@page { size: ${printLand ? '11in 8.5in' : '8.5in 11in'}; margin: 0; }`;
   printDlg.close(); setTimeout(() => window.print(), 30);
 });
@@ -4299,8 +4387,8 @@ const solNums = () => new Set(parts.filter(p => p.t === 'sol').map(p => p.L));
 const nextNum = taken => { let n = 1; while (taken.has(String(n))) n++; return String(n); }, nextSol = (taken = solNums()) => nextNum(taken);
 const coilLetters = () => new Set(parts.filter(p => p.t === 'coil').map(p => p.L));
 function newPart(kind, x, y) {
-  if (kind === 'coil') { const u = new Set([...coilLetters(), ...opLetters()]); const L = [...'XYZW' + ALL].find(c => !u.has(c)); return P('coil', x, y, { L, color: COIL_COL[L] || '#FFDC00' }); }
-  if (kind.startsWith('timer')) { const u = new Set([...coilLetters(), ...opLetters()]); const L = [...'TUVRS' + ALL].find(c => !u.has(c)); const p = P('coil', x, y, { L, color: COIL_COL[L] || '#FFDC00', delay: 5 }); if (kind === 'timer-off') p.tof = true; return p; }   // a timer (on- or off-delay), set to 5 s
+  if (kind === 'coil') { const u = new Set([...coilLetters(), ...opLetters()]); const L = [...'XYZW', ...LETTERS].find(c => !u.has(c)); return P('coil', x, y, { L, color: COIL_COL[L] || '#FFDC00' }); }
+  if (kind.startsWith('timer')) { const u = new Set([...coilLetters(), ...opLetters()]); const L = [...'TUVRS', ...LETTERS].find(c => !u.has(c)); const p = P('coil', x, y, { L, color: COIL_COL[L] || '#FFDC00', delay: 5 }); if (kind === 'timer-off') p.tof = true; return p; }   // a timer (on- or off-delay), set to 5 s
   if (kind === 'lamp') return P('lamp', x, y, { L: '', color: '#00B050' });
   if (kind === 'sol') return P('sol', x, y, { L: nextSol(), color: SOL_COL });
   if (kind === 'htr') return P('htr', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'htr').map(q => q.L))), color: HTR_COL, rate: 30, cool: 10 });
@@ -4328,8 +4416,8 @@ function newPart(kind, x, y) {
     return P('con', x, y, { L: (relays[0] || cs[0] || {}).L || 'X', nc });
   }
   const u = new Set([...coilLetters(), ...opLetters()]);
-  if (kind === 'sel') { const L = [...'SJKMN' + ALL].find(c => !u.has(c)); return P('sel', x, y, { L, n: 3, closedIn: [0], pos: 1, color: '#0070C0' }); }   // a 3-position selector switch, turned to the middle; this drawing is closed in position 1
-  const L = [...'ABCDEFGH' + ALL].find(c => !u.has(c));
+  if (kind === 'sel') { const L = [...'SJKMN', ...LETTERS].find(c => !u.has(c)); return P('sel', x, y, { L, n: 3, closedIn: [0], pos: 1, color: '#0070C0' }); }   // a 3-position selector switch, turned to the middle; this drawing is closed in position 1
+  const L = [...'ABCDEFGH', ...LETTERS].find(c => !u.has(c));
   return P('btn', x, y, { L, nc: kind.startsWith('btn-nc'), maint: !kind.endsWith('-mom'), color: kind.startsWith('btn-nc') ? '#FF0032' : '#00B050' });   // (normally open green, normally closed red)   // (-mom: momentary; otherwise maintained)
 }
 const kindOf = k => k.startsWith('lsw') ? 'lsw' : k.startsWith('tsw') ? 'tsw' : k.startsWith('psw') ? 'psw' : ['dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr'].includes(k) ? k : k.startsWith('ph-') ? 'ph' : k === 'jmp' ? 'jmp' : k === 'xfm' ? 'xfm' : k === 'src-l1' || k === 'src-l2' ? k.slice(4) : k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k === 'sol' ? 'sol' : k === 'htr' ? 'htr' : k.startsWith('con') ? 'con' : k === 'sel' ? 'sel' : 'btn';
@@ -5344,7 +5432,7 @@ function pasteClip() {
   snapshot();
   // new letters: each button letter and coil letter in the copy gets an unused one (the same for every drawing of it)
   const used = new Set([...opLetters(), ...coilLetters()]), map = {};
-  const fresh = pref => { const L = [...pref + ALL].find(c => !used.has(c)); used.add(L); return L; };
+  const fresh = pref => { const L = [...pref, ...LETTERS].find(c => !used.has(c)); used.add(L); return L; };
   for (const p of clip.parts) if (p.t === 'btn' && !map['b' + p.L]) map['b' + p.L] = fresh('ABCDEFGH');
   for (const p of clip.parts) if (p.t === 'sel' && !map['s' + p.L]) map['s' + p.L] = fresh('SJKMN');
   for (const p of clip.parts) if (p.t === 'coil' && !map['c' + p.L]) map['c' + p.L] = fresh('XYZW');
@@ -5589,7 +5677,7 @@ function renderProps() {
   if (p && p.t === 'btn') {
     const ls = document.getElementById('p-letter'), others = new Set(parts.filter(q => q.t === 'btn' && q !== p).map(q => q.L)), coils = new Set([...coilLetters(), ...selLetters()]);
     ls.innerHTML = '';
-    for (const c of ALL) if (!coils.has(c)) ls.add(new Option(others.has(c) && c !== p.L ? `${c} (same button as the other ${c})` : c, c, false, c === p.L));
+    for (const c of letterChoices()) if (!coils.has(c)) ls.add(new Option(others.has(c) && c !== p.L ? `${c} (same button as the other ${c})` : c, c, false, c === p.L));
     document.querySelectorAll('[data-nc]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.nc === +p.nc)));
     document.querySelectorAll('[data-maint]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.maint === +p.maint)));
     swatches(document.getElementById('p-colour'), p.color, hex => each(q => blocksOf(q.L).forEach(k => k.color = hex)));
@@ -5598,7 +5686,7 @@ function renderProps() {
   if (p && p.t === 'coil') {
     const os = document.getElementById('o-letter'), used = new Set([...opLetters(), ...coilLetters()]);
     os.innerHTML = '';
-    for (const c of ALL) if (c === p.L || !used.has(c)) os.add(new Option(c, c, false, c === p.L));
+    for (const c of letterChoices()) if (c === p.L || !used.has(c)) os.add(new Option(c, c, false, c === p.L));
     swatches(document.getElementById('o-colour'), p.color, hex => each(q => q.color = hex));
     showLabel(document.getElementById('o-label'), p);
     document.getElementById('o-delay-group').hidden = !G.every(isTimer);
@@ -5678,7 +5766,7 @@ const SEL_NAME_MAX = 5;
 function renderSelProps(p, multi) {
   const ls = document.getElementById('s-letter'), mine = selsOf(p.L).length, others = new Set(parts.filter(q => q.t === 'sel' && q !== p).map(q => q.L)), taken = new Set([...coilLetters(), ...btnLetters()]);
   ls.innerHTML = '';
-  for (const c of ALL) if (!taken.has(c)) ls.add(new Option(others.has(c) && c !== p.L ? `${c} (same switch as the other ${c})` : c, c, false, c === p.L));
+  for (const c of letterChoices()) if (!taken.has(c)) ls.add(new Option(others.has(c) && c !== p.L ? `${c} (same switch as the other ${c})` : c, c, false, c === p.L));
   const n = selN(p);
   document.querySelectorAll('[data-sn]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.sn === n)));
   const names = p.names || [], tag = i => names[i] || String(i + 1);
@@ -5804,7 +5892,7 @@ function readCircuit(d) {
   const num = v => { const n = Number(v); if (!Number.isFinite(n)) throw new Error('The circuit is damaged (a position is not a number).'); return snap(n); };
   const hex = c => /^[0-9a-f]{6}$/i.test(c || '') ? '#' + c.toUpperCase() : null;
   const ps = d.parts.slice(0, 200).map(a => {
-    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'htr' ? 'htr' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
+    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'htr' ? 'htr' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
     const p = P(t, snap(num(a[1])), snap(num(a[2])), {   // (on the grid: a part saved off it, by an older version, could never be wired)
       L: ['dsc', 'fus', 'fu1', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1))) : t === 'sol' || t === 'htr' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'htr' ? HTR_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : t === 'lsw' ? LSW_COL : t === 'tsw' ? TSW_COL : t === 'psw' ? PSW_COL : BTN_COL[L] || '#FF0032') });
     if (t === 'lsw') { p.nc = !!a[4]; if (a[7] === 1) p.held = true; }
