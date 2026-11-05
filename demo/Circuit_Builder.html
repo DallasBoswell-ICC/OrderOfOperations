@@ -4099,7 +4099,8 @@ const PSYM = {"3PH Disconnect":{"b":"<g transform=\"translate(0 -120)\"><circle 
    ===================================================================== */
 const PRINT_NAME_KEY = 'oo-circuit-builder-demo:print-drawn-by';
 const PRINT_W = 4;   // (the wires' weight: the symbols' lines are drawn to it)
-const PRINT_SCALE = .0055;   // (inches a unit, at most: a wire number about 8 pt, a tag about 10 pt)
+const PRINT_SCALE = .0032;   // (inches a unit, at most: a wire number about 5 pt, a tag about 6 pt)
+const PRINT_GAP = .3;        // (inches clear above and below the ladder on a sheet that carries on from or to another)
 const PRINT_SIZE_KEY = 'oo-circuit-builder-demo:print-size';
 const PRINT_POWER = new Set(['ph', 'dsc', 'fus', 'mst', 'olh', 'mtr', 'xfm']);
 
@@ -4269,7 +4270,7 @@ function printSheet(drawnBy, fit = false) {
       if (!touches || b - a < 40) continue;
       const stops = [a, b, ...[...dots.values()].filter(([dx, dy]) => dy === y && dx > a && dx < b).map(([dx]) => dx)].sort((p, q) => p - q);
       let best = [a, b], bl = -1; for (let i = 0; i < stops.length - 1; i++) if (stops[i + 1] - stops[i] > bl) { bl = stops[i + 1] - stops[i]; best = [stops[i], stops[i + 1]]; }
-      g += `<text class="wn" x="${(best[0] + best[1]) / 2}" y="${y - 9}" font-size="20" text-anchor="middle" font-weight="700">${esc(NUM.get(n))}</text>`;
+      g += `<text class="wn" x="${(best[0] + best[1]) / 2}" y="${y - 9}" font-size="22" text-anchor="middle" font-weight="700">${esc(NUM.get(n))}</text>`;
     }
   }
   for (const [y, n] of LINE) g += `<text class="ln" x="${xLeft - 34}" y="${y + 8}" font-size="24" text-anchor="end" font-weight="700">${n}</text>`;
@@ -4293,6 +4294,8 @@ function printSheet(drawnBy, fit = false) {
   const plan = land => { const [rw, rh] = room(land), s = fit ? Math.min(rw / dw, rh / dh) : Math.min(PRINT_SCALE, rw / dw); return { land, s, rw, rh, n: Math.ceil(dh * s / rh - 1e-6) }; };
   const A = plan(false), B = plan(true), pl = B.s > A.s * 1.04 || (Math.abs(B.s - A.s) <= A.s * .04 && B.n < A.n) ? B : A;
   const landscape = pl.land, s = pl.s, Wu = pl.rw / s, Hu = pl.rh / s;
+  // (split over sheets, each band of the ladder has clear space above and below it, for the arrows where it carries on)
+  const split = dh > Hu + 1, M = split ? PRINT_GAP / s : 0, Hb = Hu - 2 * M;
   // where a sheet may end: in a gap between rows of parts (never through a part, its name, or a wire's number)
   const busy = [];
   for (const q of P) { const [t, b] = PRINT_POWER.has(q.t) && q.t !== 'xfm' ? (q.t === 'mtr' ? [130, 130] : [190, 150]) : q.t === 'xfm' ? [q.y - q.terms[0][1] + 30, q.terms[2][1] - q.y + 20] : isBox(q.p) ? [40, 40] : [74, 48]; busy.push([q.y - t, q.y + b]); }
@@ -4306,10 +4309,10 @@ function printSheet(drawnBy, fit = false) {
   const above = y => { const prev = allRows.filter(r => r < y).pop() ?? y - 400; for (let c = y - 20; c > prev + 10; c -= 5) if (free(c)) return c; return null; };
   const good = starts.map(above).filter(c => c != null);
   const cuts = [by0];
-  while (cuts[cuts.length - 1] + Hu < by1 - 1) {
-    const top = cuts[cuts.length - 1], lim = top + Hu;
-    let c = good.filter(y => y > top + Hu * .25 && y <= lim).pop() ?? null;
-    if (c == null) for (let y = Math.floor(lim); y > top + Hu * .35; y -= 5) if (free(y)) { c = y; break; }
+  while (cuts[cuts.length - 1] + Hb < by1 - 1) {
+    const top = cuts[cuts.length - 1], lim = top + Hb;
+    let c = good.filter(y => y > top + Hb * .25 && y <= lim).pop() ?? null;
+    if (c == null) for (let y = Math.floor(lim); y > top + Hb * .35; y -= 5) if (free(y)) { c = y; break; }
     cuts.push(c ?? lim);
   }
   cuts.push(by1);
@@ -4318,11 +4321,19 @@ function printSheet(drawnBy, fit = false) {
   const pages = [];
   for (let k = 0; k < n; k++) {
     const top = cuts[k], bot = cuts[k + 1], more = k < n - 1;
-    // (each sheet the same scale: its own band of the drawing, the rest clipped off; where it carries on, said so)
-    const cont = (k ? `<text x="${x0 + Wu - 10}" y="${top + 26}" font-size="20" text-anchor="end" font-weight="700">CONTINUED FROM SHEET ${k}</text>` : '')
-      + (more ? `<line x1="${x0 + 10}" y1="${bot}" x2="${x0 + Wu - 10}" y2="${bot}" stroke-width="1.5" stroke-dasharray="10 8"/><text x="${x0 + Wu - 10}" y="${bot - 12}" font-size="20" text-anchor="end" font-weight="700">CONTINUED ON SHEET ${k + 2}</text>` : '');
+    // (each sheet the same scale: its own band of the drawing, the rest clipped off; where it carries on, said so, and
+    // an arrow at the end of each wire that crosses the break: pointing on, away from the wire, where it leaves the
+    // sheet; pointing in, towards the wire, where it comes onto the next)
+    const cross = c => Wr.filter(w => w.x1 === w.x2 && w.y1 < c - 1 && w.y2 > c + 1).sort((a, b) => a.x1 - b.x1);
+    const arrow = (x, y, dir, label) => `<path class="arr" d="M${x - 13} ${y} L${x + 13} ${y} L${x} ${y + dir * 22} Z" fill="#000" stroke="#000" stroke-width="2" stroke-linejoin="miter"/>`
+      + (label ? `<text x="${x + 18}" y="${y + dir * 16 + (dir > 0 ? 4 : 8)}" font-size="18" font-weight="700">${esc(label)}</text>` : '');
+    let cont = '';
+    if (k) { cont += `<text x="${x0 + Wu - 10}" y="${top - M + 30}" font-size="20" text-anchor="end" font-weight="700">CONTINUED FROM SHEET ${k}</text>`;
+      for (const w of cross(top)) cont += arrow(w.x1, top - 24, 1, NUM.get(wNet(w))); }   // (in: the point at the wire's top end)
+    if (more) { cont += `<text x="${x0 + Wu - 10}" y="${bot + M - 14}" font-size="20" text-anchor="end" font-weight="700">CONTINUED ON SHEET ${k + 2}</text>`;
+      for (const w of cross(bot)) cont += arrow(w.x1, bot + 2, 1, NUM.get(wNet(w))); }   // (on: the point away below the wire's end)
     pages.push(`<div class="pr-page${landscape ? ' land' : ''}"><div class="pr-frame">
-<div class="pr-draw"><svg viewBox="${x0} ${top} ${Wu} ${Hu}" preserveAspectRatio="xMidYMin meet" xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="pc${uid}${k}"><rect x="${x0}" y="${top}" width="${Wu}" height="${bot - top + 1}"/></clipPath></defs><g fill="none" stroke="#000" stroke-width="${PRINT_W}" stroke-linecap="round" stroke-linejoin="round"><g clip-path="url(#pc${uid}${k})">${g}</g>${cont}</g></svg></div>
+<div class="pr-draw"><svg viewBox="${x0} ${top - M} ${Wu} ${Hu}" preserveAspectRatio="xMidYMin meet" xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="pc${uid}${k}"><rect x="${x0}" y="${top}" width="${Wu}" height="${bot - top + 1}"/></clipPath></defs><g fill="none" stroke="#000" stroke-width="${PRINT_W}" stroke-linecap="round" stroke-linejoin="round"><g clip-path="url(#pc${uid}${k})">${g}</g>${cont}</g></svg></div>
 <div class="pr-tb">
   <div class="big"><div class="k">Drawing title</div><div class="v">${title}</div></div>
   <div><div class="k">Drawing type</div><div class="v">Ladder diagram</div></div>
