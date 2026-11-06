@@ -9,8 +9,8 @@ const solNums = () => new Set(parts.filter(p => p.t === 'sol').map(p => p.L));
 const nextNum = taken => { let n = 1; while (taken.has(String(n))) n++; return String(n); }, nextSol = (taken = solNums()) => nextNum(taken);
 const coilLetters = () => new Set(parts.filter(p => p.t === 'coil').map(p => p.L));
 function newPart(kind, x, y) {
-  if (kind === 'coil') { const u = new Set([...coilLetters(), ...opLetters()]); const L = [...'XYZW' + ALL].find(c => !u.has(c)); return P('coil', x, y, { L, color: COIL_COL[L] || '#FFDC00' }); }
-  if (kind.startsWith('timer')) { const u = new Set([...coilLetters(), ...opLetters()]); const L = [...'TUVRS' + ALL].find(c => !u.has(c)); const p = P('coil', x, y, { L, color: COIL_COL[L] || '#FFDC00', delay: 5 }); if (kind === 'timer-off') p.tof = true; return p; }   // a timer (on- or off-delay), set to 5 s
+  if (kind === 'coil') { const u = new Set([...coilLetters(), ...opLetters()]); const L = [...'XYZW', ...LETTERS].find(c => !u.has(c)); return P('coil', x, y, { L, color: COIL_COL[L] || '#FFDC00' }); }
+  if (kind.startsWith('timer')) { const u = new Set([...coilLetters(), ...opLetters()]); const L = [...'TUVRS', ...LETTERS].find(c => !u.has(c)); const p = P('coil', x, y, { L, color: COIL_COL[L] || '#FFDC00', delay: 5 }); if (kind === 'timer-off') p.tof = true; return p; }   // a timer (on- or off-delay), set to 5 s
   if (kind === 'lamp') return P('lamp', x, y, { L: '', color: '#00B050' });
   if (kind === 'sol') return P('sol', x, y, { L: nextSol(), color: SOL_COL });
   if (kind === 'htr') return P('htr', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'htr').map(q => q.L))), color: HTR_COL, rate: 30, cool: 10 });
@@ -38,8 +38,8 @@ function newPart(kind, x, y) {
     return P('con', x, y, { L: (relays[0] || cs[0] || {}).L || 'X', nc });
   }
   const u = new Set([...coilLetters(), ...opLetters()]);
-  if (kind === 'sel') { const L = [...'SJKMN' + ALL].find(c => !u.has(c)); return P('sel', x, y, { L, n: 3, closedIn: [0], pos: 1, color: '#0070C0' }); }   // a 3-position selector switch, turned to the middle; this drawing is closed in position 1
-  const L = [...'ABCDEFGH' + ALL].find(c => !u.has(c));
+  if (kind === 'sel') { const L = [...'SJKMN', ...LETTERS].find(c => !u.has(c)); return P('sel', x, y, { L, n: 3, closedIn: [0], pos: 1, color: '#0070C0' }); }   // a 3-position selector switch, turned to the middle; this drawing is closed in position 1
+  const L = [...'ABCDEFGH', ...LETTERS].find(c => !u.has(c));
   return P('btn', x, y, { L, nc: kind.startsWith('btn-nc'), maint: !kind.endsWith('-mom'), color: kind.startsWith('btn-nc') ? '#FF0032' : '#00B050' });   // (normally open green, normally closed red)   // (-mom: momentary; otherwise maintained)
 }
 const kindOf = k => k.startsWith('lsw') ? 'lsw' : k.startsWith('tsw') ? 'tsw' : k.startsWith('psw') ? 'psw' : ['dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr'].includes(k) ? k : k.startsWith('ph-') ? 'ph' : k === 'jmp' ? 'jmp' : k === 'xfm' ? 'xfm' : k === 'src-l1' || k === 'src-l2' ? k.slice(4) : k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k === 'sol' ? 'sol' : k === 'htr' ? 'htr' : k.startsWith('con') ? 'con' : k === 'sel' ? 'sel' : 'btn';

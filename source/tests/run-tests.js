@@ -1110,7 +1110,7 @@ const DEF_CIRCUIT = `
       m: (q => [q.label, view.parts.get(q.id).text.textContent, captionOf(q)])(parts.find(p => p.L === 'M' && p.t === 'coil')),
       s: (q => [q.label, view.parts.get(q.id).text.getComputedTextLength(), parts.length])(parts.find(p => p.L === 'S' && p.t === 'btn')) }));
     if (JSON.stringify(r.e) !== '[["Jog","Jog"],["Jog","Jog"]]') out.push('the E button drawn twice: ' + JSON.stringify(r.e));
-    if (r.m[0] !== 'Motor' || r.m[1] !== 'Motor' || r.m[2] !== 'M Coil') out.push('the M coil: ' + JSON.stringify(r.m) + ' (the caption keeps the letter)');
+    if (r.m[0] !== 'Motor' || r.m[1] !== 'Motor' || r.m[2] !== 'Motor Coil') out.push('the M coil: ' + JSON.stringify(r.m) + ' (a label of its own names it on the caption too)');
     if (r.s[0] !== 'EMERGEN' || r.s[1] > 35.5) out.push('a long label: ' + JSON.stringify(r.s) + ' (expected EMERGEN after a Backspace, no wider than the cap)');
     const saved = await page.evaluate(() => JSON.stringify(circuitData()));
     // Ctrl+Z (outside the box) takes the last label back in one go
@@ -1468,8 +1468,10 @@ const DEF_CIRCUIT = `
   await check('Supply boxes: a circuit powered by L1 Supply and L2 Return boxes instead of the bars (wired from their left, right or bottom) runs; switching back and forth, saving and undo keep it', async page => {
     const out = [];
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    await page.click('#pw-btn'); await page.waitForTimeout(40);
     if (await page.isVisible('[data-part="src-l1"]')) out.push('the supply boxes are offered while the circuit has bars');
     await page.click('[data-power="boxes"]'); await page.waitForTimeout(60);
+    if (await page.evaluate(() => document.getElementById('pw-menu').hidden)) out.push('choosing Boxes closed the Power menu');
     if (!(await page.isVisible('[data-part="src-l1"]'))) return out.concat('no supply boxes to place after choosing Boxes');
     if (await page.evaluate(() => [...svg.querySelectorAll('rect')].some(r => r.getAttribute('fill') === 'url(#gBar)'))) out.push('the bars still show with Boxes');
     // place the boxes from the ribbon, then wire a start/stop circuit to them (the second rung fed from the L1 box's bottom)
@@ -1493,6 +1495,7 @@ const DEF_CIRCUIT = `
     if (r.join() !== '00,11,00') out.push('running (M coil, light): before ' + r[0] + ', after START ' + r[1] + ', after STOP ' + r[2] + ' (expected 00, 11, 00)');
     await page.click('#tab-edit');
     // back to bars, undo, and open the saved circuit again
+    if (await page.evaluate(() => document.getElementById('pw-menu').hidden)) await page.click('#pw-btn');
     await page.click('[data-power="bars"]'); await page.waitForTimeout(40);
     if (!(await page.evaluate(() => barsOn()))) out.push('Bars did not switch back');
     await page.click('#undo'); await page.waitForTimeout(40);
@@ -1537,7 +1540,7 @@ const DEF_CIRCUIT = `
     });
     const notes = await page.evaluate(() => [...svg.querySelectorAll('text')].map(t => t.textContent).filter(s => /In series|Not wired/.test(s)));
     if (notes.filter(s => s === 'In series: 60 V').length !== 2 || notes.filter(s => s === 'In series: 40 V').length !== 3 || notes.some(s => /Not wired/.test(s))) out.push('notes: ' + notes.join(', '));
-    await page.click('[data-src="#3FB8FF"]');
+    await page.click('#pw-btn'); await page.click('[data-src="#3FB8FF"]');
     const saved = await page.evaluate(() => JSON.stringify(circuitData()));
     if (!saved.includes('"sc":"#3FB8FF"')) out.push('the source colour is not saved');
     await page.click('#tab-run'); await page.evaluate(() => setSpeed(300));
@@ -1780,12 +1783,12 @@ const DEF_CIRCUIT = `
     const turned = await page.evaluate(() => { const p = parts.find(q => q.t === 'ph' && q.L === '3'); sel = selOne('p', p.id); draw(); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' })); return p.rot || 0; });
     if (turned !== 0) out.push('R turned L3 to ' + turned);
     await page.evaluate(() => { sel = null; draw(); });
-    // the Three-phase menu on Home: opens, and picking a part puts it on the panel, selected, and closes the menu
-    await page.click('#tp-btn');
-    if (await page.evaluate(() => document.getElementById('tp-menu').hidden)) out.push('the Three-phase menu did not open');
+    // the Protection menu on Home: opens, and picking a part puts it on the panel, selected, and closes the menu
+    await page.click('#pr-btn');
+    if (await page.evaluate(() => document.getElementById('pr-menu').hidden)) out.push('the Protection menu did not open');
     const n0 = await page.evaluate(() => parts.filter(p => p.t === 'olh').length);
-    await page.click('#tp-menu [data-part="olh"]');
-    const picked = await page.evaluate(n0 => { const o = parts.filter(p => p.t === 'olh'); return [o.length - n0, sel && sel.parts.has(o[o.length - 1].id), tool, document.getElementById('tp-menu').hidden].join(); }, n0);
+    await page.click('#pr-menu [data-part="olh"]');
+    const picked = await page.evaluate(n0 => { const o = parts.filter(p => p.t === 'olh'); return [o.length - n0, sel && sel.parts.has(o[o.length - 1].id), tool, document.getElementById('pr-menu').hidden].join(); }, n0);
     if (picked !== '1,true,select,true') out.push('picking Overload from the menu (placed, selected, tool, menu closed): ' + picked);
     return out;
   });
@@ -2133,6 +2136,116 @@ const DEF_CIRCUIT = `
     if (back !== '100,100') out.push('a limit switch saved at 103,102 opened at ' + back + ' (want 100,100)');
     return out;
   });
+  await check('Ribbon menus: no Three-phase menu; its parts in Outputs, Contacts, Protection and Power; labels in title case', async page => {
+    const out = [];
+    const where = await page.evaluate(() => Object.fromEntries(['dsc', 'mst', 'mtr', 'olc', 'fus', 'fu1', 'olh', 'ph-1', 'ph-2', 'ph-3', 'xfm', 'src-l1', 'src-l2'].map(k => [k, document.querySelector(`[data-part="${k}"]`)?.closest('.tp-menu')?.id])));
+    const want = { dsc: 'pr-menu', mst: 'ct-menu', mtr: 'out-menu', olc: 'ct-menu', fus: 'pr-menu', fu1: 'pr-menu', olh: 'pr-menu', 'ph-1': 'pw-menu', 'ph-2': 'pw-menu', 'ph-3': 'pw-menu', xfm: 'pw-menu', 'src-l1': 'pw-menu', 'src-l2': 'pw-menu' };
+    for (const k in want) if (where[k] !== want[k]) out.push(k + ' in ' + where[k] + ' (want ' + want[k] + ')');
+    if (await page.$('#tp-btn, #tp-menu')) out.push('the Three-phase menu is still there');
+    if (await page.evaluate(() => !document.querySelector('#pw-menu [data-power="bars"]') || !document.querySelector('#pw-menu #src-swatches'))) out.push('Bars, Boxes and the source colour not in the Power menu');
+    // every word of a label on the ribbon starts with a capital (short joining words aside)
+    const low = await page.evaluate(() => { const bad = [];
+      for (const e of document.querySelectorAll('#ribbon .gname, #ribbon .tool span, #ribbon .label, #ribbon .seg button, .tp-menu .gname, .tp-menu .tool span'))
+        for (const n of e.childNodes) if (n.nodeType === 3) for (const w of n.textContent.trim().split(/[\s-]+/)) if (/^[a-z]/.test(w) && !/^(a|an|the|and|or|of|in|on|at|to|by|for|into)$/.test(w)) bad.push(n.textContent.trim());
+      return [...new Set(bad)].join(' | '); });
+    if (low) out.push('not in title case: ' + low);
+    return out;
+  });
+  await check('Print Diagram: wire numbers (control 1, 2, then reading order; power L1, L1A... and T1, T1A...), line numbers, cross-references, title block; printing puts the sheet alone on the page', async page => {
+    const out = [];
+    const d = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'fixtures', 'fwdrev.json'), 'utf8'));
+    await page.evaluate(d => { const c = readCircuit(d); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; normalize(); fit(true); draw(); }, d);
+    await page.evaluate(() => { try { localStorage.removeItem(PRINT_NAME_KEY); } catch (_) {} });
+    await page.click('#print-btn'); await page.waitForTimeout(150);
+    if (!(await page.evaluate(() => document.getElementById('print-dlg').open))) return out.concat('Print did not open the preview');
+    const got = await page.evaluate(() => [...new Set([...document.querySelectorAll('#pd-view .pr-page:first-child .wn')].map(t => t.textContent))].sort().join(' '));
+    const want = ['1', '2', 'X1', ...Array.from({ length: 16 }, (_, i) => String(i + 3)), ...[1, 2, 3].flatMap(n => ['L' + n + 'A', 'L' + n + 'B']), ...[1, 2, 3, 4, 5, 6].flatMap(n => ['T' + n, 'T' + n + 'A'])].sort().join(' ');
+    if (got !== want) out.push('wire numbers: ' + got + ' (want ' + want + ')');
+    // (reading order: on the top rung, after M-STOP is 3, after ON is 4)
+    const at = await page.evaluate(() => { const t = [...document.querySelectorAll('#pd-view .pr-page:first-child .wn')].filter(e => +e.getAttribute('y') === 1191).map(e => [+e.getAttribute('x'), e.textContent]).sort((a, b) => a[0] - b[0]); return t.map(e => e[1]).join(','); });
+    if (at !== '1,3,4,2') out.push('top rung, left to right: ' + at + ' (want 1,3,4,2)');
+    const lines = await page.evaluate(() => [...document.querySelectorAll('#pd-view .pr-page:first-child .ln')].map(t => t.textContent).join(','));
+    if (lines !== '1,2,3,4,5,6,7,8,9,10,11') out.push('line numbers: ' + lines);
+    const xr = await page.evaluate(() => [...document.querySelectorAll('#pd-view .pr-page:first-child .xr')].map(t => t.textContent + (t.getAttribute('text-decoration') ? '_' : '')).join(''));
+    if (xr !== '2,3,8,104,5,_PWR3,_6,PWR') out.push('cross-references: ' + xr + ' (want Z 2,3,8,10; X 4,5(NC),PWR; Y 3(NC),6,PWR)');
+    const tb = await page.evaluate(() => document.querySelector('#pd-view .pr-tb').textContent.replace(/\s+/g, ' '));
+    for (const s of ['FWD/REV_Interlock_Ovrtrvl', 'Student Name', 'Illinois Central College', 'Electrical Troubleshooting', '1 of 2']) if (!tb.includes(s)) out.push('title block has no ' + s);
+    // large enough to read: the wide FWD/REV circuit on landscape sheets, split between rungs, each saying where it carries on
+    const sheets = await page.evaluate(() => [document.querySelectorAll('#pd-view .pr-page').length, document.querySelectorAll('#pd-view .pr-page.land').length, document.getElementById('pd-count').textContent, [...document.querySelectorAll('#pd-view .pr-tb')].map(t => /(\d) of (\d)/.exec(t.textContent).slice(1).join('/')).join(' ')].join('|'));
+    if (sheets !== '2|0|2 sheets|1/2 2/2') out.push('sheets (count, landscape, label, numbering): ' + sheets);
+    const conts = await page.evaluate(() => [...document.querySelectorAll('#pd-view text')].map(t => t.textContent).filter(s => /^CONTINUED/.test(s)).join(' / '));
+    if (conts !== 'CONTINUED ON SHEET 2 / CONTINUED FROM SHEET 1') out.push('continued notes: ' + conts);
+    // an arrow at each end of each wire that crosses the break (L1's and L2's rails): leaving sheet 1, coming onto sheet 2
+    const arr = await page.evaluate(() => [...document.querySelectorAll('#pd-view .pr-page')].map(pg => [...pg.querySelectorAll('.arr:not(.in)')].map(a => a.nextSibling.textContent).join('+')).join(' / '));
+    if (arr !== '1+2 / 1+2') out.push('continuation arrows (sheet 1 / sheet 2): ' + arr);
+    // (a labelled button or coil with a label of its own goes by it: M-STOP, not PB-D; X's contacts, FORWARD)
+    const tags = await page.evaluate(() => [...document.querySelectorAll('#pd-view .pr-page:first-child text')].map(t => t.textContent));
+    if (tags.includes('PB-D') || !tags.includes('M-STOP') || tags.filter(t => t === 'FORWARD').length < 3) out.push('labels as names on the print: PB-D ' + tags.includes('PB-D') + ', FORWARD ×' + tags.filter(t => t === 'FORWARD').length);
+    // Fit on one sheet: the whole of it, smaller, remembered
+    await page.click('[data-psize="fit"]'); await page.waitForTimeout(80);
+    if (await page.evaluate(() => document.querySelectorAll('#pd-view .pr-page').length + '|' + localStorage.getItem(PRINT_SIZE_KEY)) !== '1|fit') out.push('Fit on one sheet');
+    await page.click('[data-psize="large"]'); await page.waitForTimeout(80);
+    // drawn by: typed in, shown on the sheet, remembered
+    await page.fill('#pd-name', 'Pat Lee'); await page.waitForTimeout(80);
+    if (!(await page.evaluate(() => document.querySelector('#pd-view .pr-tb').textContent.includes('Pat Lee')))) out.push('Drawn by not on the sheet');
+    if (await page.evaluate(() => localStorage.getItem(PRINT_NAME_KEY)) !== 'Pat Lee') out.push('Drawn by not remembered');
+    // printing: the sheet alone, letter portrait
+    await page.evaluate(() => { window.__printed = 0; window.print = () => { window.__printed++; }; });
+    await page.click('#pd-print'); await page.waitForTimeout(120);
+    const pr = await page.evaluate(() => [window.__printed, document.querySelectorAll('#print-host .pr-page').length, document.getElementById('print-page').textContent.includes('8.5in 11in'), document.getElementById('print-dlg').open].join());
+    if (pr !== '1,2,true,false') out.push('printing (printed, sheets, letter portrait, preview closed): ' + pr);
+    await page.emulateMedia({ media: 'print' });
+    const vis = await page.evaluate(() => [getComputedStyle(document.getElementById('print-host')).display, document.querySelector('header.titlebar').getClientRects().length ? 'shown' : 'none'].join());
+    if (vis !== 'block,none') out.push('in print, the sheet and the builder show: ' + vis + ' (want block,none)');
+    await page.emulateMedia({ media: 'screen' });
+    // a plain circuit on the bars: 1 is the L1 bar, 2 the L2 bar; Ctrl+P opens it too
+    await page.evaluate(() => { localStorage.setItem(PRINT_NAME_KEY, 'Student Name'); });
+    await page.selectOption('#preset', 'seal'); await page.waitForTimeout(100);
+    await page.keyboard.press('Control+p'); await page.waitForTimeout(150);
+    if (!(await page.evaluate(() => document.getElementById('print-dlg').open))) return out.concat('Ctrl+P did not open the preview');
+    const bars = await page.evaluate(() => [...new Set([...document.querySelectorAll('#pd-view .wn')].map(t => t.textContent))].sort((a, b) => a - b).join(','));
+    if (!/^1,2,3/.test(bars) || /L|T/.test(bars)) out.push('seal-in on the bars, wire numbers: ' + bars);
+    if (!(await page.evaluate(() => [...document.querySelectorAll('#pd-view text')].some(t => t.textContent === 'L1') && [...document.querySelectorAll('#pd-view text')].some(t => t.textContent === 'L2')))) out.push('the bars not labelled L1 and L2');
+    // the title block's two rows share their dividers (Course under Drawing type, Sheet under Rev)
+    const cols = await page.evaluate(() => { const c = [...document.querySelectorAll('#pd-view .pr-page:first-child .pr-tb > div')].map(e => e.getBoundingClientRect()); return [Math.abs(c[1].left - c[6].left), Math.abs(c[4].left - c[8].left)].map(v => v < 1).join(); });
+    if (cols !== 'true,true') out.push('title block dividers not lined up: ' + cols);
+    await page.click('#pd-close');
+    // a selector switch drawn in two rungs: Dallas's symbol, the turning arrow on the top block only, the positions each block is closed in, linked
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    await page.evaluate(() => { W = 760; W_USER = 760;
+      parts.push(P('sel', 240, 160, { L: 'S', n: 3, closedIn: [0], pos: 1, color: '#0070C0', names: ['HAND', 'OFF', 'AUTO'] }), P('lamp', 560, 160, { L: '', color: '#00B050' }), P('sel', 240, 320, { L: 'S', n: 3, closedIn: [2], pos: 1, color: '#0070C0', names: ['HAND', 'OFF', 'AUTO'] }), P('lamp', 560, 320, { L: '', color: '#FF0032' }));
+      wires.push(Wr(0, 160, 180, 160), Wr(300, 160, 500, 160), Wr(620, 160, W, 160), Wr(0, 320, 180, 320), Wr(300, 320, 500, 320), Wr(620, 320, W, 320)); normalize(); draw(); });
+    await page.click('#print-btn'); await page.waitForTimeout(150);
+    const ss = await page.evaluate(() => { const t = [...document.querySelectorAll('#pd-view text')].map(e => e.textContent), html = document.getElementById('pd-view').innerHTML;
+      return [t.filter(s => s === 'SS-S').length, t.includes('CLOSED: HAND'), t.includes('CLOSED: AUTO'), (html.match(/m 11\.58,11\.58/g) || []).length, /stroke-dasharray="12 10"/.test(html)].join(); });
+    if (ss !== '1,true,true,1,true') out.push('selector switch on the print (tag once, closed in HAND, AUTO, one turning arrow, linked): ' + ss);
+    await page.click('#pd-close');
+    return out;
+  });
+  await check('Labels: after Z, letters go on to AA, AB...; a button or coil with a label of its own is named by it; names too close together shrink to fit', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    // 27 pushbuttons: the 27th is AA (and keeps it through a save)
+    const Ls = await page.evaluate(() => { for (let i = 0; i < 27; i++) { const p = newPart('btn-no-mom', 200 + (i % 9) * 200, 160 + Math.floor(i / 9) * 200); parts.push(p); } normalize(); draw();
+      return parts.map(p => p.L); });
+    if (Ls.length !== 27 || Ls[26] !== 'AA' || new Set(Ls).size !== 27) out.push('letters for 27 buttons: ' + Ls.join(''));
+    const kept = await page.evaluate(() => readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts[26].L);
+    if (kept !== 'AA') out.push('AA saved and read back as ' + kept);
+    const opts = await page.evaluate(() => { sel = selOne('p', parts[26].id); draw(); renderProps(); return [...document.getElementById('p-letter').options].map(o => o.value); });
+    if (!opts.includes('AA') || !opts.includes('AB')) out.push('the letter list after Z: ' + opts.slice(24, 30).join(','));
+    // a label of its own: the caption goes by it; the same label on two, by their letters
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    const caps = await page.evaluate(() => { const a = P('btn', 200, 160, { L: 'A', nc: true, label: 'STOP' }), c = P('coil', 600, 160, { L: 'X', label: 'FWD' }), k = P('con', 400, 320, { L: 'X' }), b = P('btn', 200, 480, { L: 'B', label: 'JOG' }), d = P('btn', 400, 480, { L: 'D', label: 'JOG' });
+      parts.push(a, c, k, b, d); normalize(); draw(); return [a, c, k, b, d].map(p => view.parts.get(p.id).cap.textContent.replace(/\s+\d.*$/, '')).join(' | '); });
+    if (caps !== 'STOP Button (NC) | FWD Coil | FWD Contact (NO) | B Button (NO) | D Button (NO)') out.push('captions: ' + caps);
+    // two parts close together: their names shrink, so they no longer run into one another
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    const fit = await page.evaluate(() => { const a = P('lsw', 200, 200, { L: '1' }), b = P('lsw', 320, 200, { L: '2' }), c = P('btn', 800, 200, { L: 'A' }); parts.push(a, b, c); normalize(); draw();
+      const r = [a, b].map(p => view.parts.get(p.id).cap.getBBox()); return { gap: r[1].x - (r[0].x + r[0].width), fs: [a, b, c].map(p => parseFloat(getComputedStyle(view.parts.get(p.id).cap).fontSize)) }; });
+    if (!(fit.gap >= 0)) out.push('two limit switches 120 apart: their names overlap by ' + (-fit.gap).toFixed(1));
+    if (!(fit.fs[0] < 12.5 && fit.fs[2] === 12.5)) out.push('font sizes (close, close, alone): ' + fit.fs.join(','));
+    return out;
+  });
   await check('Ribbon menus: Buttons, Switches, Outputs and Contacts open and place their parts (momentary or maintained, instantaneous or timing)', async page => {
     const out = [];
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
@@ -2152,7 +2265,7 @@ const DEF_CIRCUIT = `
   await check('A part clicked on the ribbon goes onto the panel in a free spot: selected, clear of other parts and wires, joined to nothing', async page => {
     const out = [];
     await page.selectOption('#preset', page.evaluate ? await page.evaluate(() => document.querySelector('#preset option:nth-child(2)').value) : 'blank'); await page.waitForTimeout(100);
-    for (const [m, k] of [['out', 'coil'], ['bt', 'btn-no-mom'], ['ct', 'con-no-i'], ['sw', 'lsw-no'], ['tp', 'mtr'], [null, 'jmp'], ['out', 'lamp']]) {
+    for (const [m, k] of [['out', 'coil'], ['bt', 'btn-no-mom'], ['ct', 'con-no-i'], ['sw', 'lsw-no'], ['out', 'mtr'], ['pr', 'fu1'], ['pw', 'xfm'], [null, 'jmp'], ['out', 'lamp']]) {
       if (m) await page.click(`#${m}-btn`); await page.click(`[data-part="${k}"]`); await page.waitForTimeout(60);
       const r = await page.evaluate(() => { const p = parts[parts.length - 1];
         const touching = terms(p).some(([x, y]) => { const i = pointInfo(x, y, new Set(), p); return i.ends > 0 || i.interior || i.bar; });

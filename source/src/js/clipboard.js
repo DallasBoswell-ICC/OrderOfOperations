@@ -24,7 +24,7 @@ function pasteClip() {
   snapshot();
   // new letters: each button letter and coil letter in the copy gets an unused one (the same for every drawing of it)
   const used = new Set([...opLetters(), ...coilLetters()]), map = {};
-  const fresh = pref => { const L = [...pref + ALL].find(c => !used.has(c)); used.add(L); return L; };
+  const fresh = pref => { const L = [...pref, ...LETTERS].find(c => !used.has(c)); used.add(L); return L; };
   for (const p of clip.parts) if (p.t === 'btn' && !map['b' + p.L]) map['b' + p.L] = fresh('ABCDEFGH');
   for (const p of clip.parts) if (p.t === 'sel' && !map['s' + p.L]) map['s' + p.L] = fresh('SJKMN');
   for (const p of clip.parts) if (p.t === 'coil' && !map['c' + p.L]) map['c' + p.L] = fresh('XYZW');

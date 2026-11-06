@@ -39,6 +39,8 @@ MODULES = [
     "run.js",            # Run mode: animation frame, painting the current, pressing buttons
     "station.js",        # the operator station (every button and selector switch, floating over the panel)
     "process.js",        # process values (positions, pressures, temperatures) and the Process window
+    "print-symbols.js",  # the wire diagram print's symbols (Dallas's Symbol Design set, redrawn for printing)
+    "print.js",          # the wire diagram print: a NEMA ladder diagram of the circuit on letter paper
     "parts-edit.js",     # adding parts
     "wires-attach.js",   # keeping wires attached when parts move; moving groups
     "wires-edit.js",     # drawing, tidying and hit-testing wires

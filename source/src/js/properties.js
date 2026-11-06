@@ -76,7 +76,7 @@ function renderProps() {
       b.addEventListener('click', () => setPhaseCol(p.L, hex)); box.append(b);
     }
     document.getElementById('ph-custom').value = cur.toLowerCase();
-    document.getElementById('ph-colour-label').textContent = `L${p.L} colour`;
+    document.getElementById('ph-colour-label').textContent = `L${p.L} Colour`;
   }
   document.getElementById('props-lsw').hidden = !(p && isLim(p));
   if (p && isLim(p)) {
@@ -100,7 +100,7 @@ function renderProps() {
     document.getElementById('ls-sp-group').hidden = !v; document.getElementById('ls-rs-group').hidden = !v || p.t === 'lsw';
     if (v) {
       document.getElementById('ls-side').value = p.side === 'lo' ? 'lo' : 'hi';
-      document.getElementById('ls-sp-label').textContent = p.t === 'lsw' ? 'At' : pvFalls(p) ? 'Acts at (falling)' : 'Acts at (rising)';
+      document.getElementById('ls-sp-label').textContent = p.t === 'lsw' ? 'At' : pvFalls(p) ? 'Acts at (Falling)' : 'Acts at (Rising)';
       document.getElementById('ls-sp').value = pvFmt(v, +p.sp); document.getElementById('ls-rs').value = pvFmt(v, +p.rs);
       for (const u of document.querySelectorAll('.ls-unit')) u.textContent = v.unit;
     }
@@ -166,7 +166,7 @@ function renderProps() {
     document.getElementById('d-cool-group').hidden = !v || drvOff(p) !== 'back';
     if (v) {
       const dir = document.getElementById('d-dir'); dir.options[0].text = p.t === 'mtr' ? 'Forward raises it' : 'Raises it'; dir.options[1].text = p.t === 'mtr' ? 'Forward lowers it' : 'Lowers it'; dir.value = p.dir === 'down' ? 'down' : 'up';
-      document.getElementById('d-rate-label').textContent = p.t === 'htr' ? 'Heats at' : p.t === 'mtr' ? 'While it runs, at' : 'While energized, at';
+      document.getElementById('d-rate-label').textContent = p.t === 'htr' ? 'Heats at' : p.t === 'mtr' ? 'While It Runs, at' : 'While Energized, at';
       document.getElementById('d-rate').value = pvFmt(v, +p.rate || 0); document.getElementById('d-cool').value = pvFmt(v, +p.cool || 0);
       document.getElementById('d-per').value = drvPer(p); document.getElementById('d-off').value = drvOff(p);
       for (const u of document.querySelectorAll('.d-unit')) u.textContent = (v.unit || '') + (u.classList.contains('d-unit-per') ? (drvPer(p) === 'min' ? ' a minute' : ' a second') : '');
@@ -187,7 +187,7 @@ function renderProps() {
   if (p && p.t === 'btn') {
     const ls = document.getElementById('p-letter'), others = new Set(parts.filter(q => q.t === 'btn' && q !== p).map(q => q.L)), coils = new Set([...coilLetters(), ...selLetters()]);
     ls.innerHTML = '';
-    for (const c of ALL) if (!coils.has(c)) ls.add(new Option(others.has(c) && c !== p.L ? `${c} (same button as the other ${c})` : c, c, false, c === p.L));
+    for (const c of letterChoices()) if (!coils.has(c)) ls.add(new Option(others.has(c) && c !== p.L ? `${c} (same button as the other ${c})` : c, c, false, c === p.L));
     document.querySelectorAll('[data-nc]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.nc === +p.nc)));
     document.querySelectorAll('[data-maint]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.maint === +p.maint)));
     swatches(document.getElementById('p-colour'), p.color, hex => each(q => blocksOf(q.L).forEach(k => k.color = hex)));
@@ -196,7 +196,7 @@ function renderProps() {
   if (p && p.t === 'coil') {
     const os = document.getElementById('o-letter'), used = new Set([...opLetters(), ...coilLetters()]);
     os.innerHTML = '';
-    for (const c of ALL) if (c === p.L || !used.has(c)) os.add(new Option(c, c, false, c === p.L));
+    for (const c of letterChoices()) if (c === p.L || !used.has(c)) os.add(new Option(c, c, false, c === p.L));
     swatches(document.getElementById('o-colour'), p.color, hex => each(q => q.color = hex));
     showLabel(document.getElementById('o-label'), p);
     document.getElementById('o-delay-group').hidden = !G.every(isTimer);
@@ -276,7 +276,7 @@ const SEL_NAME_MAX = 5;
 function renderSelProps(p, multi) {
   const ls = document.getElementById('s-letter'), mine = selsOf(p.L).length, others = new Set(parts.filter(q => q.t === 'sel' && q !== p).map(q => q.L)), taken = new Set([...coilLetters(), ...btnLetters()]);
   ls.innerHTML = '';
-  for (const c of ALL) if (!taken.has(c)) ls.add(new Option(others.has(c) && c !== p.L ? `${c} (same switch as the other ${c})` : c, c, false, c === p.L));
+  for (const c of letterChoices()) if (!taken.has(c)) ls.add(new Option(others.has(c) && c !== p.L ? `${c} (same switch as the other ${c})` : c, c, false, c === p.L));
   const n = selN(p);
   document.querySelectorAll('[data-sn]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.sn === n)));
   const names = p.names || [], tag = i => names[i] || String(i + 1);

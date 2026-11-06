@@ -90,9 +90,9 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 .dlg input[type=text], .dlg textarea { font: inherit; font-size: .9rem; color: var(--ink); background: #1c1d1f; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; }
 .dlg textarea { font-family: "Cascadia Mono", Consolas, Menlo, monospace; font-size: .78rem; resize: vertical; word-break: break-all; }
 .dlg input:focus-visible, .dlg textarea:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
-.dlg button { font: inherit; font-size: .88rem; color: var(--ink); background: var(--chip); border: 1px solid var(--line); border-radius: 8px; padding: 7px 14px; cursor: pointer; }
-.dlg button:hover { background: var(--chip-on); }
-.dlg button.primary { background: #4d462e; border-color: var(--gold); }
+.dlg button, .pd-bar button { font: inherit; font-size: .88rem; color: var(--ink); background: var(--chip); border: 1px solid var(--line); border-radius: 8px; padding: 7px 14px; cursor: pointer; }
+.dlg button:hover, .pd-bar button:hover { background: var(--chip-on); }
+.dlg button.primary, .pd-bar button.primary { background: #4d462e; border-color: var(--gold); }
 .dlg-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .dlg-row .hint { flex: 1 1 200px; }
 .dlg-sep { height: 1px; background: var(--line); margin: 4px 0; }
@@ -286,11 +286,11 @@ body.fs .wrap { padding-top: 8px; }
 .rpanel .swatches.phsw { grid-template-columns: repeat(4, 20px); gap: 3px; }
 #ph-custom { width: 30px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
 
-/* the Three-phase menu: the parts as a small ribbon of their own, dropped down under its button */
+/* the drop-down menus: the parts as a small ribbon of their own, dropped down under its button */
 .tp-menu { position: fixed; z-index: 40; display: flex; align-items: stretch; padding: 8px 4px 2px; background: var(--chip); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 16px 34px rgba(0,0,0,.55); }
 .tp-menu .rgrp { height: auto; }
 .tp-menu .rgrp:last-child { border-right: 0; }
-#tp-btn[aria-expanded="true"], .menu-btn[aria-expanded="true"] { background: #4d462e; border-color: var(--gold); }
+.menu-btn[aria-expanded="true"] { background: #4d462e; border-color: var(--gold); }
 
 /* a ribbon button that opens a menu of parts: a small arrow after its name */
 .menu-btn span::after { content: ""; display: inline-block; width: 0; height: 0; margin-left: 5px; vertical-align: 2px; border: 4px solid transparent; border-top: 5px solid currentColor; border-bottom: 0; }
@@ -343,3 +343,40 @@ dialog#pv-dlg { width: min(760px, calc(100vw - 32px)); }
 .pvin.w12 { width: 12em; } .pvin.w5 { width: 4.6em; }
 .pvdel { color: #ff9a9a !important; background: none !important; border: 0 !important; font-size: 1rem; padding: 2px 6px !important; }
 .rpanel .pvnum { width: 5.4em; }
+
+/* ---------- Print Diagram: the preview, the sheet, and printing it ---------- */
+dialog.printdlg { width: min(1100px, calc(100vw - 24px)); height: calc(100vh - 24px); max-height: none; display: none; }
+dialog.printdlg[open] { display: flex; flex-direction: column; }
+.pd-bar { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.pd-bar h2 { margin: 0 8px 0 0; font-size: 1rem; }
+.pd-field { display: flex; align-items: center; gap: 6px; font-size: .85rem; }
+.pd-field input { font: inherit; padding: 4px 8px; border-radius: 5px; border: 1px solid var(--line); background: #1c1d20; color: var(--ink); width: 13em; }
+.pd-note { flex: 1; font-size: .76rem; color: #9a9da2; min-width: 12em; }
+.pd-view { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; align-items: center; gap: 18px; background: #3a3b3f; padding: 16px; }
+.pd-count { color: #9a9da2; font-size: .78rem; }
+.pd-bar .seg button { padding: 4px 10px; border-radius: 6px; font-size: .8rem; }
+.pd-view .pr-page { box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+/* the sheet: letter paper, a border, the drawing, the title block */
+.pr-page { width: 8.5in; height: 11in; position: relative; box-sizing: border-box; background: #fff; color: #000; font-family: "Liberation Sans", Arial, Helvetica, sans-serif; flex: none; }
+.pr-page.land { width: 11in; height: 8.5in; }
+.pr-frame { position: absolute; inset: .4in; border: 2px solid #000; display: flex; flex-direction: column; }
+.pr-draw { flex: 1; display: flex; padding: .12in; min-height: 0; }
+.pr-draw > svg { width: 100%; height: 100%; }
+.pr-draw text { fill: #000; stroke: none; font-family: "Liberation Sans", Arial, Helvetica, sans-serif; }
+.pr-tb { border-top: 2px solid #000; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, .8fr) minmax(0, .5fr); font-size: 8pt; }
+.pr-tb > div { border-left: 1px solid #000; padding: 4px 6px; align-self: stretch; }
+.pr-tb > .c1 { border-left: 0; }
+.pr-tb > .r2 { border-top: 1px solid #000; }
+.pr-tb > .span2 { grid-column: span 2; }
+.pr-tb .k { font-size: 6pt; text-transform: uppercase; letter-spacing: .06em; color: #333; }
+.pr-tb .v { font-size: 10pt; font-weight: 700; margin-top: 2px; min-height: 13pt; overflow-wrap: anywhere; }
+.pr-tb .big .v { font-size: 13pt; }
+.pr-tb > .notes { grid-column: 1 / -1; border-left: 0; border-top: 1px solid #000; display: flex; flex-wrap: wrap; gap: 2px 14px; align-items: baseline; font-size: 7pt; padding: 3px 6px; }
+#print-host { display: none; }
+@media print {
+  body > *:not(#print-host) { display: none !important; }
+  html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; height: auto !important; overflow: visible !important; }
+  #print-host { display: block !important; }
+  #print-host .pr-page { break-after: page; }
+  #print-host .pr-page:last-child { break-after: auto; }
+}

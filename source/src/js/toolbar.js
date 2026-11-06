@@ -88,7 +88,7 @@ function foldRibbon(min) {
 }
 document.getElementById('ribbon-toggle').addEventListener('click', () => foldRibbon(!document.body.classList.contains('ribbon-min')));
 try { if (localStorage.getItem(RIBBON_KEY) === '1') { document.body.classList.add('ribbon-min'); const b = document.getElementById('ribbon-toggle'); b.setAttribute('aria-expanded', 'false'); b.classList.add('down'); b.dataset.tip = 'Keep the ribbon open'; b.setAttribute('aria-label', 'Pin the ribbon open'); } } catch (_) {}
-document.addEventListener('pointerdown', e => { if (!e.target.closest('#ribbon')) closeMenus(); }, true);
+document.addEventListener('pointerdown', e => { if (!e.target.closest('#ribbon, .tp-menu')) closeMenus(); }, true);   // (Bars, Boxes and the source colour in the Power menu keep it open)
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus(); });
 /* ---------------- pop-up descriptions ----------------
    Anything with a data-tip shows it in one floating box while the pointer rests on it (or it has the keyboard focus):
@@ -122,7 +122,8 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTip(); }
    the edges of the sheet, and the L1 Supply and L2 Return boxes on the Home tab feed it instead. */
 function showPower() {
   document.querySelectorAll('[data-power]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.power === POWER)));
-  document.querySelectorAll('.src-tool').forEach(b => b.hidden = barsOn());
+  document.querySelectorAll('.src-tool').forEach(b => b.hidden = barsOn()); document.getElementById('supply-grp').hidden = barsOn();
+  const pm = document.getElementById('pw-menu'); if (!pm.hidden) placeMenu(pm);   // (the Power menu is wider with the supply boxes in it)
   document.querySelectorAll('[data-src]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.src === SRC_COL)));
   PH_COL.forEach((c, i) => { document.documentElement.style.setProperty(`--ph${i + 1}`, c); document.documentElement.style.setProperty(`--ph${i + 1}l`, lighten(c, .45)); });
 }
@@ -140,7 +141,7 @@ document.querySelectorAll('[data-power]').forEach(b => b.addEventListener('click
   fitView(); fit(true); draw();
 }));
 
-/* drop-down menus of parts (Three phase, Limit switch): the button drops its parts down under it; picking one (or
+/* drop-down menus of parts (Buttons, Switches, Outputs, Contacts, Protection, Power): the button drops its parts down under it; picking one (or
    dragging it out onto the panel) places it, as from the ribbon, and closes the menu. A press anywhere else, or Esc,
    closes it too. */
 function tpMenu(open, id) {
@@ -148,9 +149,11 @@ function tpMenu(open, id) {
     const btn = document.querySelector(`[aria-controls="${box.id}"]`), on = open && box.id === id;
     if (box.hidden === !on) continue;
     box.hidden = !on; if (btn) btn.setAttribute('aria-expanded', String(on));
-    if (on) { const r = btn.getBoundingClientRect(), w = box.offsetWidth; box.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + 'px'; box.style.top = (r.bottom + 6) + 'px'; }
+    if (on) placeMenu(box);
   }
 }
+// (under its button, kept inside the window)
+function placeMenu(box) { const r = document.querySelector(`[aria-controls="${box.id}"]`).getBoundingClientRect(), w = box.offsetWidth; box.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + 'px'; box.style.top = (r.bottom + 6) + 'px'; }
 document.querySelectorAll('[aria-controls]').forEach(b => { const id = b.getAttribute('aria-controls'); if (document.getElementById(id)?.classList.contains('tp-menu')) b.addEventListener('click', () => { if (editing) tpMenu(document.getElementById(id).hidden, id); }); });
 document.addEventListener('pointerdown', e => { if (![...document.querySelectorAll('.tp-menu, [aria-controls]')].some(m => m.contains(e.target))) tpMenu(false); }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') tpMenu(false); });

@@ -117,6 +117,7 @@ function renderInto(target, V, L) {
     else if (p.t === 'sel') bindSelector(g, p);
   }
   if (SHOW.rungs) drawRefs(V, B, net);
+  fitCaps(V);
   if (editing && V === view) {
     const f = document.getElementById('fault');
     f.hidden = !issues.has('short') && !issues.has('phshort');
@@ -124,6 +125,36 @@ function renderInto(target, V, L) {
       : `Warning: ${issues.get('phshort')} (with every switch but the starters closed). That is a short circuit.`;
   }
   if (V === view) { V.overlay = el('g', { 'pointer-events': 'none' }); if (preview) drawPreview(); }
+}
+/* captions kept apart: where two parts sit close together on a row, their names shrink to fit the room between them
+   (down to 8 px), and a name that still will not fit is cut short with "…" (the whole name shows on hover). The width
+   of a name is reckoned from its letters rather than measured, so a redraw stays quick on a slower computer. */
+const CAP_PX = 12.5, CAP_MIN = 8;
+const capWidth = (s, px) => { let w = 0; for (const c of s) w += c === ' ' ? .28 : /[A-Z]/.test(c) ? .66 : /[0-9]/.test(c) ? .56 : /[,.()·]/.test(c) ? .3 : .5; return w * px; };
+function fitCaps(V) {
+  const caps = [];
+  for (const v of V.parts.values()) { const t = v.cap; if (!t || !t.isConnected) continue;
+    const s = t.textContent, x = +t.getAttribute('x'), y = +t.getAttribute('y'), a = t.getAttribute('text-anchor') || 'start', w = capWidth(s, CAP_PX);
+    caps.push({ t, s, x, y, w, c: a === 'middle' ? x : a === 'end' ? x - w / 2 : x + w / 2 }); }
+  for (const q of caps) {
+    let room = Infinity;
+    // (two names side by side are clear when their half-widths add up to no more than the distance between them: each
+    // gets half that room, or more where its neighbour is shorter)
+    for (const o of caps) if (o !== q && Math.abs(o.y - q.y) < 13) { const d = Math.abs(o.c - q.c); room = Math.min(room, Math.max(d - 6, 2 * (d - o.w / 2) - 10)); }
+    if (!(q.w > room)) continue;
+    const px = Math.max(CAP_MIN, CAP_PX * room / q.w), halo = q.t.previousSibling && q.t.previousSibling.classList && q.t.previousSibling.classList.contains('caphalo') ? q.t.previousSibling : null;
+    for (const e of [q.t, halo]) if (e) e.style.fontSize = px.toFixed(1) + 'px';
+    if (capWidth(q.s, px) > room && !q.t.querySelector('tspan')) {
+      // (still too long at the smallest: cut short, the whole name on hover)
+      let s = q.s; while (s.length > 2 && capWidth(s + '…', px) > room) s = s.slice(0, -1);
+      q.t.textContent = s.trimEnd() + '…'; q.t.dataset.tip = q.s; q.t.style.pointerEvents = 'auto';
+    } else if (q.t.querySelector('tspan[data-nc]')) {
+      // (a coil's normally closed contacts' rungs, underlined: the lines put back under the smaller numbers)
+      const par = q.t.parentNode; par.querySelectorAll('.xline').forEach(l => l.remove());
+      for (const n of q.t.querySelectorAll('tspan[data-nc]')) { let x1, x2; try { const k = n.getNumberOfChars(); x1 = n.getStartPositionOfChar(0).x; x2 = n.getEndPositionOfChar(k - 1).x; } catch (_) { continue; }
+        if (x2 > x1) el('line', { x1, y1: q.y + 2.6, x2, y2: q.y + 2.6, class: 'xline', 'stroke-width': 1.4 }, par); }
+    }
+  }
 }
 // the dashed outline round a selected part (a single fuse standing upright: its outline stands upright too, its name beside it)
 function selRect(p) { return vert(p) ? { x: p.x - BOX / 2 - 12, y: p.y - TERM(p) - 12, width: BOX + 120, height: 2 * TERM(p) + 24 } : { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 32, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44 }; }
