@@ -286,8 +286,9 @@
     <h2 id="pd-title">Print Diagram</h2>
     <label class="pd-field">Drawn by <input id="pd-name" maxlength="40" autocomplete="off" spellcheck="false"></label>
     <span class="pd-field">Size <span class="seg" role="group" aria-label="How big to print it"><button type="button" data-psize="large" aria-pressed="true" data-tip="Printed large enough to read easily, on as many sheets as it takes">Large</button><button type="button" data-psize="fit" aria-pressed="false" data-tip="The whole circuit on one sheet (smaller)">Fit on one sheet</button></span> <span class="pd-count" id="pd-count"></span></span>
-    <span class="pd-note">Letter paper, 8.5 × 11 in. To save a PDF, choose “Save as PDF” in the print window.</span>
-    <button type="button" class="primary" id="pd-print">Print…</button>
+    <span class="pd-field pd-zoom" role="group" aria-label="Zoom">Zoom <button type="button" id="pz-out" aria-label="Zoom out" data-tip="Zoom out (Ctrl + the wheel, or Ctrl+−)">−</button><button type="button" id="pz-level" class="pz-level" data-tip="The size on screen, against the real sheet: click for 100%">100%</button><button type="button" id="pz-in" aria-label="Zoom in" data-tip="Zoom in (Ctrl + the wheel, or Ctrl++)">+</button><button type="button" id="pz-fit" aria-pressed="true" data-tip="The whole sheet in view (Ctrl+0)">Fit</button></span>
+    <span class="pd-note"></span>
+    <button type="button" class="primary" id="pd-print" data-tip="Print the sheets. To save a PDF instead, choose “Save as PDF” in the print window.">Print…</button>
     <button type="button" id="pd-close">Close</button>
   </div>
   <div class="pd-view" id="pd-view"></div>

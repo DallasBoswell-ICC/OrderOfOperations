@@ -175,7 +175,7 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
 .rpanel .swatches { display: grid; grid-template-columns: repeat(5, 20px); gap: 4px; max-width: none; }
 .rpanel .sw { width: 20px; height: 20px; }
 .rpanel .seg button { padding: 4px 10px; }
-.rpanel select { padding: 4px 8px; width: auto; max-width: 13em; }
+.rpanel select { padding: 4px 8px; width: auto; max-width: 11em; }
 /* ribbon buttons: big (icon over its name) and small (in stacks of three) */
 .tool.big { flex-direction: column; justify-content: flex-start; gap: 3px; min-width: 47px; padding: 5px 2px 4px; background: transparent; border-color: transparent; font-size: .76rem; line-height: 1.12; text-align: center; height: auto; }
 .tool.big svg { width: 32px; height: 28px; }
@@ -350,10 +350,15 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
 .pd-bar { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .pd-bar h2 { margin: 0 8px 0 0; font-size: 1rem; }
 .pd-field { display: flex; align-items: center; gap: 6px; font-size: .85rem; }
-.pd-field input { font: inherit; padding: 4px 8px; border-radius: 5px; border: 1px solid var(--line); background: #1c1d20; color: var(--ink); width: 13em; }
-.pd-note { flex: 1; font-size: .76rem; color: #9a9da2; min-width: 12em; }
-.pd-view { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; align-items: center; gap: 18px; background: #3a3b3f; padding: 16px; }
+.pd-field input { font: inherit; padding: 4px 8px; border-radius: 5px; border: 1px solid var(--line); background: #1c1d20; color: var(--ink); width: 11em; }
+.pd-note { flex: 1; font-size: .76rem; color: #9a9da2; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pd-view { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; align-items: safe center; gap: 18px; background: #3a3b3f; padding: 16px; }
 .pd-count { color: #9a9da2; font-size: .78rem; }
+.pd-zoom { gap: 3px; }
+.pd-bar .pd-zoom button { padding: 3px 9px; min-width: 30px; font-size: .85rem; }
+.pd-bar .pd-zoom .pz-level { min-width: 54px; font-variant-numeric: tabular-nums; }
+.pd-bar .pd-zoom button[aria-pressed="true"] { background: #4a4c51; border-color: #e2cc85; }
+.pd-view.zoomed { cursor: grab; } .pd-view.panning { cursor: grabbing; user-select: none; }
 .pd-bar .seg button { padding: 4px 10px; border-radius: 6px; font-size: .8rem; }
 .pd-view .pr-page { box-shadow: 0 6px 24px rgba(0,0,0,.5); }
 /* the sheet: letter paper, a border, the drawing, the title block */

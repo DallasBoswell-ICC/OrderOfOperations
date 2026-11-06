@@ -284,18 +284,53 @@ try { printFit = localStorage.getItem(PRINT_SIZE_KEY) === 'fit'; } catch (_) {}
 function showPrint() {
   const s = printSheet(document.getElementById('pd-name').value, printFit); printLand = s.landscape;
   for (const b of document.querySelectorAll('[data-psize]')) b.setAttribute('aria-pressed', String((b.dataset.psize === 'fit') === printFit));
-  document.getElementById('pd-count').textContent = s.pages > 1 ? `${s.pages} sheets` : '1 sheet';
-  const view = document.getElementById('pd-view'); view.innerHTML = s.html;
-  // (each sheet scaled to fit the preview's height; more than one, they stack, and the preview scrolls)
-  requestAnimationFrame(() => { const pg = view.firstElementChild; if (!pg) return; const r = view.getBoundingClientRect();
-    const z = Math.min((r.width - 32) / pg.offsetWidth, (r.height - 32) / pg.offsetHeight, 1.4).toFixed(3); for (const e of view.children) e.style.zoom = z; });
+  document.getElementById('pd-count').textContent = s.pages > 1 ? `${s.pages} letter sheets` : '1 letter sheet';   // (8.5 × 11 in)
+  const view = document.getElementById('pd-view'), keep = [view.scrollLeft, view.scrollTop]; view.innerHTML = s.html;
+  // (each sheet scaled to the zoom chosen, or to fit the preview's height; more than one, they stack, and the preview scrolls)
+  requestAnimationFrame(() => { applyPrintZoom(); view.scrollLeft = keep[0]; view.scrollTop = keep[1]; });
   return s;
 }
+/* ---- zooming the preview: −, +, Fit (and the size, as a percentage of the real sheet), Ctrl + the wheel over the sheets, or
+   Ctrl + plus, minus, 0; while zoomed in, the sheets can also be dragged about. Each time the preview opens, it fits. */
+const PZ_STEPS = [.25, .33, .5, .67, .75, .9, 1, 1.25, 1.5, 2, 2.5, 3];
+let printZoom = null;   // (null: fit)
+const fitZoom = () => { const view = document.getElementById('pd-view'), pg = view.firstElementChild; if (!pg) return 1;
+  const r = view.getBoundingClientRect(), z0 = parseFloat(pg.style.zoom) || 1; return Math.min((r.width - 32) / (pg.offsetWidth), (r.height - 32) / (pg.offsetHeight), 1.4); };
+function applyPrintZoom() {
+  const view = document.getElementById('pd-view'); for (const e of view.children) e.style.zoom = '';
+  const z = printZoom ?? fitZoom(); for (const e of view.children) e.style.zoom = z.toFixed(3);
+  document.getElementById('pz-level').textContent = Math.round(z * 100) + '%';
+  document.getElementById('pz-fit').setAttribute('aria-pressed', String(printZoom == null));
+  view.classList.toggle('zoomed', view.scrollWidth > view.clientWidth + 1 || view.scrollHeight > view.clientHeight + 1);
+}
+// (zoom to z, keeping the point under (cx, cy) on the screen where it is)
+function zoomPrint(z, cx, cy) {
+  const view = document.getElementById('pd-view'), r = view.getBoundingClientRect(), z0 = printZoom ?? fitZoom();
+  z = Math.max(PZ_STEPS[0], Math.min(PZ_STEPS[PZ_STEPS.length - 1], z));
+  if (cx == null) { cx = r.left + r.width / 2; cy = r.top + r.height / 2; }
+  const ox = view.scrollLeft + cx - r.left, oy = view.scrollTop + cy - r.top;
+  printZoom = z; applyPrintZoom();
+  view.scrollLeft = ox * z / z0 - (cx - r.left); view.scrollTop = oy * z / z0 - (cy - r.top);
+}
+const stepZoom = (d, cx, cy) => { const z0 = printZoom ?? fitZoom(); const next = d > 0 ? PZ_STEPS.find(v => v > z0 + .001) : [...PZ_STEPS].reverse().find(v => v < z0 - .001); zoomPrint(next ?? z0, cx, cy); };
+document.getElementById('pz-in').addEventListener('click', () => stepZoom(1));
+document.getElementById('pz-out').addEventListener('click', () => stepZoom(-1));
+document.getElementById('pz-fit').addEventListener('click', () => { printZoom = null; applyPrintZoom(); });
+document.getElementById('pz-level').addEventListener('click', () => zoomPrint(1));   // (the percentage: the real size)
+document.getElementById('pd-view').addEventListener('wheel', e => { if (!(e.ctrlKey || e.metaKey)) return; e.preventDefault(); stepZoom(e.deltaY < 0 ? 1 : -1, e.clientX, e.clientY); }, { passive: false });
+printDlg.addEventListener('keydown', e => { if (!(e.ctrlKey || e.metaKey) || e.target.tagName === 'INPUT') return;
+  if (e.key === '=' || e.key === '+') { e.preventDefault(); stepZoom(1); } else if (e.key === '-') { e.preventDefault(); stepZoom(-1); } else if (e.key === '0') { e.preventDefault(); printZoom = null; applyPrintZoom(); } });
+// (dragging the sheets about, when they are bigger than the preview)
+{ const view = document.getElementById('pd-view'); let d = null;
+  view.addEventListener('pointerdown', e => { if (e.button !== 0 || !view.classList.contains('zoomed')) return; d = [e.clientX, e.clientY, view.scrollLeft, view.scrollTop]; view.setPointerCapture(e.pointerId); view.classList.add('panning'); });
+  view.addEventListener('pointermove', e => { if (!d) return; view.scrollLeft = d[2] - (e.clientX - d[0]); view.scrollTop = d[3] - (e.clientY - d[1]); });
+  const up = () => { d = null; view.classList.remove('panning'); }; view.addEventListener('pointerup', up); view.addEventListener('pointercancel', up); }
+window.addEventListener('resize', () => { if (printDlg.open && printZoom == null) applyPrintZoom(); });
 function openPrint() {
   if (!parts.length && !wires.length) { say('Nothing to print yet: build a circuit first.'); return; }
   closeMenus(); const box = document.getElementById('pd-name');
   try { box.value = localStorage.getItem(PRINT_NAME_KEY) ?? 'Student Name'; } catch (_) { box.value = 'Student Name'; }
-  printDlg.showModal(); showPrint();
+  printZoom = null; printDlg.showModal(); showPrint();
 }
 document.getElementById('print-btn').addEventListener('click', openPrint);
 document.getElementById('pd-name').addEventListener('input', e => { try { localStorage.setItem(PRINT_NAME_KEY, e.target.value); } catch (_) {} showPrint(); });

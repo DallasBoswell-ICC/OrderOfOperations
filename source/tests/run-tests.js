@@ -2172,7 +2172,7 @@ const DEF_CIRCUIT = `
     for (const s of ['FWD/REV_Interlock_Ovrtrvl', 'Student Name', 'Illinois Central College', 'Electrical Troubleshooting', '1 of 2']) if (!tb.includes(s)) out.push('title block has no ' + s);
     // large enough to read: the wide FWD/REV circuit on landscape sheets, split between rungs, each saying where it carries on
     const sheets = await page.evaluate(() => [document.querySelectorAll('#pd-view .pr-page').length, document.querySelectorAll('#pd-view .pr-page.land').length, document.getElementById('pd-count').textContent, [...document.querySelectorAll('#pd-view .pr-tb')].map(t => /(\d) of (\d)/.exec(t.textContent).slice(1).join('/')).join(' ')].join('|'));
-    if (sheets !== '2|0|2 sheets|1/2 2/2') out.push('sheets (count, landscape, label, numbering): ' + sheets);
+    if (sheets !== '2|0|2 letter sheets|1/2 2/2') out.push('sheets (count, landscape, label, numbering): ' + sheets);
     const conts = await page.evaluate(() => [...document.querySelectorAll('#pd-view text')].map(t => t.textContent).filter(s => /^CONTINUED/.test(s)).join(' / '));
     if (conts !== 'CONTINUED ON SHEET 2 / CONTINUED FROM SHEET 1') out.push('continued notes: ' + conts);
     // an arrow at each end of each wire that crosses the break (L1's and L2's rails): leaving sheet 1, coming onto sheet 2
@@ -2219,6 +2219,25 @@ const DEF_CIRCUIT = `
     const ss = await page.evaluate(() => { const t = [...document.querySelectorAll('#pd-view text')].map(e => e.textContent), html = document.getElementById('pd-view').innerHTML;
       return [t.filter(s => s === 'SS-S').length, t.includes('CLOSED: HAND'), t.includes('CLOSED: AUTO'), (html.match(/m 11\.58,11\.58/g) || []).length, /stroke-dasharray="12 10"/.test(html)].join(); });
     if (ss !== '1,true,true,1,true') out.push('selector switch on the print (tag once, closed in HAND, AUTO, one turning arrow, linked): ' + ss);
+    await page.click('#pd-close');
+    return out;
+  });
+  await check('Print preview zoom: +, −, the percentage (100%), Fit, Ctrl + the wheel and Ctrl+0; opens fitted again', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'stress'); await page.waitForTimeout(100);
+    await page.click('#print-btn'); await page.waitForTimeout(200);
+    const st = () => page.evaluate(() => [parseFloat(document.querySelector('#pd-view .pr-page').style.zoom), document.getElementById('pz-level').textContent, document.getElementById('pz-fit').getAttribute('aria-pressed')]);
+    const fit = await st(); if (fit[2] !== 'true') out.push('opens not fitted: ' + fit);
+    await page.click('#pz-in'); await page.waitForTimeout(60); const a = await st();
+    if (!(a[0] > fit[0]) || a[2] !== 'false' || a[1] !== Math.round(a[0] * 100) + '%') out.push('+ : ' + a + ' (from ' + fit + ')');
+    await page.click('#pz-level'); await page.waitForTimeout(60); const b = await st(); if (b[0] !== 1 || b[1] !== '100%') out.push('the percentage (100%): ' + b);
+    await page.click('#pz-out'); await page.waitForTimeout(60); const c = await st(); if (!(c[0] < 1)) out.push('− : ' + c);
+    const v = await page.evaluate(() => { const r = document.getElementById('pd-view').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+    await page.mouse.move(v[0], v[1]); await page.keyboard.down('Control'); await page.mouse.wheel(0, -120); await page.keyboard.up('Control'); await page.waitForTimeout(80);
+    const d = await st(); if (!(d[0] > c[0])) out.push('Ctrl + the wheel did not zoom in: ' + d);
+    await page.keyboard.press('Control+0'); await page.waitForTimeout(60); const e = await st(); if (e[2] !== 'true' || Math.abs(e[0] - fit[0]) > .01) out.push('Ctrl+0 did not fit: ' + e);
+    await page.click('#pz-in'); await page.click('#pd-close'); await page.click('#print-btn'); await page.waitForTimeout(150);
+    const f = await st(); if (f[2] !== 'true') out.push('opened again, not fitted: ' + f);
     await page.click('#pd-close');
     return out;
   });
