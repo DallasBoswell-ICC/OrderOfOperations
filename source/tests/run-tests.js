@@ -2246,6 +2246,17 @@ const DEF_CIRCUIT = `
     if (!(fit.fs[0] < 12.5 && fit.fs[2] === 12.5)) out.push('font sizes (close, close, alone): ' + fit.fs.join(','));
     return out;
   });
+  await check('FWD/REV Template: loads as Dallas saved it (supply boxes, phase colours, process values, its parts and wires); the next preset goes back to the usual', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'fwdrev'); await page.waitForTimeout(150);
+    const r = await page.evaluate(() => [parts.length, wires.length, POWER, PH_COL.join(''), PV.map(v => v.name).join('+'), circuitName, parts.filter(p => p.t === 'mst').map(p => p.L).join(''),
+      document.querySelector('[data-power="boxes"]').getAttribute('aria-pressed')].join('|'));
+    if (r !== '13|42|boxes|#E8413C#00FF64#3F7FFF|Pressure 1+Temperature|FWD/REV Template|XY|true') out.push('the template loaded as: ' + r);
+    await page.selectOption('#preset', 'seal'); await page.waitForTimeout(100);
+    const back = await page.evaluate(() => [POWER, PV.length].join('|'));
+    if (back !== 'bars|0') out.push('after it, Start / Stop came up with: ' + back);
+    return out;
+  });
   await check('Ribbon menus: Buttons, Switches, Outputs and Contacts open and place their parts (momentary or maintained, instantaneous or timing)', async page => {
     const out = [];
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
