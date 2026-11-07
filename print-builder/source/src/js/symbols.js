@@ -57,6 +57,10 @@ const CATS = ['Buttons', 'Switches', 'Outputs', 'Contacts', 'Protection', 'Power
 const CAT_COL = { 'Buttons': '#00B050', 'Switches': '#0070C0', 'Outputs': '#FFC000', 'Contacts': '#c9c9c9', 'Protection': '#e5484d', 'Power': '#FF9C37' };
 // the motor as Circuit Builder prints it: T1, T2, T3 on its left, a line apart like the power circuit's poles, T2's
 // lead straight in, T1's and T3's bending in to the circle (so its wires come in level, on the grid)
+// the fused disconnect's contact points: Dallas's size, drawn with an outline as heavy as its lines (not heavier)
+PSYM['3PH Fusible Disconnect'] = { ...PSYM['3PH Fusible Disconnect'], b: PSYM['3PH Fusible Disconnect'].b.replace(/r="3\.333" transform="matrix\(3/g, 'r="5" transform="matrix(3').replace(/r="2" transform="matrix\(3/g, 'r="3.667" transform="matrix(3') };
+// relay coils as wide as a contact (80, terminal to terminal), so they don't look small beside them
+PSYM.Relay = { b: '<circle cx="0" cy="0" r="40" fill="#000" stroke="none"/><circle cx="0" cy="0" r="36" fill="#fff" stroke="none"/>', t: [[-40, 0], [40, 0]], y0: -40, y1: 40 };
 PSYM['Motor Leads'] = { b: PSYM.Motor.b + '<path d="M-140 -120H-120L-42.426 -42.426M-140 0H-60M-140 120H-120L-42.426 42.426" fill="none"/>', t: [[-140, -120], [-140, 0], [-140, 120]], y0: -124, y1: 124 };
 // a coil's kinds: the start of its tag
 const COIL_PRE = [['CR', 'Control Relay'], ['M', 'Starter'], ['TR', 'Timer'], ['CON', 'Contactor']];
@@ -76,5 +80,10 @@ function extentOf(t) {
 // the poles a device carries a line through (a two-ended device: its two ends)
 const polesOf = t => LIB[t].poles || (termsOf(t).length === 2 ? [[0, 1]] : []);
 // the tags a device carries: a block of three fuses, one for each fuse (FU1 → FU1, FU2, FU3)
-function tagsOf(p) { const r = /^(\D+)(\d+)$/.exec(p.tag || ''); return p.t === 'fus3' && r ? [0, 1, 2].map(i => r[1] + (+r[2] + i)) : [p.tag]; }
+function tagsOf(p) {
+  const three = t => { const r = /^(\D+)(\d+)$/.exec(t || ''); return r ? [0, 1, 2].map(i => r[1] + (+r[2] + i)) : [t]; };
+  if (p.t === 'fus3') return three(p.tag);
+  if (p.t === 'fdsc3') return [p.tag, ...(p.fu ? three(p.fu) : [])];   // (a fused disconnect: DS1, and its fuses FU1-FU3)
+  return [p.tag];
+}
 const isPowerKind = k => k === 'power' || k === 'ol' || k === 'starter' || k === 'motor' || k === 'supply';

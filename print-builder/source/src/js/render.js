@@ -36,12 +36,13 @@ function drawSheet(s, k, A) {
     if (p.t === 'sup') { arrow(p.x, p.y, 1, 0); text(p.x - 30, p.y + 10, p.tag, 28, 'end'); continue; }
     const sym = PSYM[LIB[p.t].sym], r = p.rot || 0, kind = LIB[p.t].kind;
     g += `<g class="sym" transform="translate(${p.x} ${p.y})${r ? ` rotate(${r})` : ''}">${sym.b}</g>`;
-    const up = r % 180 !== 0, inside = (kind === 'coil' && (p.tag || '').length <= 3) || kind === 'motor';
+    const up = r % 180 !== 0, inside = (kind === 'coil' && (p.tag || '').length <= 4) || kind === 'motor';
     if (up) { const off = Math.max(Math.abs(sym.y0), Math.abs(sym.y1)) + 10; text(p.x + off, p.y + 9, p.tag, 26, 'start'); if (p.desc) text(p.x + off, p.y + 34, p.desc, 20, 'start', 500); }
     else {
       const y0 = r === 180 ? -sym.y1 : sym.y0, y1 = r === 180 ? -sym.y0 : sym.y1;
+      if (p.t === 'fdsc3' && !r) tagsOf(p).slice(1).forEach((tg, i) => text(p.x + 60, termPos(p, 2 * i)[1] - 24, tg, 26));   // (a fused disconnect's fuses, each its number)
       if (p.t === 'fus3' && !r) tagsOf(p).forEach((tg, i) => text(p.x, termPos(p, 2 * i)[1] - 24, tg, 26));   // (each fuse its own number)
-      else if (inside) text(p.x, p.y + (kind === 'motor' ? 11 : 9), p.tag, kind === 'motor' ? 30 : 24); else text(p.x, p.y + y0 - 8, p.tag, 26);
+      else if (inside) text(p.x, p.y + (kind === 'motor' ? 11 : 10), p.tag, kind === 'motor' ? 30 : (p.tag || '').length > 3 ? 22 : 27); else text(p.x, p.y + y0 - 8, p.tag, 26);
       if (p.desc) text(p.x, p.y + y1 + 22, p.desc, 20, 'middle', 500);
     }
     if (p.t === 'xfmr') { const t = [0, 1, 2, 3].map(i => termPos(p, i)), nm = ['H1', 'H2', 'X1', 'X2'];
@@ -58,7 +59,12 @@ function drawSheet(s, k, A) {
     if (xs.length) text(Math.min(...xs) - 50, y + 9, n, 24, 'end');
   }
   if (SHOW.xr) for (const p of s.parts) { const r = A.xref.get(p.id); if (!r || !r.length) continue;
-    const x = rL2 && p.x < rL2.x ? rL2.x + 26 : p.x + 90;
+    // (right of everything on its row: L2, the symbols, and any wire along the row or crossing it)
+    const xs = s.parts.filter(q => q.t !== 'rail' && q.y === p.y).map(q => q.x + extentOf(q.t).x1);
+    for (const w of s.wires) { const P = wirePts(s, w); for (let i = 0; i < P.length - 1; i++) { const [a, b] = [P[i], P[i + 1]];
+      if (a[1] === p.y && b[1] === p.y) xs.push(Math.max(a[0], b[0])); else if (a[0] === b[0] && Math.min(a[1], b[1]) <= p.y && Math.max(a[1], b[1]) >= p.y) xs.push(a[0]); } }
+    if (rL2 && p.y >= rL2.y0 && p.y <= rL2.y1) xs.push(rL2.x);
+    const x = Math.max(...xs) + 26;
     g += `<text x="${x}" y="${p.y + 9}" font-size="22" font-weight="700">${r.map(o => o.nc ? `<tspan text-decoration="underline">${o.n}</tspan>` : o.n).join(', ')}</text>`; }
   // notes
   for (const t of s.texts) { const lines = String(t.s || '').split('\n');

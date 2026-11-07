@@ -103,12 +103,12 @@ let passed = 0, failed = 0;
     return r.join('|') === 'PB1,PB2,CR1,CR1|1,2,3,4|0' ? [] : ['tags | numbers | issues: ' + r.join(' | ')];
   });
 
-  await check('Motor: T1, T2, T3 come in level on the grid; selector uses the operator symbol; fused disconnect rings as thin as the rest', async p => {
+  await check('Motor: T1, T2, T3 come in level on the grid; selector uses the operator symbol; fused disconnect circles Dallas’s size, outlined as heavy as its lines', async p => {
     const r = await p.evaluate(() => { loadDoc(template('starter')); refresh(true); const m = S.parts.find(q => q.t === 'motor');
       const ts = [0, 1, 2].map(i => termPos(m, i)), ws = [0, 1, 2].map(i => wiresAt(S, { p: m.id, i }).length);
       const level = [0, 1, 2].every(i => { const w = wiresAt(S, { p: m.id, i })[0]; const P = wirePts(S, w); return P.every(q => q[1] === ts[i][1]); });
       const tl = [...new Set(S.wires.filter(w => [w.a, w.b].some(e => e.p === m.id)).map(w => A.label.get(A.wireRoot(S, w))))].sort().join(',');
-      return [ts.every(t => t[0] % 20 === 0 && t[1] % 20 === 0), ws.join(''), level, tl, LIB.sel.sym, /r=\\?"3.333\\?"/.test(PSYM['3PH Fusible Disconnect'].b) && !/r=\\?"5\\?" transform=\\?"matrix\(3/.test(PSYM['3PH Fusible Disconnect'].b)]; });
+      return [ts.every(t => t[0] % 20 === 0 && t[1] % 20 === 0), ws.join(''), level, tl, LIB.sel.sym, /r="3\.667" transform="matrix\(3/.test(PSYM['3PH Fusible Disconnect'].b) && /r="5" transform="matrix\(3/.test(PSYM['3PH Fusible Disconnect'].b)]; });
     return r.join('|') === 'true|111|true|T1A,T2A,T3A|Selector Switch Operator|true' ? [] : ['grid | wired | level | numbers | selector | fusible: ' + r.join(' | ')];
   });
 
@@ -156,6 +156,38 @@ let passed = 0, failed = 0;
     const missing = m.icons.map(i => i.src).filter(f => !fs.existsSync(path.join(dist, f)));
     const linked = await p.evaluate(() => document.querySelector('link[rel=manifest]').getAttribute('href'));
     return !missing.length && m.icons.every(i => i.src.includes('pb-')) && linked.startsWith('print-builder.webmanifest') ? [] : ['missing: ' + missing + ', linked: ' + linked];
+  });
+
+  await check('Fused disconnect: its fuses take FU numbers with the others, each labelled; relay coils as wide as contacts', async p => {
+    const r = await p.evaluate(() => { loadDoc(template('blank')); const d = addPart(S, 'fdsc3', 500, 400), f = addPart(S, 'fus3', 900, 400), one = addPart(S, 'fuse', 1200, 400); refresh();
+      const lbl = [...svg.querySelectorAll('g.ink text')].map(e => e.textContent).filter(t => /^FU\d$/.test(t)).sort().join(',');
+      return [d.tag + ':' + tagsOf(d).slice(1).join('/'), f.tag, one.tag, lbl, termsOf('coil').map(t => t[0]).join('/'), termsOf('con_no').map(t => t[0]).join('/')]; });
+    return r.join('|') === 'DS1:FU1/FU2/FU3|FU4|FU7|FU1,FU2,FU3,FU4,FU5,FU6,FU7|-40/40|-40/40' ? [] : ['got: ' + r.join(' | ')];
+  });
+
+  await check('Cross-references: right of everything on the coil’s rung, even with no L2 rail', async p => {
+    const r = await p.evaluate(() => { loadDoc(template('blank')); S.parts = S.parts.filter(q => q.t !== 'rail');
+      addWire(S, [[200, 600], [1600, 600], [1600, 300]]); const c = addPart(S, 'coil', 800, 600, { pre: 'M' }); addPart(S, 'olc', 1100, 600, { tag: 'OL1' });
+      addWire(S, [[200, 900], [1000, 900]]); addPart(S, 'con_no', 500, 900, { tag: c.tag }); refresh(true);
+      const t = [...svg.querySelectorAll('g.ink text')].find(e => +e.getAttribute('y') === 609 && /^\d/.test(e.textContent) && e.getAttribute('text-anchor') !== 'end' && e.getAttribute('text-anchor') !== 'middle');
+      return t ? +t.getAttribute('x') : null; });
+    return r != null && r >= 1620 ? [] : ['cross-reference x (should be right of the wire at 1600): ' + r];
+  });
+
+  await check('Moving parts: wires step next to the part, never running along another wire', async p => {
+    const r = await p.evaluate(() => { const out = [];
+      for (const [t, dx, dy] of [['mst3', 0, 200], ['mst3', 0, -100], ['xfmr', 200, 0], ['fus3', 0, 60], ['coil', 0, -120], ['ol3', 0, 160]]) {
+        loadDoc(template('starter')); const q = S.parts.find(x => x.t === t), orig = clone(S);
+        for (let k = 1; k <= 5; k++) { doc.sheets[0] = S = clone(orig); moveItems(S, new Set([q.id]), snap(dx * k / 5), snap(dy * k / 5)); } tidy(S); A = analyse();
+        const segs = S.wires.flatMap(w => { const P = wirePts(S, w), n = A.label.get(A.wireRoot(S, w)); return P.slice(1).map((b, i) => ({ n, a: P[i], b })); });
+        let bad = 0;
+        for (let i = 0; i < segs.length; i++) for (let j = i + 1; j < segs.length; j++) { const u = segs[i], v = segs[j]; if (u.n === v.n) continue;
+          const h = (g) => g.a[1] === g.b[1];
+          if (h(u) && h(v) && u.a[1] === v.a[1] && Math.min(Math.max(u.a[0], u.b[0]), Math.max(v.a[0], v.b[0])) > Math.max(Math.min(u.a[0], u.b[0]), Math.min(v.a[0], v.b[0]))) bad++;
+          if (!h(u) && !h(v) && u.a[0] === v.a[0] && Math.min(Math.max(u.a[1], u.b[1]), Math.max(v.a[1], v.b[1])) > Math.max(Math.min(u.a[1], u.b[1]), Math.min(v.a[1], v.b[1]))) bad++; }
+        if (bad) out.push(`${t} ${dx},${dy}: ${bad} overlaps`); }
+      return out; });
+    return r;
   });
 
   await check('Title block: boxes added, changed and taken away show on the sheet; saved and opened again', async p => {

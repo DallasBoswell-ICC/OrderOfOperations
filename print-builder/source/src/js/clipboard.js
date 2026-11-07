@@ -38,6 +38,7 @@ function pasteClip(where = null) {
     if (k === 'contact' || k === 'starter') p.tag = tagMap.get(p.tag) || p.tag;
     else if (k === 'olc') p.tag = tagMap.get('OL:' + p.tag) || p.tag;
     else if (k !== 'supply') p.tag = nextTag(LIB[p.t].pre, k === 'motor');
+    if (p.t === 'fdsc3') { p.fu = ''; p.tag = nextTag(LIB[p.t].pre); p.fu = nextTag('FU'); }
     p.id = id(p.id); p.x += dx; p.y += dy; add(p);
   }
   for (const n of c.nodes) { n.id = id(n.id); n.x += dx; n.y += dy; S.nodes.push(n); }

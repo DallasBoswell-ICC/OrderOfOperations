@@ -188,21 +188,34 @@ function moveItems(s, ids, dx, dy) {
   for (const n of s.nodes) if (ids.has(n.id)) { n.x += dx; n.y += dy; }
   for (const t of s.texts) if (ids.has(t.id)) { t.x += dx; t.y += dy; }
   for (const w of s.wires) for (const e of [w.a, w.b]) if (e.r && ids.has(e.r)) e.y += dy;
+  // (a part's straight wires that must now step: each steps close to the part, the ones on one side nested so
+  // they never run over one another, rather than halfway along where the step would cut across the rest)
+  const rank = new Map();
+  for (const p of s.parts) if (ids.has(p.id) && p.t !== 'rail') {
+    const ws = []; for (let i = 0; i < termsN(p); i++) for (const w of wiresAt(s, { p: p.id, i })) if (!w.pts.length && !(moving(w.a) && moving(w.b))) ws.push({ w, q: termPos(p, i) });
+    for (const side of [0, 1]) {   // (level wires ordered by height, upright ones by across, to suit the way it moved)
+      const grp = ws.filter(({ w }) => { const o = before.get(w.id); return (o.a[1] === o.b[1]) === !side; });
+      const k = side ? 0 : 1, d = side ? dx : dy;
+      grp.sort((u, v) => d >= 0 ? u.q[k] - v.q[k] : v.q[k] - u.q[k]).forEach(({ w }, r) => rank.set(w.id, r));
+    }
+  }
   for (const w of s.wires) {
     const am = moving(w.a), bm = moving(w.b), o = before.get(w.id);
     if (am && bm) { w.pts = w.pts.map(([x, y]) => [x + dx, y + dy]); if (w.lab) w.lab = [w.lab[0] + dx, w.lab[1] + dy]; continue; }
     if (!am && !bm) continue;
-    reroute(s, w, o.a, o.b, o.pts);
+    reroute(s, w, o.a, o.b, o.pts, rank.get(w.id) || 0, !!am);
   }
   for (const w of s.wires) simplify(s, w);
 }
 // wire w's ends have moved (from oa, ob): its bends next to them moved along so every run stays level or upright
-function reroute(s, w, oa, ob, opts) {
+function reroute(s, w, oa, ob, opts, rank = 0, aMoved = true) {
   const na = pos(s, w.a), nb = pos(s, w.b);
   if (!opts.length) {
     if (na[0] === nb[0] || na[1] === nb[1]) { w.pts = []; return; }
-    if (oa[1] === ob[1]) { const mx = snap((na[0] + nb[0]) / 2); w.pts = [[mx, na[1]], [mx, nb[1]]]; }
-    else { const my = snap((na[1] + nb[1]) / 2); w.pts = [[na[0], my], [nb[0], my]]; }
+    // (the step goes a little way out from the end that moved, not halfway: the rest of the wire stays put)
+    const k = oa[1] === ob[1] ? 0 : 1, M = aMoved ? na : nb, F = aMoved ? nb : na, dir = Math.sign(F[k] - M[k]) || 1, len = Math.abs(F[k] - M[k]);
+    const J = 2 * G + 2 * G * rank, at = J <= len - G ? M[k] + dir * J : snap((M[k] + F[k]) / 2);
+    w.pts = k === 0 ? [[at, na[1]], [at, nb[1]]] : [[na[0], at], [nb[0], at]];
     return;
   }
   const pts = opts.map(q => [...q]), f = pts[0], l = pts[pts.length - 1];
@@ -244,7 +257,7 @@ const tagPre = p => p.t === 'coil' ? (p.pre || 'CR') : LIB[p.t] && LIB[p.t].pre;
 // the next free tag starting pre: one more than the highest in use (FU1, FU2, FU3...: never the same twice)
 function nextTag(pre, motor = false) {   // (motors are counted among themselves: motor M1 and its starter M1 go together)
   let m = 0; const re = new RegExp('^' + pre + '(\\d+)$');
-  for (const { p } of allParts()) { if (['contact', 'starter', 'olc'].includes(LIB[p.t].kind) || (LIB[p.t].kind === 'motor') !== motor) continue; const r = re.exec(p.tag || ''); if (r) m = Math.max(m, +r[1] + (p.t === 'fus3' ? 2 : 0)); }   // (a block of three fuses takes three numbers: FU1, FU2, FU3)   // (contacts borrow their coil's tag: they take none of their own)
+  for (const { p } of allParts()) { if (['contact', 'starter', 'olc'].includes(LIB[p.t].kind) || (LIB[p.t].kind === 'motor') !== motor) continue; for (const tg of tagsOf(p)) { const r = re.exec(tg || ''); if (r) m = Math.max(m, +r[1]); } }   // (a block of three fuses, or a fused disconnect's fuses, take three numbers each)   // (a block of three fuses takes three numbers: FU1, FU2, FU3)   // (contacts borrow their coil's tag: they take none of their own)
   return pre + (m + 1);
 }
 // a new part's tag: its own next one; a contact, its coil's (the last coil put down or picked); starter contacts, a starter's
@@ -269,6 +282,7 @@ function redo() { if (!REDO.length) return false; UNDO.push(JSON.stringify(doc))
 function addPart(s, t, x, y, o = {}) {
   const p = { id: uid('p'), t, x, y, rot: o.rot || 0, desc: o.desc || '' };
   if (t === 'coil') p.pre = o.pre || 'CR';
+  if (t === 'fdsc3') p.fu = o.fu || nextTag('FU');   // (its three fuses: FU1, FU2, FU3, counted with the rest)
   p.tag = o.tag != null ? o.tag : t === 'coil' ? nextTag(p.pre) : defaultTag(t);
   if (LIB[t].kind === 'coil') lastCoil = p.tag;
   s.parts.push(p); settle(s, p); tidy(s); return p;
@@ -288,5 +302,5 @@ function rotateParts(s, ids) {
   const touched = s.wires.filter(w => [w.a, w.b].some(e => e.p && ids.has(e.p)));
   const before = new Map(touched.map(w => [w.id, { a: pos(s, w.a), b: pos(s, w.b), pts: w.pts.map(q => [...q]) }]));
   for (const p of s.parts) if (ids.has(p.id) && p.t !== 'rail' && p.t !== 'sup') p.rot = ((p.rot || 0) + 90) % 360;
-  for (const w of touched) { const o = before.get(w.id); reroute(s, w, o.a, o.b, o.pts); simplify(s, w); }
+  for (const w of touched) { const o = before.get(w.id); reroute(s, w, o.a, o.b, o.pts, 0, !!(w.a.p && ids.has(w.a.p))); simplify(s, w); }
 }

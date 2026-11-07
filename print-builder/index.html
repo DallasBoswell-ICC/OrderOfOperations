@@ -7,7 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22%3E %3Crect width=%22512%22 height=%22512%22 rx=%22112%22 fill=%22%23ffffff%22/%3E %3Crect x=%2210%22 y=%2210%22 width=%22492%22 height=%22492%22 rx=%22104%22 fill=%22none%22 stroke=%22%23d5d9de%22 stroke-width=%228%22/%3E %3Cellipse cx=%22208%22 cy=%22296%22 rx=%22128%22 ry=%22146%22 fill=%22none%22 stroke=%22%231f5fbf%22 stroke-width=%2262%22/%3E %3Ctext x=%22402%22 y=%22232%22 text-anchor=%22middle%22 font-family=%22Arial, Helvetica, 'DejaVu Sans', sans-serif%22 font-weight=%22700%22 font-size=%22200%22 fill=%22%231f5fbf%22%3E3%3C/text%3E %3C/svg%3E">
 <!-- installing it from the website as an app (Chrome: the install button in the address bar); the manifest and
      icons/ sit next to the page on the site -->
-<link rel="manifest" href="print-builder.webmanifest?v=2">
+<link rel="manifest" href="print-builder.webmanifest?v=3">
 <link rel="apple-touch-icon" href="icons/pb-apple-touch-icon.png">
 <meta name="theme-color" content="#1c1d1f">
 <style>:root {
@@ -317,6 +317,10 @@ const CATS = ['Buttons', 'Switches', 'Outputs', 'Contacts', 'Protection', 'Power
 const CAT_COL = { 'Buttons': '#00B050', 'Switches': '#0070C0', 'Outputs': '#FFC000', 'Contacts': '#c9c9c9', 'Protection': '#e5484d', 'Power': '#FF9C37' };
 // the motor as Circuit Builder prints it: T1, T2, T3 on its left, a line apart like the power circuit's poles, T2's
 // lead straight in, T1's and T3's bending in to the circle (so its wires come in level, on the grid)
+// the fused disconnect's contact points: Dallas's size, drawn with an outline as heavy as its lines (not heavier)
+PSYM['3PH Fusible Disconnect'] = { ...PSYM['3PH Fusible Disconnect'], b: PSYM['3PH Fusible Disconnect'].b.replace(/r="3\.333" transform="matrix\(3/g, 'r="5" transform="matrix(3').replace(/r="2" transform="matrix\(3/g, 'r="3.667" transform="matrix(3') };
+// relay coils as wide as a contact (80, terminal to terminal), so they don't look small beside them
+PSYM.Relay = { b: '<circle cx="0" cy="0" r="40" fill="#000" stroke="none"/><circle cx="0" cy="0" r="36" fill="#fff" stroke="none"/>', t: [[-40, 0], [40, 0]], y0: -40, y1: 40 };
 PSYM['Motor Leads'] = { b: PSYM.Motor.b + '<path d="M-140 -120H-120L-42.426 -42.426M-140 0H-60M-140 120H-120L-42.426 42.426" fill="none"/>', t: [[-140, -120], [-140, 0], [-140, 120]], y0: -124, y1: 124 };
 // a coil's kinds: the start of its tag
 const COIL_PRE = [['CR', 'Control Relay'], ['M', 'Starter'], ['TR', 'Timer'], ['CON', 'Contactor']];
@@ -336,7 +340,12 @@ function extentOf(t) {
 // the poles a device carries a line through (a two-ended device: its two ends)
 const polesOf = t => LIB[t].poles || (termsOf(t).length === 2 ? [[0, 1]] : []);
 // the tags a device carries: a block of three fuses, one for each fuse (FU1 → FU1, FU2, FU3)
-function tagsOf(p) { const r = /^(\D+)(\d+)$/.exec(p.tag || ''); return p.t === 'fus3' && r ? [0, 1, 2].map(i => r[1] + (+r[2] + i)) : [p.tag]; }
+function tagsOf(p) {
+  const three = t => { const r = /^(\D+)(\d+)$/.exec(t || ''); return r ? [0, 1, 2].map(i => r[1] + (+r[2] + i)) : [t]; };
+  if (p.t === 'fus3') return three(p.tag);
+  if (p.t === 'fdsc3') return [p.tag, ...(p.fu ? three(p.fu) : [])];   // (a fused disconnect: DS1, and its fuses FU1-FU3)
+  return [p.tag];
+}
 const isPowerKind = k => k === 'power' || k === 'ol' || k === 'starter' || k === 'motor' || k === 'supply';
 
 /* ---- js/model.js ---- */
@@ -530,21 +539,34 @@ function moveItems(s, ids, dx, dy) {
   for (const n of s.nodes) if (ids.has(n.id)) { n.x += dx; n.y += dy; }
   for (const t of s.texts) if (ids.has(t.id)) { t.x += dx; t.y += dy; }
   for (const w of s.wires) for (const e of [w.a, w.b]) if (e.r && ids.has(e.r)) e.y += dy;
+  // (a part's straight wires that must now step: each steps close to the part, the ones on one side nested so
+  // they never run over one another, rather than halfway along where the step would cut across the rest)
+  const rank = new Map();
+  for (const p of s.parts) if (ids.has(p.id) && p.t !== 'rail') {
+    const ws = []; for (let i = 0; i < termsN(p); i++) for (const w of wiresAt(s, { p: p.id, i })) if (!w.pts.length && !(moving(w.a) && moving(w.b))) ws.push({ w, q: termPos(p, i) });
+    for (const side of [0, 1]) {   // (level wires ordered by height, upright ones by across, to suit the way it moved)
+      const grp = ws.filter(({ w }) => { const o = before.get(w.id); return (o.a[1] === o.b[1]) === !side; });
+      const k = side ? 0 : 1, d = side ? dx : dy;
+      grp.sort((u, v) => d >= 0 ? u.q[k] - v.q[k] : v.q[k] - u.q[k]).forEach(({ w }, r) => rank.set(w.id, r));
+    }
+  }
   for (const w of s.wires) {
     const am = moving(w.a), bm = moving(w.b), o = before.get(w.id);
     if (am && bm) { w.pts = w.pts.map(([x, y]) => [x + dx, y + dy]); if (w.lab) w.lab = [w.lab[0] + dx, w.lab[1] + dy]; continue; }
     if (!am && !bm) continue;
-    reroute(s, w, o.a, o.b, o.pts);
+    reroute(s, w, o.a, o.b, o.pts, rank.get(w.id) || 0, !!am);
   }
   for (const w of s.wires) simplify(s, w);
 }
 // wire w's ends have moved (from oa, ob): its bends next to them moved along so every run stays level or upright
-function reroute(s, w, oa, ob, opts) {
+function reroute(s, w, oa, ob, opts, rank = 0, aMoved = true) {
   const na = pos(s, w.a), nb = pos(s, w.b);
   if (!opts.length) {
     if (na[0] === nb[0] || na[1] === nb[1]) { w.pts = []; return; }
-    if (oa[1] === ob[1]) { const mx = snap((na[0] + nb[0]) / 2); w.pts = [[mx, na[1]], [mx, nb[1]]]; }
-    else { const my = snap((na[1] + nb[1]) / 2); w.pts = [[na[0], my], [nb[0], my]]; }
+    // (the step goes a little way out from the end that moved, not halfway: the rest of the wire stays put)
+    const k = oa[1] === ob[1] ? 0 : 1, M = aMoved ? na : nb, F = aMoved ? nb : na, dir = Math.sign(F[k] - M[k]) || 1, len = Math.abs(F[k] - M[k]);
+    const J = 2 * G + 2 * G * rank, at = J <= len - G ? M[k] + dir * J : snap((M[k] + F[k]) / 2);
+    w.pts = k === 0 ? [[at, na[1]], [at, nb[1]]] : [[na[0], at], [nb[0], at]];
     return;
   }
   const pts = opts.map(q => [...q]), f = pts[0], l = pts[pts.length - 1];
@@ -586,7 +608,7 @@ const tagPre = p => p.t === 'coil' ? (p.pre || 'CR') : LIB[p.t] && LIB[p.t].pre;
 // the next free tag starting pre: one more than the highest in use (FU1, FU2, FU3...: never the same twice)
 function nextTag(pre, motor = false) {   // (motors are counted among themselves: motor M1 and its starter M1 go together)
   let m = 0; const re = new RegExp('^' + pre + '(\\d+)$');
-  for (const { p } of allParts()) { if (['contact', 'starter', 'olc'].includes(LIB[p.t].kind) || (LIB[p.t].kind === 'motor') !== motor) continue; const r = re.exec(p.tag || ''); if (r) m = Math.max(m, +r[1] + (p.t === 'fus3' ? 2 : 0)); }   // (a block of three fuses takes three numbers: FU1, FU2, FU3)   // (contacts borrow their coil's tag: they take none of their own)
+  for (const { p } of allParts()) { if (['contact', 'starter', 'olc'].includes(LIB[p.t].kind) || (LIB[p.t].kind === 'motor') !== motor) continue; for (const tg of tagsOf(p)) { const r = re.exec(tg || ''); if (r) m = Math.max(m, +r[1]); } }   // (a block of three fuses, or a fused disconnect's fuses, take three numbers each)   // (a block of three fuses takes three numbers: FU1, FU2, FU3)   // (contacts borrow their coil's tag: they take none of their own)
   return pre + (m + 1);
 }
 // a new part's tag: its own next one; a contact, its coil's (the last coil put down or picked); starter contacts, a starter's
@@ -611,6 +633,7 @@ function redo() { if (!REDO.length) return false; UNDO.push(JSON.stringify(doc))
 function addPart(s, t, x, y, o = {}) {
   const p = { id: uid('p'), t, x, y, rot: o.rot || 0, desc: o.desc || '' };
   if (t === 'coil') p.pre = o.pre || 'CR';
+  if (t === 'fdsc3') p.fu = o.fu || nextTag('FU');   // (its three fuses: FU1, FU2, FU3, counted with the rest)
   p.tag = o.tag != null ? o.tag : t === 'coil' ? nextTag(p.pre) : defaultTag(t);
   if (LIB[t].kind === 'coil') lastCoil = p.tag;
   s.parts.push(p); settle(s, p); tidy(s); return p;
@@ -630,7 +653,7 @@ function rotateParts(s, ids) {
   const touched = s.wires.filter(w => [w.a, w.b].some(e => e.p && ids.has(e.p)));
   const before = new Map(touched.map(w => [w.id, { a: pos(s, w.a), b: pos(s, w.b), pts: w.pts.map(q => [...q]) }]));
   for (const p of s.parts) if (ids.has(p.id) && p.t !== 'rail' && p.t !== 'sup') p.rot = ((p.rot || 0) + 90) % 360;
-  for (const w of touched) { const o = before.get(w.id); reroute(s, w, o.a, o.b, o.pts); simplify(s, w); }
+  for (const w of touched) { const o = before.get(w.id); reroute(s, w, o.a, o.b, o.pts, 0, !!(w.a.p && ids.has(w.a.p))); simplify(s, w); }
 }
 
 /* ---- js/nets.js ---- */
@@ -889,12 +912,13 @@ function drawSheet(s, k, A) {
     if (p.t === 'sup') { arrow(p.x, p.y, 1, 0); text(p.x - 30, p.y + 10, p.tag, 28, 'end'); continue; }
     const sym = PSYM[LIB[p.t].sym], r = p.rot || 0, kind = LIB[p.t].kind;
     g += `<g class="sym" transform="translate(${p.x} ${p.y})${r ? ` rotate(${r})` : ''}">${sym.b}</g>`;
-    const up = r % 180 !== 0, inside = (kind === 'coil' && (p.tag || '').length <= 3) || kind === 'motor';
+    const up = r % 180 !== 0, inside = (kind === 'coil' && (p.tag || '').length <= 4) || kind === 'motor';
     if (up) { const off = Math.max(Math.abs(sym.y0), Math.abs(sym.y1)) + 10; text(p.x + off, p.y + 9, p.tag, 26, 'start'); if (p.desc) text(p.x + off, p.y + 34, p.desc, 20, 'start', 500); }
     else {
       const y0 = r === 180 ? -sym.y1 : sym.y0, y1 = r === 180 ? -sym.y0 : sym.y1;
+      if (p.t === 'fdsc3' && !r) tagsOf(p).slice(1).forEach((tg, i) => text(p.x + 60, termPos(p, 2 * i)[1] - 24, tg, 26));   // (a fused disconnect's fuses, each its number)
       if (p.t === 'fus3' && !r) tagsOf(p).forEach((tg, i) => text(p.x, termPos(p, 2 * i)[1] - 24, tg, 26));   // (each fuse its own number)
-      else if (inside) text(p.x, p.y + (kind === 'motor' ? 11 : 9), p.tag, kind === 'motor' ? 30 : 24); else text(p.x, p.y + y0 - 8, p.tag, 26);
+      else if (inside) text(p.x, p.y + (kind === 'motor' ? 11 : 10), p.tag, kind === 'motor' ? 30 : (p.tag || '').length > 3 ? 22 : 27); else text(p.x, p.y + y0 - 8, p.tag, 26);
       if (p.desc) text(p.x, p.y + y1 + 22, p.desc, 20, 'middle', 500);
     }
     if (p.t === 'xfmr') { const t = [0, 1, 2, 3].map(i => termPos(p, i)), nm = ['H1', 'H2', 'X1', 'X2'];
@@ -911,7 +935,12 @@ function drawSheet(s, k, A) {
     if (xs.length) text(Math.min(...xs) - 50, y + 9, n, 24, 'end');
   }
   if (SHOW.xr) for (const p of s.parts) { const r = A.xref.get(p.id); if (!r || !r.length) continue;
-    const x = rL2 && p.x < rL2.x ? rL2.x + 26 : p.x + 90;
+    // (right of everything on its row: L2, the symbols, and any wire along the row or crossing it)
+    const xs = s.parts.filter(q => q.t !== 'rail' && q.y === p.y).map(q => q.x + extentOf(q.t).x1);
+    for (const w of s.wires) { const P = wirePts(s, w); for (let i = 0; i < P.length - 1; i++) { const [a, b] = [P[i], P[i + 1]];
+      if (a[1] === p.y && b[1] === p.y) xs.push(Math.max(a[0], b[0])); else if (a[0] === b[0] && Math.min(a[1], b[1]) <= p.y && Math.max(a[1], b[1]) >= p.y) xs.push(a[0]); } }
+    if (rL2 && p.y >= rL2.y0 && p.y <= rL2.y1) xs.push(rL2.x);
+    const x = Math.max(...xs) + 26;
     g += `<text x="${x}" y="${p.y + 9}" font-size="22" font-weight="700">${r.map(o => o.nc ? `<tspan text-decoration="underline">${o.n}</tspan>` : o.n).join(', ')}</text>`; }
   // notes
   for (const t of s.texts) { const lines = String(t.s || '').split('\n');
@@ -1316,6 +1345,7 @@ function pasteClip(where = null) {
     if (k === 'contact' || k === 'starter') p.tag = tagMap.get(p.tag) || p.tag;
     else if (k === 'olc') p.tag = tagMap.get('OL:' + p.tag) || p.tag;
     else if (k !== 'supply') p.tag = nextTag(LIB[p.t].pre, k === 'motor');
+    if (p.t === 'fdsc3') { p.fu = ''; p.tag = nextTag(LIB[p.t].pre); p.fu = nextTag('FU'); }
     p.id = id(p.id); p.x += dx; p.y += dy; add(p);
   }
   for (const n of c.nodes) { n.id = id(n.id); n.x += dx; n.y += dy; S.nodes.push(n); }
@@ -1449,10 +1479,11 @@ function renderProps0() {
     const list = k === 'contact' || k === 'starter' ? coils : k === 'olc' ? ols : [];
     const rn = A.rung.get(p.id), xr = A.xref.get(p.id);
     const termNums = [...Array(termsN(p)).keys()].map(i => A.label.get(A.rootT(p, S, i))).filter(Boolean);
-    P.innerHTML = `<h4>${esc(d.name)}${p.tag ? ' ' + esc(tagsOf(p).length > 1 ? tagsOf(p)[0] + '–' + tagsOf(p)[2] : p.tag) : ''}</h4>
+    P.innerHTML = `<h4>${esc(d.name)}${p.tag ? ' ' + esc(p.t === 'fus3' ? tagsOf(p)[0] + '–' + tagsOf(p)[2] : p.tag) : ''}</h4>
       ${p.t === 'sup' ? `<div class="f">Line<div class="seg">${['L1', 'L2', 'L3'].map(l => `<button data-line="${l}" aria-pressed="${p.tag === l}">${l}</button>`).join('')}</div></div>` : `
       ${k === 'contact' || k === 'starter' || k === 'olc' ? `<div class="f">Worked by<select id="p-of">${[...new Set([...list, p.tag].filter(Boolean))].map(x => `<option value="${esc(x)}"${x === p.tag ? ' selected' : ''}>${esc(x)}${list.includes(x) ? '' : ' (no ' + (k === 'olc' ? 'overload' : 'coil') + ' yet)'}</option>`).join('')}${list.length || p.tag ? '' : `<option value="">(place a ${k === 'olc' ? 'overload' : 'coil'} first)</option>`}<option value="__other">Other…</option></select></div>`
         : `<div class="f">${k === 'coil' || k === 'sw' ? 'Letter' : 'Number'}<input class="in" id="p-tag" value="${esc(p.tag)}" autocomplete="off"></div>`}`}
+      ${p.t === 'fdsc3' ? `<div class="f">Fuses<input class="in" id="p-fu" value="${esc(p.fu || '')}" autocomplete="off" title="The first of its three fuses: FU1 makes them FU1, FU2, FU3"></div><div class="f">&nbsp;<span class="ro">${esc(tagsOf(p).slice(1).join(', '))}</span></div>` : ''}
       ${k === 'coil' ? `<div class="f">Kind<select id="p-pre">${COIL_PRE.map(([v, n]) => `<option value="${v}"${(p.pre || 'CR') === v ? ' selected' : ''}>${n} (${v})</option>`).join('')}</select></div>` : ''}
       ${d.flip ? `<div class="f">Contact<div class="seg"><button data-flip="${/_no$|_hc$/.test(p.t) ? p.t : d.flip}" aria-pressed="${/_no$|_hc$/.test(p.t)}">${/_h[co]$/.test(p.t) ? 'NO (HC)' : 'NO'}</button><button data-flip="${/_nc$|_ho$/.test(p.t) ? p.t : d.flip}" aria-pressed="${/_nc$|_ho$/.test(p.t)}">${/_h[co]$/.test(p.t) ? 'NC (HO)' : 'NC'}</button></div></div>` : ''}
       ${p.t !== 'sup' ? `<div class="f">Label<input class="in" id="p-desc" value="${esc(p.desc)}" placeholder="${k === 'load' && p.t === 'pl' ? 'e.g. RED' : 'e.g. HIGH TEMP'}"></div>` : ''}
@@ -1464,6 +1495,7 @@ function renderProps0() {
       snapshot(); p.tag = v; refresh(); });
     const tg = $('p-tag'); if (tg) tg.addEventListener('input', () => edit(() => { p.tag = tg.value.trim().toUpperCase(); if (k === 'coil') lastCoil = p.tag; }));
     if (tg) tg.addEventListener('change', () => renderProps());
+    const fu = $('p-fu'); if (fu) { fu.addEventListener('input', () => edit(() => { p.fu = fu.value.trim().toUpperCase(); })); fu.addEventListener('change', () => renderProps()); }
     const ds = $('p-desc'); if (ds) ds.addEventListener('input', () => edit(() => { p.desc = ds.value.toUpperCase(); }));
     const pr = $('p-pre'); if (pr) pr.addEventListener('change', () => { snapshot(); p.pre = pr.value; p.tag = ''; p.tag = nextTag(p.pre); lastCoil = p.tag; refresh(); });
     for (const b of P.querySelectorAll('[data-flip]')) b.addEventListener('click', () => { if (b.dataset.flip === p.t) return; snapshot(); p.t = b.dataset.flip; refresh(); });
@@ -1591,6 +1623,8 @@ function loadDoc(d) {
   for (const s of d.sheets) { s.parts ||= []; s.wires ||= []; s.nodes ||= []; s.texts ||= []; for (const p of s.parts) if (p.t !== 'rail' && !LIB[p.t]) throw new Error('unknown symbol ' + p.t); }
   d.tb ||= defaultTB(); d.cur = Math.min(d.cur || 0, d.sheets.length - 1);
   doc = d; S = doc.sheets[doc.cur]; sel = new Set(); selW = null; UNDO.length = 0; REDO.length = 0;
+  // (a fused disconnect from before its fuses were numbered: the next three numbers)
+  for (const s of d.sheets) for (const p of s.parts) if (p.t === 'fdsc3' && !p.fu) p.fu = nextTag('FU');
 }
 const fileName = () => ((doc.tb.fields.find(f => /title/i.test(f.label)) || {}).value || 'Print').replace(/[\\/:*?"<>|]+/g, '').trim() || 'Print';
 $('save-btn').addEventListener('click', () => {
