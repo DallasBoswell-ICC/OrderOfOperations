@@ -15,6 +15,9 @@ function hexPath(cx, cy, R, r) {
 }
 const DEFS = `
   <linearGradient id="gWell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#303030"/><stop offset="1" stop-color="#1f1f1f"/></linearGradient>
+  <radialGradient id="gEsHead" cx="40%" cy="32%" r="75%"><stop offset="0" stop-color="#ff6a6a"/><stop offset=".45" stop-color="#e3001b"/><stop offset="1" stop-color="#7d000f"/></radialGradient>
+  <radialGradient id="gEsHeadIn" cx="45%" cy="40%" r="75%"><stop offset="0" stop-color="#d4202e"/><stop offset=".55" stop-color="#a5000f"/><stop offset="1" stop-color="#5a0008"/></radialGradient>
+  <radialGradient id="gEsPlate" cx="45%" cy="35%" r="80%"><stop offset="0" stop-color="#ffe866"/><stop offset=".7" stop-color="#ffc800"/><stop offset="1" stop-color="#c99400"/></radialGradient>
   <linearGradient id="gGloss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".38"/><stop offset=".45" stop-color="#fff" stop-opacity=".06"/><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/></linearGradient>
   <radialGradient id="gFace" cx=".42" cy=".38" r=".7"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d2d2d2"/></radialGradient>
   <radialGradient id="gDome" cx=".38" cy=".3" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient>
@@ -50,7 +53,41 @@ const devLabel = (t, L) => { const q = parts.find(p => p.t === t && p.L === L &&
 const uniqueLabel = (t, L) => { const s = devLabel(t, L); if (!s) return ''; const k = s.toUpperCase();
   return parts.some(p => (p.t === 'btn' || p.t === 'coil') && p.label && p.label.trim().toUpperCase() === k && !(p.t === t && p.L === L)) ? '' : s; };
 const idOf = p => uniqueLabel(p.t === 'con' ? 'coil' : p.t === 'lamp' ? 'btn' : p.t, p.L) || p.L;
-const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
+/* an emergency stop: a yellow legend plate, the NC pushbutton's hexagon with its corners rounded the same, EMERGENCY
+   round the top and STOP round the bottom (both reading upright, centred in the band between the head and the plate's
+   edge), and a red mushroom head with the button's letter. Latched in, the head darkens and drops in, and a badge of
+   three arrows going round anticlockwise (twist to release) shows on the top right corner. */
+const ES_PLATE = BOX / 2 * 1.08, ES_HEAD = 16.5, ES_FONT = 7.4;
+let esN = 0;
+function drawEstop(p, v, x, y, g) {
+  const R = ES_PLATE, ap = R * Math.cos(Math.PI / 6);   // (the plate's apothem: how far its flat sides are from the middle)
+  framed('path', { d: hexPath(x, y, R, R * .17), fill: 'url(#gEsPlate)', stroke: '#7a5d00', 'stroke-width': 1.3 }, g);
+  // (the band the legend sits in, between the head and the plate's flat sides; a capital's height is about .72 of the font's)
+  const mid = (ES_HEAD + 2 + ap - 1.5) / 2, cap = ES_FONT * .72, rt = mid - cap / 2, rb = mid + cap / 2, id = 'es' + (++esN);
+  const defs = el('defs', {}, g);
+  el('path', { id: id + 't', d: `M ${x - rt} ${y} A ${rt} ${rt} 0 0 1 ${x + rt} ${y}` }, defs);   // (over the top, left to right: the letters stand out from it)
+  el('path', { id: id + 'b', d: `M ${x - rb} ${y} A ${rb} ${rb} 0 0 0 ${x + rb} ${y}` }, defs);   // (under the bottom, left to right: they stand in from it, upright)
+  for (const [k, s, sp] of [['t', 'EMERGENCY', .7], ['b', 'STOP', 2.2]]) {
+    const t = el('text', { 'font-size': ES_FONT, 'font-weight': 800, 'letter-spacing': sp, fill: '#1a1a1a', class: 'eslegend' }, g);
+    const tp = el('textPath', { href: '#' + id + k, startOffset: '50%', 'text-anchor': 'middle' }, t); tp.textContent = s;
+  }
+  v.press = el('g', {}, g);
+  v.fill = el('circle', { cx: x, cy: y, r: ES_HEAD, fill: v.sec ? v.secFill : 'url(#gEsHead)', stroke: v.sec ? ESTOP_COL : '#4a0008', 'stroke-width': v.sec ? 1.8 : 1.1, filter: 'url(#fShadow)' }, v.press);
+  v.shine = el('ellipse', { cx: x - ES_HEAD * .25, cy: y - ES_HEAD * .38, rx: ES_HEAD * .5, ry: ES_HEAD * .26, fill: '#fff', opacity: v.sec ? 0 : .28 }, v.press);
+  // the badge: three arrows chasing round anticlockwise
+  const bx = x + R * .62, by = y - R * .74;
+  v.twist = el('g', { style: 'display:none' }, g);
+  el('circle', { cx: bx, cy: by, r: 9, fill: '#1f1f1f', stroke: ESTOP_PLATE, 'stroke-width': 1.4 }, v.twist);
+  for (let i = 0; i < 3; i++) {
+    const a0 = -Math.PI / 2 + i * 2 * Math.PI / 3, a1 = a0 - 1.45, r = 5.2;   // (each from a0 back to a1: anticlockwise on the screen)
+    const P0 = [bx + r * Math.cos(a0), by + r * Math.sin(a0)], P1 = [bx + r * Math.cos(a1), by + r * Math.sin(a1)];
+    el('path', { d: `M ${P0[0]} ${P0[1]} A ${r} ${r} 0 0 0 ${P1[0]} ${P1[1]}`, fill: 'none', stroke: ESTOP_PLATE, 'stroke-width': 1.5 }, v.twist);
+    // (its head: pointing on round the circle, anticlockwise)
+    const tx = Math.sin(a1), ty = -Math.cos(a1), nx = Math.cos(a1), ny = Math.sin(a1), L = 3.1, w = 2.1;
+    el('path', { d: `M ${P1[0] + tx * L} ${P1[1] + ty * L} L ${P1[0] + nx * w} ${P1[1] + ny * w} L ${P1[0] - nx * w} ${P1[1] - ny * w} Z`, fill: ESTOP_PLATE }, v.twist);
+  }
+}
+const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -108,7 +145,8 @@ function drawPart(p, g, x, y, chan, onStation) {
     v.secFill = v.sec ? '#1c1c1c' : null;   // (another contact block: a black cap with a coloured outline, like a selector's other drawings)
     // a button with a light built in: a glow behind it when the light is on
     if (v.lit) v.halo = el('rect', { x: x - BOX / 2 - 4, y: y - BOX / 2 - 4, width: BOX + 8, height: BOX + 8, rx: BOX * .22, fill: p.color, opacity: 0, filter: 'url(#fGlow)' }, g);
-    if (p.nc) {
+    if (p.estop) drawEstop(p, v, x, y, g);
+    else if (p.nc) {
       const RB = BOX / 2 * 1.08, RI = BTN_IN / 2 * 1.1;
       framed('path', { d: hexPath(x, y, RB, RB * .17), fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
       v.press = el('g', {}, g);
@@ -120,7 +158,7 @@ function drawPart(p, g, x, y, chan, onStation) {
       v.fill = el('rect', { x: x - BTN_IN / 2, y: y - BTN_IN / 2, width: BTN_IN, height: BTN_IN, rx: BTN_IN * .1667, fill: v.sec ? v.secFill : p.color, stroke: v.sec ? p.color : '#1d2733', 'stroke-width': v.sec ? 1.8 : 1.2, filter: 'url(#fShadow)' }, v.press);
       el('rect', { x: x - BTN_IN / 2, y: y - BTN_IN / 2, width: BTN_IN, height: BTN_IN, rx: BTN_IN * .1667, fill: 'url(#gGloss)' }, v.press);
     }
-    v.text = el('text', { x, y: y + 6.6, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: DARK_TEXT, style: v.sec ? `fill:${p.color}` : '' }, v.press); capText(v.text, nameOf(p), p.nc ? 35 : 37, 19, y + 6.6);
+    v.text = el('text', { x, y: y + 6.6, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: DARK_TEXT, style: v.sec ? `fill:${p.color}` : p.estop ? 'fill:#fff' : '' }, v.press); capText(v.text, nameOf(p), p.estop ? 27 : p.nc ? 35 : 37, p.estop ? 16 : 19, y + 6.6);
     // the same button drawn more than once (one operator with several contact blocks: pressing one presses them
     // all): a chain-link badge on each one's top left corner
     if (!onStation && parts.filter(q => q.t === 'btn' && q.L === p.L).length > 1) {

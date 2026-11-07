@@ -17,13 +17,14 @@ function circuitData() {
   const w = W_USER ? W : contentRight(), x = v => barsOn() && v === W ? w : v;   // (a length set by moving the bars is kept)
   return {
     app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}), ...(barsOn() ? {} : { pw: 'boxes' }), ...(SRC_COL !== SRC_DEFAULT ? { sc: SRC_COL } : {}), ...(PH_COL.join() !== PH_DEFAULT.join() ? { pc: PH_COL.map(c => c.slice(1)) } : {}),
-    parts: parts.map(p => { const a = [p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (p.t === 'lsw' && p.held) a.push(1); if (p.t === 'tsw' && p.low) a.push(1); if (turns(p) && p.rot) a.push(p.rot); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
+    parts: parts.map(p => { const a = [p.estop ? 'est' : p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (p.t === 'lsw' && p.held) a.push(1); if (p.t === 'tsw' && p.low) a.push(1); if (turns(p) && p.rot) a.push(p.rot); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
       if (p.t === 'sel') { while (a.length < 7) a.push(null); a.length = 7; a.push(selN(p), (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, (p.names || []).join('/'), p.pos || 0); }   // a selector switch: positions, closed-in mask, (no label), names, start
       if (p.lk || p.ls) { while (a.length < 12) a.push(null); a.push(p.lk ? p.lk[0] : 0, p.lk ? p.lk[1] : 0); if (p.ls) a.push(p.ls.join('')); }   // (its dashed link line, moved out of the way; the sides its ends join)
       return a; }),
     wires: wires.map(q => [x(q.x1), q.y1, x(q.x2), q.y2]),
     // (its process values: id, name, kind, unit, lowest, highest, start; and the switches they work: part, value, setting, reset, side)
-    ...(PV.length ? { pv: PV.map(v => [v.id, v.name, v.kind, v.unit, v.min, v.max, v.start]), pd: parts.map((p, i) => isDrv(p) && pvOf(p) ? [i, p.pv, +p.rate || 0, +p.cool || 0, drvPer(p), p.dir === 'down' ? 'down' : 'up', drvOff(p)] : null).filter(Boolean), pl: parts.map((p, i) => pvLinked(p) ? [i, p.pv, +p.sp, +(p.rs ?? p.sp), p.side === 'lo' ? 'lo' : 'hi'] : null).filter(Boolean) } : {}),
+    ...(PV.length ? { pv: PV.map(v => [v.id, v.name, v.kind, v.unit, v.min, v.max, v.start]), pd: parts.map((p, i) => isDrv(p) && pvOf(p) ? [i, p.pv, +p.rate || 0, +p.cool || 0, drvPer(p), p.dir === 'down' ? 'down' : 'up', drvOff(p)] : null).filter(Boolean), pl: parts.map((p, i) => pvLinked(p) ? [i, p.pv, +p.sp, +(p.rs ?? p.sp), p.side === 'lo' ? 'lo' : 'hi'] : null).filter(Boolean),
+      ...(PV.some(v => v.pic) ? { pp: PV.filter(v => v.pic).map(v => [v.id, v.pic.x, v.pic.y]) } : {}), ...(parts.some(p => p.nopic) ? { pn: parts.map((p, i) => p.nopic ? i : -1).filter(i => i >= 0) } : {}) } : {}),
   };
 }
 // check a circuit read from a file or code, and turn it back into parts and wires (throws a readable message)
@@ -40,7 +41,7 @@ function readCircuit(d) {
     if (t === 'lsw') { p.nc = !!a[4]; if (a[7] === 1) p.held = true; }
     if (t === 'psw') p.nc = !!a[4];   // (a pressure switch: NO or NC)
     if (t === 'tsw') { p.nc = !!a[4]; if (a[7] === 1) p.low = true; }   // (a temperature switch: NO or NC, high or low temperature)   // (a limit switch: NO or NC, held or not)
-    if (t === 'btn') { p.nc = !!a[4]; p.maint = a[5] !== 0; }
+    if (t === 'btn') { p.nc = !!a[4]; p.maint = a[5] !== 0; if (a[0] === 'est') { p.estop = true; p.nc = true; p.maint = true; } }
     if (t === 'sel') {
       p.n = Math.max(2, Math.min(4, Math.round(Number(a[7])) || 3)); const m = Math.round(Number(a[8])) || 0;
       p.closedIn = [...Array(p.n).keys()].filter(i => m >> i & 1);
@@ -66,6 +67,9 @@ function readCircuit(d) {
   for (const a of Array.isArray(d.pd) ? d.pd : []) { const p = Array.isArray(a) && ps[a[0]], v = p && pv.find(q => q.id === a[1]);
     if (p && v && isDrv(p) && (p.t !== 'htr' || v.kind === 'temperature')) Object.assign(p, { pv: v.id, rate: Math.max(0, fin(a[2], 1)), cool: Math.max(0, fin(a[3], 1)), per: a[4] === 'min' ? 'min' : 's', dir: a[5] === 'down' ? 'down' : 'up', off: a[6] === 'back' ? 'back' : 'hold' }); }
   for (const a of Array.isArray(d.ph) ? d.ph : []) { const p = Array.isArray(a) && ps[a[0]], v = p && pv.find(q => q.id === a[1]); if (p && v && p.t === 'htr' && v.kind === 'temperature') { p.pv = v.id; p.rate = Math.max(0, fin(a[2], 30)); p.cool = Math.max(0, fin(a[3], 10)); } }
+  // (process pictures: placed on the panel (pp), and outputs whose picture is hidden (pn))
+  for (const a of Array.isArray(d.pp) ? d.pp : []) { const v = Array.isArray(a) && pv.find(q => q.id === a[0]); if (v) v.pic = { x: snap(Math.max(0, Math.min(20000, fin(a[1], 0)))), y: snap(Math.max(0, Math.min(20000, fin(a[2], 0)))) }; }
+  for (const i of Array.isArray(d.pn) ? d.pn : []) { const p = ps[i]; if (p && isDrv(p)) p.nopic = true; }
   const w = Math.max(d.fw ? BAR_MIN : W_MIN, Math.min(20000, d.w === undefined ? W_MIN : num(d.w)));
   const ws = d.wires.slice(0, 2000).map(a => [num(a[0]), num(a[1]), num(a[2]), num(a[3])])
     .filter(([x1, y1, x2, y2]) => (x1 === x2 || y1 === y2) && (x1 !== x2 || y1 !== y2))

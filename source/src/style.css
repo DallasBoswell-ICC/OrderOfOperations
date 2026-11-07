@@ -335,7 +335,7 @@ body.fs .wrap { padding-top: 8px; }
 .pw-reset { font: 600 .76rem var(--ui); color: #222; background: #e8e8e8; border: 1px solid #888; border-radius: 5px; padding: 4px 12px; cursor: pointer; }
 .pw-reset:hover { background: #fff; }
 /* the Process values dialog */
-dialog#pv-dlg { width: min(760px, calc(100vw - 32px)); }
+dialog#pv-dlg { width: min(900px, calc(100vw - 32px)); }
 .pvtable { border-collapse: collapse; width: 100%; font-size: .84rem; }
 .pvtable th { text-align: left; font-weight: 600; color: var(--faint); font-size: .74rem; padding: 4px 5px; border-bottom: 1px solid var(--line); }
 .pvtable td { padding: 4px 5px; border-bottom: 1px solid #303135; }
@@ -385,3 +385,18 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
   #print-host .pr-page { break-after: page; }
   #print-host .pr-page:last-child { break-after: auto; }
 }
+
+/* an emergency stop's legend, round its plate */
+.eslegend { font-family: Inter, Arial, sans-serif; pointer-events: none; }
+/* process pictures on the panel (pictures.js) */
+.pic .piccard { fill: #1c1f23; stroke: #5b6672; stroke-width: 1.6; }
+.pic .piccard.on { stroke: #ffc000; stroke-width: 3; }
+.pic .picwell { fill: #121417; }
+.pic text { font-family: inherit; pointer-events: none; }
+.pic .picname { fill: #e8ecf0; font-weight: 600; }
+.pic .picnum { fill: #5ee08a; font-weight: 700; font-family: ui-monospace, Consolas, monospace; }
+.pic .piclinks { fill: #9aa6b2; font-weight: 500; }
+.pic .picstem { stroke: #7d8894; stroke-width: 2; stroke-dasharray: 3 4; }
+.picdock { fill: rgba(255,192,0,.05); stroke: #8a96a3; stroke-width: 1.6; stroke-dasharray: 6 5; pointer-events: none; }
+.picdocktext { fill: #8a96a3; font-size: 12px; pointer-events: none; }
+.piclink { fill: none; stroke: #ffc000; stroke-width: 2; stroke-dasharray: 6 5; opacity: .9; pointer-events: none; }

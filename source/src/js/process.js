@@ -140,6 +140,7 @@ function buildProcess() {
   showProcess();
 }
 function showProcessValue(id) {
+  picsShow(id);   // (its pictures on the panel too)
   const row = procEl.querySelector(`[data-pv="${id}"]`), v = PV.find(q => q.id === id); if (!row || !v) return;
   const x = PVV[id] ?? v.start, sl = row.querySelector('.pvslide'), box = row.querySelector('.pvval');
   if (document.activeElement !== sl) sl.value = x;
@@ -206,8 +207,8 @@ window.addEventListener('resize', () => { if (!procEl.hidden) placeProcess(); })
    temperature, an oven warming inside, its element glowing; a level, a tank and its liquid; a flow, a pipe, arrows moving
    along it as fast as it flows; a speed, a wheel turning as fast; anything else, a bar. */
 const VIS_COL = { position: '#cfd3d8', pressure: '#FF9C37', temperature: '#FF3333', level: '#3F9BFF', flow: '#5ee08a', speed: '#cfd3d8', other: '#5ee08a' };
-function pvVisDraw(s, v) {
-  const q = {}, defs = el('defs', {}, s), id = 'pvm' + v.id, box = (x, y, w, h, rx) => el('rect', { x, y, width: w, height: h, rx, fill: '#2a2d31', stroke: '#9aa6b2', 'stroke-width': 1.2 }, s);
+function pvVisDraw(s, v, pfx = 'pvm') {
+  const q = {}, defs = el('defs', {}, s), id = pfx + v.id, box = (x, y, w, h, rx) => el('rect', { x, y, width: w, height: h, rx, fill: '#2a2d31', stroke: '#9aa6b2', 'stroke-width': 1.2 }, s);
   const mg = el('linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 }, defs); for (const [o, c] of [[0, '#e8e8e8'], [.5, '#9a9a9a'], [1, '#5a5a5a']]) el('stop', { offset: o, 'stop-color': c }, mg);
   const k = v.kind;
   if (k === 'position') {   // (the barrel, its end caps; the piston seen through it; the rod and its end)
@@ -259,8 +260,8 @@ function pvVisSet(s, v, x) {
 let visT = 0;
 function pvVisAnim() {
   const now = performance.now(), dt = visT ? Math.min(.1, (now - visT) / 1000) : 0; visT = now;
-  if (!dt || editing || procEl.hidden) return;
-  for (const s of procEl.querySelectorAll('.pvvis')) {
+  if (!dt || editing) return;
+  for (const s of [...(procEl.hidden ? [] : procEl.querySelectorAll('.pvvis')), ...picsAll()]) {
     const q = s._q, f = s._f || 0; if (!q || !f) continue;
     if (s._k === 'flow') { q.phase = (q.phase + f * 44 * dt) % 22; q.ag.setAttribute('transform', `translate(${q.phase.toFixed(2)} 0)`); }
     if (s._k === 'speed') { q.phase = (q.phase + f * 540 * dt) % 360; q.wheel.setAttribute('transform', `rotate(${q.phase.toFixed(1)} 48 28)`); }
@@ -278,6 +279,7 @@ function buildPvDialog() {
       <td><select class="pvin" data-f="kind">${Object.entries(PV_KINDS).map(([k, [n]]) => `<option value="${k}">${n}</option>`).join('')}</select></td>
       <td>${units.length ? `<select class="pvin" data-f="unit">${units.map(u => `<option>${u}</option>`).join('')}</select>` : '<input class="pvin w5" data-f="unit" maxlength="8" placeholder="unit">'}</td>
       <td><input class="pvin w5" data-f="min" inputmode="decimal"></td><td><input class="pvin w5" data-f="max" inputmode="decimal"></td><td><input class="pvin w5" data-f="start" inputmode="decimal"></td>
+      <td><select class="pvin" data-pic aria-label="Its picture on the panel"><option value="">${parts.some(p => picShown(p) && p.pv === v.id) ? 'Under its output' : 'Not on the panel'}</option><option value="1">Placed on the panel</option></select></td>
       <td><button type="button" class="pvdel" aria-label="Remove ${v.name.replace(/"/g, '')}" data-tip="Remove this value (switches it worked go back to being clicked by hand)">✕</button></td>`;
     for (const f of tr.querySelectorAll('[data-f]')) {
       f.value = v[f.dataset.f];
@@ -291,6 +293,8 @@ function buildPvDialog() {
         buildPvDialog(); draw(); if (sel) renderProps();
       });
     }
+    const pk = tr.querySelector('[data-pic]'); pk.value = v.pic ? '1' : '';
+    pk.addEventListener('change', () => { if (pk.value) picPlace(v); else delete v.pic; draw(); });
     tr.querySelector('.pvdel').addEventListener('click', () => { snapshot(); PV = PV.filter(q => q !== v); for (const p of parts) if (p.pv === v.id) unlinkPv(p); buildPvDialog(); draw(); if (sel) renderProps(); });
     tb.append(tr);
   }

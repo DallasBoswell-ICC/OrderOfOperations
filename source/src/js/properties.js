@@ -42,6 +42,8 @@ function renderProps() {
   document.getElementById('rt-part').textContent = multi ? `${G.length} ${G.every(isTimer) ? 'timers' : KIND_NAME[p.t] || 'parts'}` : p ? captionOf(p) : 'Part';
   showRibbon();
   document.getElementById('props-btn').hidden = !(p && p.t === 'btn');
+  // (an emergency stop is always normally closed, maintained, red: none of those to choose)
+  for (const e of document.querySelectorAll('#props-btn .notestop')) e.hidden = !!(p && p.estop);
   document.getElementById('props-coil').hidden = !(p && p.t === 'coil');
   document.getElementById('props-lamp').hidden = !(p && p.t === 'lamp');
   if (p && p.t === 'lamp') {
@@ -123,7 +125,11 @@ function renderProps() {
     } else {
       lab.textContent = 'Number';
       const pre = { dsc: 'DS', fus: 'FU', fu1: 'FU', olh: 'OL', mtr: 'MTR' }[p.t], fuse = q => q.t === 'fus' || q.t === 'fu1', taken = new Set(parts.filter(q => (q.t === p.t || fuse(p) && fuse(q)) && q !== p).map(q => q.L));   // (fuses, single or three-pole, number from one count)
-      for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n))) ns.add(new Option(pre + n, String(n), false, String(n) === p.L));
+      if (fuse(p)) {   // (fuses: a block takes three numbers, FU1-FU3; each number once)
+        const k = p.t === 'fus' ? 3 : 1, tk = fuseNums(p);
+        for (let n = 1; n <= Math.max(12, ...[...tk].map(Number)) + 3; n++) { const ok = fuseFits(n, k, tk); if (ok || String(n) === p.L) ns.add(new Option(pre + n + (k > 1 ? '–' + pre + (n + 2) : '') + (ok ? '' : ' (used twice)'), String(n), false, String(n) === p.L)); }
+      } else
+      for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n)) || String(n) === p.L) ns.add(new Option(pre + n + (taken.has(String(n)) ? ' (used twice)' : ''), String(n), false, String(n) === p.L));   // (its own number always shown, even one another part has too)
     }
     document.getElementById('pw-how').textContent = { dsc: 'In Run: click it to turn it off or on', fus: 'In Run: click a fuse to blow it, or to put a new one in', fu1: 'Blows on a short through it. In Run: click it to blow it, or to put a new one in', mst: 'Its contacts close while its coil is in', olh: 'In Run: click it to trip it, or to reset it', olc: 'Opens while its overload is tripped (click it in Run to reset)', mtr: 'Runs on three phases; two swapped, it runs backward' }[p.t];
   }
@@ -164,6 +170,8 @@ function renderProps() {
     document.getElementById('d-dir-group').hidden = !v || p.t === 'htr';
     for (const g of ['d-rate-group', 'd-off-group']) document.getElementById(g).hidden = !v;
     document.getElementById('d-cool-group').hidden = !v || drvOff(p) !== 'back';
+    document.getElementById('d-pic-group').hidden = !v;
+    if (v) { const ps = document.getElementById('d-pic'); ps.options[0].text = v.pic ? 'Placed on the Panel' : 'Under It'; ps.value = p.nopic ? '0' : '1'; }
     if (v) {
       const dir = document.getElementById('d-dir'); dir.options[0].text = p.t === 'mtr' ? 'Forward raises it' : 'Raises it'; dir.options[1].text = p.t === 'mtr' ? 'Forward lowers it' : 'Lowers it'; dir.value = p.dir === 'down' ? 'down' : 'up';
       document.getElementById('d-rate-label').textContent = p.t === 'htr' ? 'Heats at' : p.t === 'mtr' ? 'While It Runs, at' : 'While Energized, at';
@@ -346,6 +354,7 @@ document.getElementById('pw-num').addEventListener('change', e => { const G = se
 document.getElementById('ls-num').addEventListener('change', e => { const G = selGroup(); if (G.every(p => p.t === G[0].t && isLim(p))) each(p => p.L = e.target.value); });
 document.getElementById('h-num').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'htr') return; snapshot(); p.L = e.target.value; draw(); });
 // what an output drives (one panel for solenoids, motors and heating elements)
+document.getElementById('d-pic').addEventListener('change', e => each(p => { if (!isDrv(p)) return; if (e.target.value === '0') p.nopic = true; else delete p.nopic; }));
 document.getElementById('d-pv').addEventListener('change', e => { const id = e.target.value, G = selGroup(); if (!G.length || !G.every(q => isDrv(q) && q.t === G[0].t)) return;
   each(p => { if (!id) { delete p.pv; return; } p.pv = id; drvDefaults(p, pvOf(p)); }); });
 for (const [id, f] of [['d-dir', 'dir'], ['d-per', 'per'], ['d-off', 'off']]) document.getElementById(id).addEventListener('change', e => each(p => { if (isDrv(p)) p[f] = e.target.value; }));

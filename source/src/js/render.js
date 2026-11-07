@@ -92,7 +92,7 @@ function renderInto(target, V, L) {
     if (editing && selHasT(fd.t === 'L1' ? 0 : W, fd.y)) el('rect', { x: fd.t === 'L1' ? 1.5 : W - BAR - 18.5, y: fd.y - 19, width: BAR + 17, height: 38, rx: 7, fill: 'rgba(255,192,0,.16)', stroke: '#ffc000', 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'pointer-events': 'none' }, B(fd.y).top);
   }
   const issues = editing ? wiringIssues(net) : new Map();
-  for (const bd of bands) { bd.links = el('g', {}, bd.g); bd.parts = el('g', {}, bd.g); bd.ends = el('g', {}, bd.g); }
+  for (const bd of bands) { bd.pics = el('g', {}, bd.g); bd.links = el('g', {}, bd.g); bd.parts = el('g', {}, bd.g); bd.ends = el('g', {}, bd.g); }
   selLinks(B);
   V.parts = new Map();
   for (const p of parts) {
@@ -116,6 +116,7 @@ function renderInto(target, V, L) {
     else if ((isPwr3(p) && p.t !== 'mst') || p.t === 'olc' || p.t === 'fu1') bindPower(g, p);
     else if (p.t === 'sel') bindSelector(g, p);
   }
+  drawPics(V, B);
   if (SHOW.rungs) drawRefs(V, B, net);
   fitCaps(V);
   if (editing && V === view) {

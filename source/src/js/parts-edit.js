@@ -6,7 +6,11 @@ const btnLetters = () => new Set(parts.filter(p => p.t === 'btn').map(p => p.L))
 const selLetters = () => new Set(parts.filter(p => p.t === 'sel').map(p => p.L));
 const opLetters = () => new Set([...btnLetters(), ...selLetters()]);   // letters taken by pushbuttons and selector switches
 const solNums = () => new Set(parts.filter(p => p.t === 'sol').map(p => p.L));
-const nextNum = taken => { let n = 1; while (taken.has(String(n))) n++; return String(n); }, nextSol = (taken = solNums()) => nextNum(taken);
+const nextNum = taken => { let n = 1; while (taken.has(String(n))) n++; return String(n); }
+// fuse numbers: each fuse its own, a three-pole block taking three (FU1, FU2, FU3), a single fuse one (FU4)
+const fuseNums = (skip = null, more = []) => { const t = new Set(more.map(String)); for (const q of parts) if (q !== skip && (q.t === 'fus' || q.t === 'fu1')) for (let i = 0; i < (q.t === 'fus' ? 3 : 1); i++) t.add(String(+q.L + i)); return t; };
+const fuseFits = (n, k, taken) => [...Array(k).keys()].every(i => !taken.has(String(n + i)));
+const nextFuse = (k, taken = fuseNums()) => { let n = 1; while (!fuseFits(n, k, taken)) n++; return String(n); }, nextSol = (taken = solNums()) => nextNum(taken);
 const coilLetters = () => new Set(parts.filter(p => p.t === 'coil').map(p => p.L));
 function newPart(kind, x, y) {
   if (kind === 'coil') { const u = new Set([...coilLetters(), ...opLetters()]); const L = [...'XYZW', ...LETTERS].find(c => !u.has(c)); return P('coil', x, y, { L, color: COIL_COL[L] || '#FFDC00' }); }
@@ -23,7 +27,7 @@ function newPart(kind, x, y) {
   if (kind.startsWith('psw')) return P('psw', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'psw').map(q => q.L))), nc: kind === 'psw-nc', color: PSW_COL });
   if (kind.startsWith('tsw')) return P('tsw', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'tsw').map(q => q.L))), nc: kind.startsWith('tsw-nc'), ...(kind.endsWith('l') ? { low: true } : {}), color: TSW_COL });   // (tsw-no, tsw-nc: high temperature; tsw-nol, tsw-ncl: low)
   if (kind.startsWith('lsw')) return P('lsw', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'lsw').map(q => q.L))), nc: kind === 'lsw-nc' || kind === 'lsw-nch', held: kind.endsWith('h'), color: LSW_COL });   // a limit switch: the next number
-  if (kind === 'fus' || kind === 'fu1') return P(kind, x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'fus' || q.t === 'fu1').map(q => q.L))) });   // (fuses, single or three-pole, number from one count)
+  if (kind === 'fus' || kind === 'fu1') return P(kind, x, y, { L: nextFuse(kind === 'fus' ? 3 : 1) });   // (fuses: one count, a block taking three numbers)
   if (kind === 'dsc' || kind === 'olh' || kind === 'mtr') return P(kind, x, y, { L: nextNum(new Set(parts.filter(q => q.t === kind).map(q => q.L))) });   // the next number
   if (kind === 'mst') return P('mst', x, y, { L: 'M' });   // a starter: worked by the M coil (change it in its settings)
   if (kind === 'olc') { const ols = parts.filter(q => q.t === 'olh').map(q => q.L), free = ols.find(L => !parts.some(q => q.t === 'olc' && q.L === L)); return P('olc', x, y, { L: free || ols[0] || '1', nc: true }); }   // an overload's contact: one not yet in the control circuit
@@ -40,6 +44,7 @@ function newPart(kind, x, y) {
   const u = new Set([...coilLetters(), ...opLetters()]);
   if (kind === 'sel') { const L = [...'SJKMN', ...LETTERS].find(c => !u.has(c)); return P('sel', x, y, { L, n: 3, closedIn: [0], pos: 1, color: '#0070C0' }); }   // a 3-position selector switch, turned to the middle; this drawing is closed in position 1
   const L = [...'ABCDEFGH', ...LETTERS].find(c => !u.has(c));
+  if (kind === 'btn-estop') return P('btn', x, y, { L, nc: true, maint: true, estop: true, color: ESTOP_COL });   // (an emergency stop: normally closed, latching)
   return P('btn', x, y, { L, nc: kind.startsWith('btn-nc'), maint: !kind.endsWith('-mom'), color: kind.startsWith('btn-nc') ? '#FF0032' : '#00B050' });   // (normally open green, normally closed red)   // (-mom: momentary; otherwise maintained)
 }
 const kindOf = k => k.startsWith('lsw') ? 'lsw' : k.startsWith('tsw') ? 'tsw' : k.startsWith('psw') ? 'psw' : ['dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr'].includes(k) ? k : k.startsWith('ph-') ? 'ph' : k === 'jmp' ? 'jmp' : k === 'xfm' ? 'xfm' : k === 'src-l1' || k === 'src-l2' ? k.slice(4) : k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k === 'sol' ? 'sol' : k === 'htr' ? 'htr' : k.startsWith('con') ? 'con' : k === 'sel' ? 'sel' : 'btn';

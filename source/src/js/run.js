@@ -102,6 +102,9 @@ function paintBtn(p, v, x, y) {
     v.fill.setAttribute('fill', pr ? SEC_PRESSED : v.secFill);
     v.fill.setAttribute('stroke', pr ? SEC_PRESSED_RIM : p.color);
     v.text.style.fill = pr ? SEC_PRESSED_RIM : p.color;
+  } else if (p.estop) {   // an emergency stop latched in: its head darker, the twist-to-release badge showing
+    v.fill.setAttribute('fill', pr ? 'url(#gEsHeadIn)' : 'url(#gEsHead)'); v.shine.setAttribute('opacity', pr ? 0 : .28);
+    v.text.style.fill = pr ? '#ffb3b8' : '#fff';
   } else {
     v.fill.setAttribute('fill', v.lit ? mixOk(pr ? GREY : mixOk(p.color, GREY, .55), p.color, lit) : pr ? GREY : p.color);
     v.text.style.fill = pr && lit < .5 ? LIGHT_TEXT : DARK_TEXT;
@@ -111,7 +114,8 @@ function paintBtn(p, v, x, y) {
     v.badge.setAttribute('fill', mixRgb(GREY, p.color, lit));
     v.badgeFil.setAttribute('stroke', lit > .5 ? 'rgba(255,255,255,.85)' : 'rgba(30,30,30,.55)');
   }
-  v.press.setAttribute('transform', pr ? `translate(${x} ${y}) scale(.93) translate(${-x} ${-y})` : '');
+  if (v.twist) v.twist.style.display = pr ? '' : 'none';
+  v.press.setAttribute('transform', pr ? `translate(${x} ${y}) scale(${p.estop ? .86 : .93}) translate(${-x} ${-y})` : '');
 }
 // a selector switch's handle turning, and its position names
 function paintSel(p, v) {

@@ -14,9 +14,10 @@ function contentRight(floor = W_MIN) {
   let m = floor;
   for (const p of parts) m = Math.max(m, p.x + TERM(p) + 40);
   for (const w of wires) for (const x of [w.x1, w.x2]) if (x !== W || !barsOn()) m = Math.max(m, x + 20);
+  m = Math.max(m, picExt().r + 30);   // (pictures on the panel)
   return Math.ceil(m / G) * G;
 }
-const contentH = () => { let m = 0; for (const p of parts) m = Math.max(m, p.y + 60); for (const w of wires) m = Math.max(m, w.y1, w.y2); return Math.max(400, snap(m + 120)); };
+const contentH = () => { let m = picExt().b - 60; for (const p of parts) m = Math.max(m, p.y + 60); for (const w of wires) m = Math.max(m, w.y1, w.y2); return Math.max(400, snap(m + 120)); };
 // move the L2 bar to x = nw: wire ends on it move with it
 function setWidth(nw) {
   if (nw === W) return false;
@@ -40,6 +41,7 @@ function leftRoom() {
 function shiftL1(dx) {
   if (!dx) return;
   for (const p of parts) p.x -= dx;
+  for (const v of PV) if (v.pic) v.pic.x -= dx;
   for (const w of wires) { if (w.x1 !== 0) w.x1 -= dx; if (w.x2 !== 0) w.x2 -= dx; }
   W -= dx; normalize();
 }
@@ -49,6 +51,7 @@ function canvasH() {
   let m = editing && typeof cam !== 'undefined' && !cam.fit ? cam.y + VIS_H1 / cam.z : 0;   // (zoomed out while building: down to the bottom of the view, room to build in)
   for (const p of parts) m = Math.max(m, p.y + 60);
   for (const w of wires) m = Math.max(m, w.y1, w.y2);
+  m = Math.max(m, picExt().b - 100);   // (pictures on the panel: room below them too)
   return Math.max(400, VIS_H1, snap(m + 120));
 }
 // how far right things can go: to the L2 bar, or with supply boxes, on past the sheet's edge (which then moves out)

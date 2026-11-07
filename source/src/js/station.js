@@ -53,7 +53,7 @@ const operators = () => {
   return out;
 };
 const plateOf = p => p.t === 'sel' ? ((p.names || []).filter(Boolean).join('/') || `${p.L} SELECTOR`) : nameOf(p);
-const tagOf = p => p.t === 'sel' ? `${p.L} · ${selN(p)}-position` : `${p.L} · ${p.nc ? 'NC' : 'NO'}${p.maint ? ' · maint.' : ''}`;
+const tagOf = p => p.t === 'sel' ? `${p.L} · ${selN(p)}-position` : p.estop ? `${p.L} · E-Stop` : `${p.L} · ${p.nc ? 'NC' : 'NO'}${p.maint ? ' · maint.' : ''}`;
 function buildStation() {
   const grid = document.getElementById('st-grid'); grid.innerHTML = ''; STV = [];
   // (drawn while showing, though unseen, so the labels can be measured and shrunk to fit their caps)

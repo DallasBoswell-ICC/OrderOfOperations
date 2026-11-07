@@ -50,7 +50,10 @@ function pasteClip() {
     if (p.t === 'con' && map['c' + p.L]) q.L = map['c' + p.L];
     if (p.t === 'lamp' && p.L && map['b' + p.L]) q.L = map['b' + p.L];
     if (p.t === 'jmp') { if (!jm[p.L]) jm[p.L] = nextNum(new Set([...parts.filter(isJmp).map(q => q.L), ...Object.values(jm)])); q.L = jm[p.L]; }   // (pasted continuations pair among themselves)
-    if (p.t === 'dsc' || p.t === 'fus' || p.t === 'mtr' || p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw') { q.L = nextNum(new Set([...parts.filter(z => z.t === p.t).map(z => z.L), ...xf.filter(([t]) => t === p.t).map(([, L]) => L)])); xf.push([p.t, q.L]); }
+    // (numbered parts get the next number of their own; fuses, single or three-pole, count together, so a pasted fuse is never FU2 twice)
+    if (p.t === 'fus' || p.t === 'fu1') { const k = p.t === 'fus' ? 3 : 1; q.L = nextFuse(k, fuseNums(null, xf.filter(([t]) => t === 'fuse').map(([, L]) => L))); for (let i = 0; i < k; i++) xf.push(['fuse', String(+q.L + i)]); }
+    else if (['dsc', 'olh', 'mtr', 'lsw', 'tsw', 'psw'].includes(p.t)) { const grp = t => t === 'fu1' ? 'fus' : t, g = grp(p.t);
+      q.L = nextNum(new Set([...parts.filter(z => grp(z.t) === g).map(z => z.L), ...xf.filter(([t]) => t === g).map(([, L]) => L)])); xf.push([g, q.L]); }
     if (p.t === 'xfm') { q.L = nextNum(new Set([...parts.filter(z => z.t === 'xfm').map(z => z.L), ...xf.filter(([t]) => t === 'xfm').map(([, L]) => L)])); xf.push(['xfm', q.L]); }   // (a pasted transformer gets a number of its own)
     if (p.t === 'htr') { q.L = nextNum(new Set([...parts.filter(z => z.t === 'htr').map(z => z.L), ...xf.filter(([t]) => t === 'htr').map(([, L]) => L)])); xf.push(['htr', q.L]); }
     if (p.t === 'sol') { q.L = nextSol(new Set([...solNums(), ...np0])); np0.push(q.L); }   // (a pasted solenoid gets a number of its own)

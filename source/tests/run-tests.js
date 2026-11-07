@@ -2151,6 +2151,23 @@ const DEF_CIRCUIT = `
     if (low) out.push('not in title case: ' + low);
     return out;
   });
+  await check('Print Diagram: fuses in a transformer’s primary leads keep their power wires out of the control numbers (FWD/REV with MCR)', async page => {
+    const d = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'fixtures', 'fwdrev_mcr.json'), 'utf8'));
+    await page.evaluate(d => { const c = readCircuit(d); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; normalize(); fit(true); draw(); }, d);
+    const got = await page.evaluate(() => { const h = document.createElement('div'); h.innerHTML = printSheet('x', true).html; return [...new Set([...h.querySelectorAll('.wn')].map(t => t.textContent))]; });
+    const ctl = got.filter(l => /^\d+$/.test(l)).map(Number).sort((a, b) => a - b), out = [];
+    if (ctl.join() !== Array.from({ length: 15 }, (_, i) => i + 1).join()) out.push('control numbers: ' + ctl.join(',') + ' (want 1-15, none skipped)');
+    for (const l of ['L1B', 'L2B', 'L3B', 'X1']) if (!got.includes(l)) out.push('no ' + l);
+    // (a pasted fuse gets a number of its own)
+    const n = await page.evaluate(() => { sel = selOne('p', parts.find(p => p.t === 'fu1').id); copySel(); pasteClip(); return parts.filter(p => p.t === 'fu1' || p.t === 'fus').map(p => p.L).join(','); });
+    if (!/,4$/.test(n)) out.push('fuse numbers after pasting one: ' + n);
+    // (new fuses: a block takes FU1-FU3, then single fuses FU4, FU5, FU6; the print numbers each fuse of the block)
+    const m = await page.evaluate(() => { parts = []; wires = []; sel = null; const f = ['fus', 'fu1', 'fu1', 'fu1'].map((k, i) => { const p = newPart(k, 400 + 200 * i, 400); parts.push(p); return p; });
+      draw(); const h = document.createElement('div'); h.innerHTML = printSheet('x', true).html; return [f.map(p => p.L).join(','), [...h.querySelectorAll('text')].map(t => t.textContent).filter(t => /^FU\d$/.test(t)).sort().join(',')]; });
+    if (m[0] !== '1,4,5,6') out.push('new fuse numbers: ' + m[0] + ' (want 1,4,5,6)');
+    if (m[1] !== 'FU1,FU2,FU3,FU4,FU5,FU6') out.push('fuses on the print: ' + m[1]);
+    return out;
+  });
   await check('Print Diagram: wire numbers (control 1, 2, then reading order; power L1, L1A... and T1, T1A...), line numbers, cross-references, title block; printing puts the sheet alone on the page', async page => {
     const out = [];
     const d = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'fixtures', 'fwdrev.json'), 'utf8'));
@@ -2274,6 +2291,76 @@ const DEF_CIRCUIT = `
     await page.selectOption('#preset', 'seal'); await page.waitForTimeout(100);
     const back = await page.evaluate(() => [POWER, PV.length].join('|'));
     if (back !== 'bars|0') out.push('after it, Start / Stop came up with: ' + back);
+    return out;
+  });
+  await check('Emergency stop: from the Buttons menu; NC and maintained, its own look and caption; latches in (the twist badge showing), and out again; saved and read back; printed with the E-stop symbol', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    await page.click('#bt-btn'); await page.click('#bt-menu [data-part="btn-estop"]'); await page.waitForTimeout(80);
+    const p0 = await page.evaluate(() => { const e = parts.find(p => p.estop); return e && [e.t, e.nc, e.maint, e.color, view.parts.get(e.id).cap.textContent.trim(), [...document.querySelectorAll('#props-btn .notestop')].every(g => g.hidden), [...document.querySelectorAll('.eslegend')].map(t => t.textContent).join('/')].join('|'); });
+    if (p0 !== 'btn|true|true|#E3001B|A E-Stop (NC)|true|EMERGENCY/STOP') out.push('placed from the menu: ' + p0);
+    // wire it to a lamp and run: pressed, it latches in (the lamp goes out, the badge shows); pressed again, it comes out
+    await page.evaluate(() => { const e = parts.find(p => p.estop); e.x = 200; e.y = 160; W = 760; W_USER = 760; parts.push(P('lamp', 560, 160, { L: '', color: '#00B050' })); wires.push(Wr(0, 160, 160, 160), Wr(240, 160, 500, 160), Wr(620, 160, W, 160)); normalize(); sel = null; draw(); });
+    await page.click('#tab-run'); await page.waitForTimeout(300);
+    const at = await page.evaluate(() => { const g = view.parts.get(parts.find(p => p.estop).id).fill.getBoundingClientRect(); return [g.left + g.width / 2, g.top + g.height / 2]; });
+    const st = () => page.evaluate(() => { const e = parts.find(p => p.estop), v = view.parts.get(e.id); return [!!down[e.L], v.twist.style.display !== 'none', v.fill.getAttribute('fill')].join('|'); });
+    await page.mouse.click(at[0], at[1]); await page.waitForTimeout(400);
+    if (await st() !== 'true|true|url(#gEsHeadIn)') out.push('pressed (latched, badge, darker head): ' + await st());
+    await page.mouse.click(at[0], at[1]); await page.waitForTimeout(400);
+    if (await st() !== 'false|false|url(#gEsHead)') out.push('pressed again (out, no badge): ' + await st());
+    await page.click('#tab-edit'); await page.waitForTimeout(200);
+    const saved = await page.evaluate(() => { const d = JSON.parse(JSON.stringify(circuitData())), c = readCircuit(d), e = c.parts.find(p => p.t === 'btn'); return [d.parts.find(a => a[0] === 'est') ? 'est' : 'none', e.estop, e.nc, e.maint].join('|'); });
+    if (saved !== 'est|true|true|true') out.push('saved and read back: ' + saved);
+    await page.click('#print-btn'); await page.waitForTimeout(200);
+    const pr = await page.evaluate(() => [...document.querySelectorAll('#pd-view .pr-page:first-child text')].some(t => t.textContent === 'ES-A') && document.getElementById('pd-view').innerHTML.includes(PSYM['NC EStop Pushbutton'].b.slice(0, 40)));
+    if (!pr) out.push('the print does not show ES-A with the E-stop symbol');
+    await page.click('#pd-close');
+    return out;
+  });
+  await check('Process pictures on the panel: docked under the output that drives it, dragged off as a card, docked again, placed from Process values, hidden, saved', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    await page.evaluate(() => { W = 1100; W_USER = 1100;
+      const cyl = pvNew('position'), oven = pvNew('temperature'), air = pvNew('pressure'); cyl.name = 'Cylinder A'; oven.name = 'Oven'; air.name = 'Air'; PV.push(cyl, oven, air);
+      const a = P('btn', 200, 140, { L: 'A', color: '#00B050', nc: false, maint: true }), sol = newPart('sol', 600, 140); sol.pv = cyl.id; drvDefaults(sol, cyl);
+      const b = P('btn', 200, 540, { L: 'B', color: '#00B050', nc: false, maint: true }), h = newPart('htr', 600, 540); Object.assign(h, { pv: oven.id, rate: 600, cool: 600 });
+      const t = newPart('tsw-no', 300, 740); Object.assign(t, { pv: oven.id, sp: 350, rs: 340 });
+      parts.push(a, sol, b, h, t, P('lamp', 680, 740, { L: '', color: '#FF3333' }));
+      for (const [y, x1, x2] of [[140, 200, 600], [540, 200, 600]]) { const ha = TERM(parts.find(p => p.y === y && p.x === x1)), hb = TERM(parts.find(p => p.y === y && p.x === x2)); wires.push(Wr(0, y, x1 - ha, y), Wr(x1 + ha, y, x2 - hb, y), Wr(x2 + hb, y, W, y)); }
+      wires.push(Wr(0, 740, 300 - TERM(t), 740), Wr(300 + TERM(t), 740, 620, 740), Wr(740, 740, W, 740));
+      normalize(); fit(true); draw(); });
+    const pics = () => page.evaluate(() => [...document.querySelectorAll('#svg .pic')].map(g => (g.classList.contains('docked') ? 'd:' : 'c:') + PV.find(v => v.id === g.dataset.pic).name + '=' + g.querySelector('.picnum').textContent).join());
+    let s = await pics(); if (s !== 'd:Cylinder A=0 in,d:Oven=70 °F') out.push('docked under SOL1 and HTR1 (Air drives nothing: no picture): ' + s);
+    // drag the oven's picture off: a card, selected, with its links and a dock under HTR1
+    const bx = await page.locator('#svg .pic.docked').nth(1).boundingBox(), cx = bx.x + bx.width / 2, cy = bx.y + bx.height / 2;
+    await page.mouse.move(cx, cy); await page.mouse.down(); for (let i = 1; i <= 8; i++) await page.mouse.move(cx + 30 * i, cy + 6 * i); await page.mouse.up(); await page.waitForTimeout(100);
+    s = await pics(); if (s !== 'd:Cylinder A=0 in,c:Oven=70 °F') out.push('dragged off: ' + s);
+    const card = await page.evaluate(() => { const g = document.querySelector('#svg .pic:not(.docked)'); return [picSel === PV[1].id, document.querySelectorAll('#svg .picdock').length, document.querySelectorAll('#svg .piclink').length, g.querySelector('.piclinks').textContent]; });
+    if (card.join() !== 'true,1,2,HTR1 → TS1') out.push('the card, selected: ' + card.join());
+    // undo puts it back under HTR1, redo off again
+    await page.keyboard.press('Control+z'); await page.waitForTimeout(60); s = await pics(); if (s !== 'd:Cylinder A=0 in,d:Oven=70 °F') out.push('undo: ' + s);
+    await page.keyboard.press('Control+y'); await page.waitForTimeout(60);
+    // double-click: docked again
+    const cb = await page.locator('#svg .pic:not(.docked)').boundingBox(); await page.mouse.dblclick(cb.x + cb.width / 2, cb.y + cb.height / 2); await page.waitForTimeout(80);
+    s = await pics(); if (s !== 'd:Cylinder A=0 in,d:Oven=70 °F') out.push('double-clicked: ' + s);
+    // Air, placed from Process values; then selected and Deleted
+    await page.click('#pv-btn'); await page.locator('#pv-rows tr').nth(2).locator('[data-pic]').selectOption('1'); await page.keyboard.press('Escape'); await page.waitForTimeout(80);
+    s = await pics(); if (s !== 'd:Cylinder A=0 in,d:Oven=70 °F,c:Air=0 psi') out.push('Air placed from Process values: ' + s);
+    const back = await page.evaluate(() => { const d = JSON.parse(JSON.stringify(circuitData())), c = readCircuit(d); return c.pv.map(v => v.pic ? v.pic.x + '/' + v.pic.y : '-').join(); });
+    const now = await page.evaluate(() => PV.map(v => v.pic ? v.pic.x + '/' + v.pic.y : '-').join()); if (back !== now || !/^-,-,\d+\/\d+$/.test(now)) out.push('saved and read back: ' + now + ' → ' + back);
+    const ab = await page.locator('#svg .pic:not(.docked)').boundingBox(); await page.mouse.click(ab.x + ab.width / 2, ab.y + 12); await page.keyboard.press('Delete'); await page.waitForTimeout(60);
+    s = await pics(); if (s !== 'd:Cylinder A=0 in,d:Oven=70 °F') out.push('Air deleted from the panel: ' + s);
+    // SOL1's picture hidden on its tab (and saved so)
+    const sid = await page.evaluate(() => parts.find(p => p.t === 'sol').id), sb = await page.locator(`#svg [data-part="${sid}"]`).boundingBox();
+    await page.mouse.click(sb.x + sb.width / 2, sb.y + sb.height / 2); await page.waitForTimeout(60);
+    await page.selectOption('#d-pic', '0'); await page.waitForTimeout(60);
+    s = await pics(); if (s !== 'd:Oven=70 °F') out.push('SOL1\'s picture hidden: ' + s);
+    if (!(await page.evaluate(() => readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.find(p => p.t === 'sol').nopic))) out.push('SOL1\'s hidden picture not saved');
+    // running: the oven's picture follows its value
+    await page.click('#tab-run'); await page.evaluate(() => { setSpeed(10); press('B', true); }); await page.waitForTimeout(900);
+    const run = await page.evaluate(() => [PVV[PV[1].id], document.querySelector('#svg .pic .picnum').textContent, pvFmt(PV[1], PVV[PV[1].id]) + ' °F']);
+    if (!(run[0] > 90) || run[1] !== run[2]) out.push('running, the oven heating: ' + run.join());
+    await page.click('#tab-edit');
     return out;
   });
   await check('Ribbon menus: Buttons, Switches, Outputs and Contacts open and place their parts (momentary or maintained, instantaneous or timing)', async page => {

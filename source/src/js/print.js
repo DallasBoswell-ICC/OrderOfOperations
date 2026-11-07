@@ -64,8 +64,18 @@ function printSheet(drawnBy, fit = false) {
   } else if (bars) { n1 = find(mk('BAR1')); n2 = find(mk('BAR2')); }
   else { n1 = s1 ? netAt(...s1.terms[0]) : null; n2 = s2 ? netAt(...s2.terms[0]) : null; }
   if (n1 != null) { NUM.set(n1, '1'); ctrl.add(n1); } if (n2 != null && n2 !== n1) { NUM.set(n2, '2'); ctrl.add(n2); }
+  // (the power circuit first: every wire reached from a phase through disconnects, fuses, starters and overloads, a
+  // single fuse too (a transformer's primary fuse), and the transformer's primary. No control number goes to any of
+  // them: a primary fuse taken for a control part had pushed the power wires into the control numbers, and every
+  // control number up with them)
+  const PWRNET = new Set(), poles = q => q.t === 'fu1' ? [[0, 1]] : ['dsc', 'fus', 'mst', 'olh'].includes(q.t) ? [[0, 1], [2, 3], [4, 5]] : [];
+  { const q0 = []; for (const q of P) if (q.t === 'ph') { const n = netAt(...q.terms[0]); if (n != null && !PWRNET.has(n)) { PWRNET.add(n); q0.push(n); } }
+    while (q0.length) { const n = q0.shift();
+      for (const q of P) for (const [i, j] of poles(q)) { const a = netAt(...q.terms[i]), b = netAt(...q.terms[j]);
+        for (const [x, y] of [[a, b], [b, a]]) if (x === n && y != null && !PWRNET.has(y) && !NUM.has(y)) { PWRNET.add(y); q0.push(y); } } }
+    if (xf) for (const i of [0, 1]) { const n = netAt(...xf.terms[i]); if (n != null && !NUM.has(n)) PWRNET.add(n); } }
   // (the control circuit: everything reached from 1 and 2 through control parts)
-  const ctrlPart = q => !PRINT_POWER.has(q.t) && !isSrc(q.p) && !isPh(q.p);
+  const ctrlPart = q => !PRINT_POWER.has(q.t) && !isSrc(q.p) && !isPh(q.p) && !q.terms.some(t => PWRNET.has(netAt(...t)));
   for (let grew = true; grew;) { grew = false;
     for (const q of P) if (ctrlPart(q)) { const ns = q.terms.map(t => netAt(...t)).filter(n => n != null);
       if (ns.some(n => ctrl.has(n))) for (const n of ns) if (!ctrl.has(n)) { ctrl.add(n); grew = true; } } }
@@ -79,8 +89,8 @@ function printSheet(drawnBy, fit = false) {
   // power: traced pole by pole from the phases
   const LET = d => d > 0 ? String.fromCharCode(64 + d) : '';
   const POLED = new Set(['dsc', 'fus', 'mst', 'olh']);
-  const across = n => { const o = []; for (const q of P) if (POLED.has(q.t) && q.t !== 'mst') for (let i = 0; i < 6; i += 2) {
-    const a = netAt(...q.terms[i]), b = netAt(...q.terms[i + 1]); if (a === n && b != null) o.push(b); else if (b === n && a != null) o.push(a); } return o; };
+  const across = n => { const o = []; for (const q of P) if ((POLED.has(q.t) && q.t !== 'mst') || (q.t === 'fu1' && q.terms.some(t => PWRNET.has(netAt(...t))))) for (const [i, j] of poles(q)) {
+    const a = netAt(...q.terms[i]), b = netAt(...q.terms[j]); if (a === n && b != null) o.push(b); else if (b === n && a != null) o.push(a); } return o; };
   const mstLoad = new Set(); for (const q of P) if (q.t === 'mst') for (let i = 1; i < 6; i += 2) { const n = netAt(...q.terms[i]); if (n != null) mstLoad.add(n); }
   const lineQ = [];
   for (const q of P) if (q.t === 'ph') { const n = netAt(...q.terms[0]); if (n != null && !NUM.has(n)) { NUM.set(n, 'L' + q.L); PHASE.add(n); lineQ.push([n, q.L, 0]); } }
@@ -104,7 +114,7 @@ function printSheet(drawnBy, fit = false) {
   /* ---------- tags ---------- */
   const lampN = new Map(); P.filter(q => q.t === 'lamp').sort((a, b) => a.y - b.y || a.x - b.x).forEach((q, i) => lampN.set(q, i + 1));
   // (a button or coil with a label of its own, that no other has, goes by it: no PB-A, its contacts named by it too)
-  const tag = q => ({ btn: uniqueLabel('btn', q.L) || 'PB-' + q.L, sel: 'SS-' + q.L, coil: uniqueLabel('coil', q.L) || q.L, con: uniqueLabel('coil', q.L) || q.L, olc: 'OL' + q.L, lamp: 'PL' + lampN.get(q), sol: 'SOL' + q.L, htr: 'HTR' + q.L, tsw: 'TS' + q.L,
+  const tag = q => ({ btn: uniqueLabel('btn', q.L) || (q.p.estop ? 'ES-' : 'PB-') + q.L, sel: 'SS-' + q.L, coil: uniqueLabel('coil', q.L) || q.L, con: uniqueLabel('coil', q.L) || q.L, olc: 'OL' + q.L, lamp: 'PL' + lampN.get(q), sol: 'SOL' + q.L, htr: 'HTR' + q.L, tsw: 'TS' + q.L,
     psw: 'PS' + q.L, lsw: 'LS' + q.L, fu1: 'FU' + q.L, fus: 'FU' + q.L, dsc: 'DS' + q.L, mst: q.L, olh: 'OL' + q.L, mtr: 'M' + q.L, xfm: 'CPT' + q.L })[q.t] || '';
   const COLOURS = { '#00B050': 'GREEN', '#FF0032': 'RED', '#FF9600': 'AMBER', '#FFDC00': 'YELLOW', '#0070C0': 'BLUE', '#FFFFFF': 'WHITE', '#7030A0': 'PURPLE' };
   const colourName = c => COLOURS[(c || '').toUpperCase()] || '';
@@ -154,7 +164,7 @@ function printSheet(drawnBy, fit = false) {
         if (!fed.length) text(x, y + 10, name, 28); break; }
       case 'jmp': { g += `<circle cx="${x}" cy="${y}" r="16" stroke-width="${PRINT_W}" fill="#fff"/>`; text(x, y + 8, q.L, 22);
         q.terms.forEach(t => { if (wired(t)) { const dx = Math.sign(t[0] - x) * 16, dy = Math.sign(t[1] - y) * 16; line(t[0], t[1], x + dx, y + dy); } }); break; }
-      case 'btn': two(q, p.nc ? 'NC Pushbutton' : 'NO Pushbutton', uniqueLabel('btn', q.L) ? '' : p.label || ''); break;
+      case 'btn': two(q, p.estop ? 'NC EStop Pushbutton' : p.nc ? 'NC Pushbutton' : 'NO Pushbutton', uniqueLabel('btn', q.L) ? '' : p.label || ''); break;
       case 'sel': { // (Dallas's selector switch: a contact block in each rung it is drawn in, its turning arrow on the top one,
         // which carries its tag; under each, the positions that block is closed in; a dashed line links the blocks, below)
         const main = mainSel(q.L) === p, names = (p.names || []).slice(0, selN(p)), cl = (p.closedIn || []).map(i => names[i] || String(i + 1));
@@ -171,7 +181,9 @@ function printSheet(drawnBy, fit = false) {
       case 'psw': two(q, `${p.nc ? 'NC' : 'NO'} Pressure Switch`); break;
       case 'lsw': two(q, p.held ? (p.nc ? 'NC HO Limit Switch' : 'NO HC Limit Switch') : `${p.nc ? 'NC' : 'NO'} Limit Switch`); break;
       case 'dsc': three(q, '3PH Disconnect'); break;
-      case 'fus': three(q, '3PH Fuses'); break;
+      case 'fus': { // (each fuse its own number: FU1, FU2, FU3 down the block)
+        const s = put('3PH Fuses', q.x, q.y), sp = pts(s, q.x, q.y, false); q.terms.forEach((t, i) => line(t[0], t[1], sp[i][0], sp[i][1]));
+        for (let i = 0; i < 3; i++) text(q.x, sp[2 * i][1] - 24, 'FU' + (+q.L + i), 26); break; }
       case 'mst': three(q, '3PH Starter Contacts'); break;
       case 'olh': three(q, '3PH Thermal Overload'); break;
       case 'mtr': { // the circle level with T2, the leads in to it, T1 and T3 bending in

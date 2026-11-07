@@ -21,6 +21,7 @@ const DARK_TEXT = 'rgba(28,28,28,.85)', LIGHT_TEXT = 'rgba(242,242,242,.78)';
 // (white mixes like white light: it pales whatever it meets)
 const PALETTE = [['Red', '#FF0032'], ['Orange', '#FF9600'], ['Yellow', '#FFDC00'], ['Green', '#00B050'], ['Teal', '#00D2BE'],
   ['Blue', '#0070C0'], ['Violet', '#7030A0'], ['Magenta', '#EC008C'], ['White', '#FFFFFF']];
+const ESTOP_COL = '#E3001B', ESTOP_PLATE = '#FFC800';   // (an emergency stop: its red mushroom head, its yellow legend plate)
 const BTN_COL = { A: '#FF0032', B: '#0070C0', C: '#00B050', D: '#FF9600', E: '#00D2BE', F: '#7030A0', G: '#EC008C', H: '#FFDC00' };
 const COIL_COL = { X: '#FFDC00', Y: '#EC008C', Z: '#7030A0', W: '#00D2BE' };
 const ALL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
