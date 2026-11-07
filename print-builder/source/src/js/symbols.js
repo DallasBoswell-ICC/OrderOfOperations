@@ -50,7 +50,7 @@ const LIB = {
   fdsc3:   { cat: 'Power', name: 'Fused Disconnect', sym: '3PH Fusible Disconnect', pre: 'DS', kind: 'power', poles: [[0, 1], [2, 3], [4, 5]] },
   mst3:    { cat: 'Power', name: 'Starter Contacts (3-Phase)', sym: '3PH Starter Contacts', kind: 'starter', poles: [[0, 1], [2, 3], [4, 5]] },
   xfmr:    { cat: 'Power', name: 'Control Transformer', sym: 'Control Transformer', pre: 'CPT', kind: 'xfmr' },
-  motor:   { cat: 'Power', name: 'Motor', sym: 'Motor', pre: 'MTR', kind: 'motor' },
+  motor:   { cat: 'Power', name: 'Motor', sym: 'Motor', pre: 'M', kind: 'motor' },
 };
 const CATS = ['Buttons', 'Switches', 'Contacts', 'Coils & Outputs', 'Protection', 'Power'];
 const CAT_COL = { 'Buttons': '#00B050', 'Switches': '#0070C0', 'Contacts': '#c9c9c9', 'Coils & Outputs': '#FFC000', 'Protection': '#e5484d', 'Power': '#FF9C37' };

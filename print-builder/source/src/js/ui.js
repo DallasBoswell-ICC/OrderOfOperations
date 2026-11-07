@@ -204,14 +204,20 @@ $('tb-done').addEventListener('click', () => $('tb-dlg').close());
 
 /* ---------- zoom and panning ---------- */
 const pageSize = () => S.land ? [1056, 816] : [816, 1056];
-function applyZoom() { const [w, h] = pageSize(); host.style.transform = `scale(${zoom})`; sizer.style.width = (w * zoom + 48) + 'px'; sizer.style.height = (h * zoom + 48) + 'px'; $('z-lvl').textContent = Math.round(zoom * 100) + '%'; }
-function fitZoom() { const [w, h] = pageSize(), r = zoomer.getBoundingClientRect(); zoom = Math.max(.2, Math.min(3, Math.min((r.width - 48) / w, (r.height - 48) / h))); applyZoom(); zoomer.scrollLeft = 0; zoomer.scrollTop = 0;
-  const [W] = pageSize(); if (W * zoom + 48 < r.width) host.style.left = ((r.width - W * zoom) / 2) + 'px'; else host.style.left = '24px'; }
+// the room round the page: enough to bring any part of it (its edges too) to the middle of the window, so zooming
+// about the pointer never runs out of room (Fit puts the page back in the middle)
+const padX = () => zoomer.clientWidth * .6, padY = () => zoomer.clientHeight * .6;
+function applyZoom() { const [w, h] = pageSize(), px = padX(), py = padY();
+  host.style.transform = `scale(${zoom})`; host.style.left = px + 'px'; host.style.top = py + 'px';
+  sizer.style.width = (w * zoom + 2 * px) + 'px'; sizer.style.height = (h * zoom + 2 * py) + 'px'; $('z-lvl').textContent = Math.round(zoom * 100) + '%'; }
+function fitZoom() { const [w, h] = pageSize(); zoom = Math.max(.2, Math.min(3, Math.min((zoomer.clientWidth - 48) / w, (zoomer.clientHeight - 48) / h))); applyZoom();
+  zoomer.scrollLeft = padX() + w * zoom / 2 - zoomer.clientWidth / 2; zoomer.scrollTop = padY() + h * zoom / 2 - zoomer.clientHeight / 2; }
+// zoomed by f about a point on the screen (the pointer; else the middle): that point stays where it is
 function zoomBy(f, cx, cy) {
   const r = zoomer.getBoundingClientRect(); cx = cx ?? r.left + r.width / 2; cy = cy ?? r.top + r.height / 2;
-  const hl = parseFloat(host.style.left) || 24, px = (zoomer.scrollLeft + cx - r.left - hl) / zoom, py = (zoomer.scrollTop + cy - r.top - 24) / zoom;
-  zoom = Math.max(.2, Math.min(4, zoom * f)); host.style.left = '24px'; applyZoom();
-  zoomer.scrollLeft = px * zoom + 24 - (cx - r.left); zoomer.scrollTop = py * zoom + 24 - (cy - r.top);
+  const qx = (zoomer.scrollLeft + cx - r.left - padX()) / zoom, qy = (zoomer.scrollTop + cy - r.top - padY()) / zoom;
+  zoom = Math.max(.2, Math.min(4, zoom * f)); applyZoom();
+  zoomer.scrollLeft = qx * zoom + padX() - (cx - r.left); zoomer.scrollTop = qy * zoom + padY() - (cy - r.top);
 }
 $('z-in').addEventListener('click', () => zoomBy(1.25)); $('z-out').addEventListener('click', () => zoomBy(.8)); $('z-fit').addEventListener('click', fitZoom);
 zoomer.addEventListener('wheel', e => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); zoomBy(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX, e.clientY); }, { passive: false });

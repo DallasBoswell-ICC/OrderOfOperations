@@ -15,7 +15,7 @@ function drawSheet(s, k, A) {
     g += `<path d="M${bx + px} ${by + py}L${bx - px} ${by - py}L${x} ${y}Z" fill="#000" stroke="#000" stroke-width="2"/>`; };
   // rails
   const rails = s.parts.filter(p => p.t === 'rail');
-  for (const r of rails) { line(r.x, r.y0, r.x, r.y1, PW + 2);
+  for (const r of rails) { line(r.x, r.y0, r.x, r.y1);
     // (fed at its top by a wire, from the transformer: no arrow, its name beside it)
     const fed = s.wires.some(w => [w.a, w.b].some(e => e.r === r.id && e.y <= r.y0));
     if (fed) text(r.x + (r.label === 'L1' ? -14 : 14), r.y0 + 40, r.label, 26, r.label === 'L1' ? 'end' : 'start');
@@ -49,11 +49,11 @@ function drawSheet(s, k, A) {
     if (p.t === 'sup') { arrow(p.x, p.y, 1, 0); text(p.x - 30, p.y + 10, p.tag, 28, 'end'); continue; }
     const sym = PSYM[LIB[p.t].sym], r = p.rot || 0, kind = LIB[p.t].kind;
     g += `<g class="sym" transform="translate(${p.x} ${p.y})${r ? ` rotate(${r})` : ''}">${sym.b}</g>`;
-    const up = r % 180 !== 0, inside = kind === 'coil' && (p.tag || '').length <= 3;
+    const up = r % 180 !== 0, inside = (kind === 'coil' && (p.tag || '').length <= 3) || kind === 'motor';
     if (up) { const off = Math.max(Math.abs(sym.y0), Math.abs(sym.y1)) + 10; text(p.x + off, p.y + 9, p.tag, 26, 'start'); if (p.desc) text(p.x + off, p.y + 34, p.desc, 20, 'start', 500); }
     else {
       const y0 = r === 180 ? -sym.y1 : sym.y0, y1 = r === 180 ? -sym.y0 : sym.y1;
-      if (inside) text(p.x, p.y + 9, p.tag, 24); else text(p.x, p.y + y0 - 8, p.tag, 26);
+      if (inside) text(p.x, p.y + (kind === 'motor' ? 11 : 9), p.tag, kind === 'motor' ? 30 : 24); else text(p.x, p.y + y0 - 8, p.tag, 26);
       if (p.desc) text(p.x, p.y + y1 + 22, p.desc, 20, 'middle', 500);
     }
     if (p.t === 'xfmr') { const t = [0, 1, 2, 3].map(i => termPos(p, i)), nm = ['H1', 'H2', 'X1', 'X2'];

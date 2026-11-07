@@ -242,9 +242,9 @@ function removeWire(s, id) { const w = s.wires.find(w => w.id === id); if (w) s.
 const allParts = () => doc.sheets.flatMap((s, k) => s.parts.filter(p => p.t !== 'rail').map(p => ({ p, s, k })));
 const tagPre = p => p.t === 'coil' ? (p.pre || 'CR') : LIB[p.t] && LIB[p.t].pre;
 // the next free tag starting pre: one more than the highest in use (FU1, FU2, FU3...: never the same twice)
-function nextTag(pre) {
+function nextTag(pre, motor = false) {   // (motors are counted among themselves: motor M1 and its starter M1 go together)
   let m = 0; const re = new RegExp('^' + pre + '(\\d+)$');
-  for (const { p } of allParts()) { if (['contact', 'starter', 'olc'].includes(LIB[p.t].kind)) continue; const r = re.exec(p.tag || ''); if (r) m = Math.max(m, +r[1]); }   // (contacts borrow their coil's tag: they take none of their own)
+  for (const { p } of allParts()) { if (['contact', 'starter', 'olc'].includes(LIB[p.t].kind) || (LIB[p.t].kind === 'motor') !== motor) continue; const r = re.exec(p.tag || ''); if (r) m = Math.max(m, +r[1]); }   // (contacts borrow their coil's tag: they take none of their own)
   return pre + (m + 1);
 }
 // a new part's tag: its own next one; a contact, its coil's (the last coil put down or picked); starter contacts, a starter's
@@ -255,7 +255,7 @@ function defaultTag(t) {
   if (k === 'starter') { const m = allParts().find(q => q.p.t === 'coil' && /^M\d*$/.test(q.p.tag || '')); return m ? m.p.tag : 'M1'; }
   if (k === 'olc') { const o = allParts().find(q => LIB[q.p.t].kind === 'ol'); return o ? o.p.tag : 'OL1'; }
   if (t === 'sup') { const used = new Set(allParts().filter(q => q.p.t === 'sup').map(q => q.p.tag)); return ['L1', 'L2', 'L3'].find(l => !used.has(l)) || 'L1'; }
-  return nextTag(LIB[t].pre);
+  return nextTag(LIB[t].pre, LIB[t].kind === 'motor');
 }
 
 /* ---------- undo ---------- */

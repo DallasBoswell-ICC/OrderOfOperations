@@ -14,7 +14,7 @@ function template(name) {
 // fuse feeding the ladder: stop/start with a seal-in, run and stopped lights
 function buildStarter(s) {
   const L1 = s.parts.find(p => p.label === 'L1'), L2 = s.parts.find(p => p.label === 'L2');
-  L1.y0 = L2.y0 = 960; L1.y1 = L2.y1 = 1560;
+  L1.y0 = L2.y0 = 960; L1.y1 = L2.y1 = 1600;
   // power
   for (const [l, y] of [['L1', 200], ['L2', 320], ['L3', 440]]) { addPart(s, 'sup', 200, y, { tag: l }); addWire(s, [[200, y], [1840, y]]); }
   addPart(s, 'dsc3', 400, 320); addPart(s, 'fus3', 640, 320);
@@ -28,11 +28,11 @@ function buildStarter(s) {
   addWire(s, [[860, 760], [860, 840], [560, 840]]); addPart(s, 'fuse', 520, 840); addWire(s, [[480, 840], [200, 840], [200, 960]]);
   addWire(s, [[980, 760], [980, 840], [L2.x, 840], [L2.x, 960]]);
   // the ladder
-  for (const y of [1080, 1360, 1480]) addWire(s, [[L1.x, y], [L2.x, y]]);
+  for (const y of [1080, 1360, 1520]) addWire(s, [[L1.x, y], [L2.x, y]]);
   addPart(s, 'pb_nc', 420, 1080, { desc: 'STOP' }); addPart(s, 'pb_no', 680, 1080, { desc: 'START' });
   const c = addPart(s, 'coil', 1300, 1080, { pre: 'M' }); addPart(s, 'olc', 1600, 1080, { tag: 'OL1' });
   addWire(s, [[600, 1080], [600, 1200], [760, 1200], [760, 1080]]); addPart(s, 'con_no', 680, 1200, { tag: c.tag });
   addPart(s, 'con_no', 680, 1360, { tag: c.tag }); addPart(s, 'pl', 1300, 1360, { desc: 'GREEN' });
-  addPart(s, 'con_nc', 680, 1480, { tag: c.tag }); addPart(s, 'pl', 1300, 1480, { desc: 'RED' });
+  addPart(s, 'con_nc', 680, 1520, { tag: c.tag }); addPart(s, 'pl', 1300, 1520, { desc: 'RED' });
   void x;
 }
