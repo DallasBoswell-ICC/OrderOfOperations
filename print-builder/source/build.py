@@ -2,9 +2,11 @@
 """Build Print Builder into one self-contained HTML file: dist/Print_Builder.html.
 
 The source lives in src/: index.html (the page), style.css, and the JavaScript in src/js/, split by job.
-The built file needs no server, no internet connection and nothing installed.
+The built file needs no server, no internet connection and nothing installed. Next to it go the app icons
+(dist/icons) and dist/print-builder.webmanifest, for installing it from the website as an app.
 """
 from pathlib import Path
+import shutil
 from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parent
@@ -40,6 +42,12 @@ def build() -> Path:
     page = page.replace("%ICON%", icon).replace("%CSS%", css).replace("%JS%", js)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(page, encoding="utf-8")
+    # the app icons and the web app manifest go next to it (for the website: installing it as an app)
+    icons = OUT.parent / "icons"
+    if icons.exists():
+        shutil.rmtree(icons)
+    shutil.copytree(SRC / "icons", icons)
+    shutil.copy(SRC / "print-builder.webmanifest", OUT.parent / "print-builder.webmanifest")
     return OUT
 
 
