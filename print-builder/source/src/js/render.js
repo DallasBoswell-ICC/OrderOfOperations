@@ -4,6 +4,7 @@
    ===================================================================== */
 const PW = 4;                                  // the wires' weight (the symbols' lines are drawn to it)
 let SHOW = { wn: true, rn: true, xr: true };   // wire numbers, rung numbers, cross-references
+let LABS = [];                                 // the wire numbers on the sheet on screen: { id (its wire), l, x, y, anchor, x0..y1 }
 const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 // the sheet's drawing (no editor marks): an SVG group's insides
@@ -20,24 +21,10 @@ function drawSheet(s, k, A) {
     const fed = s.wires.some(w => [w.a, w.b].some(e => e.r === r.id && e.y <= r.y0));
     if (fed) text(r.x + (r.label === 'L1' ? -14 : 14), r.y0 + 40, r.label, 26, r.label === 'L1' ? 'end' : 'start');
     else { arrow(r.x, r.y0, 0, 1); text(r.x, r.y0 - 34, r.label, 28); } }
-  // wires, and their numbers
-  for (const w of s.wires) {
-    const P = wirePts(s, w);
-    g += `<polyline points="${P.map(q => q.join(',')).join(' ')}"/>`;
-    if (!SHOW.wn) continue;
-    const l = A.label.get(A.wireRoot(s, w)); if (!l) continue;
-    let best = null;
-    for (let i = 0; i < P.length - 1; i++) { const [a, b] = [P[i], P[i + 1]], h = a[1] === b[1], len = Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
-      const sc = len * (h ? 2 : 1); if (len >= 46 && (!best || sc > best.sc)) best = { a, b, h, sc }; }
-    if (!best) continue;
-    if (best.h) text((best.a[0] + best.b[0]) / 2, best.a[1] - 9, l, 22);
-    else {   // (upright: beside it, clear of the wires that cross it)
-      const x = best.a[0], ya = Math.min(best.a[1], best.b[1]), yb = Math.max(best.a[1], best.b[1]);
-      const crossing = y => s.wires.some(v => v !== w && wirePts(s, v).some((q, i, V) => i < V.length - 1 && q[1] === V[i + 1][1] && Math.abs(q[1] - y) < 34 && Math.min(q[0], V[i + 1][0]) < x + 60 && Math.max(q[0], V[i + 1][0]) > x));
-      const f = [.5, .3, .7, .2, .8, .4, .6].find(f => !crossing(ya + (yb - ya) * f)) ?? .5;
-      text(x + 10, ya + (yb - ya) * f + 8, l, 22, 'start');
-    }
-  }
+  // wires, then their numbers (placed clear of the symbols, their tags and the other wires; see wireLabels)
+  for (const w of s.wires) g += `<polyline points="${wirePts(s, w).map(q => q.join(',')).join(' ')}"/>`;
+  LABS = SHOW.wn ? wireLabels(s, A) : [];
+  for (const L of LABS) text(L.x, L.y, L.l, 22, L.anchor);
   // joints: three or more wires at a node or a terminal; a wire teed onto a rail
   const deg = new Map(), bump = (x, y) => { const c = x + ',' + y; deg.set(c, (deg.get(c) || 0) + 1); };
   for (const w of s.wires) for (const e of [w.a, w.b]) { const [x, y] = pos(s, e); if (e.r) { const r = partOf(s, e.r); if (r && y > r.y0 && y < r.y1) { deg.set(x + ',' + y, 9); continue; } } bump(x, y); }
@@ -99,3 +86,47 @@ function fitDraw(page) {
   svg.setAttribute('viewBox', `0 0 ${vw} ${vh}`);
   return [vw, vh];
 }
+
+/* ---------- wire numbers: where each goes ---------- */
+// One number for each run of wire: wires that carry straight on through a joint count as one run (as Circuit
+// Builder prints them). Each goes above a level run or beside an upright one, at the first spot that is clear of
+// the symbols and their tags, the other numbers and the other wires; one dragged somewhere stays there.
+function wireLabels(s, A) {
+  const out = [], boxes = s.parts.filter(p => p.t !== 'rail').map(p => partBox(p));
+  for (const t of s.texts) boxes.push(textBox(t));
+  for (const r of s.parts) if (r.t === 'rail') boxes.push({ x0: r.x - 30, x1: r.x + 30, y0: r.y0 - 60, y1: r.y0 + 50 });
+  const segs = s.wires.flatMap(w => { const P = wirePts(s, w); return P.slice(1).map((q, i) => ({ w, a: P[i], b: q })); });
+  const hits = (R, own) => boxes.some(b => R.x0 < b.x1 && R.x1 > b.x0 && R.y0 < b.y1 && R.y1 > b.y0) || out.some(b => R.x0 < b.x1 + 6 && R.x1 > b.x0 - 6 && R.y0 < b.y1 + 4 && R.y1 > b.y0 - 4)
+    || segs.some(g => !own.has(g.w) && Math.max(g.a[0], g.b[0]) >= R.x0 - 8 && Math.min(g.a[0], g.b[0]) <= R.x1 + 8 && Math.max(g.a[1], g.b[1]) >= R.y0 - 16 && Math.min(g.a[1], g.b[1]) <= R.y1 + 16);
+  const rect = (l, x, y, anchor) => { const wd = String(l).length * 13 + 4, x0 = anchor === 'start' ? x : anchor === 'end' ? x - wd : x - wd / 2; return { x0, x1: x0 + wd, y0: y - 18, y1: y + 3 }; };
+  const runs = runsOf(s);
+  // (the ones dragged into place first, so the others keep clear of them)
+  const list = [...new Set(runs.values())].sort((a, b) => (b.some(w => w.lab) ? 1 : 0) - (a.some(w => w.lab) ? 1 : 0));
+  for (const ws of list) {
+    const l = A.label.get(A.wireRoot(s, ws[0])); if (!l || ws.every(w => w.hideNum)) continue;
+    const own = new Set(ws), fixed = ws.find(w => w.lab && !w.hideNum);
+    if (fixed) { const [x, y] = fixed.lab; out.push({ id: fixed.id, l, x, y, anchor: 'middle', ...rect(l, x, y, 'middle') }); continue; }
+    const cand = [];
+    for (const w of ws) { if (w.hideNum) continue; const P = wirePts(s, w);
+      for (let i = 0; i < P.length - 1; i++) { const a = P[i], b = P[i + 1], h = a[1] === b[1], len = Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]); if (len < 40) continue;
+        cand.push({ w, a, b, h, len, sc: len * (h ? 2 : 1) }); } }
+    cand.sort((p, q) => q.sc - p.sc);
+    let put = null;
+    for (const c of cand) { for (const f of [.5, .35, .65, .2, .8]) { const spots = c.h ? [[c.a[0] + (c.b[0] - c.a[0]) * f, c.a[1] - 9, 'middle'], [c.a[0] + (c.b[0] - c.a[0]) * f, c.a[1] + 27, 'middle']]
+        : [[c.a[0] + 10, c.a[1] + (c.b[1] - c.a[1]) * f + 8, 'start'], [c.a[0] - 10, c.a[1] + (c.b[1] - c.a[1]) * f + 8, 'end']];
+        for (const [x, y, an] of spots) { const R = rect(l, x, y, an); if (!hits(R, own)) { put = { id: c.w.id, l, x: Math.round(x), y: Math.round(y), anchor: an, ...R }; break; } }
+        if (put) break; } if (put) break; }
+    if (!put && cand.length) { const c = cand[0], x = c.h ? (c.a[0] + c.b[0]) / 2 : c.a[0] + 10, y = c.h ? c.a[1] - 9 : (c.a[1] + c.b[1]) / 2 + 8, an = c.h ? 'middle' : 'start'; put = { id: c.w.id, l, x, y, anchor: an, ...rect(l, x, y, an) }; }
+    if (put) out.push(put);
+  }
+  return out;
+}
+// the runs of wire on a sheet: wire id → the wires of its run (wires carrying straight on through a joint)
+function runsOf(s) {
+  const up = new Map(s.wires.map(w => [w.id, w.id])), find = id => { while (up.get(id) !== id) id = up.get(id); return id; };
+  for (const n of s.nodes) { const ws = wiresAt(s, { n: n.id }), dir = w => { const P = wirePts(s, w), at = sameEnd(w.a, { n: n.id }) ? 0 : P.length - 1, o = P[at ? at - 1 : 1]; return [Math.sign(o[0] - n.x), Math.sign(o[1] - n.y)]; };
+    for (let i = 0; i < ws.length; i++) for (let j = i + 1; j < ws.length; j++) { const a = dir(ws[i]), b = dir(ws[j]); if (a[0] === -b[0] && a[1] === -b[1]) up.set(find(ws[i].id), find(ws[j].id)); } }
+  const g = new Map(); for (const w of s.wires) { const r = find(w.id); if (!g.has(r)) g.set(r, []); g.get(r).push(w); }
+  return new Map(s.wires.map(w => [w.id, g.get(find(w.id))]));
+}
+const runWires = w => runsOf(S).get(w.id) || [w];

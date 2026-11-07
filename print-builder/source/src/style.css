@@ -113,3 +113,13 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
   #print-host .pr-page { box-shadow: none; page-break-after: always; break-after: page; }
   #print-host .pr-page { page: port; } #print-host .pr-page.land { page: land; }
 }
+/* the Edit group: small buttons, two to a column */
+.stk { display: flex; flex-direction: column; gap: 2px; }
+.rb.sm { flex-direction: row; gap: 6px; min-width: 76px; padding: 3px 8px; justify-content: flex-start; }
+.rb.sm svg { width: 17px; height: 17px; }
+.rb.sm.danger:hover { color: #ff8a8d; }
+.rb:disabled { opacity: .38; cursor: default; background: transparent; }
+/* no page text highlighted by dragging on the sheet */
+.desk, .desk * { -webkit-user-select: none; user-select: none; }
+/* over a terminal in Select: a drag draws a wire */
+#sv.tool-select.on-term { cursor: crosshair; }

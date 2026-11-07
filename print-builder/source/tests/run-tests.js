@@ -103,6 +103,45 @@ let passed = 0, failed = 0;
     return r.join('|') === 'PB1,PB2,CR1,CR1|1,2,3,4|0' ? [] : ['tags | numbers | issues: ' + r.join(' | ')];
   });
 
+  await check('Motor: T1, T2, T3 come in level on the grid; selector uses the operator symbol; fused disconnect rings as thin as the rest', async p => {
+    const r = await p.evaluate(() => { loadDoc(template('starter')); refresh(true); const m = S.parts.find(q => q.t === 'motor');
+      const ts = [0, 1, 2].map(i => termPos(m, i)), ws = [0, 1, 2].map(i => wiresAt(S, { p: m.id, i }).length);
+      const level = [0, 1, 2].every(i => { const w = wiresAt(S, { p: m.id, i })[0]; const P = wirePts(S, w); return P.every(q => q[1] === ts[i][1]); });
+      const tl = [...new Set(S.wires.filter(w => [w.a, w.b].some(e => e.p === m.id)).map(w => A.label.get(A.wireRoot(S, w))))].sort().join(',');
+      return [ts.every(t => t[0] % 20 === 0 && t[1] % 20 === 0), ws.join(''), level, tl, LIB.sel.sym, /r=\\?"3.333\\?"/.test(PSYM['3PH Fusible Disconnect'].b) && !/r=\\?"5\\?" transform=\\?"matrix\(3/.test(PSYM['3PH Fusible Disconnect'].b)]; });
+    return r.join('|') === 'true|111|true|T1A,T2A,T3A|Selector Switch Operator|true' ? [] : ['grid | wired | level | numbers | selector | fusible: ' + r.join(' | ')];
+  });
+
+  await check('Select: drag from a terminal draws a wire; dragging on the sheet highlights no text', async p => {
+    await p.click('#new-btn'); await p.click('[data-new="blank"]'); await p.waitForTimeout(100);
+    const scr = (x, y) => p.evaluate(([x, y]) => { const m = svg.getScreenCTM(); return [m.a * x + m.e, m.d * y + m.f]; }, [x, y]);
+    await p.evaluate(() => { const L1 = S.parts[0]; addWire(S, [[L1.x, 400], [600, 400]]); addPart(S, 'pb_no', 640, 400); refresh(); });
+    const [ax, ay] = await scr(680, 400), [bx, by] = await scr(900, 560);
+    await p.mouse.move(ax, ay); await p.mouse.down(); await p.mouse.move(bx, by, { steps: 6 }); await p.mouse.up();
+    const r = await p.evaluate(() => { const pb = S.parts.find(q => q.t === 'pb_no'); const w = wiresAt(S, { p: pb.id, i: 1 })[0]; return [tool, !!w, w ? wirePts(S, w).map(q => q.join(',')).join(' ') : '', String(getSelection()).length]; });
+    return r.join('|') === 'select|true|680,400 900,400 900,560|0' ? [] : ['tool | wire | points | highlighted: ' + r.join(' | ')];
+  });
+
+  await check('Copy and paste: a coil and its contact get a new letter together; a contact copied alone keeps its coil', async p => {
+    const r = await p.evaluate(() => { loadDoc(template('blank')); const L1 = S.parts[0], L2 = S.parts[1];
+      addWire(S, [[L1.x, 400], [L2.x, 400]]); const c = addPart(S, 'con_no', 500, 400, { tag: 'CR1' }); const k = addPart(S, 'coil', 1000, 400); refresh();
+      sel = new Set([c.id, k.id]); copySel(); pasteClip([400, 700]);
+      const tags = S.parts.filter(q => q.t !== 'rail').map(q => q.tag).join(',');
+      sel = new Set([c.id]); copySel(); pasteClip([400, 900]);
+      return [tags, S.parts.filter(q => q.t !== 'rail').map(q => q.tag).join(','), S.wires.length]; });
+    return r.join('|') === 'CR1,CR1,CR2,CR2|CR1,CR1,CR2,CR2,CR1|4' ? [] : ['tags after each paste | wires: ' + r.join(' | ')];
+  });
+
+  await check('Wire numbers: clear of symbols and tags, once a straight run; one can be moved or hidden', async p => {
+    const r = await p.evaluate(() => { loadDoc(template('starter')); refresh(true);
+      const boxes = S.parts.filter(q => q.t !== 'rail').map(partBox), over = LABS.filter(L => boxes.some(b => L.x0 < b.x1 && L.x1 > b.x0 && L.y0 < b.y1 && L.y1 > b.y0)).map(L => L.l);
+      const w = S.wires.find(w => A.label.get(A.wireRoot(S, w)) === '6'); const L = LABS.find(L => L.id === w.id || runWires(w).some(o => o.id === L.id));
+      w.lab = [L.x + 40, L.y - 40]; drawInk(); const moved = LABS.some(L => L.l === '6' && L.x === w.lab[0]);
+      for (const o of runWires(w)) o.hideNum = true; drawInk(); const hidden = !LABS.some(L => L.l === '6');
+      return [over.join(','), moved, hidden]; });
+    return r.join('|') === '|true|true' ? [] : ['over symbols | moved | hidden: ' + r.join(' | ')];
+  });
+
   await check('Title block: boxes added, changed and taken away show on the sheet; saved and opened again', async p => {
     await p.click('#tb-btn'); await p.click('#tb-add'); await p.keyboard.type('Instructor');
     await p.locator('.tbrow[data-i]').last().locator('[data-k=value]').fill('D. Boswell');

@@ -21,6 +21,7 @@ MODULES = [
     "render.js",     # drawing a sheet and its title block, as it prints
     "templates.js",  # ready-made prints
     "editor.js",     # the tools, picking and the editor's marks
+    "clipboard.js",  # copy, cut and paste
     "ui.js",         # the window round it: ribbon, palette, properties, sheets, title block, zoom, files, printing
 ]
 

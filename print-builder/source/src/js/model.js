@@ -129,7 +129,7 @@ function splitWire(s, w, x, y) {
     const atBend = P[k + 1][0] === x && P[k + 1][1] === y && k + 1 < P.length - 1;
     const w2 = { id: uid('w'), a: { n: n.id }, b: w.b, pts: w.pts.slice(atBend ? k + 1 : k) };
     w.pts = w.pts.slice(0, k); w.b = { n: n.id };
-    s.wires.push(w2); if (w.num) w2.num = w.num;
+    s.wires.push(w2); if (w.num) w2.num = w.num; if (w.hideNum) w2.hideNum = true;
     return { n: n.id };
   }
   return null;
@@ -190,7 +190,7 @@ function moveItems(s, ids, dx, dy) {
   for (const w of s.wires) for (const e of [w.a, w.b]) if (e.r && ids.has(e.r)) e.y += dy;
   for (const w of s.wires) {
     const am = moving(w.a), bm = moving(w.b), o = before.get(w.id);
-    if (am && bm) { w.pts = w.pts.map(([x, y]) => [x + dx, y + dy]); continue; }
+    if (am && bm) { w.pts = w.pts.map(([x, y]) => [x + dx, y + dy]); if (w.lab) w.lab = [w.lab[0] + dx, w.lab[1] + dy]; continue; }
     if (!am && !bm) continue;
     reroute(s, w, o.a, o.b, o.pts);
   }

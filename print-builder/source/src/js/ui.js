@@ -8,7 +8,7 @@ const AUTOSAVE = 'oo-print-builder:autosave', SHOWKEY = 'oo-print-builder:show';
 let zoom = 1, spaceDown = false, pan = null, pageFor = null;
 const say = s => { $('hint').textContent = s || hintFor(); };
 const hintFor = () => ({
-  select: 'Click to pick · drag to move · drag empty paper to pick several · R turns · Delete takes away',
+  select: 'Click to pick · drag to move · drag empty paper to pick several · R turns · Delete deletes',
   wire: 'Click to start · click to bend · click a terminal, rail or wire to finish · Esc stops',
   rung: 'Click between the rails to add a rung, then drop symbols onto it',
   note: 'Click where the note goes',
@@ -35,6 +35,8 @@ function buildPage(key) {
 function drawInk() { svg.querySelector('g.ink').innerHTML = drawSheet(S, doc.cur, A); }
 function updateButtons() {
   $('undo-btn').disabled = !UNDO.length; $('redo-btn').disabled = !REDO.length;
+  const any = [...sel].some(id => { const p = partOf(S, id); return p ? p.t !== 'rail' : true; });
+  $('copy-btn').disabled = $('cut-btn').disabled = !any; $('del-btn').disabled = !sel.size && !selW; $('paste-btn').disabled = !hasClip();
   $('orient-lbl').textContent = S.land ? 'Landscape' : 'Portrait';
   $('pageinfo').textContent = `Letter · ${S.land ? 'Landscape' : 'Portrait'}`;
   const n = ISSUES.filter(i => i.sev !== 'ok').length, b = $('check-badge');
@@ -53,7 +55,7 @@ function startPlacing(t) { placing = { t, rot: 0 }; sel = new Set(); selW = null
 /* ---------- the palette and the ribbon's menus ---------- */
 const thumb = t => { if (t === 'sup') return `<svg viewBox="-80 -30 100 60"><path d="M-22 -13L-22 13L0 0Z" fill="#000"/><line x1="0" y1="0" x2="18" y2="0" stroke="#000" stroke-width="4"/><text x="-30" y="9" font-size="26" font-weight="700" text-anchor="end" font-family="Arial">L1</text></svg>`;
   const s = PSYM[LIB[t].sym], e = extentOf(t), pad = 8; return `<svg viewBox="${e.x0 - pad} ${s.y0 - pad} ${e.x1 - e.x0 + 2 * pad} ${s.y1 - s.y0 + 2 * pad}"><g fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${s.b}</g></svg>`; };
-const short = n => n.replace('Pushbutton', 'PB').replace('Temperature', 'Temp.').replace('Proximity', 'Prox.').replace('Selector Switch', 'Selector').replace(', Held Closed', ' (HC)').replace(', Held Open', ' (HO)').replace('Toggle Switch (SPST)', 'Toggle').replace('Overload Contact (NC)', 'OL Contact').replace('Overload Heater', 'Overload').replace('Starter Contacts (3-Phase)', 'Starter').replace('Control Transformer', 'Control Xfmr').replace('Line In (L1, L2, L3)', 'Line In').replace('3-Phase', '3Ø');
+const short = n => n.replace('Pushbutton', 'PB').replace('Emergency Stop', 'E-Stop').replace('Temperature', 'Temp.').replace('Proximity', 'Prox.').replace('Selector Switch', 'Selector').replace(', Held Closed', ' (HC)').replace(', Held Open', ' (HO)').replace('Toggle Switch (SPST)', 'Toggle').replace('Overload Heater (1 line)', 'OL Heater').replace('Phase (L1, L2, L3)', 'Phase').replace('3-Phase', '3Ø');
 function buildPalette() {
   let h = '';
   for (const c of CATS) { h += `<div class="ph">${c}</div><div class="pg">`;
@@ -91,7 +93,7 @@ function renderProps() {
     return;
   }
   if (p && p.t === 'rail') {
-    P.innerHTML = `<h4>Rail ${esc(p.label)}</h4><p class="help">Control ${p.label} (wire ${p.label === 'L1' ? 1 : 2}${A.n1 != null && p.label === 'L1' && doc.sheets.some(s => s.parts.some(q => q.t === 'xfmr')) ? ', from the transformer’s X1' : ''}). Drag its ends to lengthen it; drag it to move it (its rungs stay on it).</p><div class="acts"><button class="btn del" id="p-del">Take Away</button></div>`;
+    P.innerHTML = `<h4>Rail ${esc(p.label)}</h4><p class="help">Control ${p.label} (wire ${p.label === 'L1' ? 1 : 2}${A.n1 != null && p.label === 'L1' && doc.sheets.some(s => s.parts.some(q => q.t === 'xfmr')) ? ', from the transformer’s X1' : ''}). Drag its ends to lengthen it; drag it to move it (its rungs stay on it).</p><div class="acts"><button class="btn del" id="p-del">Delete</button></div>`;
   } else if (p) {
     const d = LIB[p.t], k = d.kind, coils = [...new Set(allParts().filter(x => LIB[x.p.t].kind === 'coil').map(x => x.p.tag).filter(Boolean))];
     const ols = [...new Set(allParts().filter(x => LIB[x.p.t].kind === 'ol').map(x => x.p.tag).filter(Boolean))];
@@ -100,14 +102,17 @@ function renderProps() {
     const termNums = [...Array(termsN(p)).keys()].map(i => A.label.get(A.rootT(p, S, i))).filter(Boolean);
     P.innerHTML = `<h4>${esc(d.name)}${p.tag ? ' ' + esc(tagsOf(p).length > 1 ? tagsOf(p)[0] + '–' + tagsOf(p)[2] : p.tag) : ''}</h4>
       ${p.t === 'sup' ? `<div class="f">Line<div class="seg">${['L1', 'L2', 'L3'].map(l => `<button data-line="${l}" aria-pressed="${p.tag === l}">${l}</button>`).join('')}</div></div>` : `
-      <div class="f">Tag<input class="in" id="p-tag" value="${esc(p.tag)}" list="p-tags" autocomplete="off"><datalist id="p-tags">${list.map(x => `<option value="${esc(x)}">`).join('')}</datalist></div>`}
-      ${k === 'coil' ? `<div class="f">Coil<select id="p-pre">${COIL_PRE.map(([v, n]) => `<option value="${v}"${(p.pre || 'CR') === v ? ' selected' : ''}>${n} (${v})</option>`).join('')}</select></div>` : ''}
-      ${d.flip ? `<div class="f">Type<div class="seg"><button data-flip="${/_no$|_hc$/.test(p.t) ? p.t : d.flip}" aria-pressed="${/_no$|_hc$/.test(p.t)}">${/_h[co]$/.test(p.t) ? 'NO (HC)' : 'NO'}</button><button data-flip="${/_nc$|_ho$/.test(p.t) ? p.t : d.flip}" aria-pressed="${/_nc$|_ho$/.test(p.t)}">${/_h[co]$/.test(p.t) ? 'NC (HO)' : 'NC'}</button></div></div>` : ''}
-      ${p.t !== 'sup' ? `<div class="f">Description<input class="in" id="p-desc" value="${esc(p.desc)}" placeholder="${k === 'load' && p.t === 'pl' ? 'e.g. RED' : 'e.g. HIGH TEMP'}"></div>` : ''}
+      ${k === 'contact' || k === 'starter' || k === 'olc' ? `<div class="f">Worked by<select id="p-of">${[...new Set([...list, p.tag].filter(Boolean))].map(x => `<option value="${esc(x)}"${x === p.tag ? ' selected' : ''}>${esc(x)}${list.includes(x) ? '' : ' (no ' + (k === 'olc' ? 'overload' : 'coil') + ' yet)'}</option>`).join('')}${list.length || p.tag ? '' : `<option value="">(place a ${k === 'olc' ? 'overload' : 'coil'} first)</option>`}<option value="__other">Other…</option></select></div>`
+        : `<div class="f">${k === 'coil' || k === 'sw' ? 'Letter' : 'Number'}<input class="in" id="p-tag" value="${esc(p.tag)}" autocomplete="off"></div>`}`}
+      ${k === 'coil' ? `<div class="f">Kind<select id="p-pre">${COIL_PRE.map(([v, n]) => `<option value="${v}"${(p.pre || 'CR') === v ? ' selected' : ''}>${n} (${v})</option>`).join('')}</select></div>` : ''}
+      ${d.flip ? `<div class="f">Contact<div class="seg"><button data-flip="${/_no$|_hc$/.test(p.t) ? p.t : d.flip}" aria-pressed="${/_no$|_hc$/.test(p.t)}">${/_h[co]$/.test(p.t) ? 'NO (HC)' : 'NO'}</button><button data-flip="${/_nc$|_ho$/.test(p.t) ? p.t : d.flip}" aria-pressed="${/_nc$|_ho$/.test(p.t)}">${/_h[co]$/.test(p.t) ? 'NC (HO)' : 'NC'}</button></div></div>` : ''}
+      ${p.t !== 'sup' ? `<div class="f">Label<input class="in" id="p-desc" value="${esc(p.desc)}" placeholder="${k === 'load' && p.t === 'pl' ? 'e.g. RED' : 'e.g. HIGH TEMP'}"></div>` : ''}
       ${rn ? `<div class="f">Rung<span class="ro">${rn} (automatic)</span></div>` : ''}
       ${termNums.length ? `<div class="f">Wires<span class="ro">${termNums.join(' → ')} (automatic)</span></div>` : ''}
       ${xr && xr.length ? `<div class="f">Contacts on<span class="ro">${xr.map(o => o.n + (o.nc ? ' (NC)' : '')).join(', ')}</span></div>` : ''}
-      <div class="acts">${termsN(p) === 2 ? '<button class="btn" id="p-rot">Turn (R)</button>' : ''}<button class="btn del" id="p-del">Take Away</button></div>`;
+      <div class="acts">${termsN(p) === 2 ? '<button class="btn" id="p-rot">Rotate (R)</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
+    const of = $('p-of'); if (of) of.addEventListener('change', () => { let v = of.value; if (v === '__other') { v = (prompt(k === 'olc' ? 'The overload this contact belongs to (e.g. OL2):' : 'The coil that works this contact (e.g. CR3):', p.tag || '') || '').trim().toUpperCase(); if (!v) { renderProps(); return; } }
+      snapshot(); p.tag = v; refresh(); });
     const tg = $('p-tag'); if (tg) tg.addEventListener('input', () => edit(() => { p.tag = tg.value.trim().toUpperCase(); if (k === 'coil') lastCoil = p.tag; }));
     if (tg) tg.addEventListener('change', () => renderProps());
     const ds = $('p-desc'); if (ds) ds.addEventListener('input', () => edit(() => { p.desc = ds.value.toUpperCase(); }));
@@ -119,7 +124,7 @@ function renderProps() {
     P.innerHTML = `<h4>Note</h4><textarea id="note-text" rows="4">${esc(t.s)}</textarea>
       <div class="f" style="margin-top:8px">Size<div class="seg">${[[20, 'Small'], [24, 'Medium'], [32, 'Large']].map(([z, n]) => `<button data-size="${z}" aria-pressed="${(t.size || 24) === z}">${n}</button>`).join('')}</div></div>
       <div class="f">Bold<div class="seg"><button data-bold="0" aria-pressed="${!t.bold}">No</button><button data-bold="1" aria-pressed="${!!t.bold}">Yes</button></div></div>
-      <div class="acts"><button class="btn del" id="p-del">Take Away</button></div>`;
+      <div class="acts"><button class="btn del" id="p-del">Delete</button></div>`;
     $('note-text').addEventListener('input', e => edit(() => { t.s = e.target.value; }));
     for (const b of P.querySelectorAll('[data-size]')) b.addEventListener('click', () => { snapshot(); t.size = +b.dataset.size; refresh(); });
     for (const b of P.querySelectorAll('[data-bold]')) b.addEventListener('click', () => { snapshot(); t.bold = b.dataset.bold === '1'; refresh(); });
@@ -128,12 +133,16 @@ function renderProps() {
     P.innerHTML = `<h4>Wire ${esc(auto || '')}</h4>
       <div class="f">Number<input class="in" id="w-num" value="${esc(w.num || '')}" placeholder="${esc(w.num ? '' : auto || '')} (automatic)"></div>
       <p class="help">${net > 1 ? `${net} wire pieces are joined here; they all take this number.` : 'Numbered automatically.'} Type a number to fix it yourself; clear it to go back to automatic.</p>
-      <div class="acts"><button class="btn del" id="p-del">Take Away</button></div>`;
+      <div class="f">On the Print<div class="seg"><button data-wshow="1" aria-pressed="${!w.hideNum}">Shown</button><button data-wshow="0" aria-pressed="${!!w.hideNum}">Hidden</button></div></div>
+      <p class="help">Drag the number on the sheet to move it.${w.lab ? '' : ' It finds a clear spot by itself until you do.'}</p>
+      <div class="acts">${w.lab ? '<button class="btn" id="w-auto">Put Number Back</button>' : ''}<button class="btn del" id="p-del">Delete Wire</button></div>`;
+    for (const b of P.querySelectorAll('[data-wshow]')) b.addEventListener('click', () => { snapshot(); const hide = b.dataset.wshow === '0'; for (const o of runWires(w)) { if (hide) o.hideNum = true; else delete o.hideNum; } refresh(); });
+    const wa = $('w-auto'); if (wa) wa.addEventListener('click', () => { snapshot(); for (const o of runWires(w)) delete o.lab; refresh(); });
     $('w-num').addEventListener('input', e => edit(() => { const v = e.target.value.trim().toUpperCase(); for (const o of A.WIRED.get(r) || []) delete o.w.num; if (v) w.num = v; }));
   } else if (ids.length > 1) {
-    P.innerHTML = `<h4>${ids.length} things picked</h4><p class="help">Drag any of them to move them together. <kbd>R</kbd> turns the symbols; <kbd>Delete</kbd> takes them all away.</p><div class="acts"><button class="btn del" id="p-del">Take Away</button></div>`;
+    P.innerHTML = `<h4>${ids.length} things picked</h4><p class="help">Drag any of them to move them together. <kbd>R</kbd> turns the symbols; <kbd>Delete</kbd> deletes them all.</p><div class="acts"><button class="btn del" id="p-del">Delete</button></div>`;
   } else {
-    P.innerHTML = `<h4>Drawing the Print</h4><p class="help"><b>1.</b> Drag a symbol from the left onto a rung: it goes into the wire.<br><b>2.</b> <b>Rung</b> adds a rung between the rails; <b>Wire</b> draws branches and the power circuit.<br><b>3.</b> Pick a symbol to set its tag (NO/NC, its coil) and description.<br><b>4.</b> Wire numbers, rung numbers and cross-references fill in by themselves.<br><b>5.</b> <b>Check Print</b> rings what needs fixing.</p>`;
+    P.innerHTML = `<h4>Drawing the Print</h4><p class="help"><b>1.</b> Drag a symbol from the left onto a rung: it goes into the wire.<br><b>2.</b> <b>Rung</b> adds a rung between the rails; <b>Wire</b> draws branches and the power circuit.<br><b>3.</b> Pick a symbol to set its number or letter, NO/NC, what works it, and its label.<br><b>4.</b> Wire numbers, rung numbers and cross-references fill in by themselves.<br><b>5.</b> <b>Check Print</b> rings what needs fixing.</p>`;
   }
   const del = $('p-del'); if (del) del.addEventListener('click', removeSelection);
 }
@@ -265,6 +274,7 @@ $('print-btn').addEventListener('click', printAll);
 /* ---------- the ribbon's other buttons, and the keyboard ---------- */
 for (const b of document.querySelectorAll('[data-tool]')) b.addEventListener('click', () => setTool(b.dataset.tool));
 $('check-btn').addEventListener('click', () => { checkOn = !checkOn; updateButtons(); drawEd(); });
+$('copy-btn').addEventListener('click', copySel); $('cut-btn').addEventListener('click', cutSel); $('paste-btn').addEventListener('click', () => pasteClip(null)); $('del-btn').addEventListener('click', removeSelection);
 $('undo-btn').addEventListener('click', () => { if (undo()) { sel = new Set(); selW = null; refresh(true); } });
 $('redo-btn').addEventListener('click', () => { if (redo()) { sel = new Set(); selW = null; refresh(true); } });
 for (const [id, k] of [['show-wn', 'wn'], ['show-rn', 'rn'], ['show-xr', 'xr']]) $(id).addEventListener('change', e => { SHOW[k] = e.target.checked; refresh(); });
@@ -276,6 +286,10 @@ document.addEventListener('keydown', e => {
     if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); $('redo-btn').click(); return; }
     if (k === 's') { e.preventDefault(); $('save-btn').click(); return; }
     if (k === 'p') { e.preventDefault(); printAll(); return; }
+    if (k === 'c') { e.preventDefault(); copySel(); return; }
+    if (k === 'x') { e.preventDefault(); cutSel(); return; }
+    if (k === 'v') { e.preventDefault(); pasteClip(cursor); return; }
+    if (k === 'd') { e.preventDefault(); if (copySel()) pasteClip(null); return; }
     if (k === 'a') { e.preventDefault(); sel = new Set([...S.parts, ...S.texts].map(x => x.id)); selW = null; refresh(); return; }
     if (k === '0') { e.preventDefault(); fitZoom(); return; }
     if (k === '=' || k === '+') { e.preventDefault(); zoomBy(1.25); return; }

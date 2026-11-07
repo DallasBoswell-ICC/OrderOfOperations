@@ -19,9 +19,7 @@ function buildStarter(s) {
   for (const [l, y] of [['L1', 200], ['L2', 320], ['L3', 440]]) { addPart(s, 'sup', 200, y, { tag: l }); addWire(s, [[200, y], [1840, y]]); }
   addPart(s, 'dsc3', 400, 320); addPart(s, 'fus3', 640, 320);
   addPart(s, 'mst3', 1180, 320, { tag: 'M1' }); addPart(s, 'ol3', 1520, 320);
-  const m = addPart(s, 'motor', 1980, 320);
-  // (the leads fan in to the motor)
-  [200, 320, 440].forEach((y, i) => addWire(s, [[1840, y], termPos(m, i)]));
+  addPart(s, 'motor', 1980, 320);   // (its T1, T2, T3 land on the three lines' ends)
   // the control transformer, off L1 and L2 after the fuses
   const x = addPart(s, 'xfmr', 920, 700);
   addWire(s, [[860, 200], [860, 640]]); addWire(s, [[980, 320], [980, 640]]);
