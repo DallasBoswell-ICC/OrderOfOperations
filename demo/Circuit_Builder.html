@@ -4384,8 +4384,18 @@ function printSheet(drawnBy, fit = false) {
   } else if (bars) { n1 = find(mk('BAR1')); n2 = find(mk('BAR2')); }
   else { n1 = s1 ? netAt(...s1.terms[0]) : null; n2 = s2 ? netAt(...s2.terms[0]) : null; }
   if (n1 != null) { NUM.set(n1, '1'); ctrl.add(n1); } if (n2 != null && n2 !== n1) { NUM.set(n2, '2'); ctrl.add(n2); }
+  // (the power circuit first: every wire reached from a phase through disconnects, fuses, starters and overloads, a
+  // single fuse too (a transformer's primary fuse), and the transformer's primary. No control number goes to any of
+  // them: a primary fuse taken for a control part had pushed the power wires into the control numbers, and every
+  // control number up with them)
+  const PWRNET = new Set(), poles = q => q.t === 'fu1' ? [[0, 1]] : ['dsc', 'fus', 'mst', 'olh'].includes(q.t) ? [[0, 1], [2, 3], [4, 5]] : [];
+  { const q0 = []; for (const q of P) if (q.t === 'ph') { const n = netAt(...q.terms[0]); if (n != null && !PWRNET.has(n)) { PWRNET.add(n); q0.push(n); } }
+    while (q0.length) { const n = q0.shift();
+      for (const q of P) for (const [i, j] of poles(q)) { const a = netAt(...q.terms[i]), b = netAt(...q.terms[j]);
+        for (const [x, y] of [[a, b], [b, a]]) if (x === n && y != null && !PWRNET.has(y) && !NUM.has(y)) { PWRNET.add(y); q0.push(y); } } }
+    if (xf) for (const i of [0, 1]) { const n = netAt(...xf.terms[i]); if (n != null && !NUM.has(n)) PWRNET.add(n); } }
   // (the control circuit: everything reached from 1 and 2 through control parts)
-  const ctrlPart = q => !PRINT_POWER.has(q.t) && !isSrc(q.p) && !isPh(q.p);
+  const ctrlPart = q => !PRINT_POWER.has(q.t) && !isSrc(q.p) && !isPh(q.p) && !q.terms.some(t => PWRNET.has(netAt(...t)));
   for (let grew = true; grew;) { grew = false;
     for (const q of P) if (ctrlPart(q)) { const ns = q.terms.map(t => netAt(...t)).filter(n => n != null);
       if (ns.some(n => ctrl.has(n))) for (const n of ns) if (!ctrl.has(n)) { ctrl.add(n); grew = true; } } }
@@ -4399,8 +4409,8 @@ function printSheet(drawnBy, fit = false) {
   // power: traced pole by pole from the phases
   const LET = d => d > 0 ? String.fromCharCode(64 + d) : '';
   const POLED = new Set(['dsc', 'fus', 'mst', 'olh']);
-  const across = n => { const o = []; for (const q of P) if (POLED.has(q.t) && q.t !== 'mst') for (let i = 0; i < 6; i += 2) {
-    const a = netAt(...q.terms[i]), b = netAt(...q.terms[i + 1]); if (a === n && b != null) o.push(b); else if (b === n && a != null) o.push(a); } return o; };
+  const across = n => { const o = []; for (const q of P) if ((POLED.has(q.t) && q.t !== 'mst') || (q.t === 'fu1' && q.terms.some(t => PWRNET.has(netAt(...t))))) for (const [i, j] of poles(q)) {
+    const a = netAt(...q.terms[i]), b = netAt(...q.terms[j]); if (a === n && b != null) o.push(b); else if (b === n && a != null) o.push(a); } return o; };
   const mstLoad = new Set(); for (const q of P) if (q.t === 'mst') for (let i = 1; i < 6; i += 2) { const n = netAt(...q.terms[i]); if (n != null) mstLoad.add(n); }
   const lineQ = [];
   for (const q of P) if (q.t === 'ph') { const n = netAt(...q.terms[0]); if (n != null && !NUM.has(n)) { NUM.set(n, 'L' + q.L); PHASE.add(n); lineQ.push([n, q.L, 0]); } }
@@ -5751,7 +5761,9 @@ function pasteClip() {
     if (p.t === 'con' && map['c' + p.L]) q.L = map['c' + p.L];
     if (p.t === 'lamp' && p.L && map['b' + p.L]) q.L = map['b' + p.L];
     if (p.t === 'jmp') { if (!jm[p.L]) jm[p.L] = nextNum(new Set([...parts.filter(isJmp).map(q => q.L), ...Object.values(jm)])); q.L = jm[p.L]; }   // (pasted continuations pair among themselves)
-    if (p.t === 'dsc' || p.t === 'fus' || p.t === 'mtr' || p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw') { q.L = nextNum(new Set([...parts.filter(z => z.t === p.t).map(z => z.L), ...xf.filter(([t]) => t === p.t).map(([, L]) => L)])); xf.push([p.t, q.L]); }
+    // (numbered parts get the next number of their own; fuses, single or three-pole, count together, so a pasted fuse is never FU2 twice)
+    if (['dsc', 'fus', 'fu1', 'olh', 'mtr', 'lsw', 'tsw', 'psw'].includes(p.t)) { const grp = t => t === 'fu1' ? 'fus' : t, g = grp(p.t);
+      q.L = nextNum(new Set([...parts.filter(z => grp(z.t) === g).map(z => z.L), ...xf.filter(([t]) => t === g).map(([, L]) => L)])); xf.push([g, q.L]); }
     if (p.t === 'xfm') { q.L = nextNum(new Set([...parts.filter(z => z.t === 'xfm').map(z => z.L), ...xf.filter(([t]) => t === 'xfm').map(([, L]) => L)])); xf.push(['xfm', q.L]); }   // (a pasted transformer gets a number of its own)
     if (p.t === 'htr') { q.L = nextNum(new Set([...parts.filter(z => z.t === 'htr').map(z => z.L), ...xf.filter(([t]) => t === 'htr').map(([, L]) => L)])); xf.push(['htr', q.L]); }
     if (p.t === 'sol') { q.L = nextSol(new Set([...solNums(), ...np0])); np0.push(q.L); }   // (a pasted solenoid gets a number of its own)
@@ -5908,7 +5920,7 @@ function renderProps() {
     } else {
       lab.textContent = 'Number';
       const pre = { dsc: 'DS', fus: 'FU', fu1: 'FU', olh: 'OL', mtr: 'MTR' }[p.t], fuse = q => q.t === 'fus' || q.t === 'fu1', taken = new Set(parts.filter(q => (q.t === p.t || fuse(p) && fuse(q)) && q !== p).map(q => q.L));   // (fuses, single or three-pole, number from one count)
-      for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n))) ns.add(new Option(pre + n, String(n), false, String(n) === p.L));
+      for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n)) || String(n) === p.L) ns.add(new Option(pre + n + (taken.has(String(n)) ? ' (used twice)' : ''), String(n), false, String(n) === p.L));   // (its own number always shown, even one another part has too)
     }
     document.getElementById('pw-how').textContent = { dsc: 'In Run: click it to turn it off or on', fus: 'In Run: click a fuse to blow it, or to put a new one in', fu1: 'Blows on a short through it. In Run: click it to blow it, or to put a new one in', mst: 'Its contacts close while its coil is in', olh: 'In Run: click it to trip it, or to reset it', olc: 'Opens while its overload is tripped (click it in Run to reset)', mtr: 'Runs on three phases; two swapped, it runs backward' }[p.t];
   }
