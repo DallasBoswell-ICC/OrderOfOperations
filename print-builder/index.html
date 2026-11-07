@@ -1,0 +1,1448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Print Builder</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22%3E %3Crect width=%22512%22 height=%22512%22 rx=%22112%22 fill=%22%231c1d1f%22/%3E %3Crect x=%2210%22 y=%2210%22 width=%22492%22 height=%22492%22 rx=%22104%22 fill=%22none%22 stroke=%22%233a3b3f%22 stroke-width=%228%22/%3E %3Cellipse cx=%22208%22 cy=%22296%22 rx=%22128%22 ry=%22146%22 fill=%22none%22 stroke=%22%23ffc000%22 stroke-width=%2262%22/%3E %3Ctext x=%22402%22 y=%22232%22 text-anchor=%22middle%22 font-family=%22Arial, Helvetica, 'DejaVu Sans', sans-serif%22 font-weight=%22700%22 font-size=%22200%22 fill=%22%23ffc000%22%3E3%3C/text%3E %3C/svg%3E">
+<style>:root {
+  --page: #1b1d20; --bar: #202326; --rib: #232528; --line: #2e3237; --line2: #3a3f45; --card: #25282c;
+  --ink: #e8ecf0; --muted: #aab3bb; --faint: #8a939c; --gold: #ffc000; --sel: #2f8cff; --err: #e5484d; --warn: #ffb224; --ok: #46c46a;
+  --ui: "Aptos", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--ui); overflow: hidden; }
+button { font: inherit; color: inherit; }
+.app { height: 100vh; display: grid; grid-template-rows: 52px auto 1fr 34px; }
+/* top bar */
+.top { display: flex; align-items: center; gap: 12px; padding: 0 16px; background: var(--bar); border-bottom: 1px solid var(--line); }
+.logo { width: 30px; height: 30px; border-radius: 7px; }
+h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 span { color: var(--gold); }
+.tb-btns { margin-left: auto; display: flex; gap: 6px; }
+.btn { border: 1px solid var(--line2); border-radius: 8px; padding: 6px 13px; font-size: .9rem; background: #26292d; cursor: pointer; color: #d6dbe0; }
+.btn:hover { background: #30343a; } .btn.icon { padding: 6px 10px; } .btn.primary { background: var(--gold); color: #111; border-color: var(--gold); font-weight: 700; }
+.btn:disabled { opacity: .4; cursor: default; }
+.menuwrap { position: relative; }
+.dmenu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 40; display: grid; gap: 2px; padding: 6px; min-width: 220px; background: #26282b; border: 1px solid var(--line2); border-radius: 10px; box-shadow: 0 12px 28px rgba(0,0,0,.55); }
+.dmenu[hidden] { display: none; }
+.dmenu button { text-align: left; background: transparent; border: 0; border-radius: 6px; padding: 7px 10px; cursor: pointer; font-size: .88rem; color: #d6dbe0; display: flex; align-items: center; gap: 10px; }
+.dmenu button:hover { background: #34383d; }
+.dmenu img { width: 46px; height: 26px; object-fit: contain; background: #f4f5f6; border-radius: 4px; padding: 2px; }
+/* ribbon */
+.ribbon { display: flex; background: var(--rib); border-bottom: 1px solid var(--line); padding: 6px 8px 0; overflow-x: auto; }
+.grp { display: flex; flex-direction: column; border-right: 1px solid #34383d; padding: 0 8px; flex: none; } .grp.last { border-right: 0; }
+.grp .row { display: flex; gap: 2px; flex: 1; align-items: center; } .grp .row.col { flex-direction: column; align-items: flex-start; gap: 5px; padding-top: 4px; }
+.gl { font-size: 11px; color: var(--faint); text-align: center; padding: 3px 0 5px; white-space: nowrap; }
+.rb { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 8px; border-radius: 7px; font-size: 12.5px; color: #d6dbe0; min-width: 50px; background: transparent; border: 0; cursor: pointer; position: relative; }
+.rb:hover { background: #2e3236; } .rb[aria-pressed="true"] { background: #3a3524; outline: 1.5px solid var(--gold); }
+.rb svg { width: 22px; height: 22px; }
+.rb .sw { width: 22px; height: 22px; border-radius: 6px; border: 2.5px solid; background: #2b2e32; }
+.chkbtn[aria-pressed="true"] { outline-color: var(--err); background: #3a2426; }
+.badge { background: var(--err); color: #fff; font-size: 10.5px; font-weight: 800; border-radius: 9px; padding: 0 6px; margin-left: 4px; } .badge.w { background: var(--warn); color: #111; }
+.chk { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: #d6dbe0; cursor: pointer; }
+.chk input { display: none; } .tog { width: 28px; height: 16px; border-radius: 9px; background: #4a4f55; position: relative; flex: none; }
+.tog:after { content: ''; position: absolute; left: 2px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: #ddd; transition: left .12s; }
+.chk input:checked + .tog { background: var(--gold); } .chk input:checked + .tog:after { left: 14px; background: #111; }
+/* middle */
+.mid { display: grid; grid-template-columns: 224px 1fr 296px; min-height: 0; }
+.pal { background: #1f2124; border-right: 1px solid var(--line); padding: 8px 9px 16px; overflow-y: auto; }
+.ph { font-size: 11.5px; font-weight: 700; color: var(--muted); margin: 12px 2px 6px; text-transform: uppercase; letter-spacing: .05em; } .ph:first-child { margin-top: 2px; }
+.pg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.pt { background: #f4f5f6; border-radius: 7px; height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 2px solid transparent; cursor: grab; padding: 2px; user-select: none; touch-action: none; }
+.pt:hover { border-color: #9ec5ff; } .pt.on { border-color: var(--sel); box-shadow: 0 0 0 3px rgba(47,140,255,.25); }
+.pt svg { width: 52px; height: 30px; overflow: visible; } .pt span { font-size: 9.5px; color: #333; font-weight: 600; text-align: center; line-height: 1.05; }
+.desk { background: #3a3d42; position: relative; overflow: hidden; }
+.zoomer { position: absolute; inset: 0; overflow: auto; }
+.sizer { position: relative; }
+.pagehost { position: absolute; left: 24px; top: 24px; transform-origin: 0 0; }
+.desk.pan, .desk.pan * { cursor: grab !important; }
+.zoombar { position: absolute; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 2px; background: rgba(28,29,31,.88); border: 1px solid var(--line2); border-radius: 8px; padding: 2px; }
+.zoombar button { background: transparent; border: 0; border-radius: 6px; min-width: 30px; height: 28px; padding: 0 8px; cursor: pointer; font-weight: 600; }
+.zoombar button:hover { background: #3a3e44; } .zoombar span { font-size: .78rem; color: var(--muted); min-width: 3.4em; text-align: center; }
+.tip { position: absolute; background: #111; color: #fff; font-size: 13px; padding: 6px 10px; border-radius: 7px; box-shadow: 0 4px 14px rgba(0,0,0,.5); white-space: nowrap; pointer-events: none; z-index: 5; } .tip b { color: #7cc4ff; }
+.side { background: #1f2124; border-left: 1px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+.card { background: var(--card); border: 1px solid #33373c; border-radius: 10px; padding: 12px; }
+.card h4 { margin: 0 0 10px; font-size: 14px; }
+.f { display: grid; grid-template-columns: 88px 1fr; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 13px; color: var(--muted); }
+.in, .card select, .card textarea { width: 100%; background: #1b1d20; border: 1px solid var(--line2); border-radius: 6px; padding: 6px 8px; color: var(--ink); font: inherit; font-size: 13px; }
+.in:focus, .card select:focus, .card textarea:focus { outline: 2px solid var(--gold); outline-offset: 0; }
+.seg { display: flex; border: 1px solid var(--line2); border-radius: 6px; overflow: hidden; } .seg button { flex: 1; text-align: center; padding: 5px 0; font-size: 12.5px; background: transparent; border: 0; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--gold); color: #111; font-weight: 700; }
+.ro { color: var(--muted); font-size: 13px; }
+.acts { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; } .acts .btn { font-size: .82rem; padding: 5px 10px; } .btn.del { color: #ff8a8d; }
+.help { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin: 0; } .help b { color: var(--ink); } .help kbd { font: inherit; font-size: 11px; background: #33373c; border-radius: 4px; padding: 0 4px; }
+.is { display: flex; gap: 8px; font-size: 12.8px; line-height: 1.38; padding: 8px 4px; border-top: 1px solid #33373c; color: #d6dbe0; cursor: pointer; border-radius: 6px; }
+.is:first-child { border-top: 0; } .is:hover { background: #2c3035; } .is.okk { cursor: default; } .is.okk:hover { background: transparent; }
+.is small { display: block; color: var(--faint); font-size: 11.5px; }
+.dot { flex: 0 0 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 900; color: #111; margin-top: 1px; }
+.dot.e { background: var(--err); color: #fff; } .dot.w { background: var(--warn); } .dot.ok { background: var(--ok); }
+.bot { background: var(--bar); border-top: 1px solid var(--line); display: flex; align-items: center; gap: 12px; padding: 0 12px; font-size: 12.5px; color: var(--muted); overflow: hidden; white-space: nowrap; }
+.tabs { display: flex; gap: 4px; align-self: flex-end; }
+.tab { padding: 5px 12px; border-radius: 6px 6px 0 0; border: 1px solid var(--line2); border-bottom: 0; background: transparent; cursor: pointer; color: #d6dbe0; font-size: 12.5px; }
+.tab[aria-selected="true"] { background: #3a3d42; color: #fff; font-weight: 600; } .tab .x { margin-left: 6px; color: var(--faint); } .tab .x:hover { color: #ff8a8d; }
+.hint { margin-left: auto; color: var(--faint); overflow: hidden; text-overflow: ellipsis; }
+/* the page (as it prints) */
+.pr-page { width: 8.5in; height: 11in; position: relative; background: #fff; color: #000; font-family: "Liberation Sans", Arial, Helvetica, sans-serif; box-shadow: 0 6px 24px rgba(0,0,0,.45); }
+.pr-page.land { width: 11in; height: 8.5in; }
+.pr-frame { position: absolute; inset: .4in; border: 2px solid #000; display: flex; flex-direction: column; }
+.pr-draw { flex: 1 1 0; display: flex; padding: .12in; min-height: 0; }
+.pr-draw > svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.pr-draw text { fill: #000; stroke: none; font-family: "Liberation Sans", Arial, Helvetica, sans-serif; }
+.pr-tb { border-top: 2px solid #000; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 1px; background: #000; font-size: 8pt; }
+.tbf { background: #fff; padding: 3px 6px 4px; min-width: 0; }
+.pr-tb .k { font-size: 6pt; text-transform: uppercase; letter-spacing: .06em; color: #333; }
+.pr-tb .v { font-size: 10pt; font-weight: 700; margin-top: 1px; min-height: 13pt; overflow-wrap: anywhere; } .pr-tb .big .v { font-size: 13pt; }
+.pr-tb > .notes { grid-column: 1 / -1; background: #fff; padding: 3px 6px 4px; display: flex; flex-wrap: wrap; gap: 0 14px; font-size: 7pt; }
+.pr-tb > .notes .k { margin-right: 6px; }
+.pr-tb { overflow: hidden; }
+/* editor marks (never printed) */
+#sv { touch-action: none; }
+#sv.tool-wire, #sv.tool-rung, #sv.tool-place, #sv.tool-note { cursor: crosshair; }
+/* title block dialog */
+.dlg { background: #232528; color: var(--ink); border: 1px solid var(--line2); border-radius: 12px; padding: 18px 20px; width: min(760px, 94vw); }
+.dlg::backdrop { background: rgba(0,0,0,.55); }
+.dlg h3 { margin: 0 0 4px; } .dlg .sub { margin: 0 0 12px; font-size: 13px; color: var(--muted); } .dlg code { background: #33373c; border-radius: 4px; padding: 0 4px; }
+.tbrows { display: grid; gap: 6px; margin-bottom: 10px; max-height: 46vh; overflow-y: auto; }
+.tbrow { display: grid; grid-template-columns: 28px 1fr 1.4fr 74px 58px 28px 28px 28px; gap: 6px; align-items: center; }
+.tbrow input[type=text], .tbrow select, .dlg textarea { background: #1b1d20; border: 1px solid var(--line2); border-radius: 6px; padding: 6px 8px; color: var(--ink); font: inherit; font-size: 13px; width: 100%; }
+.tbrow .ib { background: #2b2e32; border: 1px solid var(--line2); border-radius: 6px; height: 30px; cursor: pointer; }
+.tbrow .ib:hover { background: #363a40; } .tbrow .num { color: var(--faint); font-size: 12px; text-align: center; }
+.tbrow label { font-size: 12px; color: var(--muted); display: flex; gap: 4px; align-items: center; }
+.tbhead { font-size: 11px; color: var(--faint); text-transform: uppercase; letter-spacing: .05em; }
+.notes-row { display: flex; gap: 8px; align-items: center; font-size: 13px; margin: 12px 0 6px; }
+.dlg-foot { display: flex; justify-content: space-between; margin-top: 14px; }
+#print-host { display: none; }
+@media print {
+  body { overflow: visible; background: #fff; }
+  .app, dialog { display: none !important; }
+  #print-host { display: block; }
+  #print-host .pr-page { box-shadow: none; page-break-after: always; break-after: page; }
+  #print-host .pr-page { page: port; } #print-host .pr-page.land { page: land; }
+}
+</style>
+<style id="print-page"></style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <img class="logo" src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22%3E %3Crect width=%22512%22 height=%22512%22 rx=%22112%22 fill=%22%231c1d1f%22/%3E %3Crect x=%2210%22 y=%2210%22 width=%22492%22 height=%22492%22 rx=%22104%22 fill=%22none%22 stroke=%22%233a3b3f%22 stroke-width=%228%22/%3E %3Cellipse cx=%22208%22 cy=%22296%22 rx=%22128%22 ry=%22146%22 fill=%22none%22 stroke=%22%23ffc000%22 stroke-width=%2262%22/%3E %3Ctext x=%22402%22 y=%22232%22 text-anchor=%22middle%22 font-family=%22Arial, Helvetica, 'DejaVu Sans', sans-serif%22 font-weight=%22700%22 font-size=%22200%22 fill=%22%23ffc000%22%3E3%3C/text%3E %3C/svg%3E" alt="O³">
+    <h1>Order of Operations: <span>Print Builder</span></h1>
+    <div class="tb-btns">
+      <div class="menuwrap"><button class="btn" id="new-btn" aria-haspopup="menu">New ▾</button>
+        <div class="dmenu" id="new-menu" hidden>
+          <button data-new="blank">Blank Ladder</button>
+          <button data-new="starter">Example: Motor Starter</button>
+                  </div></div>
+      <button class="btn" id="open-btn">Open</button>
+      <button class="btn" id="save-btn">Save</button>
+      <button class="btn" id="print-btn">Print</button>
+      <button class="btn icon" id="undo-btn" title="Undo (Ctrl+Z)">↶</button>
+      <button class="btn icon" id="redo-btn" title="Redo (Ctrl+Y)">↷</button>
+    </div>
+  </header>
+  <nav class="ribbon" id="ribbon">
+    <div class="grp"><div class="row" id="tools">
+      <button class="rb" data-tool="select" title="Select and move (V)"><svg viewBox="0 0 24 24"><path d="M6 3l12 9-5 1 3 6-2 1-3-6-4 4z" fill="currentColor"/></svg><span>Select</span></button>
+      <button class="rb" data-tool="wire" title="Draw a wire (W): click to start, click to bend, click on a terminal, rail or wire to finish"><svg viewBox="0 0 24 24"><path d="M4 18h6V6h10" fill="none" stroke="currentColor" stroke-width="2.2"/></svg><span>Wire</span></button>
+      <button class="rb" data-tool="rung" title="Add a rung (R): click between the rails"><svg viewBox="0 0 24 24"><path d="M4 3v18M20 3v18M4 9h16M4 15h16" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>Rung</span></button>
+      <button class="rb" data-tool="note" title="Add a note (N)"><svg viewBox="0 0 24 24"><path d="M5 5h14M12 5v14" stroke="currentColor" stroke-width="2.4" fill="none"/></svg><span>Note</span></button>
+    </div><div class="gl">Tools</div></div>
+    <div class="grp"><div class="row" id="sym-menus"></div><div class="gl">Symbols</div></div>
+    <div class="grp"><div class="row col">
+      <label class="chk"><input type="checkbox" id="show-wn" checked><span class="tog"></span>Wire Numbers</label>
+      <label class="chk"><input type="checkbox" id="show-rn" checked><span class="tog"></span>Rung Numbers</label>
+      <label class="chk"><input type="checkbox" id="show-xr" checked><span class="tog"></span>Cross-References</label>
+    </div><div class="gl">Numbering (Automatic)</div></div>
+    <div class="grp"><div class="row">
+      <button class="rb" id="tb-btn" title="Change what the title block shows"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 13h18M10 13v6M15 13v6" stroke="currentColor" stroke-width="1.6"/></svg><span>Title Block</span></button>
+      <button class="rb" id="orient-btn" title="Turn the sheet (portrait / landscape)"><svg viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><span id="orient-lbl">Portrait</span></button>
+      <button class="rb" id="addsheet-btn" title="Add a sheet"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2"/></svg><span>Add Sheet</span></button>
+    </div><div class="gl">Sheet</div></div>
+    <div class="grp last"><div class="row">
+      <button class="rb chkbtn" id="check-btn" title="Ring what Check Print found, on the sheet"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7.5 12.5l3 3 6-6.5" fill="none" stroke="currentColor" stroke-width="2.4"/></svg><span>Check Print<b class="badge" id="check-badge" hidden>0</b></span></button>
+    </div><div class="gl">Check</div></div>
+  </nav>
+  <main class="mid">
+    <aside class="pal" id="palette" aria-label="Symbols"></aside>
+    <section class="desk" id="desk">
+      <div class="zoomer" id="zoomer"><div class="sizer" id="sizer"><div class="pagehost" id="pagehost"></div></div></div>
+      <div class="tip" id="tip" hidden></div>
+      <div class="zoombar"><button id="z-out" title="Zoom out">−</button><span id="z-lvl">100%</span><button id="z-in" title="Zoom in">+</button><button id="z-fit" title="Fit the sheet">Fit</button></div>
+    </section>
+    <aside class="side">
+      <div class="card" id="props"></div>
+      <div class="card" id="checks"><h4>Check the Print</h4><div id="check-list"></div></div>
+    </aside>
+  </main>
+  <footer class="bot"><div id="tabs" class="tabs"></div><span id="pageinfo"></span><span class="hint" id="hint"></span></footer>
+</div>
+<dialog id="tb-dlg" class="dlg">
+  <h3>Title Block</h3>
+  <p class="sub">Change any box, add your own, or take one away. Widths are out of 12 across the sheet. Type <code>{sheet}</code> for “1 of 2”, <code>{date}</code> for today.</p>
+  <div class="tbrows" id="tb-rows"></div>
+  <button class="btn" id="tb-add">+ Add a Box</button>
+  <label class="notes-row"><input type="checkbox" id="tb-shownotes"> Notes under the boxes (one a line)</label>
+  <textarea id="tb-notes" rows="3"></textarea>
+  <div class="dlg-foot"><button class="btn" id="tb-reset">Back to the Standard Boxes</button><button class="btn primary" id="tb-done">Done</button></div>
+</dialog>
+<input type="file" id="file-in" accept=".json,application/json" hidden>
+<div id="print-host"></div>
+<script>/* ---- js/psym.js ---- */
+/* =====================================================================
+   the print symbols: Dallas's Symbol Design set, redrawn for the wire diagram print (the originals' Print Symbol-*.svg
+   in "Circuit Builder Print Symbols"). Each in the builder's own units, its middle at 0,0, its lines the wires' weight
+   (drawn inside a group that sets the stroke): b its drawing, t where its wires attach, y0..y1 its height.
+   ===================================================================== */
+const PSYM = {"3PH Disconnect":{"b":"<g transform=\"translate(0 -120)\"><circle cx=\"31.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/></g><g transform=\"translate(0 -120)\"><circle cx=\"31.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/></g><g transform=\"translate(0 -120)\"><path d=\"M 1.6,19 31.6,4\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/></g><g transform=\"translate(0 -120)\"><circle cx=\"1.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/></g><g transform=\"translate(0 -120)\"><circle cx=\"1.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/></g><g transform=\"translate(0 0)\"><circle cx=\"31.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/></g><g transform=\"translate(0 0)\"><circle cx=\"31.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/></g><g transform=\"translate(0 0)\"><path d=\"M 1.6,19 31.6,4\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/></g><g transform=\"translate(0 0)\"><circle cx=\"1.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/></g><g transform=\"translate(0 0)\"><circle cx=\"1.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/></g><g transform=\"translate(0 120)\"><circle cx=\"31.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/></g><g transform=\"translate(0 120)\"><circle cx=\"31.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/></g><g transform=\"translate(0 120)\"><path d=\"M 1.6,19 31.6,4\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/></g><g transform=\"translate(0 120)\"><circle cx=\"1.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/></g><g transform=\"translate(0 120)\"><circle cx=\"1.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/></g><line x1=\"4\" y1=\"-140\" x2=\"4\" y2=\"108\" stroke-dasharray=\"10 8\"/>","t":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"y0":-156.0,"y1":136.0},"3PH Fuses":{"b":"<g transform=\"translate(0 -120)\"><line x1=\"14\" y1=\"0\" x2=\"38\" y2=\"0\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 -120)\"><line x1=\"-38\" y1=\"0\" x2=\"-14\" y2=\"0\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 -120)\"><polygon points=\"-26,-10 26,-10 26,10 -26,10\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/></g><g transform=\"translate(0 -120)\"><polygon points=\"-18,-10 18,-10 18,10 -18,10\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/></g><g transform=\"translate(0 0)\"><line x1=\"14\" y1=\"0\" x2=\"38\" y2=\"0\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 0)\"><line x1=\"-38\" y1=\"0\" x2=\"-14\" y2=\"0\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 0)\"><polygon points=\"-26,-10 26,-10 26,10 -26,10\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/></g><g transform=\"translate(0 0)\"><polygon points=\"-18,-10 18,-10 18,10 -18,10\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/></g><g transform=\"translate(0 120)\"><line x1=\"14\" y1=\"0\" x2=\"38\" y2=\"0\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 120)\"><line x1=\"-38\" y1=\"0\" x2=\"-14\" y2=\"0\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 120)\"><polygon points=\"-26,-10 26,-10 26,10 -26,10\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/></g><g transform=\"translate(0 120)\"><polygon points=\"-18,-10 18,-10 18,10 -18,10\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/></g>","t":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"y0":-136.0,"y1":136.0},"3PH Fusible Disconnect":{"b":"<line x1=\"-60\" y1=\"-27\" x2=\"-60\" y2=\"-24\" stroke-linecap=\"square\"/><line x1=\"81\" y1=\"120\" x2=\"117\" y2=\"120\" stroke-linecap=\"square\"/><line x1=\"-9\" y1=\"120\" x2=\"39\" y2=\"120\" stroke-linecap=\"square\"/><polygon points=\"21,105 99,105 99,135 21,135\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/><polygon points=\"33,105 87,105 87,135 33,135\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/><circle cx=\"33.5\" cy=\"99.5\" r=\"5\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"33.5\" cy=\"99.5\" r=\"3\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 3.5,99.5 30,-15\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><circle cx=\"3.5\" cy=\"99.5\" r=\"5\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"3.5\" cy=\"99.5\" r=\"3\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#fff\" stroke=\"none\"/><line x1=\"81\" y1=\"0\" x2=\"117\" y2=\"0\" stroke-linecap=\"square\"/><line x1=\"-9\" y1=\"0\" x2=\"39\" y2=\"0\" stroke-linecap=\"square\"/><polygon points=\"21,-15 99,-15 99,15 21,15\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/><polygon points=\"33,-15 87,-15 87,15 33,15\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/><line x1=\"81\" y1=\"-120\" x2=\"117\" y2=\"-120\" stroke-linecap=\"square\"/><line x1=\"-9\" y1=\"-120\" x2=\"39\" y2=\"-120\" stroke-linecap=\"square\"/><polygon points=\"21,-135 99,-135 99,-105 21,-105\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/><polygon points=\"33,-135 87,-135 87,-105 33,-105\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/><line x1=\"-60\" y1=\"-132\" x2=\"-60\" y2=\"-129\" stroke-linecap=\"square\"/><line x1=\"-60\" y1=\"-117\" x2=\"-60\" y2=\"-114\" stroke-linecap=\"square\"/><line x1=\"-60\" y1=\"-102\" x2=\"-60\" y2=\"-99\" stroke-linecap=\"square\"/><line x1=\"-60\" y1=\"-87\" x2=\"-60\" y2=\"-84\" stroke-linecap=\"square\"/><line x1=\"-60\" y1=\"-72\" x2=\"-60\" y2=\"-69\" stroke-linecap=\"square\"/><line x1=\"-60\" y1=\"-57\" x2=\"-60\" y2=\"-54\" stroke-linecap=\"square\"/><line x1=\"-60\" y1=\"-42\" x2=\"-60\" y2=\"-39\" stroke-linecap=\"square\"/><line x1=\"-60\" y1=\"93\" x2=\"-60\" y2=\"96\" stroke-linecap=\"square\"/><line x1=\"-60\" y1=\"-12\" x2=\"-60\" y2=\"-9\" stroke-linecap=\"square\"/><line x1=\"-60\" y1=\"3\" x2=\"-60\" y2=\"6\" stroke-linecap=\"square\"/><line x1=\"-60\" y1=\"18\" x2=\"-60\" y2=\"21\" stroke-linecap=\"square\"/><line x1=\"-60\" y1=\"33\" x2=\"-60\" y2=\"36\" stroke-linecap=\"square\"/><line x1=\"-60\" y1=\"48\" x2=\"-60\" y2=\"51\" stroke-linecap=\"square\"/><line x1=\"-60\" y1=\"63\" x2=\"-60\" y2=\"66\" stroke-linecap=\"square\"/><line x1=\"-60\" y1=\"78\" x2=\"-60\" y2=\"81\" stroke-linecap=\"square\"/><circle cx=\"33.5\" cy=\"59.5\" r=\"5\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"33.5\" cy=\"59.5\" r=\"3\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 3.5,59.5 30,-15\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><circle cx=\"3.5\" cy=\"59.5\" r=\"5\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"3.5\" cy=\"59.5\" r=\"3\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"33.5\" cy=\"19.5\" r=\"5\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"33.5\" cy=\"19.5\" r=\"3\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 3.5,19.5 30,-15\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><circle cx=\"3.5\" cy=\"19.5\" r=\"5\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"3.5\" cy=\"19.5\" r=\"3\" transform=\"matrix(3 0 0 3 -115.5 -178.5)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-120,-120],[120,-120],[-120,0],[120,0],[-120,120],[120,120]],"y0":-171.0,"y1":141.0},"3PH Starter Contacts":{"b":"<g transform=\"translate(0 -120)\"><line x1=\"14\" y1=\"0\" x2=\"38\" y2=\"0\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 -120)\"><line x1=\"-38\" y1=\"0\" x2=\"-14\" y2=\"0\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 -120)\"><line x1=\"12\" y1=\"-22\" x2=\"12\" y2=\"22\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 -120)\"><line x1=\"-12\" y1=\"-22\" x2=\"-12\" y2=\"22\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 0)\"><line x1=\"14\" y1=\"0\" x2=\"38\" y2=\"0\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 0)\"><line x1=\"-38\" y1=\"0\" x2=\"-14\" y2=\"0\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 0)\"><line x1=\"12\" y1=\"-22\" x2=\"12\" y2=\"22\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 0)\"><line x1=\"-12\" y1=\"-22\" x2=\"-12\" y2=\"22\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 120)\"><line x1=\"14\" y1=\"0\" x2=\"38\" y2=\"0\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 120)\"><line x1=\"-38\" y1=\"0\" x2=\"-14\" y2=\"0\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 120)\"><line x1=\"12\" y1=\"-22\" x2=\"12\" y2=\"22\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 120)\"><line x1=\"-12\" y1=\"-22\" x2=\"-12\" y2=\"22\" stroke-linecap=\"square\"/></g>","t":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"y0":-148.0,"y1":148.0},"3PH Thermal Overload":{"b":"<g transform=\"translate(0 -120)\"><line x1=\"24\" y1=\"0\" x2=\"38\" y2=\"0\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 -120)\"><line x1=\"-38\" y1=\"0\" x2=\"-24\" y2=\"0\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 -120)\"><path d=\"m 8.45,11.6 c 3.31,0 6,2.69 6,6 0,3.31 -2.69,6 -6,6 -3.31,0 -6,-2.69 -6,-6\" transform=\"matrix(2 0 0 2 -28.9 -35.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/></g><g transform=\"translate(0 -120)\"><path d=\"m 20.45,11.6 c 3.31,0 6,2.69 6,6 0,3.31 -2.69,6 -6,6 -3.31,0 -6,-2.69 -6,-6\" transform=\"matrix(-2 0 0 -2 52.9 35.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/></g><g transform=\"translate(0 0)\"><line x1=\"24\" y1=\"0\" x2=\"38\" y2=\"0\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 0)\"><line x1=\"-38\" y1=\"0\" x2=\"-24\" y2=\"0\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 0)\"><path d=\"m 8.45,11.6 c 3.31,0 6,2.69 6,6 0,3.31 -2.69,6 -6,6 -3.31,0 -6,-2.69 -6,-6\" transform=\"matrix(2 0 0 2 -28.9 -35.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/></g><g transform=\"translate(0 0)\"><path d=\"m 20.45,11.6 c 3.31,0 6,2.69 6,6 0,3.31 -2.69,6 -6,6 -3.31,0 -6,-2.69 -6,-6\" transform=\"matrix(-2 0 0 -2 52.9 35.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/></g><g transform=\"translate(0 120)\"><line x1=\"24\" y1=\"0\" x2=\"38\" y2=\"0\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 120)\"><line x1=\"-38\" y1=\"0\" x2=\"-24\" y2=\"0\" stroke-linecap=\"square\"/></g><g transform=\"translate(0 120)\"><path d=\"m 8.45,11.6 c 3.31,0 6,2.69 6,6 0,3.31 -2.69,6 -6,6 -3.31,0 -6,-2.69 -6,-6\" transform=\"matrix(2 0 0 2 -28.9 -35.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/></g><g transform=\"translate(0 120)\"><path d=\"m 20.45,11.6 c 3.31,0 6,2.69 6,6 0,3.31 -2.69,6 -6,6 -3.31,0 -6,-2.69 -6,-6\" transform=\"matrix(-2 0 0 -2 52.9 35.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/></g>","t":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"y0":-138.0,"y1":138.0},"Control Transformer":{"b":"<path d=\"m 18.5,46.66 c -0.05,-1.81 0.87,-3.5 2.41,-4.44 1.54,-0.93 3.47,-0.96 5.04,-0.08 1.58,0.89 2.55,2.55 2.55,4.36\" transform=\"matrix(3 0 0 3 -115.5 -118.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><path d=\"m 18.5,32.5 c 0,-1.81 0.97,-3.47 2.55,-4.36 1.57,-0.88 3.5,-0.85 5.04,0.08 1.54,0.94 2.46,2.63 2.41,4.44\" transform=\"matrix(-3 0 0 -3 25.5 76.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><path d=\"m 28.5,46.5 c 0,-2.76 2.24,-5 5,-5 2.76,0 5,2.24 5,5\" transform=\"matrix(3 0 0 3 -115.5 -118.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><path d=\"m 28.5,32.5 c 0,-2.76 2.24,-5 5,-5 2.76,0 5,2.24 5,5\" transform=\"matrix(-3 0 0 -3 85.5 76.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><path d=\"m 38.5,46.5 c 0,-2.76 2.24,-5 5,-5 2.76,0 5,2.24 5,5\" transform=\"matrix(3 0 0 3 -115.5 -118.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><path d=\"m 38.5,32.5 c 0,-2.76 2.24,-5 5,-5 2.76,0 5,2.24 5,5\" transform=\"matrix(-3 0 0 -3 145.5 76.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><path d=\"m 48.5,46.5 c 0,-1.81 0.97,-3.47 2.55,-4.36 1.57,-0.88 3.5,-0.85 5.04,0.08 1.54,0.94 2.46,2.63 2.41,4.44\" transform=\"matrix(3 0 0 3 -115.5 -118.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><path d=\"m 48.5,32.66 c -0.05,-1.81 0.87,-3.5 2.41,-4.44 1.54,-0.93 3.47,-0.96 5.04,-0.08 1.58,0.89 2.55,2.55 2.55,4.36\" transform=\"matrix(-3 0 0 -3 205.5 76.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"1.333\"/><line x1=\"-60\" y1=\"-57\" x2=\"-60\" y2=\"-24\" stroke-linecap=\"square\"/><line x1=\"60\" y1=\"-57\" x2=\"60\" y2=\"-24\" stroke-linecap=\"square\"/><line x1=\"-60\" y1=\"24\" x2=\"-60\" y2=\"57\" stroke-linecap=\"square\"/><line x1=\"60\" y1=\"24\" x2=\"60\" y2=\"57\" stroke-linecap=\"square\"/>","t":[[-60,-60],[60,-60],[-60,60],[60,60]],"y0":-64.0,"y1":64.0},"DC Power Supply":{"b":"<polygon points=\"-60,-60 60,-60 60,60 -60,60\" fill=\"#000\" stroke=\"none\"/><polygon points=\"-56,-56 56,-56 56,56 -56,56\" fill=\"#fff\" stroke=\"none\"/><path d=\"M 1,45 59,15\" transform=\"matrix(2 0 0 2 -60 -60)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"10\" cy=\"50\" r=\"5\" transform=\"matrix(2 0 0 2 -60 -60)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"10\" cy=\"50\" r=\"3\" transform=\"matrix(2 0 0 2 -60 -60)\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"50\" cy=\"50\" r=\"5\" transform=\"matrix(2 0 0 2 -60 -60)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"50\" cy=\"50\" r=\"3\" transform=\"matrix(2 0 0 2 -60 -60)\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"10\" cy=\"10\" r=\"5\" transform=\"matrix(2 0 0 2 -60 -60)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"10\" cy=\"10\" r=\"3\" transform=\"matrix(2 0 0 2 -60 -60)\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"50\" cy=\"10\" r=\"5\" transform=\"matrix(2 0 0 2 -60 -60)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"50\" cy=\"10\" r=\"3\" transform=\"matrix(2 0 0 2 -60 -60)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 5,24.98 c 4.07,-4.95 5.99,-4.98 10,0 4.01,4.99 5.89,5.02 10,0\" transform=\"matrix(2 0 0 2 -60 -60)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><line x1=\"12\" y1=\"12\" x2=\"48\" y2=\"12\" stroke-linecap=\"square\"/><line x1=\"12\" y1=\"22\" x2=\"20\" y2=\"22\" stroke-linecap=\"square\"/><line x1=\"26\" y1=\"22\" x2=\"34\" y2=\"22\" stroke-linecap=\"square\"/><line x1=\"40\" y1=\"22\" x2=\"48\" y2=\"22\" stroke-linecap=\"square\"/>","t":[[-40,-50],[40,-50],[-40,50],[40,50]],"y0":-66.0,"y1":66.0},"Fuse":{"b":"<line x1=\"14\" y1=\"0\" x2=\"38\" y2=\"0\" stroke-linecap=\"square\"/><line x1=\"-38\" y1=\"0\" x2=\"-14\" y2=\"0\" stroke-linecap=\"square\"/><polygon points=\"-26,-10 26,-10 26,10 -26,10\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/><polygon points=\"-18,-10 18,-10 18,10 -18,10\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"4\"/>","t":[[-40,0],[40,0]],"y0":-16.0,"y1":16.0},"Heating Element":{"b":"<path d=\"m 9,20 3,-7\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 28,27 3,-7\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 12,13 2,14\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"M 28,27 26,13\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"M 21,27 26,13\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"M 14,27 19,13\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"M 21,27 19,13\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 31,20 h 4\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"M 5,20 H 9\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"5\" cy=\"20\" r=\"5\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"5\" cy=\"20\" r=\"3\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"35\" cy=\"20\" r=\"5\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"35\" cy=\"20\" r=\"3\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-20.0,"y1":20.0},"Motor":{"b":"<circle cx=\"0\" cy=\"0\" r=\"60\"/>","t":[[-42.426,-42.426],[-60,0],[-42.426,42.426]],"y0":-66.0,"y1":66.0},"NC Contact":{"b":"<line x1=\"14\" y1=\"0\" x2=\"38\" y2=\"0\" stroke-linecap=\"square\"/><line x1=\"-38\" y1=\"0\" x2=\"-14\" y2=\"0\" stroke-linecap=\"square\"/><line x1=\"12\" y1=\"-22\" x2=\"12\" y2=\"22\" stroke-linecap=\"square\"/><line x1=\"-12\" y1=\"-22\" x2=\"-12\" y2=\"22\" stroke-linecap=\"square\"/><line x1=\"19.799\" y1=\"-19.799\" x2=\"-19.799\" y2=\"19.799\" stroke-linecap=\"square\"/>","t":[[-40,0],[40,0]],"y0":-28.0,"y1":28.0},"NC EStop Pushbutton":{"b":"<line x1=\"0\" y1=\"-36\" x2=\"0\" y2=\"10\" stroke-linecap=\"square\"/><path d=\"m 4.5,10.5 c 0,-5.52 6.27,-10 14,-10 7.73,0 14,4.48 14,10\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><line x1=\"-38\" y1=\"12\" x2=\"38\" y2=\"12\" stroke-linecap=\"square\"/><circle cx=\"33.5\" cy=\"19.5\" r=\"5\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"33.5\" cy=\"19.5\" r=\"3\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"3.5\" cy=\"19.5\" r=\"5\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"3.5\" cy=\"19.5\" r=\"3\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-44.0,"y1":18.0},"NC FD Switch":{"b":"<line x1=\"0\" y1=\"-4\" x2=\"0\" y2=\"14\" stroke-linecap=\"square\"/><circle cx=\"31.65\" cy=\"11.45\" r=\"5\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"31.65\" cy=\"11.45\" r=\"3\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 1.65,11.45 30,-6\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"1.65\" cy=\"11.45\" r=\"5\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"1.65\" cy=\"11.45\" r=\"3\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 16.65,20.45 5,-5\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 11.65,15.45 5,5\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/>","t":[[-40,0],[40,0]],"y0":-18.0,"y1":25.0},"NC Float Switch":{"b":"<line x1=\"0\" y1=\"-4\" x2=\"0\" y2=\"6\" stroke-linecap=\"square\"/><circle cx=\"33\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"33\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#fff\" stroke=\"none\"/><path d=\"M 3,19 33,13\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"3\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"3\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"18\" cy=\"27\" r=\"6\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"18\" cy=\"27\" r=\"4\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-18.0,"y1":34.0},"NC Flow Switch":{"b":"<line x1=\"0\" y1=\"-4\" x2=\"0\" y2=\"6\" stroke-linecap=\"square\"/><circle cx=\"33\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"33\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#fff\" stroke=\"none\"/><path d=\"M 3,19 33,13\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"3\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"3\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 18,28 v -8 l 6,8 z\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"2\"/>","t":[[-40,0],[40,0]],"y0":-18.0,"y1":24.0},"NC HO Limit Switch":{"b":"<path d=\"m 5.28,18.2 -3.68,-10 23,10 z\" transform=\"matrix(-2 0 0 2 21.2 -37.2)\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"30.6\" cy=\"18.6\" r=\"5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30.6\" cy=\"18.6\" r=\"3\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 0.6,18.6 30,-13\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"0.60000002\" cy=\"18.6\" r=\"5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"0.60000002\" cy=\"18.6\" r=\"3\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-32.0,"y1":16.0},"NC Limit Switch":{"b":"<path d=\"m 6.28,21.75 -3.68,-10 23,10 z\" transform=\"matrix(-1.956 -0.416 -0.416 1.956 29.549 -31.405)\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"31.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"31.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 1.6,19 30,-6\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"1.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"1.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-26.0,"y1":17.0},"NC ND Switch":{"b":"<line x1=\"0\" y1=\"-4\" x2=\"0\" y2=\"8\" stroke-linecap=\"square\"/><circle cx=\"31.65\" cy=\"11.45\" r=\"5\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"31.65\" cy=\"11.45\" r=\"3\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 1.65,11.45 30,-6\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"1.65\" cy=\"11.45\" r=\"5\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"1.65\" cy=\"11.45\" r=\"3\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 16.65,15.45 5,5\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 11.65,20.45 5,-5\" transform=\"matrix(2 0 0 2 -33.3 -22.9)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/>","t":[[-40,0],[40,0]],"y0":-18.0,"y1":25.0},"NC Pressure Switch":{"b":"<line x1=\"0\" y1=\"-4\" x2=\"0\" y2=\"6\" stroke-linecap=\"square\"/><circle cx=\"30.15\" cy=\"16.25\" r=\"5\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30.15\" cy=\"16.25\" r=\"3\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 0.15,16.25 30,-6\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"0.15000001\" cy=\"16.25\" r=\"5\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"0.15000001\" cy=\"16.25\" r=\"3\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 10.15,20.25 c 0,2.76 2.24,5 5,5 2.76,0 5,-2.24 5,-5 z\" transform=\"matrix(-2 0 0 -2 30.3 58.5)\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"2\"/>","t":[[-40,0],[40,0]],"y0":-18.0,"y1":24.0},"NC Proximity Switch":{"b":"<path d=\"m 38.5,7.5 32,32 -32,32 -32,-32 z\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 28.18,42.25 -3.68,-10 23,10 z\" transform=\"matrix(-1.956 -0.416 -0.416 1.956 80.916 -62.402)\" fill=\"#000\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 23.5,39.5 30,-6\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"M 23.5,39.5 H 7.5\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"23.5\" cy=\"39.5\" r=\"5\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"23.5\" cy=\"39.5\" r=\"3\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 53.5,39.5 h 16\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"53.5\" cy=\"39.5\" r=\"5\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"53.5\" cy=\"39.5\" r=\"3\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-64,0],[64,0]],"y0":-70.0,"y1":70.0},"NC Pushbutton":{"b":"<line x1=\"-38\" y1=\"12\" x2=\"38\" y2=\"12\" stroke-linecap=\"square\"/><circle cx=\"33\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"33\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"3\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"3\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -36 -38)\" fill=\"#fff\" stroke=\"none\"/><line x1=\"0\" y1=\"-38\" x2=\"0\" y2=\"10\" stroke-linecap=\"square\"/>","t":[[-40,0],[40,0]],"y0":-44.0,"y1":18.0},"NC Temperature Switch":{"b":"<line x1=\"0\" y1=\"-4\" x2=\"0\" y2=\"6\" stroke-linecap=\"square\"/><circle cx=\"33.5\" cy=\"19.5\" r=\"5\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"33.5\" cy=\"19.5\" r=\"3\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 3.5,19.5 30,-6\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"3.5\" cy=\"19.5\" r=\"5\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"3.5\" cy=\"19.5\" r=\"3\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#fff\" stroke=\"none\"/><line x1=\"0\" y1=\"6\" x2=\"8\" y2=\"6\" stroke-linecap=\"square\"/><line x1=\"8\" y1=\"6\" x2=\"8\" y2=\"14\" stroke-linecap=\"square\"/><line x1=\"0\" y1=\"14\" x2=\"8\" y2=\"14\" stroke-linecap=\"square\"/><line x1=\"0\" y1=\"14\" x2=\"0\" y2=\"18\" stroke-linecap=\"square\"/>","t":[[-40,0],[40,0]],"y0":-18.0,"y1":24.0},"NO Contact":{"b":"<line x1=\"14\" y1=\"0\" x2=\"38\" y2=\"0\" stroke-linecap=\"square\"/><line x1=\"-38\" y1=\"0\" x2=\"-14\" y2=\"0\" stroke-linecap=\"square\"/><line x1=\"12\" y1=\"-22\" x2=\"12\" y2=\"22\" stroke-linecap=\"square\"/><line x1=\"-12\" y1=\"-22\" x2=\"-12\" y2=\"22\" stroke-linecap=\"square\"/>","t":[[-40,0],[40,0]],"y0":-28.0,"y1":28.0},"NO FD Switch":{"b":"<line x1=\"0\" y1=\"14\" x2=\"0\" y2=\"32\" stroke-linecap=\"square\"/><circle cx=\"30.6\" cy=\"18.6\" r=\"5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30.6\" cy=\"18.6\" r=\"3\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 0.6,18.6 30,13\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"0.60000002\" cy=\"18.6\" r=\"5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"0.60000002\" cy=\"18.6\" r=\"3\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 15.6,36.6 5,-5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 10.6,31.6 5,5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/>","t":[[-40,0],[40,0]],"y0":-16.0,"y1":42.0},"NO Float Switch":{"b":"<line x1=\"0\" y1=\"14\" x2=\"0\" y2=\"24\" stroke-linecap=\"square\"/><circle cx=\"30.6\" cy=\"18.6\" r=\"5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30.6\" cy=\"18.6\" r=\"3\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 0.6,18.6 30,13\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"0.60000002\" cy=\"18.6\" r=\"5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"0.60000002\" cy=\"18.6\" r=\"3\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"15.6\" cy=\"35.599998\" r=\"6\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"15.6\" cy=\"35.599998\" r=\"4\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-16.0,"y1":52.0},"NO Flow Switch":{"b":"<line x1=\"0\" y1=\"14\" x2=\"0\" y2=\"24\" stroke-linecap=\"square\"/><circle cx=\"30.15\" cy=\"16.25\" r=\"5\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30.15\" cy=\"16.25\" r=\"3\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 0.15,16.25 30,13\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"0.15000001\" cy=\"16.25\" r=\"5\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"0.15000001\" cy=\"16.25\" r=\"3\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 15.15,34.25 v -8 l 6,8 z\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"2\"/>","t":[[-40,0],[40,0]],"y0":-16.0,"y1":42.0},"NO HC Limit Switch":{"b":"<path d=\"m 6.28,26.5 -3.68,-10 23,10 z\" transform=\"matrix(-1.638 -1.147 -1.147 1.638 42.764 -14.049)\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"31.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"31.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 1.6,19 30,6\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"1.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"1.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-23.0,"y1":33.0},"NO Limit Switch":{"b":"<path d=\"m 7.18,29.75 -3.68,-10 23,10 z\" transform=\"matrix(-1.364 -1.463 -1.463 1.364 49.662 -1.318)\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"33.5\" cy=\"19.5\" r=\"5\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"33.5\" cy=\"19.5\" r=\"3\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 3.5,19.5 30,13\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"3.5\" cy=\"19.5\" r=\"5\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"3.5\" cy=\"19.5\" r=\"3\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-20.0,"y1":41.0},"NO ND Switch":{"b":"<line x1=\"0\" y1=\"14\" x2=\"0\" y2=\"26\" stroke-linecap=\"square\"/><circle cx=\"30.6\" cy=\"18.6\" r=\"5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30.6\" cy=\"18.6\" r=\"3\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 0.6,18.6 30,13\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"0.60000002\" cy=\"18.6\" r=\"5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"0.60000002\" cy=\"18.6\" r=\"3\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 15.6,31.6 5,5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 10.6,36.6 5,-5\" transform=\"matrix(2 0 0 2 -31.2 -37.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/>","t":[[-40,0],[40,0]],"y0":-16.0,"y1":42.0},"NO Pressure Switch":{"b":"<line x1=\"0\" y1=\"14\" x2=\"0\" y2=\"24\" stroke-linecap=\"square\"/><circle cx=\"30.15\" cy=\"16.25\" r=\"5\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30.15\" cy=\"16.25\" r=\"3\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 0.15,16.25 30,13\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"0.15000001\" cy=\"16.25\" r=\"5\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"0.15000001\" cy=\"16.25\" r=\"3\" transform=\"matrix(2 0 0 2 -30.3 -32.5)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 10.15,28.25 c 0,2.76 2.24,5 5,5 2.76,0 5,-2.24 5,-5 z\" transform=\"matrix(-2 0 0 -2 30.3 90.5)\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"2\"/>","t":[[-40,0],[40,0]],"y0":-16.0,"y1":40.0},"NO Proximity Switch":{"b":"<path d=\"m 38.5,7.5 32,32 -32,32 -32,-32 z\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"#fff\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 27.18,49.75 -3.68,-10 23,10 z\" transform=\"matrix(-1.364 -1.463 -1.463 1.364 106.196 0.656)\" fill=\"#000\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 23.5,39.5 30,13\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 53.5,39.5 h 16\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"53.5\" cy=\"39.5\" r=\"5\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"53.5\" cy=\"39.5\" r=\"3\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"#fff\" stroke=\"none\"/><path d=\"M 23.5,39.5 H 7.5\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"23.5\" cy=\"39.5\" r=\"5\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"23.5\" cy=\"39.5\" r=\"3\" transform=\"matrix(2 0 0 2 -77 -79)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-64,0],[64,0]],"y0":-70.0,"y1":70.0},"NO Pushbutton":{"b":"<line x1=\"-38\" y1=\"-18\" x2=\"38\" y2=\"-18\" stroke-linecap=\"square\"/><ellipse cx=\"35\" cy=\"20\" rx=\"5\" ry=\"5\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"#000\" stroke=\"none\"/><ellipse cx=\"35\" cy=\"20\" rx=\"3\" ry=\"3\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"#fff\" stroke=\"none\"/><ellipse cx=\"5\" cy=\"20\" rx=\"5\" ry=\"5\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"#000\" stroke=\"none\"/><ellipse cx=\"5\" cy=\"20\" rx=\"3\" ry=\"3\" transform=\"matrix(2 0 0 2 -40 -40)\" fill=\"#fff\" stroke=\"none\"/><line x1=\"0\" y1=\"-38\" x2=\"0\" y2=\"-20\" stroke-linecap=\"square\"/>","t":[[-40,0],[40,0]],"y0":-44.0,"y1":16.0},"NO Temperature Switch":{"b":"<line x1=\"0\" y1=\"14\" x2=\"0\" y2=\"24\" stroke-linecap=\"square\"/><circle cx=\"33.5\" cy=\"19.5\" r=\"5\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"33.5\" cy=\"19.5\" r=\"3\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 3.5,19.5 30,13\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"3.5\" cy=\"19.5\" r=\"5\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"3.5\" cy=\"19.5\" r=\"3\" transform=\"matrix(2 0 0 2 -37 -39)\" fill=\"#fff\" stroke=\"none\"/><line x1=\"0\" y1=\"24\" x2=\"8\" y2=\"24\" stroke-linecap=\"square\"/><line x1=\"8\" y1=\"24\" x2=\"8\" y2=\"32\" stroke-linecap=\"square\"/><line x1=\"0\" y1=\"32\" x2=\"8\" y2=\"32\" stroke-linecap=\"square\"/><line x1=\"0\" y1=\"32\" x2=\"0\" y2=\"36\" stroke-linecap=\"square\"/>","t":[[-40,0],[40,0]],"y0":-16.0,"y1":42.0},"Pilot Light":{"b":"<circle cx=\"14.45\" cy=\"17.6\" r=\"20\" transform=\"matrix(1.4 0 0 1.4 -20.23 -24.64)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"14.45\" cy=\"17.6\" r=\"18\" transform=\"matrix(1.4 0 0 1.4 -20.23 -24.64)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 1.45,30.6 26,-26\" transform=\"matrix(1.4 0 0 1.4 -20.23 -24.64)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2.857\"/><path d=\"m 27.45,30.6 -26,-26\" transform=\"matrix(1.4 0 0 1.4 -20.23 -24.64)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2.857\"/>","t":[[-28,0],[28,0]],"y0":-34.0,"y1":34.0},"Relay":{"b":"<circle cx=\"18\" cy=\"19\" r=\"20\" transform=\"matrix(1.6 0 0 1.6 -28.8 -30.4)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"18\" cy=\"19\" r=\"18\" transform=\"matrix(1.6 0 0 1.6 -28.8 -30.4)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-32,0],[32,0]],"y0":-38.0,"y1":38.0},"SPST Switch":{"b":"<circle cx=\"31.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"31.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/><path d=\"M 1.6,19 31.6,4\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"1.6\" cy=\"19\" r=\"5\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"1.6\" cy=\"19\" r=\"3\" transform=\"matrix(2 0 0 2 -33.2 -38)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-36.0,"y1":16.0},"Selector Switch Operator":{"b":"<line x1=\"-38\" y1=\"-18\" x2=\"38\" y2=\"-18\" stroke-linecap=\"square\"/><circle cx=\"35\" cy=\"40\" r=\"5\" transform=\"matrix(2 0 0 2 -40 -80)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"35\" cy=\"40\" r=\"3\" transform=\"matrix(2 0 0 2 -40 -80)\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"5\" cy=\"40\" r=\"5\" transform=\"matrix(2 0 0 2 -40 -80)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"5\" cy=\"40\" r=\"3\" transform=\"matrix(2 0 0 2 -40 -80)\" fill=\"#fff\" stroke=\"none\"/><line x1=\"0\" y1=\"-38\" x2=\"0\" y2=\"-20\" stroke-linecap=\"square\"/><path d=\"M 20,20 14.23,14.23\" transform=\"matrix(2 0 0 2 -40 -80)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 11.58,11.58 5.3,1.77 -2.65,0.88 -0.88,2.65 z\" transform=\"matrix(2 0 0 2 -40 -80)\" fill=\"#000\" stroke=\"#000\" stroke-width=\"2\"/>","t":[[-40,0],[40,0]],"y0":-63.0,"y1":17.0},"Selector Switch":{"b":"<line x1=\"-38\" y1=\"-18\" x2=\"38\" y2=\"-18\" stroke-linecap=\"square\"/><circle cx=\"35\" cy=\"40\" r=\"5\" transform=\"matrix(2 0 0 2 -40 -80)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"35\" cy=\"40\" r=\"3\" transform=\"matrix(2 0 0 2 -40 -80)\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"5\" cy=\"40\" r=\"5\" transform=\"matrix(2 0 0 2 -40 -80)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"5\" cy=\"40\" r=\"3\" transform=\"matrix(2 0 0 2 -40 -80)\" fill=\"#fff\" stroke=\"none\"/><line x1=\"0\" y1=\"-38\" x2=\"0\" y2=\"-20\" stroke-linecap=\"square\"/>","t":[[-40,0],[40,0]],"y0":-44.0,"y1":16.0},"Solenoid":{"b":"<path d=\"m 25.25,15.5 h 7\" transform=\"matrix(2 0 0 2 -34.5 -31)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 17.25,-1.5 v 34\" transform=\"matrix(2 0 0 2 -34.5 -31)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 17.25,32.5 8,-17\" transform=\"matrix(2 0 0 2 -34.5 -31)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 2.25,15.5 h 7\" transform=\"matrix(2 0 0 2 -34.5 -31)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"2.25\" cy=\"15.5\" r=\"5\" transform=\"matrix(2 0 0 2 -34.5 -31)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"2.25\" cy=\"15.5\" r=\"3\" transform=\"matrix(2 0 0 2 -34.5 -31)\" fill=\"#fff\" stroke=\"none\"/><path d=\"m 9.25,15.5 8,-17\" transform=\"matrix(2 0 0 2 -34.5 -31)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><circle cx=\"32.25\" cy=\"15.5\" r=\"5\" transform=\"matrix(2 0 0 2 -34.5 -31)\" fill=\"#000\" stroke=\"none\"/><circle cx=\"32.25\" cy=\"15.5\" r=\"3\" transform=\"matrix(2 0 0 2 -34.5 -31)\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-40.0,"y1":40.0},"Thermal Overload":{"b":"<line x1=\"24\" y1=\"0\" x2=\"38\" y2=\"0\" stroke-linecap=\"square\"/><line x1=\"-38\" y1=\"0\" x2=\"-24\" y2=\"0\" stroke-linecap=\"square\"/><path d=\"m 8.45,11.6 c 3.31,0 6,2.69 6,6 0,3.31 -2.69,6 -6,6 -3.31,0 -6,-2.69 -6,-6\" transform=\"matrix(2 0 0 2 -28.9 -35.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/><path d=\"m 20.45,11.6 c 3.31,0 6,2.69 6,6 0,3.31 -2.69,6 -6,6 -3.31,0 -6,-2.69 -6,-6\" transform=\"matrix(-2 0 0 -2 52.9 35.2)\" fill=\"none\" stroke=\"#000\" stroke-width=\"2\"/>","t":[[-40,0],[40,0]],"y0":-18.0,"y1":18.0}};
+
+/* ---- js/symbols.js ---- */
+/* =====================================================================
+   The library: every device Print Builder can place, on the print symbols (psym.js).
+   cat     its group in the palette and the ribbon's menus
+   sym     its print symbol (PSYM's name)
+   pre     the start of its tag (PB1, LS2, FU3...); none for a contact, which takes its coil's tag
+   kind    what it is to the numbering and the check:
+             sw       a switch or pushbutton (control)        contact  a relay contact (its coil's tag)
+             coil     a coil (relay, starter, timer)          load     a pilot light, solenoid, heating element
+             olc      an overload's contact (its OL's tag)    fuse     a fuse (power or control)
+             ol       an overload heater (power)              power    a disconnect, fuse block (power)
+             starter  a starter's power contacts (its coil's tag)
+             motor    a motor                                 xfmr     a control transformer
+             supply   a line coming in (L1, L2, L3)
+   poles   pairs of its terminals that carry a line through it, line side first (power and fuses)
+   flip    the same device the other way (NO <-> NC)
+   ===================================================================== */
+const LIB = {
+  pb_no:   { cat: 'Buttons', name: 'NO Pushbutton', sym: 'NO Pushbutton', pre: 'PB', kind: 'sw', flip: 'pb_nc' },
+  pb_nc:   { cat: 'Buttons', name: 'NC Pushbutton', sym: 'NC Pushbutton', pre: 'PB', kind: 'sw', flip: 'pb_no' },
+  estop:   { cat: 'Buttons', name: 'E-Stop', sym: 'NC EStop Pushbutton', pre: 'ES', kind: 'sw' },
+  sel:     { cat: 'Buttons', name: 'Selector Switch', sym: 'Selector Switch', pre: 'SS', kind: 'sw' },
+  ls_no:   { cat: 'Switches', name: 'NO Limit Switch', sym: 'NO Limit Switch', pre: 'LS', kind: 'sw', flip: 'ls_nc' },
+  ls_nc:   { cat: 'Switches', name: 'NC Limit Switch', sym: 'NC Limit Switch', pre: 'LS', kind: 'sw', flip: 'ls_no' },
+  ls_hc:   { cat: 'Switches', name: 'NO Limit Switch, Held Closed', sym: 'NO HC Limit Switch', pre: 'LS', kind: 'sw', flip: 'ls_ho' },
+  ls_ho:   { cat: 'Switches', name: 'NC Limit Switch, Held Open', sym: 'NC HO Limit Switch', pre: 'LS', kind: 'sw', flip: 'ls_hc' },
+  ts_no:   { cat: 'Switches', name: 'NO Temperature Switch', sym: 'NO Temperature Switch', pre: 'TS', kind: 'sw', flip: 'ts_nc' },
+  ts_nc:   { cat: 'Switches', name: 'NC Temperature Switch', sym: 'NC Temperature Switch', pre: 'TS', kind: 'sw', flip: 'ts_no' },
+  ps_no:   { cat: 'Switches', name: 'NO Pressure Switch', sym: 'NO Pressure Switch', pre: 'PS', kind: 'sw', flip: 'ps_nc' },
+  ps_nc:   { cat: 'Switches', name: 'NC Pressure Switch', sym: 'NC Pressure Switch', pre: 'PS', kind: 'sw', flip: 'ps_no' },
+  fs_no:   { cat: 'Switches', name: 'NO Float Switch', sym: 'NO Float Switch', pre: 'FS', kind: 'sw', flip: 'fs_nc' },
+  fs_nc:   { cat: 'Switches', name: 'NC Float Switch', sym: 'NC Float Switch', pre: 'FS', kind: 'sw', flip: 'fs_no' },
+  fls_no:  { cat: 'Switches', name: 'NO Flow Switch', sym: 'NO Flow Switch', pre: 'FLS', kind: 'sw', flip: 'fls_nc' },
+  fls_nc:  { cat: 'Switches', name: 'NC Flow Switch', sym: 'NC Flow Switch', pre: 'FLS', kind: 'sw', flip: 'fls_no' },
+  prs_no:  { cat: 'Switches', name: 'NO Proximity Switch', sym: 'NO Proximity Switch', pre: 'PRS', kind: 'sw', flip: 'prs_nc' },
+  prs_nc:  { cat: 'Switches', name: 'NC Proximity Switch', sym: 'NC Proximity Switch', pre: 'PRS', kind: 'sw', flip: 'prs_no' },
+  spst:    { cat: 'Switches', name: 'Toggle Switch (SPST)', sym: 'SPST Switch', pre: 'SW', kind: 'sw' },
+  con_no:  { cat: 'Contacts', name: 'NO Contact', sym: 'NO Contact', kind: 'contact', flip: 'con_nc' },
+  con_nc:  { cat: 'Contacts', name: 'NC Contact', sym: 'NC Contact', kind: 'contact', flip: 'con_no' },
+  olc:     { cat: 'Contacts', name: 'Overload Contact (NC)', sym: 'NC Contact', kind: 'olc' },
+  coil:    { cat: 'Coils & Outputs', name: 'Coil', sym: 'Relay', pre: 'CR', kind: 'coil' },
+  pl:      { cat: 'Coils & Outputs', name: 'Pilot Light', sym: 'Pilot Light', pre: 'PL', kind: 'load' },
+  sol:     { cat: 'Coils & Outputs', name: 'Solenoid', sym: 'Solenoid', pre: 'SOL', kind: 'load' },
+  htr:     { cat: 'Coils & Outputs', name: 'Heating Element', sym: 'Heating Element', pre: 'HTR', kind: 'load' },
+  fuse:    { cat: 'Protection', name: 'Fuse', sym: 'Fuse', pre: 'FU', kind: 'fuse', poles: [[0, 1]] },
+  ol:      { cat: 'Protection', name: 'Overload Heater', sym: 'Thermal Overload', pre: 'OL', kind: 'ol', poles: [[0, 1]] },
+  fus3:    { cat: 'Protection', name: '3-Phase Fuses', sym: '3PH Fuses', pre: 'FU', kind: 'power', poles: [[0, 1], [2, 3], [4, 5]] },
+  ol3:     { cat: 'Protection', name: '3-Phase Overload', sym: '3PH Thermal Overload', pre: 'OL', kind: 'ol', poles: [[0, 1], [2, 3], [4, 5]] },
+  sup:     { cat: 'Power', name: 'Line In (L1, L2, L3)', kind: 'supply' },
+  dsc3:    { cat: 'Power', name: '3-Phase Disconnect', sym: '3PH Disconnect', pre: 'DS', kind: 'power', poles: [[0, 1], [2, 3], [4, 5]] },
+  fdsc3:   { cat: 'Power', name: 'Fused Disconnect', sym: '3PH Fusible Disconnect', pre: 'DS', kind: 'power', poles: [[0, 1], [2, 3], [4, 5]] },
+  mst3:    { cat: 'Power', name: 'Starter Contacts (3-Phase)', sym: '3PH Starter Contacts', kind: 'starter', poles: [[0, 1], [2, 3], [4, 5]] },
+  xfmr:    { cat: 'Power', name: 'Control Transformer', sym: 'Control Transformer', pre: 'CPT', kind: 'xfmr' },
+  motor:   { cat: 'Power', name: 'Motor', sym: 'Motor', pre: 'MTR', kind: 'motor' },
+};
+const CATS = ['Buttons', 'Switches', 'Contacts', 'Coils & Outputs', 'Protection', 'Power'];
+const CAT_COL = { 'Buttons': '#00B050', 'Switches': '#0070C0', 'Contacts': '#c9c9c9', 'Coils & Outputs': '#FFC000', 'Protection': '#e5484d', 'Power': '#FF9C37' };
+// a coil's kinds: the start of its tag
+const COIL_PRE = [['CR', 'Control Relay'], ['M', 'Starter'], ['TR', 'Timer'], ['CON', 'Contactor']];
+// the line-in arrow: its one terminal at its middle, the arrow pointing into it from the left
+const SUP_T = [[0, 0]];
+// a device's own terminals (its symbol's, or the line-in arrow's), before it is turned
+const termsOf = t => t === 'sup' ? SUP_T : PSYM[LIB[t].sym].t;
+// how far its drawing reaches either side of its middle, and above and below (for picking it, and its labels)
+function extentOf(t) {
+  if (t === 'sup') return { x0: -70, x1: 4, y0: -20, y1: 20 };
+  const s = PSYM[LIB[t].sym], xs = s.t.map(p => p[0]);
+  let x0 = Math.min(...xs), x1 = Math.max(...xs);
+  if (t === 'motor') { x0 = -66; x1 = 66; }
+  if (t === 'xfmr') { x0 = -64; x1 = 64; }
+  return { x0, x1, y0: s.y0, y1: s.y1 };
+}
+// the poles a device carries a line through (a two-ended device: its two ends)
+const polesOf = t => LIB[t].poles || (termsOf(t).length === 2 ? [[0, 1]] : []);
+const isPowerKind = k => k === 'power' || k === 'ol' || k === 'starter' || k === 'motor' || k === 'supply';
+
+/* ---- js/model.js ---- */
+/* =====================================================================
+   The print being drawn, and the edits that change it.
+
+   A document has sheets (each a letter page); a sheet has parts, wires, nodes and notes.
+   - A part: { id, t (LIB key, or 'rail'), x, y, rot (0/90/180/270), tag, desc, pre (a coil's tag start) }.
+     A rail (the control circuit's L1 or L2) is { id, t: 'rail', x, y0, y1, label }.
+   - A wire: { id, a, b, pts }: from end a to end b through its bends pts ([x, y], ...), every run level or upright.
+   - An end is where a wire is fixed: a part's terminal { p: id, i }, a node { n: id }, or a rail { r: id, y }.
+   - A node: { id, x, y }: a joint between wires (a dot where three or more meet), or a wire's loose end.
+   Wires join only where an end is fixed: two wires that cross are not joined, and moving a part never joins
+   anything new (its wires follow it, bending where they must). That is what keeps a moved part from shorting
+   wires together.
+   ===================================================================== */
+const G = 20;                  // the grid
+const U_IN = 312.5;            // units an inch (the print's scale: .0032 in a unit)
+let doc = null, S = null;      // the document, and the sheet on screen
+const uid = p => p + Math.random().toString(36).slice(2, 9);
+const snap = v => Math.round(v / G) * G;
+const clone = o => JSON.parse(JSON.stringify(o));
+const today = () => { const d = new Date(); return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`; };
+
+/* ---------- the title block's fields (users can change, add and take away any of them) ---------- */
+function defaultTB() {
+  return { fields: [
+    { id: uid('f'), label: 'Drawing Title', value: 'Untitled Print', span: 4, big: true },
+    { id: uid('f'), label: 'Drawing Type', value: 'Ladder Diagram', span: 3 },
+    { id: uid('f'), label: 'Drawn By', value: 'Student Name', span: 2 },
+    { id: uid('f'), label: 'Date', value: today(), span: 2 },
+    { id: uid('f'), label: 'Rev', value: 'A', span: 1 },
+    { id: uid('f'), label: 'Program / School', value: 'Illinois Central College', span: 4 },
+    { id: uid('f'), label: 'Course', value: 'Electrical Troubleshooting', span: 3 },
+    { id: uid('f'), label: 'Made With', value: 'O³ Print Builder', span: 3 },
+    { id: uid('f'), label: 'Sheet', value: '{sheet}', span: 2 },
+  ], notes: '1 = control L1 (X1, after its fuse); 2 = control L2 (X2).\nWire numbers on a coil’s right: the rungs its contacts are on. Underlined = NC; PWR = power contacts.', showNotes: true };
+}
+function newSheet(rails = true, land = false) {
+  const s = { id: uid('s'), land, parts: [], wires: [], nodes: [], texts: [] };
+  if (rails) {
+    const w = drawW(land);
+    s.parts.push({ id: uid('r'), t: 'rail', label: 'L1', x: 200, y0: 240, y1: snap(drawH(land) - 140) },
+                 { id: uid('r'), t: 'rail', label: 'L2', x: snap(w - 420), y0: 240, y1: snap(drawH(land) - 140) });
+  }
+  return s;
+}
+function newDoc() { const d = { kind: 'o3-print', v: 1, tb: defaultTB(), sheets: [newSheet()], cur: 0 }; return d; }
+// the drawing's room on a sheet (inside the frame, above the title block): its width; its height, about
+const drawW = land => Math.round(((land ? 11 : 8.5) - .8 - .24) * U_IN);
+const drawH = land => Math.round(((land ? 8.5 : 11) - .8 - .24 - 1.25) * U_IN);
+
+/* ---------- where things are ---------- */
+const partOf = (s, id) => s.parts.find(p => p.id === id);
+const nodeOf = (s, id) => s.nodes.find(n => n.id === id);
+function turn([a, b], r) { return r === 90 ? [-b, a] : r === 180 ? [-a, -b] : r === 270 ? [b, -a] : [a, b]; }
+function termPos(p, i) { const [a, b] = turn(termsOf(p.t)[i], p.rot || 0); return [p.x + a, p.y + b]; }
+const termsN = p => p.t === 'rail' ? 0 : termsOf(p.t).length;
+function pos(s, e) {
+  if (e.p) { const p = partOf(s, e.p); return p ? termPos(p, e.i) : [0, 0]; }
+  if (e.n) { const n = nodeOf(s, e.n); return n ? [n.x, n.y] : [0, 0]; }
+  const r = partOf(s, e.r); return r ? [r.x, Math.max(r.y0, Math.min(r.y1, e.y))] : [0, 0];
+}
+const wirePts = (s, w) => [pos(s, w.a), ...w.pts.map(p => [p[0], p[1]]), pos(s, w.b)];
+const sameEnd = (e, f) => (e.p && e.p === f.p && e.i === f.i) || (e.n && e.n === f.n) || (e.r && e.r === f.r && e.y === f.y);
+const endKey = e => e.p ? 'p:' + e.p + ':' + e.i : e.n ? 'n:' + e.n : 'r:' + e.r + ':' + e.y;
+const wiresAt = (s, e) => s.wires.filter(w => sameEnd(w.a, e) || sameEnd(w.b, e));
+const onSeg = (x, y, [x1, y1], [x2, y2]) => (x1 === x2 ? x === x1 && y >= Math.min(y1, y2) && y <= Math.max(y1, y2) : y === y1 && y2 === y1 && x >= Math.min(x1, x2) && x <= Math.max(x1, x2));
+// a part's box (for picking it): its symbol, and the room its tag takes above
+function partBox(p) {
+  if (p.t === 'rail') return { x0: p.x - 14, x1: p.x + 14, y0: p.y0 - 70, y1: p.y1 };
+  const e = extentOf(p.t), c = [[e.x0, e.y0 - 30], [e.x1, e.y1 + 10]].map(q => turn(q, p.rot || 0));
+  return { x0: p.x + Math.min(c[0][0], c[1][0]), x1: p.x + Math.max(c[0][0], c[1][0]), y0: p.y + Math.min(c[0][1], c[1][1]), y1: p.y + Math.max(c[0][1], c[1][1]) };
+}
+
+/* ---------- tidying wires ---------- */
+// a wire's bends without repeats, or bends in a straight run
+function simplify(s, w) {
+  const P = wirePts(s, w), out = [P[0]];
+  for (let k = 1; k < P.length; k++) {
+    const q = P[k], l = out[out.length - 1];
+    if (q[0] === l[0] && q[1] === l[1]) continue;
+    if (out.length >= 2) { const m = out[out.length - 2]; if ((m[0] === l[0] && l[0] === q[0]) || (m[1] === l[1] && l[1] === q[1])) { out[out.length - 1] = q; continue; } }
+    out.push(q);
+  }
+  if (out.length === 1) out.push(out[0]);
+  w.pts = out.slice(1, -1);
+}
+// a whole sheet tidied: no wire with no length, no nodes left with nothing on them, two wires through a node with
+// nothing else on it made one, a part's terminal sitting on a loose end taking the wire
+function tidy(s) {
+  for (let again = true, guard = 0; again && guard < 50; guard++) {
+    again = false;
+    for (const w of s.wires) simplify(s, w);
+    // (a wire from a point to the same point: gone, its two ends made one)
+    for (const w of [...s.wires]) {
+      const P = wirePts(s, w);
+      if (P.length === 2 && P[0][0] === P[1][0] && P[0][1] === P[1][1]) {
+        s.wires.splice(s.wires.indexOf(w), 1);
+        if (w.a.n && !sameEnd(w.a, w.b)) replaceEnd(s, w.a, w.b); else if (w.b.n && !sameEnd(w.a, w.b)) replaceEnd(s, w.b, w.a);
+        again = true;
+      }
+    }
+    // (a node with two wires through it and nothing else: the two made one)
+    for (const n of [...s.nodes]) {
+      const e = { n: n.id }, ws = wiresAt(s, e);
+      if (ws.length === 0) { s.nodes.splice(s.nodes.indexOf(n), 1); again = true; continue; }
+      if (ws.length === 2 && ws[0] !== ws[1]) { mergeAt(s, ws[0], ws[1], e); s.nodes.splice(s.nodes.indexOf(n), 1); again = true; }
+    }
+  }
+}
+// two wires meeting at end e made one wire
+function mergeAt(s, w1, w2, e) {
+  if (sameEnd(w1.a, e)) reverse(s, w1);   // (w1 now ends at e)
+  if (sameEnd(w2.b, e)) reverse(s, w2);   // (w2 now starts at e)
+  const mid = pos(s, e);
+  w1.pts = [...w1.pts, mid, ...w2.pts]; w1.b = w2.b;
+  s.wires.splice(s.wires.indexOf(w2), 1);
+  simplify(s, w1);
+}
+function reverse(s, w) { [w.a, w.b] = [w.b, w.a]; w.pts.reverse(); }
+function replaceEnd(s, from, to) { for (const w of s.wires) { if (sameEnd(w.a, from)) w.a = { ...to }; if (sameEnd(w.b, from)) w.b = { ...to }; } }
+
+/* ---------- joining things ---------- */
+// wire w split at x, y (which must be on it): a node there, w up to it, a new wire on from it. The node's end.
+function splitWire(s, w, x, y) {
+  const P = wirePts(s, w);
+  for (const e of [w.a, w.b]) { const q = pos(s, e); if (q[0] === x && q[1] === y) return e; }
+  for (let k = 0; k < P.length - 1; k++) {
+    if (!onSeg(x, y, P[k], P[k + 1])) continue;
+    const n = { id: uid('n'), x, y }; s.nodes.push(n);
+    const atBend = P[k + 1][0] === x && P[k + 1][1] === y && k + 1 < P.length - 1;
+    const w2 = { id: uid('w'), a: { n: n.id }, b: w.b, pts: w.pts.slice(atBend ? k + 1 : k) };
+    w.pts = w.pts.slice(0, k); w.b = { n: n.id };
+    s.wires.push(w2); if (w.num) w2.num = w.num;
+    return { n: n.id };
+  }
+  return null;
+}
+// what there is to join to at x, y: a part's terminal, a node, a rail, or a wire's run (split there for it)
+function endAt(s, x, y, skipPart = null, split = true) {
+  for (const p of s.parts) if (p.t !== 'rail' && p.id !== skipPart) for (let i = 0; i < termsN(p); i++) { const q = termPos(p, i); if (q[0] === x && q[1] === y) return { p: p.id, i }; }
+  for (const n of s.nodes) if (n.x === x && n.y === y) return { n: n.id };
+  for (const w of s.wires) for (const e of [w.a, w.b]) { const q = pos(s, e); if (q[0] === x && q[1] === y && !(e.p && e.p === skipPart)) return { ...e }; }
+  for (const r of s.parts) if (r.t === 'rail' && r.x === x && y >= r.y0 && y <= r.y1) return { r: r.id, y };
+  for (const w of s.wires) { const P = wirePts(s, w); for (let k = 0; k < P.length - 1; k++) if (onSeg(x, y, P[k], P[k + 1])) return split ? splitWire(s, w, x, y) : { w: w.id }; }
+  return null;
+}
+// a part just put down: dropped across a wire, the wire cut and the part put in it (each pole along its own wire);
+// a terminal on a wire's loose end, or on a wire's run, joined to it
+function settle(s, p) {
+  if (p.t === 'rail' || p.t === 'sup') return attachTerms(s, p);
+  for (const [i, j] of polesOf(p.t)) {
+    if (wiresAt(s, { p: p.id, i }).length || wiresAt(s, { p: p.id, i: j }).length) continue;
+    const A = termPos(p, i), B = termPos(p, j);
+    const w = s.wires.find(w => { const P = wirePts(s, w); return P.some((q, k) => k < P.length - 1 && onSeg(A[0], A[1], q, P[k + 1]) && onSeg(B[0], B[1], q, P[k + 1])); });
+    if (!w) continue;
+    const P = wirePts(s, w); if ([P[0], P[P.length - 1]].some(q => (q[0] === A[0] && q[1] === A[1]) || (q[0] === B[0] && q[1] === B[1]))) continue;   // (only across a run, not at its end)
+    const ea = splitWire(s, w, A[0], A[1]);
+    const w2 = s.wires.find(v => v !== w && sameEnd(v.a, ea)) || w;
+    const eb = splitWire(s, onWire(s, w, B) ? w : w2, B[0], B[1]);
+    // (the bit between the two cuts: gone; the cuts' nodes become the part's terminals)
+    const mid = s.wires.find(v => (sameEnd(v.a, ea) && sameEnd(v.b, eb)) || (sameEnd(v.a, eb) && sameEnd(v.b, ea)));
+    if (mid) s.wires.splice(s.wires.indexOf(mid), 1);
+    replaceEnd(s, ea, { p: p.id, i }); replaceEnd(s, eb, { p: p.id, i: j });
+    s.nodes = s.nodes.filter(n => n.id !== ea.n && n.id !== eb.n);
+  }
+  attachTerms(s, p);
+}
+const onWire = (s, w, [x, y]) => { const P = wirePts(s, w); return P.some((q, k) => k < P.length - 1 && onSeg(x, y, q, P[k + 1])); };
+// a part's free terminals joined to whatever is right there (a loose wire end, or a wire's run)
+function attachTerms(s, p) {
+  for (let i = 0; i < termsN(p); i++) {
+    const me = { p: p.id, i }; if (wiresAt(s, me).length) continue;
+    const [x, y] = termPos(p, i);
+    const n = s.nodes.find(n => n.x === x && n.y === y);
+    if (n) { replaceEnd(s, { n: n.id }, me); s.nodes.splice(s.nodes.indexOf(n), 1); continue; }
+    const w = s.wires.find(w => onWire(s, w, [x, y]) && !sameEnd(w.a, me) && !sameEnd(w.b, me));
+    if (w) { const e = splitWire(s, w, x, y); if (e && e.n) { replaceEnd(s, e, me); s.nodes = s.nodes.filter(q => q.id !== e.n); } }
+  }
+}
+
+/* ---------- moving ---------- */
+// parts, nodes and notes (by id) moved by dx, dy. A wire with both ends moving moves whole; a wire with one end
+// moving keeps its other end where it was, bending to reach (it never takes on anything new).
+function moveItems(s, ids, dx, dy) {
+  if (!dx && !dy) return;
+  const moving = e => (e.p && ids.has(e.p)) || (e.n && ids.has(e.n)) || (e.r && ids.has(e.r));
+  const before = new Map(s.wires.map(w => [w.id, { a: pos(s, w.a), b: pos(s, w.b), pts: w.pts.map(q => [...q]) }]));
+  for (const p of s.parts) if (ids.has(p.id)) { p.x += dx; if (p.t === 'rail') { p.y0 += dy; p.y1 += dy; } else p.y += dy; }
+  for (const n of s.nodes) if (ids.has(n.id)) { n.x += dx; n.y += dy; }
+  for (const t of s.texts) if (ids.has(t.id)) { t.x += dx; t.y += dy; }
+  for (const w of s.wires) for (const e of [w.a, w.b]) if (e.r && ids.has(e.r)) e.y += dy;
+  for (const w of s.wires) {
+    const am = moving(w.a), bm = moving(w.b), o = before.get(w.id);
+    if (am && bm) { w.pts = w.pts.map(([x, y]) => [x + dx, y + dy]); continue; }
+    if (!am && !bm) continue;
+    reroute(s, w, o.a, o.b, o.pts);
+  }
+  for (const w of s.wires) simplify(s, w);
+}
+// wire w's ends have moved (from oa, ob): its bends next to them moved along so every run stays level or upright
+function reroute(s, w, oa, ob, opts) {
+  const na = pos(s, w.a), nb = pos(s, w.b);
+  if (!opts.length) {
+    if (na[0] === nb[0] || na[1] === nb[1]) { w.pts = []; return; }
+    if (oa[1] === ob[1]) { const mx = snap((na[0] + nb[0]) / 2); w.pts = [[mx, na[1]], [mx, nb[1]]]; }
+    else { const my = snap((na[1] + nb[1]) / 2); w.pts = [[na[0], my], [nb[0], my]]; }
+    return;
+  }
+  const pts = opts.map(q => [...q]), f = pts[0], l = pts[pts.length - 1];
+  if (oa[1] === f[1] && oa[0] !== f[0]) f[1] = na[1]; else f[0] = na[0];
+  if (ob[1] === l[1] && ob[0] !== l[0]) l[1] = nb[1]; else l[0] = nb[0];
+  w.pts = pts;
+}
+
+/* ---------- taking away ---------- */
+// a part taken away: where a wire came in one side and went out the other, the two made one again (the rung
+// healed); any other wire on it left with a loose end where the terminal was
+function removePart(s, id) {
+  const p = partOf(s, id); if (!p) return;
+  if (p.t === 'rail') {
+    for (const w of s.wires) for (const k of ['a', 'b']) if (w[k].r === id) { const [x, y] = pos(s, w[k]); const n = { id: uid('n'), x, y }; s.nodes.push(n); w[k] = { n: n.id }; }
+  } else {
+    for (const [i, j] of polesOf(p.t)) {
+      const wi = wiresAt(s, { p: id, i }), wj = wiresAt(s, { p: id, i: j });
+      if (wi.length === 1 && wj.length === 1 && wi[0] !== wj[0]) {
+        const A = termPos(p, i), B = termPos(p, j), w1 = wi[0], w2 = wj[0];
+        if (sameEnd(w1.a, { p: id, i })) reverse(s, w1);
+        if (sameEnd(w2.b, { p: id, i: j })) reverse(s, w2);
+        w1.pts = [...w1.pts, A, B, ...w2.pts]; w1.b = w2.b; s.wires.splice(s.wires.indexOf(w2), 1); simplify(s, w1);
+      }
+    }
+    for (let i = 0; i < termsN(p); i++) for (const w of wiresAt(s, { p: id, i })) for (const k of ['a', 'b']) if (sameEnd(w[k], { p: id, i })) {
+      const [x, y] = termPos(p, i); let n = s.nodes.find(n => n.x === x && n.y === y); if (!n) { n = { id: uid('n'), x, y }; s.nodes.push(n); } w[k] = { n: n.id };
+    }
+  }
+  s.parts.splice(s.parts.indexOf(p), 1);
+  tidy(s);
+}
+function removeWire(s, id) { const w = s.wires.find(w => w.id === id); if (w) s.wires.splice(s.wires.indexOf(w), 1); tidy(s); }
+
+/* ---------- tags ---------- */
+// every part in the document, with its sheet
+const allParts = () => doc.sheets.flatMap((s, k) => s.parts.filter(p => p.t !== 'rail').map(p => ({ p, s, k })));
+const tagPre = p => p.t === 'coil' ? (p.pre || 'CR') : LIB[p.t] && LIB[p.t].pre;
+// the next free tag starting pre: one more than the highest in use (FU1, FU2, FU3...: never the same twice)
+function nextTag(pre) {
+  let m = 0; const re = new RegExp('^' + pre + '(\\d+)$');
+  for (const { p } of allParts()) { if (['contact', 'starter', 'olc'].includes(LIB[p.t].kind)) continue; const r = re.exec(p.tag || ''); if (r) m = Math.max(m, +r[1]); }   // (contacts borrow their coil's tag: they take none of their own)
+  return pre + (m + 1);
+}
+// a new part's tag: its own next one; a contact, its coil's (the last coil put down or picked); starter contacts, a starter's
+let lastCoil = '';
+function defaultTag(t) {
+  const k = LIB[t].kind;
+  if (k === 'contact') return lastCoil || (allParts().find(q => q.p.t === 'coil') || {}).p?.tag || '';
+  if (k === 'starter') { const m = allParts().find(q => q.p.t === 'coil' && /^M\d*$/.test(q.p.tag || '')); return m ? m.p.tag : 'M1'; }
+  if (k === 'olc') { const o = allParts().find(q => LIB[q.p.t].kind === 'ol'); return o ? o.p.tag : 'OL1'; }
+  if (t === 'sup') { const used = new Set(allParts().filter(q => q.p.t === 'sup').map(q => q.p.tag)); return ['L1', 'L2', 'L3'].find(l => !used.has(l)) || 'L1'; }
+  return nextTag(LIB[t].pre);
+}
+
+/* ---------- undo ---------- */
+const UNDO = [], REDO = [];
+function snapshot() { UNDO.push(JSON.stringify(doc)); if (UNDO.length > 200) UNDO.shift(); REDO.length = 0; }
+function undo() { if (!UNDO.length) return false; REDO.push(JSON.stringify(doc)); doc = JSON.parse(UNDO.pop()); S = doc.sheets[Math.min(doc.cur, doc.sheets.length - 1)]; return true; }
+function redo() { if (!REDO.length) return false; UNDO.push(JSON.stringify(doc)); doc = JSON.parse(REDO.pop()); S = doc.sheets[Math.min(doc.cur, doc.sheets.length - 1)]; return true; }
+
+/* ---------- building by hand (templates, tests) ---------- */
+// a part put down at x, y: given its next tag, cut into the wire it lands across
+function addPart(s, t, x, y, o = {}) {
+  const p = { id: uid('p'), t, x, y, rot: o.rot || 0, desc: o.desc || '' };
+  if (t === 'coil') p.pre = o.pre || 'CR';
+  p.tag = o.tag != null ? o.tag : t === 'coil' ? nextTag(p.pre) : defaultTag(t);
+  if (LIB[t].kind === 'coil') lastCoil = p.tag;
+  s.parts.push(p); settle(s, p); tidy(s); return p;
+}
+// a wire along the points given, its ends joined to whatever is at them (or left loose)
+function addWire(s, pts) {
+  const loose = ([x, y]) => { const n = { id: uid('n'), x, y }; s.nodes.push(n); return { n: n.id }; };
+  const a = endAt(s, ...pts[0]) || loose(pts[0]);
+  const b = endAt(s, ...pts[pts.length - 1]) || loose(pts[pts.length - 1]);
+  const w = { id: uid('w'), a, b, pts: pts.slice(1, -1).map(q => [...q]) };
+  s.wires.push(w); tidy(s); return w;
+}
+
+/* ---------- turning ---------- */
+// parts turned a quarter (clockwise) about their middles; their wires bend to follow, as when moved
+function rotateParts(s, ids) {
+  const touched = s.wires.filter(w => [w.a, w.b].some(e => e.p && ids.has(e.p)));
+  const before = new Map(touched.map(w => [w.id, { a: pos(s, w.a), b: pos(s, w.b), pts: w.pts.map(q => [...q]) }]));
+  for (const p of s.parts) if (ids.has(p.id) && p.t !== 'rail' && p.t !== 'sup') p.rot = ((p.rot || 0) + 90) % 360;
+  for (const w of touched) { const o = before.get(w.id); reroute(s, w, o.a, o.b, o.pts); simplify(s, w); }
+}
+
+/* ---- js/nets.js ---- */
+/* =====================================================================
+   Reading the drawing: what is joined to what (nets), and from that the wire numbers, the rung numbers and the
+   cross-references. Done afresh from the drawing every time, so the numbers are always right for what is drawn.
+
+   Joined: a wire's two ends; terminals and nodes at the same spot; every rail of the same name (L1 on any sheet
+   is one wire); every line-in arrow of the same name. Not joined: wires that only cross.
+
+   Wire numbers
+   - Power: each line in (L1, L2, L3) takes its name; past each disconnect, fuse or overload it takes the next
+     letter (L1, L1A, L1B...) up to the starters. Past a starter's contacts, each motor's leads are T1-T3 (the
+     first motor), T4-T6 (the second)..., lettered again past each overload (T1, T1A).
+   - Control: the control transformer's X1, past its fuse, is 1 (X1 itself is X1); X2 is 2. With no transformer,
+     rail L1 is 1 and rail L2 is 2. The rest take the next numbers in reading order: rung by rung, top to bottom,
+     each left to right (a wire's place: the first terminal on it, reading so).
+   - A number typed on a wire (its num) is kept for its whole net, and never given to another.
+   ===================================================================== */
+const LET = d => d > 0 ? String.fromCharCode(64 + d) : '';
+const isCtrlKind = k => k === 'sw' || k === 'contact' || k === 'coil' || k === 'load' || k === 'olc';
+const isLoadKind = k => k === 'coil' || k === 'load';
+
+function analyse(D = doc) {
+  // ---- nets
+  const par = new Map(), find = k => { let r = k; while (par.get(r) !== r) r = par.get(r); let c = k; while (par.get(c) !== r) { const n = par.get(c); par.set(c, r); c = n; } return r; };
+  const mk = k => { if (!par.has(k)) par.set(k, k); return k; };
+  const join = (a, b) => { a = find(mk(a)); b = find(mk(b)); if (a !== b) par.set(a, b); };
+  const key = (s, e) => {
+    if (e.p) return s.id + ':p:' + e.p + ':' + e.i;
+    if (e.n) return s.id + ':n:' + e.n;
+    const r = partOf(s, e.r); return 'RAIL:' + (r ? r.label : '?');
+  };
+  const terms = [];   // { s, k (sheet index), p, i, key, x, y }
+  D.sheets.forEach((s, k) => {
+    const at = new Map(), here = (x, y, kk) => { const c = x + ',' + y; if (at.has(c)) join(at.get(c), kk); else at.set(c, mk(kk)); };
+    for (const p of s.parts) {
+      if (p.t === 'rail') { mk('RAIL:' + p.label); continue; }
+      for (let i = 0; i < termsN(p); i++) { const kk = mk(s.id + ':p:' + p.id + ':' + i), [x, y] = termPos(p, i); terms.push({ s, k, p, i, key: kk, x, y }); here(x, y, kk); }
+      if (p.t === 'sup' && p.tag) join(s.id + ':p:' + p.id + ':0', 'SUP:' + p.tag);
+    }
+    for (const n of s.nodes) here(n.x, n.y, s.id + ':n:' + n.id);
+    for (const w of s.wires) join(key(s, w.a), key(s, w.b));
+  });
+  const root = (s, e) => find(mk(key(s, e)));
+  const rootT = (p, s, i) => find(mk(s.id + ':p:' + p.id + ':' + i));
+  const wireRoot = (s, w) => root(s, w.a);
+  const TERMS = new Map(); for (const t of terms) { const r = find(t.key); if (!TERMS.has(r)) TERMS.set(r, []); TERMS.get(r).push(t); }
+  const WIRED = new Map(); D.sheets.forEach((s, k) => s.wires.forEach(w => { const r = wireRoot(s, w); if (!WIRED.has(r)) WIRED.set(r, []); WIRED.get(r).push({ s, k, w }); }));
+  const kindOf = p => LIB[p.t].kind;
+  const parts = []; D.sheets.forEach((s, k) => s.parts.forEach(p => { if (p.t !== 'rail') parts.push({ s, k, p }); }));
+  const reading = (a, b) => a.k - b.k || a.p.y - b.p.y || a.p.x - b.p.x;
+
+  // ---- wire numbers
+  const label = new Map(), power = new Set(), taken = new Set();
+  // (numbers typed on wires first: kept, and never given out again)
+  for (const [r, ws] of WIRED) { const o = ws.find(x => x.w.num); if (o) { label.set(r, String(o.w.num)); taken.add(String(o.w.num)); } }
+  const give = (r, l) => { if (r == null || label.has(r)) return false; label.set(r, l); return true; };
+  // (the poles a line passes through, and the starters' contacts)
+  const CROSS = new Set(['power', 'fuse', 'ol']);
+  const across = new Map(), addX = (a, b) => { if (!across.has(a)) across.set(a, []); across.get(a).push(b); };
+  const starterLoad = new Set(), starterLine = new Map();
+  for (const { s, p } of parts) {
+    const k = kindOf(p); if (!CROSS.has(k) && k !== 'starter') continue;
+    for (const [i, j] of polesOf(p.t)) {
+      const a = rootT(p, s, i), b = rootT(p, s, j);
+      if (k === 'starter') { starterLoad.add(b); starterLine.set(b, a); } else { addX(a, b); addX(b, a); }
+    }
+  }
+  // power, the line side: from each line in, lettered at each pole passed, up to the starters
+  const sups = parts.filter(x => x.p.t === 'sup').sort((a, b) => (a.p.tag || '').localeCompare(b.p.tag || '') || reading(a, b));
+  const q = [];
+  for (const { s, p } of sups) { const r = rootT(p, s, 0); power.add(r); if (give(r, p.tag || 'L?')) q.push([r, p.tag || 'L?', 0]); }
+  while (q.length) {
+    const [r, L, d] = q.shift();
+    for (const m of across.get(r) || []) if (!label.has(m) && !starterLoad.has(m)) { label.set(m, L + LET(d + 1)); power.add(m); q.push([m, L, d + 1]); }
+  }
+  // power, the load side: each motor's leads, back from it to its starter
+  const motors = parts.filter(x => kindOf(x.p) === 'motor').sort(reading);
+  let tN = 0;
+  motors.forEach(({ s, p }, mk_) => {
+    const leads = [0, 1, 2].map(i => ({ i, y: termPos(p, i)[1] })).sort((a, b) => a.y - b.y);
+    leads.forEach(({ i }, j) => {
+      const chain = [rootT(p, s, i)];
+      for (let g = 0; g < 30 && !starterLoad.has(chain[chain.length - 1]); g++) {
+        const nx = (across.get(chain[chain.length - 1]) || []).find(m => !chain.includes(m) && !label.has(m)); if (nx == null) break; chain.push(nx);
+      }
+      const n = 3 * mk_ + j + 1; tN = Math.max(tN, n);
+      if (starterLoad.has(chain[chain.length - 1])) chain.reverse().forEach((r, d) => { if (give(r, 'T' + n + LET(d))) power.add(r); });
+      else { power.add(chain[0]); give(chain[0], 'T' + n); }
+    });
+  });
+  // (a starter's contacts with no motor after them: T numbers of their own)
+  for (const { s, p } of parts.filter(x => kindOf(x.p) === 'starter').sort(reading))
+    for (const [, j] of polesOf(p.t)) { const r = rootT(p, s, j); if (!label.has(r)) { label.set(r, 'T' + (++tN)); power.add(r); } }
+  for (const { s, p } of parts) if (isPowerKind(kindOf(p))) for (let i = 0; i < termsN(p); i++) power.add(rootT(p, s, i));
+  // control: 1 and 2
+  const xf = parts.filter(x => kindOf(x.p) === 'xfmr').sort(reading)[0];
+  let n1 = null, n2 = null, x1fuse = null;
+  if (xf) {
+    const rX1 = rootT(xf.p, xf.s, 2), rX2 = rootT(xf.p, xf.s, 3);
+    for (const i of [0, 1]) power.add(rootT(xf.p, xf.s, i));
+    const fu = parts.find(x => kindOf(x.p) === 'fuse' && [0, 1].some(i => rootT(x.p, x.s, i) === rX1));
+    if (fu) { x1fuse = fu.p; give(rX1, 'X1'); n1 = rootT(fu.p, fu.s, rootT(fu.p, fu.s, 0) === rX1 ? 1 : 0); }
+    else n1 = rX1;
+    n2 = rX2;
+  }
+  const r1 = par.has('RAIL:L1') ? find('RAIL:L1') : null, r2 = par.has('RAIL:L2') ? find('RAIL:L2') : null;
+  if (n1 == null) n1 = r1; if (n2 == null) n2 = r2;
+  const startAt = n1 != null || n2 != null ? 3 : 1;
+  if (n1 != null && !taken.has('1')) give(n1, '1');
+  if (n2 != null && n2 !== n1 && !taken.has('2')) give(n2, '2');
+  // control: the rest, in reading order (a net's place: its first terminal, rung by rung, left to right)
+  const place = r => {
+    let b = null; for (const t of TERMS.get(r) || []) if (!b || t.k < b[0] || (t.k === b[0] && (t.y < b[1] || (t.y === b[1] && t.x < b[2])))) b = [t.k, t.y, t.x];
+    if (!b) for (const { s, k, w } of WIRED.get(r) || []) for (const [x, y] of wirePts(s, w)) if (!b || k < b[0] || (k === b[0] && (y < b[1] || (y === b[1] && x < b[2])))) b = [k, y, x];
+    return b || [1e9, 1e9, 1e9];
+  };
+  // (a power wire not reached from a line in: no control number for it, or it would push every control number on one)
+  for (const r of WIRED.keys()) if (!label.has(r) && power.has(r)) label.set(r, '?');
+  const rest = [...WIRED.keys()].filter(r => !label.has(r)).map(r => ({ r, b: place(r) }))
+    .sort((a, b) => a.b[0] - b.b[0] || a.b[1] - b.b[1] || a.b[2] - b.b[2]);
+  let next = startAt;
+  for (const { r } of rest) { while (taken.has(String(next))) next++; label.set(r, String(next++)); }
+
+  // ---- rung numbers: the rows the control devices are on, top to bottom, sheet after sheet
+  const rung = new Map(), rows = [];
+  let rn = 0;
+  D.sheets.forEach((s, k) => {
+    const ys = new Set();
+    for (const p of s.parts) {
+      if (p.t === 'rail' || (p.rot || 0) % 180) continue;
+      const kd = kindOf(p);
+      const ctl = isCtrlKind(kd) || (kd === 'fuse' && p !== x1fuse && [0, 1].every(i => !power.has(rootT(p, s, i))));
+      if (ctl) ys.add(p.y);
+    }
+    const sorted = [...ys].sort((a, b) => a - b), map = new Map(sorted.map(y => [y, ++rn]));
+    rows.push(sorted.map(y => ({ y, n: map.get(y) })));
+    for (const p of s.parts) if (p.t !== 'rail' && map.has(p.y) && !((p.rot || 0) % 180)) rung.set(p.id, map.get(p.y));
+  });
+  // ---- cross-references: a coil's contacts' rungs (NC underlined), PWR for its starter contacts
+  const xref = new Map();
+  for (const { p } of parts) if (kindOf(p) === 'coil' && p.tag) {
+    const r = [];
+    for (const { p: c } of parts) if (kindOf(c) === 'contact' && c.tag === p.tag && rung.has(c.id)) r.push({ n: rung.get(c.id), nc: c.t === 'con_nc' });
+    r.sort((a, b) => a.n - b.n);
+    if (parts.some(x => kindOf(x.p) === 'starter' && x.p.tag === p.tag)) r.push({ n: 'PWR', nc: false });
+    xref.set(p.id, r);
+  }
+  return { label, power, rung, rows, xref, root, rootT, wireRoot, TERMS, WIRED, parts, x1fuse, n1, n2, kindOf };
+}
+
+/* ---- js/check.js ---- */
+/* =====================================================================
+   Check Print: the mistakes a print can have, found on the drawing. Each: how bad (e error, w warning),
+   what it is, a line more, and where (sheet k, the thing's id, a point to ring on the sheet).
+   ===================================================================== */
+const UNIQUE = new Set(['sw', 'coil', 'load', 'fuse', 'ol', 'power', 'motor', 'xfmr']);
+function checkPrint(A = analyse()) {
+  const out = [], pk = ({ s, k, p }) => ({ k, id: p.id, x: p.x, y: p.y });
+  const add = (sev, title, detail, at = []) => out.push({ sev, title, detail, at });
+  const { parts, kindOf, label, TERMS, WIRED } = A;
+  const name = p => p.tag || LIB[p.t].name;
+  const sheetName = k => doc.sheets.length > 1 ? ` (sheet ${k + 1})` : '';
+  // tags: the same one on two devices that must each have their own; none at all
+  const byTag = new Map();
+  for (const x of parts) if (UNIQUE.has(kindOf(x.p)) && x.p.tag) { if (!byTag.has(x.p.tag)) byTag.set(x.p.tag, []); byTag.get(x.p.tag).push(x); }
+  let dups = 0;
+  for (const [t, xs] of byTag) if (xs.length > 1) { dups++;
+    add('e', `${xs.length} devices are tagged ${t}`, `${[...new Set(xs.map(x => LIB[x.p.t].name))].join(' and ')}: each needs a tag of its own (only contacts share their coil’s).`, xs.map(pk)); }
+  for (const x of parts) if (!x.p.tag) add('w', `A ${LIB[x.p.t].name.toLowerCase()} has no tag`, 'Give it one in its properties.', [pk(x)]);
+  // contacts and their coils
+  const coils = new Set(parts.filter(x => kindOf(x.p) === 'coil').map(x => x.p.tag)), ols = new Set(parts.filter(x => kindOf(x.p) === 'ol').map(x => x.p.tag));
+  const orphan = new Map();
+  for (const x of parts) { const k = kindOf(x.p); if (!x.p.tag) continue;
+    if ((k === 'contact' || k === 'starter') && !coils.has(x.p.tag)) { if (!orphan.has(x.p.tag)) orphan.set(x.p.tag, []); orphan.get(x.p.tag).push(x); }
+    if (k === 'olc' && !ols.has(x.p.tag)) add('w', `Overload contact ${x.p.tag} has no overload`, `No overload heater is tagged ${x.p.tag}.`, [pk(x)]); }
+  for (const [t, xs] of orphan) add('w', `Contact${xs.length > 1 ? 's' : ''} ${t} ha${xs.length > 1 ? 've' : 's'} no coil`, `No coil is tagged ${t}${coils.size ? ` (the coils: ${[...coils].filter(Boolean).join(', ')})` : ''}.`, xs.map(pk));
+  for (const x of parts) if (kindOf(x.p) === 'coil' && x.p.tag && !parts.some(y => (kindOf(y.p) === 'contact' || kindOf(y.p) === 'starter') && y.p.tag === x.p.tag))
+    add('w', `Coil ${x.p.tag} works no contacts`, `Nothing on the print is tagged ${x.p.tag} but the coil.`, [pk(x)]);
+  // wiring: terminals with nothing on them, wires that end in the air
+  let open = 0;
+  for (const x of parts) { const loose = [];
+    for (let i = 0; i < termsN(x.p); i++) { const r = A.rootT(x.p, x.s, i); if (!WIRED.has(r) && (TERMS.get(r) || []).length < 2 && !(x.p.t === 'sup')) loose.push(i); }
+    if (loose.length) { open++; add('e', `${name(x.p)} is not wired${loose.length < termsN(x.p) ? ' at one end' : ''}${sheetName(x.k)}`, loose.length < termsN(x.p) ? 'A terminal with no wire on it.' : 'No wire reaches it.', [pk(x)]); } }
+  doc.sheets.forEach((s, k) => { for (const n of s.nodes) if (wiresAt(s, { n: n.id }).length === 1 && !s.parts.some(p => p.t !== 'rail' && [...Array(termsN(p)).keys()].some(i => { const q = termPos(p, i); return q[0] === n.x && q[1] === n.y; })))
+    { open++; add('e', `A wire ends without reaching anything${sheetName(k)}`, 'Its loose end is ringed: join it to a terminal, a rail or another wire.', [{ k, id: n.id, x: n.x, y: n.y }]); } });
+  // shorts: 1 and 2 joined, two lines joined, or a way from 1 to 2 through nothing but switches and contacts
+  let shorts = 0;
+  if (A.n1 != null && A.n1 === A.n2) { shorts++; add('e', '1 and 2 are joined: a dead short', 'Control L1 and L2 are wired together.', []); }
+  const supR = new Map(); for (const x of parts) if (x.p.t === 'sup') { const r = A.rootT(x.p, x.s, 0), o = supR.get(r); if (o && o.p.tag !== x.p.tag) { shorts++; add('e', `${o.p.tag} and ${x.p.tag} are joined: a short`, 'Two lines in are wired together.', [pk(o), pk(x)]); } else supR.set(r, x); }
+  if (A.n1 != null && A.n2 != null && A.n1 !== A.n2) {
+    const PASS = new Set(['sw', 'contact', 'olc', 'fuse']), adj = new Map(), add2 = (a, b, x) => { if (!adj.has(a)) adj.set(a, []); adj.get(a).push([b, x]); };
+    for (const x of parts) if (PASS.has(kindOf(x.p)) && termsN(x.p) === 2) { const a = A.rootT(x.p, x.s, 0), b = A.rootT(x.p, x.s, 1); add2(a, b, x); add2(b, a, x); }
+    const prev = new Map([[A.n1, null]]), q = [A.n1];
+    while (q.length) { const r = q.shift(); if (r === A.n2) break; for (const [m, x] of adj.get(r) || []) if (!prev.has(m)) { prev.set(m, [r, x]); q.push(m); } }
+    if (prev.has(A.n2)) { shorts++; const path = []; for (let r = A.n2; prev.get(r); r = prev.get(r)[0]) path.push(prev.get(r)[1]);
+      add('e', `No load between 1 and 2${path.length ? ' (rung ' + (A.rung.get(path[0].p.id) || '?') + ')' : ''}`, `${path.reverse().map(x => name(x.p)).join(' → ')}: closing ${path.length > 1 ? 'these' : 'it'} would short L1 to L2. Every rung needs a load (a coil, a light...).`, path.map(pk)); }
+  }
+  // two loads one after the other
+  for (const [r, ts] of TERMS) if (r !== A.n1 && r !== A.n2 && ts.length >= 2 && ts.every(t => isLoadKind(kindOf(t.p)))) {
+    const ps = [...new Set(ts.map(t => t.p))]; if (ps.length >= 2) add('w', `${ps.map(name).join(' and ')} are in series`, 'Loads in series share the voltage, so neither gets enough. Put each across 1 and 2 (in parallel).', ts.map(t => ({ k: t.k, id: t.p.id, x: t.p.x, y: t.p.y })));
+  }
+  // wire numbers
+  const byNum = new Map(); for (const [r, l] of label) if (WIRED.has(r)) { if (!byNum.has(l)) byNum.set(l, []); byNum.get(l).push(r); }
+  let dupN = 0;
+  for (const [l, rs] of byNum) {
+    if (l === '?') { add('w', `${rs.length} power wire${rs.length > 1 ? 's' : ''} could not be numbered`, 'Not reached from a line in (L1, L2, L3) through the disconnect, fuses and starters.', rs.map(r => { const o = WIRED.get(r)[0], P = wirePts(o.s, o.w); return { k: o.k, id: o.w.id, x: P[0][0], y: P[0][1] }; })); continue; }
+    if (rs.length > 1) { dupN++; add('e', `Wire number ${l} is used twice`, 'Two wires that are not joined have the same number. Change one (or clear the number you typed).', rs.map(r => { const o = WIRED.get(r)[0], P = wirePts(o.s, o.w); return { k: o.k, id: o.w.id, x: P[0][0], y: P[0][1] }; })); }
+  }
+  const okLine = (t, d) => out.push({ sev: 'ok', title: t, detail: d, at: [] });
+  if (!open) okLine('Everything is wired', 'No loose terminals or wire ends.');
+  if (!shorts && (A.n1 != null || parts.length)) okLine('No shorts', 'Every way from 1 to 2 goes through a load.');
+  if (!dups) okLine('Every device has its own tag', 'Contacts share only their coil’s.');
+  if (!dupN) okLine('No wire number is used twice', '');
+  const rank = { e: 0, w: 1, ok: 2 }; out.sort((a, b) => rank[a.sev] - rank[b.sev]);
+  return out;
+}
+
+/* ---- js/render.js ---- */
+/* =====================================================================
+   Drawing a sheet: the page (frame, drawing, title block), as it prints. The editor draws its own marks
+   (selection, the grid, loose ends, what Check Print found) over the drawing, in a layer that never prints.
+   ===================================================================== */
+const PW = 4;                                  // the wires' weight (the symbols' lines are drawn to it)
+let SHOW = { wn: true, rn: true, xr: true };   // wire numbers, rung numbers, cross-references
+const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+// the sheet's drawing (no editor marks): an SVG group's insides
+function drawSheet(s, k, A) {
+  let g = '';
+  const line = (x1, y1, x2, y2, w = PW) => { g += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke-width="${w}"/>`; };
+  const text = (x, y, t, size = 26, anchor = 'middle', weight = 700, extra = '') => { if (t !== '' && t != null) g += `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}" font-weight="${weight}"${extra}>${esc(t)}</text>`; };
+  const arrow = (x, y, ux, uy) => { const bx = x - ux * 22, by = y - uy * 22, px = -uy * 13, py = ux * 13;
+    g += `<path d="M${bx + px} ${by + py}L${bx - px} ${by - py}L${x} ${y}Z" fill="#000" stroke="#000" stroke-width="2"/>`; };
+  // rails
+  const rails = s.parts.filter(p => p.t === 'rail');
+  for (const r of rails) { line(r.x, r.y0, r.x, r.y1, PW + 2);
+    // (fed at its top by a wire, from the transformer: no arrow, its name beside it)
+    const fed = s.wires.some(w => [w.a, w.b].some(e => e.r === r.id && e.y <= r.y0));
+    if (fed) text(r.x + (r.label === 'L1' ? -14 : 14), r.y0 + 40, r.label, 26, r.label === 'L1' ? 'end' : 'start');
+    else { arrow(r.x, r.y0, 0, 1); text(r.x, r.y0 - 34, r.label, 28); } }
+  // wires, and their numbers
+  for (const w of s.wires) {
+    const P = wirePts(s, w);
+    g += `<polyline points="${P.map(q => q.join(',')).join(' ')}"/>`;
+    if (!SHOW.wn) continue;
+    const l = A.label.get(A.wireRoot(s, w)); if (!l) continue;
+    let best = null;
+    for (let i = 0; i < P.length - 1; i++) { const [a, b] = [P[i], P[i + 1]], h = a[1] === b[1], len = Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
+      const sc = len * (h ? 2 : 1); if (len >= 46 && (!best || sc > best.sc)) best = { a, b, h, sc }; }
+    if (!best) continue;
+    if (best.h) text((best.a[0] + best.b[0]) / 2, best.a[1] - 9, l, 22);
+    else {   // (upright: beside it, clear of the wires that cross it)
+      const x = best.a[0], ya = Math.min(best.a[1], best.b[1]), yb = Math.max(best.a[1], best.b[1]);
+      const crossing = y => s.wires.some(v => v !== w && wirePts(s, v).some((q, i, V) => i < V.length - 1 && q[1] === V[i + 1][1] && Math.abs(q[1] - y) < 34 && Math.min(q[0], V[i + 1][0]) < x + 60 && Math.max(q[0], V[i + 1][0]) > x));
+      const f = [.5, .3, .7, .2, .8, .4, .6].find(f => !crossing(ya + (yb - ya) * f)) ?? .5;
+      text(x + 10, ya + (yb - ya) * f + 8, l, 22, 'start');
+    }
+  }
+  // joints: three or more wires at a node or a terminal; a wire teed onto a rail
+  const deg = new Map(), bump = (x, y) => { const c = x + ',' + y; deg.set(c, (deg.get(c) || 0) + 1); };
+  for (const w of s.wires) for (const e of [w.a, w.b]) { const [x, y] = pos(s, e); if (e.r) { const r = partOf(s, e.r); if (r && y > r.y0 && y < r.y1) { deg.set(x + ',' + y, 9); continue; } } bump(x, y); }
+  for (const [c, n] of deg) { if (n < 3) { const [x, y] = c.split(',').map(Number); if (!(n === 2 && s.parts.some(p => p.t !== 'rail' && [...Array(termsN(p)).keys()].some(i => { const q = termPos(p, i); return q[0] === x && q[1] === y; })))) continue; }
+    const [x, y] = c.split(',').map(Number); g += `<circle cx="${x}" cy="${y}" r="7" fill="#000" stroke="none"/>`; }
+  // devices
+  for (const p of s.parts) {
+    if (p.t === 'rail') continue;
+    if (p.t === 'sup') { arrow(p.x, p.y, 1, 0); text(p.x - 30, p.y + 10, p.tag, 28, 'end'); continue; }
+    const sym = PSYM[LIB[p.t].sym], r = p.rot || 0, kind = LIB[p.t].kind;
+    g += `<g class="sym" transform="translate(${p.x} ${p.y})${r ? ` rotate(${r})` : ''}">${sym.b}</g>`;
+    const up = r % 180 !== 0, inside = kind === 'coil' && (p.tag || '').length <= 3;
+    if (up) { const off = Math.max(Math.abs(sym.y0), Math.abs(sym.y1)) + 10; text(p.x + off, p.y + 9, p.tag, 26, 'start'); if (p.desc) text(p.x + off, p.y + 34, p.desc, 20, 'start', 500); }
+    else {
+      const y0 = r === 180 ? -sym.y1 : sym.y0, y1 = r === 180 ? -sym.y0 : sym.y1;
+      if (inside) text(p.x, p.y + 9, p.tag, 24); else text(p.x, p.y + y0 - 8, p.tag, 26);
+      if (p.desc) text(p.x, p.y + y1 + 22, p.desc, 20, 'middle', 500);
+    }
+    if (p.t === 'xfmr') { const t = [0, 1, 2, 3].map(i => termPos(p, i)), nm = ['H1', 'H2', 'X1', 'X2'];
+      t.forEach((q, i) => text(q[0] + (i % 2 ? 12 : -12), q[1] + (i < 2 ? -8 : 22), nm[i], 18, i % 2 ? 'start' : 'end', 600)); }
+  }
+  // rung numbers, left of L1; cross-references, right of L2
+  const rL1 = rails.find(r => r.label === 'L1'), rL2 = rails.find(r => r.label === 'L2');
+  if (SHOW.rn) for (const { y, n } of A.rows[k] || []) {
+    const xs = s.parts.filter(p => p.t !== 'rail' && p.y === y).map(p => p.x);
+    text(rL1 ? rL1.x - 50 : Math.min(...xs) - 110, y + 9, n, 24, 'end');
+  }
+  if (SHOW.xr) for (const p of s.parts) { const r = A.xref.get(p.id); if (!r || !r.length) continue;
+    const x = rL2 && p.x < rL2.x ? rL2.x + 26 : p.x + 90;
+    g += `<text x="${x}" y="${p.y + 9}" font-size="22" font-weight="700">${r.map(o => o.nc ? `<tspan text-decoration="underline">${o.n}</tspan>` : o.n).join(', ')}</text>`; }
+  // notes
+  for (const t of s.texts) { const lines = String(t.s || '').split('\n');
+    g += `<text x="${t.x}" y="${t.y}" font-size="${t.size || 24}" font-weight="${t.bold ? 700 : 500}">${lines.map((l, i) => `<tspan x="${t.x}" dy="${i ? (t.size || 24) * 1.25 : 0}">${esc(l)}</tspan>`).join('')}</text>`; }
+  return g;
+}
+
+// the title block: its fields in a 12-column grid, rows filled in order; its notes under them
+function tbHTML(k, n) {
+  const tb = doc.tb, val = v => String(v ?? '').replace(/\{sheet\}/gi, `${k + 1} of ${n}`).replace(/\{date\}/gi, today());
+  // (a box that would not fit on its row starts the next: the row's end filled, so no gaps show)
+  let cells = '', col = 0;
+  const fill = n => { if (n > 0) cells += `<div class="tbf" style="grid-column: span ${n}"></div>`; };
+  for (const f of tb.fields) { const sp = Math.max(1, Math.min(12, f.span || 2)); if (col + sp > 12) { fill(12 - col); col = 0; }
+    cells += `<div class="tbf${f.big ? ' big' : ''}" style="grid-column: span ${sp}"><div class="k">${esc(f.label)}</div><div class="v">${esc(val(f.value))}</div></div>`; col = (col + sp) % 12; }
+  if (col) fill(12 - col);
+  const notes = tb.showNotes && tb.notes.trim() ? `<div class="notes"><span class="k">Notes</span>${tb.notes.split('\n').filter(l => l.trim()).map((l, i) => `<span>${i + 1}. ${esc(l)}</span>`).join('')}</div>` : '';
+  return `<div class="pr-tb">${cells}${notes}</div>`;
+}
+// a whole page; the drawing's viewBox is set once it is laid out (see fitDraw)
+function pageHTML(s, k, A, editor = false) {
+  return `<div class="pr-page${s.land ? ' land' : ''}" data-k="${k}"><div class="pr-frame"><div class="pr-draw"><svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet"${editor ? ' id="sv"' : ''}>${editor ? '<g id="ed-under"></g>' : ''}<g class="ink" fill="none" stroke="#000" stroke-width="${PW}" stroke-linecap="round" stroke-linejoin="round">${drawSheet(s, k, A)}</g>${editor ? '<g id="ed-over"></g>' : ''}</svg></div>${tbHTML(k, doc.sheets.length)}</div></div>`;
+}
+// a page's drawing given its viewBox: a unit 1/312.5 in, whatever the room the title block leaves
+function fitDraw(page) {
+  const d = page.querySelector('.pr-draw'), svg = d.querySelector('svg'), cs = getComputedStyle(d);
+  const w = d.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), h = d.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  const vw = Math.round(w * U_IN / 96), vh = Math.round(h * U_IN / 96);
+  svg.setAttribute('viewBox', `0 0 ${vw} ${vh}`);
+  return [vw, vh];
+}
+
+/* ---- js/templates.js ---- */
+/* =====================================================================
+   Ready-made prints (New ▾): a blank ladder, and a motor starter to show how it all goes.
+   ===================================================================== */
+function template(name) {
+  const keep = doc, keepS = S;
+  const d = newDoc(); doc = d; S = d.sheets[0]; lastCoil = '';
+  try {
+    if (name === 'starter') buildStarter(S);
+    d.tb.fields.find(f => f.label === 'Drawing Title').value = name === 'starter' ? 'Motor Starter' : 'Untitled Print';
+    return d;
+  } finally { if (keep) { doc = keep; S = keepS; } }
+}
+// a 3-phase motor starter: disconnect, fuses, starter M1, overload OL1, motor; a control transformer with its
+// fuse feeding the ladder: stop/start with a seal-in, run and stopped lights
+function buildStarter(s) {
+  const L1 = s.parts.find(p => p.label === 'L1'), L2 = s.parts.find(p => p.label === 'L2');
+  L1.y0 = L2.y0 = 960; L1.y1 = L2.y1 = 1560;
+  // power
+  for (const [l, y] of [['L1', 200], ['L2', 320], ['L3', 440]]) { addPart(s, 'sup', 200, y, { tag: l }); addWire(s, [[200, y], [1840, y]]); }
+  addPart(s, 'dsc3', 400, 320); addPart(s, 'fus3', 640, 320);
+  addPart(s, 'mst3', 1180, 320, { tag: 'M1' }); addPart(s, 'ol3', 1520, 320);
+  const m = addPart(s, 'motor', 1980, 320);
+  // (the leads fan in to the motor)
+  [200, 320, 440].forEach((y, i) => addWire(s, [[1840, y], termPos(m, i)]));
+  // the control transformer, off L1 and L2 after the fuses
+  const x = addPart(s, 'xfmr', 920, 700);
+  addWire(s, [[860, 200], [860, 640]]); addWire(s, [[980, 320], [980, 640]]);
+  addWire(s, [[860, 760], [860, 840], [560, 840]]); addPart(s, 'fuse', 520, 840); addWire(s, [[480, 840], [200, 840], [200, 960]]);
+  addWire(s, [[980, 760], [980, 840], [L2.x, 840], [L2.x, 960]]);
+  // the ladder
+  for (const y of [1080, 1360, 1480]) addWire(s, [[L1.x, y], [L2.x, y]]);
+  addPart(s, 'pb_nc', 420, 1080, { desc: 'STOP' }); addPart(s, 'pb_no', 680, 1080, { desc: 'START' });
+  const c = addPart(s, 'coil', 1300, 1080, { pre: 'M' }); addPart(s, 'olc', 1600, 1080, { tag: 'OL1' });
+  addWire(s, [[600, 1080], [600, 1200], [760, 1200], [760, 1080]]); addPart(s, 'con_no', 680, 1200, { tag: c.tag });
+  addPart(s, 'con_no', 680, 1360, { tag: c.tag }); addPart(s, 'pl', 1300, 1360, { desc: 'GREEN' });
+  addPart(s, 'con_nc', 680, 1480, { tag: c.tag }); addPart(s, 'pl', 1300, 1480, { desc: 'RED' });
+  void x;
+}
+
+/* ---- js/editor.js ---- */
+/* =====================================================================
+   The editor: picking, the tools (Select, Wire, Rung, Note, putting a symbol down), and its marks on the sheet.
+   ===================================================================== */
+let A = null, ISSUES = [];                 // the drawing read (nets.js), and what Check Print found
+let tool = 'select', placing = null;       // the tool; the symbol being put down ({ t, rot })
+let sel = new Set(), selW = null;          // what is picked: parts, rails, nodes, notes (ids); a wire (id)
+let checkOn = false, hover = null, drag = null, wd = null, cursor = null;
+let svg = null, VB = [0, 0];
+
+// a point on the sheet from the pointer
+function sheetPt(e) { const m = svg.getScreenCTM().inverse(), p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; const q = p.matrixTransform(m); return [q.x, q.y]; }
+const near = (a, b, d) => Math.abs(a[0] - b[0]) <= d && Math.abs(a[1] - b[1]) <= d;
+const segDist = ([x, y], [x1, y1], [x2, y2]) => { const dx = x2 - x1, dy = y2 - y1, L = dx * dx + dy * dy, t = L ? Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / L)) : 0; return Math.hypot(x - (x1 + t * dx), y - (y1 + t * dy)); };
+
+/* ---------- picking ---------- */
+function textBox(t) { const lines = String(t.s || '').split('\n'), z = t.size || 24; return { x0: t.x - 6, x1: t.x + Math.max(40, ...lines.map(l => l.length * z * .56)) + 6, y0: t.y - z, y1: t.y + (lines.length - 1) * z * 1.25 + 8 }; }
+const inBox = ([x, y], b) => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1;
+// what is under point q: { kind: 'node' | 'end' (a rail's end) | 'part' | 'text' | 'wire' | 'rail', ... }
+function pick(q) {
+  for (const n of S.nodes) if (near(q, [n.x, n.y], 14)) return { kind: 'node', id: n.id };
+  for (const r of S.parts) if (r.t === 'rail') for (const k of ['y0', 'y1']) if (near(q, [r.x, r[k]], 16)) return { kind: 'end', id: r.id, k };
+  let best = null;
+  for (const p of S.parts) if (p.t !== 'rail') { const b = partBox(p); if (inBox(q, b)) { const a = (b.x1 - b.x0) * (b.y1 - b.y0); if (!best || a < best.a) best = { kind: 'part', id: p.id, a }; } }
+  if (best) return best;
+  for (const t of S.texts) if (inBox(q, textBox(t))) return { kind: 'text', id: t.id };
+  let bw = null;
+  for (const w of S.wires) { const P = wirePts(S, w); for (let k = 0; k < P.length - 1; k++) { const d = segDist(q, P[k], P[k + 1]); if (d <= 10 && (!bw || d < bw.d)) bw = { kind: 'wire', id: w.id, k, d }; } }
+  if (bw) return bw;
+  for (const r of S.parts) if (r.t === 'rail' && Math.abs(q[0] - r.x) <= 12 && q[1] >= r.y0 - 60 && q[1] <= r.y1) return { kind: 'rail', id: r.id };
+  return null;
+}
+// where a wire would join at q: a terminal, a node or a wire's end, a rail, a wire's run (the nearest within reach), or the grid
+function snapTarget(q, skip = null) {
+  let b = null; const take = (x, y, kind, d) => { if (!b || d < b.d) b = { x, y, kind, d }; };
+  for (const p of S.parts) if (p.t !== 'rail' && p.id !== skip) for (let i = 0; i < termsN(p); i++) { const t = termPos(p, i), d = Math.hypot(t[0] - q[0], t[1] - q[1]); if (d <= 22) take(t[0], t[1], 'term', d); }
+  for (const n of S.nodes) { const d = Math.hypot(n.x - q[0], n.y - q[1]); if (d <= 18) take(n.x, n.y, 'node', d); }
+  if (b) return b;
+  for (const r of S.parts) if (r.t === 'rail') { const d = Math.abs(q[0] - r.x), y = snap(q[1]); if (d <= 18 && y >= r.y0 && y <= r.y1) take(r.x, y, 'rail', d); }
+  for (const w of S.wires) { const P = wirePts(S, w); for (let k = 0; k < P.length - 1; k++) { const [a, c] = [P[k], P[k + 1]], d = segDist(q, a, c); if (d > 14) continue;
+    if (a[1] === c[1]) { const x = Math.max(Math.min(a[0], c[0]), Math.min(Math.max(a[0], c[0]), snap(q[0]))); take(x, a[1], 'wire', d + 1); }
+    else if (a[0] === c[0]) { const y = Math.max(Math.min(a[1], c[1]), Math.min(Math.max(a[1], c[1]), snap(q[1]))); take(a[0], y, 'wire', d + 1); } } }
+  return b || { x: snap(q[0]), y: snap(q[1]), kind: 'grid', d: 0 };
+}
+
+/* ---------- the editor's marks ---------- */
+function drawEd() {
+  if (!svg) return;
+  const under = svg.querySelector('#ed-under'), over = svg.querySelector('#ed-over');
+  under.innerHTML = `<defs><pattern id="gp" x="-20" y="-20" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="2.2" fill="#d3d9e0"/></pattern></defs><rect x="0" y="0" width="${VB[0]}" height="${VB[1]}" fill="url(#gp)"/>`;
+  let g = '';
+  // picked things
+  for (const id of sel) {
+    const p = partOf(S, id);
+    if (p) { const b = partBox(p); g += `<rect x="${b.x0 - 8}" y="${b.y0 - 6}" width="${b.x1 - b.x0 + 16}" height="${b.y1 - b.y0 + 12}" rx="10" fill="rgba(47,140,255,.08)" stroke="#2f8cff" stroke-width="4" stroke-dasharray="12 7"/>`;
+      if (p.t === 'rail') for (const y of [p.y0, p.y1]) g += `<rect x="${p.x - 12}" y="${y - 12}" width="24" height="24" rx="4" fill="#fff" stroke="#2f8cff" stroke-width="4"/>`; continue; }
+    const n = nodeOf(S, id); if (n) { g += `<circle cx="${n.x}" cy="${n.y}" r="14" fill="none" stroke="#2f8cff" stroke-width="5"/>`; continue; }
+    const t = S.texts.find(t => t.id === id); if (t) { const b = textBox(t); g += `<rect x="${b.x0}" y="${b.y0}" width="${b.x1 - b.x0}" height="${b.y1 - b.y0}" rx="6" fill="none" stroke="#2f8cff" stroke-width="4" stroke-dasharray="12 7"/>`; }
+  }
+  if (selW) { const w = S.wires.find(w => w.id === selW); if (w) g += `<polyline points="${wirePts(S, w).map(q => q.join(',')).join(' ')}" fill="none" stroke="#2f8cff" stroke-width="16" stroke-opacity=".35" stroke-linecap="round" stroke-linejoin="round"/>`; }
+  // loose ends: terminals with nothing on them, wires ending in the air (small rings)
+  const wired = new Set(); for (const w of S.wires) for (const e of [w.a, w.b]) wired.add(pos(S, e).join(','));
+  for (const p of S.parts) if (p.t !== 'rail') for (let i = 0; i < termsN(p); i++) { const t = termPos(p, i); if (!wired.has(t.join(','))) g += `<circle cx="${t[0]}" cy="${t[1]}" r="7" fill="#fff" stroke="#2f8cff" stroke-width="3"/>`; }
+  for (const n of S.nodes) if (wiresAt(S, { n: n.id }).length === 1) g += `<circle cx="${n.x}" cy="${n.y}" r="8" fill="#fff" stroke="#e5484d" stroke-width="3.5"/>`;
+  // what Check Print found, ringed (on this sheet)
+  if (checkOn) for (const is of ISSUES) if (is.sev !== 'ok') for (const a of is.at) if (a.k === doc.cur) {
+    const p = partOf(S, a.id), b = p ? partBox(p) : { x0: a.x - 20, x1: a.x + 20, y0: a.y - 20, y1: a.y + 20 };
+    g += `<ellipse cx="${(b.x0 + b.x1) / 2}" cy="${(b.y0 + b.y1) / 2}" rx="${(b.x1 - b.x0) / 2 + 26}" ry="${(b.y1 - b.y0) / 2 + 20}" fill="none" stroke="${is.sev === 'e' ? '#e5484d' : '#ffb224'}" stroke-width="6"/>`;
+  }
+  // the tool's preview
+  if (tool === 'wire' && cursor) {
+    const t = snapTarget(cursor);
+    if (wd) { const P = [...wd.pts, ...lRoute(wd.pts[wd.pts.length - 1], [t.x, t.y], wd.pts)]; g += `<polyline points="${P.map(q => q.join(',')).join(' ')}" fill="none" stroke="#2f8cff" stroke-width="5" stroke-dasharray="14 8" stroke-linejoin="round"/>`; }
+    g += `<circle cx="${t.x}" cy="${t.y}" r="${t.kind === 'grid' ? 6 : 11}" fill="${t.kind === 'grid' ? '#2f8cff' : 'none'}" stroke="#2f8cff" stroke-width="4"/>`;
+  }
+  if (tool === 'rung' && cursor) { const r = rungAt(cursor); if (r) g += `<line x1="${r.x1}" y1="${r.y}" x2="${r.x2}" y2="${r.y}" stroke="#2f8cff" stroke-width="6" stroke-dasharray="16 10" opacity="${r.ok ? 1 : .35}"/>`; }
+  if (tool === 'place' && placing && cursor) {
+    const p = ghostPart(cursor), sym = LIB[p.t].sym, sp = splicePreview(p);
+    for (const w of sp.wires) g += `<polyline points="${wirePts(S, w).map(q => q.join(',')).join(' ')}" fill="none" stroke="#2f8cff" stroke-width="12" stroke-opacity=".3"/>`;
+    g += `<g opacity=".55" fill="none" stroke="#1f6fd8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">`;
+    if (p.t === 'sup') g += `<path d="M${p.x - 22} ${p.y - 13}L${p.x - 22} ${p.y + 13}L${p.x} ${p.y}Z" fill="#1f6fd8"/>`;
+    else g += `<g transform="translate(${p.x} ${p.y})${p.rot ? ` rotate(${p.rot})` : ''}">${PSYM[sym].b}</g>`;
+    g += '</g>';
+  }
+  if (drag && drag.box) { const [a, b] = drag.box; g += `<rect x="${Math.min(a[0], b[0])}" y="${Math.min(a[1], b[1])}" width="${Math.abs(a[0] - b[0])}" height="${Math.abs(a[1] - b[1])}" fill="rgba(47,140,255,.08)" stroke="#2f8cff" stroke-width="3" stroke-dasharray="10 6"/>`; }
+  over.innerHTML = g;
+  // (symbols in the marks drawn in their own blue)
+  for (const e of over.querySelectorAll('g[opacity] [stroke="#000"]')) e.setAttribute('stroke', '#1f6fd8');
+  for (const e of over.querySelectorAll('g[opacity] [fill="#000"]')) e.setAttribute('fill', '#1f6fd8');
+}
+// an L from a to b (along first, then across; the way that carries on from the last run, or the longer way first)
+function lRoute(a, b, pts) {
+  if (a[0] === b[0] || a[1] === b[1]) return [b];
+  let hFirst = Math.abs(b[0] - a[0]) >= Math.abs(b[1] - a[1]);
+  if (pts && pts.length >= 2) { const p = pts[pts.length - 2]; hFirst = p[0] === a[0]; }
+  return [hFirst ? [b[0], a[1]] : [a[0], b[1]], b];
+}
+// the rung the Rung tool would add at q: from rail L1 to rail L2 at q's height
+function rungAt(q) {
+  const r1 = S.parts.find(p => p.t === 'rail' && p.label === 'L1'), r2 = S.parts.find(p => p.t === 'rail' && p.label === 'L2');
+  if (!r1 || !r2) return null;
+  const y = snap(q[1]); if (y < Math.max(r1.y0, r2.y0) || y > Math.min(r1.y1, r2.y1)) return null;
+  const ok = !S.wires.some(w => { const P = wirePts(S, w); return P.some((p, k) => k < P.length - 1 && p[1] === y && P[k + 1][1] === y && Math.min(p[0], P[k + 1][0]) <= r1.x + 1 && Math.max(p[0], P[k + 1][0]) > r1.x); });
+  return { x1: r1.x, x2: r2.x, y, ok };
+}
+// the symbol being put down, where it would go
+const ghostPart = q => ({ id: '__ghost', t: placing.t, x: snap(q[0]), y: snap(q[1]), rot: placing.rot || 0 });
+// the wires it would cut into, and what it would tell
+function splicePreview(p) {
+  const wires = [];
+  for (const [i, j] of polesOf(p.t)) { const A_ = termPos(p, i), B = termPos(p, j);
+    const w = S.wires.find(w => { const P = wirePts(S, w); return P.some((q, k) => k < P.length - 1 && onSeg(A_[0], A_[1], q, P[k + 1]) && onSeg(B[0], B[1], q, P[k + 1])) && ![P[0], P[P.length - 1]].some(e => (e[0] === A_[0] && e[1] === A_[1]) || (e[0] === B[0] && e[1] === B[1])); });
+    if (w && !wires.includes(w)) wires.push(w); }
+  return { wires };
+}
+
+/* ---------- the pointer ---------- */
+function onDown(e) {
+  if (e.button === 1 || (e.button === 0 && spaceDown)) return startPan(e);
+  if (e.button !== 0) { if (tool === 'wire' && wd) { wd = null; drawEd(); } return; }
+  const q = sheetPt(e);
+  if (tool === 'place' && placing) { putDown(q, e.shiftKey); return; }
+  if (tool === 'wire') return wireClick(q, e.detail >= 2);
+  if (tool === 'rung') { const r = rungAt(q); if (r && r.ok) { snapshot(); addWire(S, [[r.x1, r.y], [r.x2, r.y]]); refresh(); } else if (r) say('There is a rung there already.'); return; }
+  if (tool === 'note') { snapshot(); const t = { id: uid('t'), x: snap(q[0]), y: snap(q[1]), s: 'Note' }; S.texts.push(t); sel = new Set([t.id]); selW = null; setTool('select'); refresh(); focusProp('note-text'); return; }
+  // Select
+  const h = pick(q);
+  if (!h) { if (!e.shiftKey) { sel = new Set(); selW = null; } drag = { box: [q, q], add: e.shiftKey }; svg.setPointerCapture(e.pointerId); refresh(); return; }
+  if (h.kind === 'wire') { sel = new Set(); selW = h.id; drag = { wire: h.id, k: h.k, q0: q, orig: clone(S), pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
+  if (h.kind === 'end') { sel = new Set([h.id]); selW = null; drag = { rail: h.id, k: h.k, pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
+  if (e.shiftKey) { sel.has(h.id) ? sel.delete(h.id) : sel.add(h.id); selW = null; refresh(); return; }
+  if (!sel.has(h.id)) { sel = new Set([h.id]); selW = null; }
+  const p = partOf(S, h.id); if (p && p.t === 'coil') lastCoil = p.tag;
+  drag = { ids: new Set(sel), q0: q, orig: clone(S), pre: JSON.stringify(doc), moved: false };
+  svg.setPointerCapture(e.pointerId); refresh();
+}
+function onMove(e) {
+  const q = sheetPt(e); cursor = q;
+  if (pan) return doPan(e);
+  if (!drag) { if (tool !== 'select') { drawEd(); tipFor(q, e); } return; }
+  if (drag.box) { drag.box[1] = q; drawEd(); return; }
+  const dx = snap(q[0] - (drag.q0 ? drag.q0[0] : q[0])), dy = snap(q[1] - (drag.q0 ? drag.q0[1] : q[1]));
+  if (drag.rail) { const r = partOf(S, drag.rail), y = snap(q[1]); if (drag.k === 'y0') r.y0 = Math.min(y, r.y1 - 200); else r.y1 = Math.max(y, r.y0 + 200); drag.moved = true; frame(); return; }
+  if (!drag.moved && !dx && !dy) return;
+  drag.moved = true;
+  const s = clone(drag.orig); doc.sheets[doc.cur] = S = s;
+  if (drag.wire) moveSegment(S, drag.wire, drag.k, dx, dy); else moveItems(S, drag.ids, dx, dy);
+  frame();
+}
+function onUp(e) {
+  if (pan) { pan = null; desk.classList.remove('pan'); return; }
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (d.box) { const [a, b] = d.box, bx = { x0: Math.min(a[0], b[0]), x1: Math.max(a[0], b[0]), y0: Math.min(a[1], b[1]), y1: Math.max(a[1], b[1]) };
+    if (bx.x1 - bx.x0 > 8 || bx.y1 - bx.y0 > 8) { if (!d.add) sel = new Set();
+      for (const p of S.parts) { const pb = partBox(p); if (p.t === 'rail' ? (p.x >= bx.x0 && p.x <= bx.x1 && p.y0 >= bx.y0 && p.y1 <= bx.y1) : inBox([(pb.x0 + pb.x1) / 2, (pb.y0 + pb.y1) / 2], bx)) sel.add(p.id); }
+      for (const n of S.nodes) if (inBox([n.x, n.y], bx)) sel.add(n.id);
+      for (const t of S.texts) if (inBox([t.x, t.y], bx)) sel.add(t.id); }
+    refresh(); return; }
+  if (d.moved) {
+    // (a part moved off its wires onto a wire: cut into it, as when first put down)
+    if (d.ids) for (const id of d.ids) { const p = partOf(S, id); if (p && p.t !== 'rail' && ![...Array(termsN(p)).keys()].some(i => wiresAt(S, { p: id, i }).length)) settle(S, p); }
+    tidy(S); UNDO.push(d.pre); REDO.length = 0;
+    if (selW && !S.wires.some(w => w.id === selW)) selW = null;
+  }
+  refresh();
+}
+// a wire's run k dragged across itself (its ends stay where they are: a step is put in if they must)
+function moveSegment(s, id, k, dx, dy) {
+  const w = s.wires.find(w => w.id === id); if (!w) return;
+  const P = wirePts(s, w), h = P[k][1] === P[k + 1][1], v = P[k][0] === P[k + 1][0];
+  if (!h && !v) return;
+  const arr = P.map(q => [...q]); let i = k, j = k + 1;
+  if (k === 0) { arr.unshift([...arr[0]]); i++; j++; }
+  if (j === arr.length - 1) arr.push([...arr[arr.length - 1]]);
+  for (const m of [i, j]) { if (h) arr[m][1] += dy; else arr[m][0] += dx; }
+  w.pts = arr.slice(1, -1); simplify(s, w);
+}
+// a symbol put down at q (Shift: keep putting them down)
+function putDown(q, keep) {
+  snapshot();
+  const g = ghostPart(q), p = addPart(S, placing.t, g.x, g.y, { rot: placing.rot });
+  sel = new Set([p.id]); selW = null;
+  if (!keep) { placing = null; setTool('select'); }
+  refresh();
+}
+// the Wire tool: a click starts, bends or (on something to join) finishes a wire; a double click finishes it anywhere
+function wireClick(q, dbl) {
+  const t = snapTarget(q), pt = [t.x, t.y];
+  if (!wd) { wd = { pts: [pt], startKind: t.kind }; drawEd(); return; }
+  const last = wd.pts[wd.pts.length - 1];
+  if (!(pt[0] === last[0] && pt[1] === last[1])) wd.pts.push(...lRoute(last, pt, wd.pts));
+  const start = wd.pts[0];
+  if (dbl || (t.kind !== 'grid' && !(pt[0] === start[0] && pt[1] === start[1]))) finishWire();
+  else drawEd();
+}
+function finishWire() {
+  if (!wd) return;
+  const P = wd.pts; wd = null;
+  if (P.length >= 2 && !(P.length === 2 && P[0][0] === P[1][0] && P[0][1] === P[1][1])) { snapshot(); addWire(S, P); }
+  refresh();
+}
+// what the pointer would do, said beside it
+function tipFor(q, e) {
+  const tip = document.getElementById('tip'); let s = '';
+  if (tool === 'place' && placing) { const p = ghostPart(q), sp = splicePreview(p);
+    if (sp.wires.length) { const ns = sp.wires.map(w => A.label.get(A.wireRoot(S, w))).filter(Boolean), rn = A.rows[doc.cur]?.find(r => r.y === p.y);
+      s = `Drop ${rn ? `on <b>rung ${rn.n}</b>` : 'here'}: it goes into wire${ns.length > 1 ? 's' : ''} <b>${[...new Set(ns)].join(', ')}</b>`; } }
+  if (tool === 'wire') { const t = snapTarget(q); s = wd ? (t.kind === 'grid' ? 'Click to bend · double-click to end here' : 'Click to join here') : (t.kind === 'grid' ? 'Click to start a wire' : `Click to start from this ${({ term: 'terminal', node: 'joint', rail: 'rail', wire: 'wire' })[t.kind]}`); }
+  if (tool === 'rung') { const r = rungAt(q); s = r ? (r.ok ? 'Click to add a rung here' : 'There is a rung here already') : 'Rungs go between the L1 and L2 rails'; }
+  if (!s) { tip.hidden = true; return; }
+  const dr = desk.getBoundingClientRect(); tip.innerHTML = s; tip.hidden = false;
+  tip.style.left = (e.clientX - dr.left + 18) + 'px'; tip.style.top = (e.clientY - dr.top - 34) + 'px';
+}
+// redrawn at most once a frame while dragging
+let framed = false;
+function frame() { if (framed) return; framed = true; requestAnimationFrame(() => { framed = false; A = analyse(); drawInk(); drawEd(); }); }
+
+/* ---- js/ui.js ---- */
+/* =====================================================================
+   The window round the sheet: the ribbon, the palette, properties, Check Print, sheets, the title block,
+   zoom, files, printing, the keyboard; and starting up.
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const desk = $('desk'), zoomer = $('zoomer'), host = $('pagehost'), sizer = $('sizer');
+const AUTOSAVE = 'oo-print-builder:autosave', SHOWKEY = 'oo-print-builder:show';
+let zoom = 1, spaceDown = false, pan = null, pageFor = null;
+const say = s => { $('hint').textContent = s || hintFor(); };
+const hintFor = () => ({
+  select: 'Click to pick · drag to move · drag empty paper to pick several · R turns · Delete takes away',
+  wire: 'Click to start · click to bend · click a terminal, rail or wire to finish · Esc stops',
+  rung: 'Click between the rails to add a rung, then drop symbols onto it',
+  note: 'Click where the note goes',
+  place: 'Click on a rung to put it in the wire · Shift+click to put down more · R turns it · Esc stops',
+})[tool] || '';
+
+/* ---------- drawing it all ---------- */
+function refresh(full = false) {
+  S = doc.sheets[doc.cur];
+  A = analyse(); ISSUES = checkPrint(A);
+  const key = JSON.stringify([doc.tb, doc.cur, doc.sheets.length, S.land, S.id]);
+  if (full || key !== pageFor || !svg) buildPage(key); else drawInk();
+  drawEd(); renderProps(); renderChecks(); renderTabs(); updateButtons(); autosave();
+}
+function buildPage(key) {
+  host.innerHTML = pageHTML(S, doc.cur, A, true); pageFor = key;
+  svg = $('sv'); VB = fitDraw(host.firstElementChild);
+  svg.addEventListener('pointerdown', onDown); svg.addEventListener('pointermove', onMove); svg.addEventListener('pointerup', onUp);
+  svg.addEventListener('pointerleave', () => { cursor = null; $('tip').hidden = true; if (!drag) drawEd(); });
+  svg.addEventListener('dblclick', e => { const h = pick(sheetPt(e)); if (tool === 'select' && h && h.kind === 'text') focusProp('note-text'); else if (tool === 'select' && h && h.kind === 'part') focusProp('p-tag'); });
+  svg.setAttribute('class', 'tool-' + tool);
+  applyZoom();
+}
+function drawInk() { svg.querySelector('g.ink').innerHTML = drawSheet(S, doc.cur, A); }
+function updateButtons() {
+  $('undo-btn').disabled = !UNDO.length; $('redo-btn').disabled = !REDO.length;
+  $('orient-lbl').textContent = S.land ? 'Landscape' : 'Portrait';
+  $('pageinfo').textContent = `Letter · ${S.land ? 'Landscape' : 'Portrait'}`;
+  const n = ISSUES.filter(i => i.sev !== 'ok').length, b = $('check-badge');
+  b.hidden = !n; b.textContent = n; b.className = 'badge' + (ISSUES.some(i => i.sev === 'e') ? '' : ' w');
+  $('check-btn').setAttribute('aria-pressed', checkOn);
+  for (const x of document.querySelectorAll('[data-tool]')) x.setAttribute('aria-pressed', x.dataset.tool === tool);
+  for (const x of document.querySelectorAll('.pt')) x.classList.toggle('on', tool === 'place' && placing && x.dataset.t === placing.t);
+}
+function setTool(t) {
+  tool = t; wd = null; if (t !== 'place') placing = null;
+  if (svg) svg.setAttribute('class', 'tool-' + t);
+  $('tip').hidden = true; say(); updateButtons(); drawEd();
+}
+function startPlacing(t) { placing = { t, rot: 0 }; sel = new Set(); selW = null; setTool('place'); renderProps(); }
+
+/* ---------- the palette and the ribbon's menus ---------- */
+const thumb = t => { if (t === 'sup') return `<svg viewBox="-80 -30 100 60"><path d="M-22 -13L-22 13L0 0Z" fill="#000"/><line x1="0" y1="0" x2="18" y2="0" stroke="#000" stroke-width="4"/><text x="-30" y="9" font-size="26" font-weight="700" text-anchor="end" font-family="Arial">L1</text></svg>`;
+  const s = PSYM[LIB[t].sym], e = extentOf(t), pad = 8; return `<svg viewBox="${e.x0 - pad} ${s.y0 - pad} ${e.x1 - e.x0 + 2 * pad} ${s.y1 - s.y0 + 2 * pad}"><g fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${s.b}</g></svg>`; };
+const short = n => n.replace('Pushbutton', 'PB').replace('Temperature', 'Temp.').replace('Proximity', 'Prox.').replace('Selector Switch', 'Selector').replace(', Held Closed', ' (HC)').replace(', Held Open', ' (HO)').replace('Toggle Switch (SPST)', 'Toggle').replace('Overload Contact (NC)', 'OL Contact').replace('Overload Heater', 'Overload').replace('Starter Contacts (3-Phase)', 'Starter').replace('Control Transformer', 'Control Xfmr').replace('Line In (L1, L2, L3)', 'Line In').replace('3-Phase', '3Ø');
+function buildPalette() {
+  let h = '';
+  for (const c of CATS) { h += `<div class="ph">${c}</div><div class="pg">`;
+    for (const [t, d] of Object.entries(LIB)) if (d.cat === c) h += `<div class="pt" data-t="${t}" title="${esc(d.name)}">${thumb(t)}<span>${esc(short(d.name))}</span></div>`;
+    h += '</div>'; }
+  $('palette').innerHTML = h;
+  for (const el of document.querySelectorAll('.pt')) el.addEventListener('pointerdown', e => {
+    e.preventDefault(); const t = el.dataset.t; startPlacing(t);
+    // (dragged out onto the sheet: put down where it is let go)
+    const up = ev => { window.removeEventListener('pointerup', up);
+      const r = svg.getBoundingClientRect(); if (ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom && tool === 'place') putDown(sheetPt(ev), ev.shiftKey); };
+    window.addEventListener('pointerup', up);
+  });
+  let m = '';
+  for (const c of CATS) { m += `<div class="menuwrap"><button class="rb" data-menu="${c}"><span class="sw" style="border-color:${CAT_COL[c]}"></span><span>${c} ▾</span></button><div class="dmenu" hidden>`;
+    for (const [t, d] of Object.entries(LIB)) if (d.cat === c) m += `<button data-t="${t}">${thumb(t).replace('<svg', '<svg style="width:46px;height:26px;background:#f4f5f6;border-radius:4px;padding:2px"')}${esc(d.name)}</button>`;
+    m += '</div></div>'; }
+  $('sym-menus').innerHTML = m;
+  for (const b of document.querySelectorAll('[data-menu]')) b.addEventListener('click', e => { e.stopPropagation(); const d = b.nextElementSibling, open = d.hidden; closeMenus(); d.hidden = !open; if (open) { const r = b.getBoundingClientRect(); d.style.position = 'fixed'; d.style.left = r.left + 'px'; d.style.top = (r.bottom + 6) + 'px'; } });
+  for (const b of document.querySelectorAll('#sym-menus .dmenu button')) b.addEventListener('click', () => { closeMenus(); startPlacing(b.dataset.t); });
+}
+const closeMenus = () => { for (const d of document.querySelectorAll('.dmenu')) d.hidden = true; };
+document.addEventListener('click', e => { if (!e.target.closest('.menuwrap')) closeMenus(); });
+
+/* ---------- properties ---------- */
+function focusProp(id) { setTimeout(() => { const el = $(id); if (el) { el.focus(); el.select && el.select(); } }, 0); }
+let editing = false;   // (one undo step for a run of typing in one box)
+const edit = fn => { if (!editing) { snapshot(); editing = true; } fn(); A = analyse(); ISSUES = checkPrint(A); drawInk(); drawEd(); renderChecks(); updateButtons(); autosave(); };
+function renderProps() {
+  const P = $('props'); editing = false;
+  const ids = [...sel], one = ids.length === 1 ? ids[0] : null, p = one && partOf(S, one), t = one && S.texts.find(x => x.id === one), w = selW && S.wires.find(x => x.id === selW);
+  if (tool === 'place' && placing) {
+    const d = LIB[placing.t];
+    P.innerHTML = `<h4>Putting down: ${esc(d.name)}</h4><p class="help">Click on a rung (or drag it from the palette) and it goes into the wire there. Its tag comes next: <b>${esc(placing.t === 'coil' ? nextTag('CR') : defaultTag(placing.t) || '(its coil’s)')}</b>.<br><kbd>R</kbd> turns it · <kbd>Shift</kbd>+click puts down more · <kbd>Esc</kbd> stops.</p>`;
+    return;
+  }
+  if (p && p.t === 'rail') {
+    P.innerHTML = `<h4>Rail ${esc(p.label)}</h4><p class="help">Control ${p.label} (wire ${p.label === 'L1' ? 1 : 2}${A.n1 != null && p.label === 'L1' && doc.sheets.some(s => s.parts.some(q => q.t === 'xfmr')) ? ', from the transformer’s X1' : ''}). Drag its ends to lengthen it; drag it to move it (its rungs stay on it).</p><div class="acts"><button class="btn del" id="p-del">Take Away</button></div>`;
+  } else if (p) {
+    const d = LIB[p.t], k = d.kind, coils = [...new Set(allParts().filter(x => LIB[x.p.t].kind === 'coil').map(x => x.p.tag).filter(Boolean))];
+    const ols = [...new Set(allParts().filter(x => LIB[x.p.t].kind === 'ol').map(x => x.p.tag).filter(Boolean))];
+    const list = k === 'contact' || k === 'starter' ? coils : k === 'olc' ? ols : [];
+    const rn = A.rung.get(p.id), xr = A.xref.get(p.id);
+    const termNums = [...Array(termsN(p)).keys()].map(i => A.label.get(A.rootT(p, S, i))).filter(Boolean);
+    P.innerHTML = `<h4>${esc(d.name)}${p.tag ? ' ' + esc(p.tag) : ''}</h4>
+      ${p.t === 'sup' ? `<div class="f">Line<div class="seg">${['L1', 'L2', 'L3'].map(l => `<button data-line="${l}" aria-pressed="${p.tag === l}">${l}</button>`).join('')}</div></div>` : `
+      <div class="f">Tag<input class="in" id="p-tag" value="${esc(p.tag)}" list="p-tags" autocomplete="off"><datalist id="p-tags">${list.map(x => `<option value="${esc(x)}">`).join('')}</datalist></div>`}
+      ${k === 'coil' ? `<div class="f">Coil<select id="p-pre">${COIL_PRE.map(([v, n]) => `<option value="${v}"${(p.pre || 'CR') === v ? ' selected' : ''}>${n} (${v})</option>`).join('')}</select></div>` : ''}
+      ${d.flip ? `<div class="f">Type<div class="seg"><button data-flip="${/_no$|_hc$/.test(p.t) ? p.t : d.flip}" aria-pressed="${/_no$|_hc$/.test(p.t)}">${/_h[co]$/.test(p.t) ? 'NO (HC)' : 'NO'}</button><button data-flip="${/_nc$|_ho$/.test(p.t) ? p.t : d.flip}" aria-pressed="${/_nc$|_ho$/.test(p.t)}">${/_h[co]$/.test(p.t) ? 'NC (HO)' : 'NC'}</button></div></div>` : ''}
+      ${p.t !== 'sup' ? `<div class="f">Description<input class="in" id="p-desc" value="${esc(p.desc)}" placeholder="${k === 'load' && p.t === 'pl' ? 'e.g. RED' : 'e.g. HIGH TEMP'}"></div>` : ''}
+      ${rn ? `<div class="f">Rung<span class="ro">${rn} (automatic)</span></div>` : ''}
+      ${termNums.length ? `<div class="f">Wires<span class="ro">${termNums.join(' → ')} (automatic)</span></div>` : ''}
+      ${xr && xr.length ? `<div class="f">Contacts on<span class="ro">${xr.map(o => o.n + (o.nc ? ' (NC)' : '')).join(', ')}</span></div>` : ''}
+      <div class="acts">${termsN(p) === 2 ? '<button class="btn" id="p-rot">Turn (R)</button>' : ''}<button class="btn del" id="p-del">Take Away</button></div>`;
+    const tg = $('p-tag'); if (tg) tg.addEventListener('input', () => edit(() => { p.tag = tg.value.trim().toUpperCase(); if (k === 'coil') lastCoil = p.tag; }));
+    if (tg) tg.addEventListener('change', () => renderProps());
+    const ds = $('p-desc'); if (ds) ds.addEventListener('input', () => edit(() => { p.desc = ds.value.toUpperCase(); }));
+    const pr = $('p-pre'); if (pr) pr.addEventListener('change', () => { snapshot(); p.pre = pr.value; p.tag = ''; p.tag = nextTag(p.pre); lastCoil = p.tag; refresh(); });
+    for (const b of P.querySelectorAll('[data-flip]')) b.addEventListener('click', () => { if (b.dataset.flip === p.t) return; snapshot(); p.t = b.dataset.flip; refresh(); });
+    for (const b of P.querySelectorAll('[data-line]')) b.addEventListener('click', () => { snapshot(); p.tag = b.dataset.line; refresh(); });
+    const ro = $('p-rot'); if (ro) ro.addEventListener('click', () => { snapshot(); rotateParts(S, new Set([p.id])); refresh(); });
+  } else if (t) {
+    P.innerHTML = `<h4>Note</h4><textarea id="note-text" rows="4">${esc(t.s)}</textarea>
+      <div class="f" style="margin-top:8px">Size<div class="seg">${[[20, 'Small'], [24, 'Medium'], [32, 'Large']].map(([z, n]) => `<button data-size="${z}" aria-pressed="${(t.size || 24) === z}">${n}</button>`).join('')}</div></div>
+      <div class="f">Bold<div class="seg"><button data-bold="0" aria-pressed="${!t.bold}">No</button><button data-bold="1" aria-pressed="${!!t.bold}">Yes</button></div></div>
+      <div class="acts"><button class="btn del" id="p-del">Take Away</button></div>`;
+    $('note-text').addEventListener('input', e => edit(() => { t.s = e.target.value; }));
+    for (const b of P.querySelectorAll('[data-size]')) b.addEventListener('click', () => { snapshot(); t.size = +b.dataset.size; refresh(); });
+    for (const b of P.querySelectorAll('[data-bold]')) b.addEventListener('click', () => { snapshot(); t.bold = b.dataset.bold === '1'; refresh(); });
+  } else if (w) {
+    const r = A.wireRoot(S, w), auto = A.label.get(r), net = (A.WIRED.get(r) || []).length;
+    P.innerHTML = `<h4>Wire ${esc(auto || '')}</h4>
+      <div class="f">Number<input class="in" id="w-num" value="${esc(w.num || '')}" placeholder="${esc(w.num ? '' : auto || '')} (automatic)"></div>
+      <p class="help">${net > 1 ? `${net} wire pieces are joined here; they all take this number.` : 'Numbered automatically.'} Type a number to fix it yourself; clear it to go back to automatic.</p>
+      <div class="acts"><button class="btn del" id="p-del">Take Away</button></div>`;
+    $('w-num').addEventListener('input', e => edit(() => { const v = e.target.value.trim().toUpperCase(); for (const o of A.WIRED.get(r) || []) delete o.w.num; if (v) w.num = v; }));
+  } else if (ids.length > 1) {
+    P.innerHTML = `<h4>${ids.length} things picked</h4><p class="help">Drag any of them to move them together. <kbd>R</kbd> turns the symbols; <kbd>Delete</kbd> takes them all away.</p><div class="acts"><button class="btn del" id="p-del">Take Away</button></div>`;
+  } else {
+    P.innerHTML = `<h4>Drawing the Print</h4><p class="help"><b>1.</b> Drag a symbol from the left onto a rung: it goes into the wire.<br><b>2.</b> <b>Rung</b> adds a rung between the rails; <b>Wire</b> draws branches and the power circuit.<br><b>3.</b> Pick a symbol to set its tag (NO/NC, its coil) and description.<br><b>4.</b> Wire numbers, rung numbers and cross-references fill in by themselves.<br><b>5.</b> <b>Check Print</b> rings what needs fixing.</p>`;
+  }
+  const del = $('p-del'); if (del) del.addEventListener('click', removeSelection);
+}
+function removeSelection() {
+  if (!sel.size && !selW) return;
+  snapshot();
+  for (const id of sel) { if (partOf(S, id)) removePart(S, id); else if (nodeOf(S, id)) { S.wires = S.wires.filter(w => !(w.a.n === id || w.b.n === id)); S.nodes = S.nodes.filter(n => n.id !== id); tidy(S); } else S.texts = S.texts.filter(t => t.id !== id); }
+  if (selW) removeWire(S, selW);
+  sel = new Set(); selW = null; refresh();
+}
+
+/* ---------- Check Print ---------- */
+function renderChecks() {
+  $('check-list').innerHTML = ISSUES.map((is, i) => `<div class="is${is.sev === 'ok' ? ' okk' : ''}" data-i="${i}"><span class="dot ${is.sev}">${is.sev === 'e' ? '!' : is.sev === 'w' ? '?' : '✓'}</span><div>${esc(is.title)}${is.detail ? `<small>${esc(is.detail)}</small>` : ''}</div></div>`).join('');
+  for (const el of document.querySelectorAll('.is[data-i]')) el.addEventListener('click', () => {
+    const is = ISSUES[+el.dataset.i]; if (!is.at.length) return;
+    checkOn = true; const a = is.at[0]; if (a.k !== doc.cur) { doc.cur = a.k; }
+    S = doc.sheets[doc.cur]; sel = new Set(is.at.filter(x => x.k === doc.cur && (partOf(S, x.id) || nodeOf(S, x.id))).map(x => x.id));
+    selW = is.at.find(x => S.wires.some(w => w.id === x.id))?.id || null;
+    refresh(); showPoint(a.x, a.y);
+  });
+}
+// the view scrolled to put a point on the sheet in the middle
+function showPoint(x, y) { const r = svg.getBoundingClientRect(), m = svg.getScreenCTM(), sx = m.a * x + m.e, sy = m.d * y + m.f, dr = zoomer.getBoundingClientRect();
+  zoomer.scrollLeft += sx - (dr.left + dr.width / 2); zoomer.scrollTop += sy - (dr.top + dr.height / 2); }
+
+/* ---------- sheets ---------- */
+function renderTabs() {
+  $('tabs').innerHTML = doc.sheets.map((s, k) => `<button class="tab" data-k="${k}" aria-selected="${k === doc.cur}">Sheet ${k + 1}${doc.sheets.length > 1 && k === doc.cur ? '<span class="x" data-del="1" title="Take this sheet away">×</span>' : ''}</button>`).join('');
+  for (const b of document.querySelectorAll('.tab')) b.addEventListener('click', e => {
+    const k = +b.dataset.k;
+    if (e.target.dataset.del) { if (!confirm(`Take Sheet ${k + 1} away, and everything on it?`)) return; snapshot(); doc.sheets.splice(k, 1); doc.cur = Math.max(0, Math.min(doc.cur, doc.sheets.length - 1)); }
+    else doc.cur = k;
+    sel = new Set(); selW = null; refresh(); fitZoom();
+  });
+}
+$('addsheet-btn').addEventListener('click', () => { snapshot(); doc.sheets.push(newSheet(true, S.land)); doc.cur = doc.sheets.length - 1; sel = new Set(); selW = null; refresh(); fitZoom(); });
+$('orient-btn').addEventListener('click', () => {
+  snapshot(); S.land = !S.land;
+  // (an empty sheet: its rails laid out afresh for the new way round; otherwise kept on the paper)
+  const rails = S.parts.filter(p => p.t === 'rail');
+  if (rails.length === S.parts.length && !S.wires.length && !S.texts.length) { const f = newSheet(true, S.land); S.parts = f.parts; }
+  refresh(true);
+  for (const r of S.parts) if (r.t === 'rail') { r.y1 = Math.min(r.y1, snap(VB[1] - 60)); r.y0 = Math.min(r.y0, r.y1 - 200); r.x = Math.min(r.x, snap(VB[0] - 60)); }
+  refresh(); fitZoom();
+});
+
+/* ---------- the title block ---------- */
+function renderTB() {
+  const f = doc.tb.fields;
+  $('tb-rows').innerHTML = `<div class="tbrow tbhead"><span></span><span>Label</span><span>What it says</span><span>Width</span><span>Large</span><span></span><span></span><span></span></div>` + f.map((x, i) => `<div class="tbrow" data-i="${i}">
+    <span class="num">${i + 1}</span><input type="text" data-k="label" value="${esc(x.label)}"><input type="text" data-k="value" value="${esc(x.value)}">
+    <select data-k="span">${[1, 2, 3, 4, 5, 6, 8, 12].map(n => `<option value="${n}"${(x.span || 2) === n ? ' selected' : ''}>${n}/12</option>`).join('')}</select>
+    <label><input type="checkbox" data-k="big"${x.big ? ' checked' : ''}>big</label>
+    <button class="ib" data-mv="-1" title="Earlier"${i ? '' : ' disabled'}>↑</button><button class="ib" data-mv="1" title="Later"${i < f.length - 1 ? '' : ' disabled'}>↓</button><button class="ib" data-rm="1" title="Take this box away">✕</button></div>`).join('');
+  $('tb-shownotes').checked = !!doc.tb.showNotes; $('tb-notes').value = doc.tb.notes || '';
+  for (const r of document.querySelectorAll('.tbrow[data-i]')) { const i = +r.dataset.i;
+    for (const el of r.querySelectorAll('[data-k]')) el.addEventListener(el.type === 'checkbox' || el.tagName === 'SELECT' ? 'change' : 'input', () => { const x = f[i]; const k = el.dataset.k; x[k] = k === 'span' ? +el.value : k === 'big' ? el.checked : el.value; refresh(true); });
+    for (const b of r.querySelectorAll('[data-mv]')) b.addEventListener('click', () => { const j = i + +b.dataset.mv; [f[i], f[j]] = [f[j], f[i]]; renderTB(); refresh(true); });
+    r.querySelector('[data-rm]').addEventListener('click', () => { f.splice(i, 1); renderTB(); refresh(true); }); }
+}
+$('tb-btn').addEventListener('click', () => { snapshot(); renderTB(); $('tb-dlg').showModal(); });
+$('tb-add').addEventListener('click', () => { doc.tb.fields.push({ id: uid('f'), label: 'New Box', value: '', span: 3 }); renderTB(); refresh(true); const r = document.querySelectorAll('.tbrow[data-i]'); r[r.length - 1].querySelector('input').select(); });
+$('tb-shownotes').addEventListener('change', e => { doc.tb.showNotes = e.target.checked; refresh(true); });
+$('tb-notes').addEventListener('input', e => { doc.tb.notes = e.target.value; refresh(true); });
+$('tb-reset').addEventListener('click', () => { doc.tb = defaultTB(); renderTB(); refresh(true); });
+$('tb-done').addEventListener('click', () => $('tb-dlg').close());
+
+/* ---------- zoom and panning ---------- */
+const pageSize = () => S.land ? [1056, 816] : [816, 1056];
+function applyZoom() { const [w, h] = pageSize(); host.style.transform = `scale(${zoom})`; sizer.style.width = (w * zoom + 48) + 'px'; sizer.style.height = (h * zoom + 48) + 'px'; $('z-lvl').textContent = Math.round(zoom * 100) + '%'; }
+function fitZoom() { const [w, h] = pageSize(), r = zoomer.getBoundingClientRect(); zoom = Math.max(.2, Math.min(3, Math.min((r.width - 48) / w, (r.height - 48) / h))); applyZoom(); zoomer.scrollLeft = 0; zoomer.scrollTop = 0;
+  const [W] = pageSize(); if (W * zoom + 48 < r.width) host.style.left = ((r.width - W * zoom) / 2) + 'px'; else host.style.left = '24px'; }
+function zoomBy(f, cx, cy) {
+  const r = zoomer.getBoundingClientRect(); cx = cx ?? r.left + r.width / 2; cy = cy ?? r.top + r.height / 2;
+  const hl = parseFloat(host.style.left) || 24, px = (zoomer.scrollLeft + cx - r.left - hl) / zoom, py = (zoomer.scrollTop + cy - r.top - 24) / zoom;
+  zoom = Math.max(.2, Math.min(4, zoom * f)); host.style.left = '24px'; applyZoom();
+  zoomer.scrollLeft = px * zoom + 24 - (cx - r.left); zoomer.scrollTop = py * zoom + 24 - (cy - r.top);
+}
+$('z-in').addEventListener('click', () => zoomBy(1.25)); $('z-out').addEventListener('click', () => zoomBy(.8)); $('z-fit').addEventListener('click', fitZoom);
+zoomer.addEventListener('wheel', e => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); zoomBy(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX, e.clientY); }, { passive: false });
+function startPan(e) { e.preventDefault(); pan = { x: e.clientX, y: e.clientY, l: zoomer.scrollLeft, t: zoomer.scrollTop }; desk.classList.add('pan'); svg.setPointerCapture(e.pointerId); }
+function doPan(e) { zoomer.scrollLeft = pan.l - (e.clientX - pan.x); zoomer.scrollTop = pan.t - (e.clientY - pan.y); }
+window.addEventListener('resize', () => { if (svg) { VB = fitDraw(host.firstElementChild); drawEd(); } });
+
+/* ---------- files ---------- */
+let saveT = null;
+function autosave() { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(AUTOSAVE, JSON.stringify(doc)); localStorage.setItem(SHOWKEY, JSON.stringify(SHOW)); } catch (_) {} }, 400); }
+function loadDoc(d) {
+  if (!d || d.kind !== 'o3-print' || !Array.isArray(d.sheets) || !d.sheets.length) throw new Error('not a Print Builder file');
+  for (const s of d.sheets) { s.parts ||= []; s.wires ||= []; s.nodes ||= []; s.texts ||= []; for (const p of s.parts) if (p.t !== 'rail' && !LIB[p.t]) throw new Error('unknown symbol ' + p.t); }
+  d.tb ||= defaultTB(); d.cur = Math.min(d.cur || 0, d.sheets.length - 1);
+  doc = d; S = doc.sheets[doc.cur]; sel = new Set(); selW = null; UNDO.length = 0; REDO.length = 0;
+}
+const fileName = () => ((doc.tb.fields.find(f => /title/i.test(f.label)) || {}).value || 'Print').replace(/[\\/:*?"<>|]+/g, '').trim() || 'Print';
+$('save-btn').addEventListener('click', () => {
+  const b = new Blob([JSON.stringify(doc, null, 1)], { type: 'application/json' }), a = document.createElement('a');
+  a.href = URL.createObjectURL(b); a.download = fileName() + '.o3print.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  say('Saved to your Downloads as ' + a.download);
+});
+$('open-btn').addEventListener('click', () => $('file-in').click());
+$('file-in').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try { const d = JSON.parse(await f.text()); snapshot(); const keep = UNDO.slice(); loadDoc(d); UNDO.push(...keep); refresh(true); fitZoom(); say('Opened ' + f.name); }
+  catch (err) { alert('That file could not be opened: it is not a Print Builder file (' + err.message + ').'); }
+});
+$('new-btn').addEventListener('click', e => { e.stopPropagation(); const m = $('new-menu'), o = m.hidden; closeMenus(); m.hidden = !o; });
+for (const b of document.querySelectorAll('[data-new]')) b.addEventListener('click', () => { closeMenus(); snapshot(); const keep = UNDO.slice(); loadDoc(template(b.dataset.new)); UNDO.push(...keep); refresh(true); fitZoom(); });
+
+/* ---------- printing: every sheet, each on its own page the right way round ---------- */
+function printAll() {
+  const ph = $('print-host');
+  ph.innerHTML = doc.sheets.map((s, k) => pageHTML(s, k, A)).join('');
+  ph.style.cssText = 'display:block;position:fixed;left:-30000px;top:0';
+  for (const p of ph.querySelectorAll('.pr-page')) fitDraw(p);
+  ph.style.cssText = '';
+  $('print-page').textContent = '@page port { size: 8.5in 11in; margin: 0; } @page land { size: 11in 8.5in; margin: 0; } @page { margin: 0; }';
+  setTimeout(() => window.print(), 30);
+}
+window.addEventListener('afterprint', () => { $('print-host').innerHTML = ''; });
+$('print-btn').addEventListener('click', printAll);
+
+/* ---------- the ribbon's other buttons, and the keyboard ---------- */
+for (const b of document.querySelectorAll('[data-tool]')) b.addEventListener('click', () => setTool(b.dataset.tool));
+$('check-btn').addEventListener('click', () => { checkOn = !checkOn; updateButtons(); drawEd(); });
+$('undo-btn').addEventListener('click', () => { if (undo()) { sel = new Set(); selW = null; refresh(true); } });
+$('redo-btn').addEventListener('click', () => { if (redo()) { sel = new Set(); selW = null; refresh(true); } });
+for (const [id, k] of [['show-wn', 'wn'], ['show-rn', 'rn'], ['show-xr', 'xr']]) $(id).addEventListener('change', e => { SHOW[k] = e.target.checked; refresh(); });
+document.addEventListener('keydown', e => {
+  const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) || $('tb-dlg').open;
+  if ((e.ctrlKey || e.metaKey) && !typing) {
+    const k = e.key.toLowerCase();
+    if (k === 'z' && !e.shiftKey) { e.preventDefault(); $('undo-btn').click(); return; }
+    if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); $('redo-btn').click(); return; }
+    if (k === 's') { e.preventDefault(); $('save-btn').click(); return; }
+    if (k === 'p') { e.preventDefault(); printAll(); return; }
+    if (k === 'a') { e.preventDefault(); sel = new Set([...S.parts, ...S.texts].map(x => x.id)); selW = null; refresh(); return; }
+    if (k === '0') { e.preventDefault(); fitZoom(); return; }
+    if (k === '=' || k === '+') { e.preventDefault(); zoomBy(1.25); return; }
+    if (k === '-') { e.preventDefault(); zoomBy(.8); return; }
+    return;
+  }
+  if (typing) return;
+  if (e.key === ' ') { spaceDown = true; e.preventDefault(); return; }
+  if (e.key === 'Escape') { if (wd) finishWire(); else if (tool !== 'select') setTool('select'); else { sel = new Set(); selW = null; refresh(); } return; }
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); removeSelection(); return; }
+  const k = e.key.toLowerCase();
+  if (k === 'r') { if (tool === 'place' && placing) { if (termsOf(placing.t).length === 2) placing.rot = ((placing.rot || 0) + 90) % 360; drawEd(); } else if (sel.size) { snapshot(); rotateParts(S, sel); refresh(); } return; }
+  if (k === 'v') setTool('select'); if (k === 'w') setTool('wire'); if (k === 'l') setTool('rung'); if (k === 'n') setTool('note');
+  const mv = { arrowleft: [-G, 0], arrowright: [G, 0], arrowup: [0, -G], arrowdown: [0, G] }[k];
+  if (mv && sel.size) { e.preventDefault(); snapshot(); moveItems(S, sel, ...mv); tidy(S); refresh(); }
+});
+document.addEventListener('keyup', e => { if (e.key === ' ') spaceDown = false; });
+
+/* ---------- starting up ---------- */
+function start() {
+  try { const sv = JSON.parse(localStorage.getItem(SHOWKEY) || 'null'); if (sv) SHOW = { ...SHOW, ...sv }; } catch (_) {}
+  $('show-wn').checked = SHOW.wn; $('show-rn').checked = SHOW.rn; $('show-xr').checked = SHOW.xr;
+  let d = null; try { d = JSON.parse(localStorage.getItem(AUTOSAVE) || 'null'); } catch (_) {}
+  try { if (d) loadDoc(d); else loadDoc(template('starter')); } catch (_) { loadDoc(template('blank')); }
+  buildPalette(); refresh(true); setTool('select'); requestAnimationFrame(fitZoom);
+}
+start();
+</script>
+</body>
+</html>
