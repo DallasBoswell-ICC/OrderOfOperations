@@ -211,7 +211,7 @@ function putDown(q, keep) {
   const g = ghostPart(q), p = addPart(S, placing.t, g.x, g.y, { rot: placing.rot });
   sel = new Set([p.id]); selW = null;
   if (!keep) { placing = null; setTool('select'); }
-  refresh();
+  keepTab = true; refresh(); keepTab = false;   // (a part just put down: the tools stay in view; click it for its Part tab)
 }
 // the Wire tool: a click starts, bends or (on something to join) finishes a wire; a double click finishes it anywhere
 function wireClick(q, dbl) {

@@ -38,7 +38,7 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .tog:after { content: ''; position: absolute; left: 2px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: #ddd; transition: left .12s; }
 .chk input:checked + .tog { background: var(--gold); } .chk input:checked + .tog:after { left: 14px; background: #111; }
 /* middle */
-.mid { display: grid; grid-template-columns: 224px 1fr 296px; min-height: 0; }
+.mid { display: grid; grid-template-columns: 224px 1fr; min-height: 0; }
 .pal { background: #1f2124; border-right: 1px solid var(--line); padding: 8px 9px 16px; overflow-y: auto; }
 .ph { font-size: 11.5px; font-weight: 700; color: var(--muted); margin: 12px 2px 6px; text-transform: uppercase; letter-spacing: .05em; } .ph:first-child { margin-top: 2px; }
 .pg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
@@ -58,8 +58,8 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .card { background: var(--card); border: 1px solid #33373c; border-radius: 10px; padding: 12px; }
 .card h4 { margin: 0 0 10px; font-size: 14px; }
 .f { display: grid; grid-template-columns: 88px 1fr; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 13px; color: var(--muted); }
-.in, .card select, .card textarea { width: 100%; background: #1b1d20; border: 1px solid var(--line2); border-radius: 6px; padding: 6px 8px; color: var(--ink); font: inherit; font-size: 13px; }
-.in:focus, .card select:focus, .card textarea:focus { outline: 2px solid var(--gold); outline-offset: 0; }
+.in, #props select, #props textarea { width: 100%; background: #1b1d20; border: 1px solid var(--line2); border-radius: 6px; padding: 6px 8px; color: var(--ink); font: inherit; font-size: 13px; }
+.in:focus, #props select:focus, #props textarea:focus { outline: 2px solid var(--gold); outline-offset: 0; }
 .seg { display: flex; border: 1px solid var(--line2); border-radius: 6px; overflow: hidden; } .seg button { flex: 1; text-align: center; padding: 5px 0; font-size: 12.5px; background: transparent; border: 0; cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--gold); color: #111; font-weight: 700; }
 .ro { color: var(--muted); font-size: 13px; }
@@ -123,3 +123,29 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .desk, .desk * { -webkit-user-select: none; user-select: none; }
 /* over a terminal in Select: a drag draws a wire */
 #sv.tool-select.on-term { cursor: crosshair; }
+
+/* the ribbon's tabs: Home, the gold Part tab (what is picked; as in Circuit Builder), Check Print */
+.ribwrap { background: var(--rib); border-bottom: 1px solid var(--line); min-width: 0; }
+.ribwrap .ribbon { border-bottom: 0; min-height: 92px; }
+.rtabs { display: flex; gap: 2px; padding: 5px 10px 0; background: #191b1e; }
+.rtab { background: transparent; border: 0; color: #aab1b9; font: inherit; font-size: 13px; font-weight: 600; padding: 6px 16px 7px; border-radius: 7px 7px 0 0; cursor: pointer; display: flex; align-items: center; }
+.rtab:hover { color: #fff; } .rtab[aria-pressed="true"] { background: var(--rib); color: #fff; }
+.rtab.gold { background: #3a3220; color: var(--gold); } .rtab.gold[aria-pressed="true"] { background: var(--gold); color: #141414; }
+.ribwrap:has(#rt-part[aria-pressed="true"]) .ribbon.part { box-shadow: inset 0 3px 0 var(--gold); }
+/* a part's settings across the ribbon: each a label over its box */
+#props { display: flex; align-items: flex-start; gap: 18px; padding: 10px 8px 8px; flex-wrap: nowrap; }
+#props h4 { display: none; }
+#props .f { display: flex; flex-direction: column; align-items: stretch; gap: 5px; margin: 0; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); flex: none; }
+#props .f > * { text-transform: none; letter-spacing: 0; }
+#props .f .in, #props .f select { min-width: 130px; font-size: 14px; padding: 7px 9px; }
+#props .f .seg { min-width: 120px; } #props .f .seg button { padding: 7px 12px; font-size: 13px; }
+#props .f .ro { font-size: 14px; color: var(--ink); padding: 7px 0; white-space: nowrap; }
+#props .help { max-width: 300px; font-size: 12px; align-self: center; }
+#props .acts { margin: 0; align-self: flex-end; flex-wrap: nowrap; padding-bottom: 1px; }
+#props .acts .btn { font-size: 13px; padding: 7px 12px; }
+#props textarea { width: 300px; min-height: 58px; }
+/* Check Print's findings across the ribbon */
+.chips { display: flex; gap: 8px; padding: 8px; overflow-x: auto; align-items: stretch; }
+.chips .is { flex: none; width: 250px; background: #26292d; border: 1px solid #34383d; border-radius: 8px; padding: 7px 9px; }
+.chips .is:first-child { border-top: 1px solid #34383d; }
+.ribwrap [hidden] { display: none !important; }

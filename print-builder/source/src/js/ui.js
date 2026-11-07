@@ -39,8 +39,10 @@ function updateButtons() {
   $('copy-btn').disabled = $('cut-btn').disabled = !any; $('del-btn').disabled = !sel.size && !selW; $('paste-btn').disabled = !hasClip();
   $('orient-lbl').textContent = S.land ? 'Landscape' : 'Portrait';
   $('pageinfo').textContent = `Letter · ${S.land ? 'Landscape' : 'Portrait'}`;
-  const n = ISSUES.filter(i => i.sev !== 'ok').length, b = $('check-badge');
-  b.hidden = !n; b.textContent = n; b.className = 'badge' + (ISSUES.some(i => i.sev === 'e') ? '' : ' w');
+  const n = ISSUES.filter(i => i.sev !== 'ok').length;
+  for (const b of [$('check-badge'), $('tab-badge')]) { b.hidden = !n; b.textContent = n; b.className = 'badge' + (ISSUES.some(i => i.sev === 'e') ? '' : ' w'); }
+  $('ring-chk').checked = checkOn;
+  $('check-sum').textContent = n ? `${n} thing${n > 1 ? 's' : ''} to look at · click one to go to it` : 'Nothing to fix';
   $('check-btn').setAttribute('aria-pressed', checkOn);
   for (const x of document.querySelectorAll('[data-tool]')) x.setAttribute('aria-pressed', x.dataset.tool === tool);
   for (const x of document.querySelectorAll('.pt')) x.classList.toggle('on', tool === 'place' && placing && x.dataset.t === placing.t);
@@ -84,7 +86,23 @@ document.addEventListener('click', e => { if (!e.target.closest('.menuwrap')) cl
 function focusProp(id) { setTimeout(() => { const el = $(id); if (el) { el.focus(); el.select && el.select(); } }, 0); }
 let editing = false;   // (one undo step for a run of typing in one box)
 const edit = fn => { if (!editing) { snapshot(); editing = true; } fn(); A = analyse(); ISSUES = checkPrint(A); drawInk(); drawEd(); renderChecks(); updateButtons(); autosave(); };
-function renderProps() {
+/* ---------- the ribbon's tabs ---------- */
+let ribTab = 'home', lastSelKey = '', keepTab = false;
+function setRib(t) {
+  ribTab = t;
+  $('ribbon').hidden = t !== 'home'; $('rp-part').hidden = t !== 'part'; $('rp-check').hidden = t !== 'check';
+  for (const [b, k] of [['rt-home', 'home'], ['rt-part', 'part'], ['rt-check', 'check']]) $(b).setAttribute('aria-pressed', String(t === k));
+}
+// the gold Part tab: there while something is picked, and opened when something new is picked (as in Circuit Builder)
+function partTab(title) {
+  const has = !!title, key = has ? [...sel].join() + '|' + (selW || '') : '';
+  $('rt-part').hidden = !has; if (has) $('rt-part').textContent = 'Part: ' + title;
+  if (has && key !== lastSelKey && !keepTab) setRib('part');
+  if (!has && ribTab === 'part') setRib('home');
+  lastSelKey = key;
+}
+function renderProps() { renderProps0(); const h = $('props').querySelector('h4'); partTab(tool === 'place' || !h || /^Drawing the Print/.test(h.textContent) ? '' : h.textContent); }
+function renderProps0() {
   const P = $('props'); editing = false;
   const ids = [...sel], one = ids.length === 1 ? ids[0] : null, p = one && partOf(S, one), t = one && S.texts.find(x => x.id === one), w = selW && S.wires.find(x => x.id === selW);
   if (tool === 'place' && placing) {
@@ -162,7 +180,7 @@ function renderChecks() {
     checkOn = true; const a = is.at[0]; if (a.k !== doc.cur) { doc.cur = a.k; }
     S = doc.sheets[doc.cur]; sel = new Set(is.at.filter(x => x.k === doc.cur && (partOf(S, x.id) || nodeOf(S, x.id))).map(x => x.id));
     selW = is.at.find(x => S.wires.some(w => w.id === x.id))?.id || null;
-    refresh(); showPoint(a.x, a.y);
+    keepTab = true; refresh(); keepTab = false; showPoint(a.x, a.y);
   });
 }
 // the view scrolled to put a point on the sheet in the middle
@@ -273,7 +291,10 @@ $('print-btn').addEventListener('click', printAll);
 
 /* ---------- the ribbon's other buttons, and the keyboard ---------- */
 for (const b of document.querySelectorAll('[data-tool]')) b.addEventListener('click', () => setTool(b.dataset.tool));
-$('check-btn').addEventListener('click', () => { checkOn = !checkOn; updateButtons(); drawEd(); });
+$('check-btn').addEventListener('click', () => { checkOn = true; setRib('check'); updateButtons(); drawEd(); });
+$('ring-chk').addEventListener('change', e => { checkOn = e.target.checked; updateButtons(); drawEd(); });
+$('rt-home').addEventListener('click', () => setRib('home')); $('rt-part').addEventListener('click', () => setRib('part'));
+$('rt-check').addEventListener('click', () => { checkOn = true; setRib('check'); updateButtons(); drawEd(); });
 $('copy-btn').addEventListener('click', copySel); $('cut-btn').addEventListener('click', cutSel); $('paste-btn').addEventListener('click', () => pasteClip(null)); $('del-btn').addEventListener('click', removeSelection);
 $('undo-btn').addEventListener('click', () => { if (undo()) { sel = new Set(); selW = null; refresh(true); } });
 $('redo-btn').addEventListener('click', () => { if (redo()) { sel = new Set(); selW = null; refresh(true); } });

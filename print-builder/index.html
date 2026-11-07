@@ -45,7 +45,7 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .tog:after { content: ''; position: absolute; left: 2px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: #ddd; transition: left .12s; }
 .chk input:checked + .tog { background: var(--gold); } .chk input:checked + .tog:after { left: 14px; background: #111; }
 /* middle */
-.mid { display: grid; grid-template-columns: 224px 1fr 296px; min-height: 0; }
+.mid { display: grid; grid-template-columns: 224px 1fr; min-height: 0; }
 .pal { background: #1f2124; border-right: 1px solid var(--line); padding: 8px 9px 16px; overflow-y: auto; }
 .ph { font-size: 11.5px; font-weight: 700; color: var(--muted); margin: 12px 2px 6px; text-transform: uppercase; letter-spacing: .05em; } .ph:first-child { margin-top: 2px; }
 .pg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
@@ -65,8 +65,8 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .card { background: var(--card); border: 1px solid #33373c; border-radius: 10px; padding: 12px; }
 .card h4 { margin: 0 0 10px; font-size: 14px; }
 .f { display: grid; grid-template-columns: 88px 1fr; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 13px; color: var(--muted); }
-.in, .card select, .card textarea { width: 100%; background: #1b1d20; border: 1px solid var(--line2); border-radius: 6px; padding: 6px 8px; color: var(--ink); font: inherit; font-size: 13px; }
-.in:focus, .card select:focus, .card textarea:focus { outline: 2px solid var(--gold); outline-offset: 0; }
+.in, #props select, #props textarea { width: 100%; background: #1b1d20; border: 1px solid var(--line2); border-radius: 6px; padding: 6px 8px; color: var(--ink); font: inherit; font-size: 13px; }
+.in:focus, #props select:focus, #props textarea:focus { outline: 2px solid var(--gold); outline-offset: 0; }
 .seg { display: flex; border: 1px solid var(--line2); border-radius: 6px; overflow: hidden; } .seg button { flex: 1; text-align: center; padding: 5px 0; font-size: 12.5px; background: transparent; border: 0; cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--gold); color: #111; font-weight: 700; }
 .ro { color: var(--muted); font-size: 13px; }
@@ -130,6 +130,32 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .desk, .desk * { -webkit-user-select: none; user-select: none; }
 /* over a terminal in Select: a drag draws a wire */
 #sv.tool-select.on-term { cursor: crosshair; }
+
+/* the ribbon's tabs: Home, the gold Part tab (what is picked; as in Circuit Builder), Check Print */
+.ribwrap { background: var(--rib); border-bottom: 1px solid var(--line); min-width: 0; }
+.ribwrap .ribbon { border-bottom: 0; min-height: 92px; }
+.rtabs { display: flex; gap: 2px; padding: 5px 10px 0; background: #191b1e; }
+.rtab { background: transparent; border: 0; color: #aab1b9; font: inherit; font-size: 13px; font-weight: 600; padding: 6px 16px 7px; border-radius: 7px 7px 0 0; cursor: pointer; display: flex; align-items: center; }
+.rtab:hover { color: #fff; } .rtab[aria-pressed="true"] { background: var(--rib); color: #fff; }
+.rtab.gold { background: #3a3220; color: var(--gold); } .rtab.gold[aria-pressed="true"] { background: var(--gold); color: #141414; }
+.ribwrap:has(#rt-part[aria-pressed="true"]) .ribbon.part { box-shadow: inset 0 3px 0 var(--gold); }
+/* a part's settings across the ribbon: each a label over its box */
+#props { display: flex; align-items: flex-start; gap: 18px; padding: 10px 8px 8px; flex-wrap: nowrap; }
+#props h4 { display: none; }
+#props .f { display: flex; flex-direction: column; align-items: stretch; gap: 5px; margin: 0; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); flex: none; }
+#props .f > * { text-transform: none; letter-spacing: 0; }
+#props .f .in, #props .f select { min-width: 130px; font-size: 14px; padding: 7px 9px; }
+#props .f .seg { min-width: 120px; } #props .f .seg button { padding: 7px 12px; font-size: 13px; }
+#props .f .ro { font-size: 14px; color: var(--ink); padding: 7px 0; white-space: nowrap; }
+#props .help { max-width: 300px; font-size: 12px; align-self: center; }
+#props .acts { margin: 0; align-self: flex-end; flex-wrap: nowrap; padding-bottom: 1px; }
+#props .acts .btn { font-size: 13px; padding: 7px 12px; }
+#props textarea { width: 300px; min-height: 58px; }
+/* Check Print's findings across the ribbon */
+.chips { display: flex; gap: 8px; padding: 8px; overflow-x: auto; align-items: stretch; }
+.chips .is { flex: none; width: 250px; background: #26292d; border: 1px solid #34383d; border-radius: 8px; padding: 7px 9px; }
+.chips .is:first-child { border-top: 1px solid #34383d; }
+.ribwrap [hidden] { display: none !important; }
 </style>
 <style id="print-page"></style>
 </head>
@@ -151,6 +177,12 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
       <button class="btn icon" id="redo-btn" title="Redo (Ctrl+Y)">↷</button>
     </div>
   </header>
+  <div class="ribwrap">
+  <div class="rtabs" role="tablist">
+    <button class="rtab" id="rt-home" role="tab" aria-pressed="true">Home</button>
+    <button class="rtab gold" id="rt-part" role="tab" aria-pressed="false" hidden>Part</button>
+    <button class="rtab" id="rt-check" role="tab" aria-pressed="false">Check Print<span class="badge" id="tab-badge" hidden></span></button>
+  </div>
   <nav class="ribbon" id="ribbon">
     <div class="grp"><div class="row">
       <div class="stk">
@@ -179,9 +211,18 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
       <button class="rb" id="addsheet-btn" title="Add a sheet"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2"/></svg><span>Add Sheet</span></button>
     </div><div class="gl">Sheet</div></div>
     <div class="grp last"><div class="row">
-      <button class="rb chkbtn" id="check-btn" title="Ring what Check Print found, on the sheet"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7.5 12.5l3 3 6-6.5" fill="none" stroke="currentColor" stroke-width="2.4"/></svg><span>Check Print<b class="badge" id="check-badge" hidden>0</b></span></button>
+      <button class="rb chkbtn" id="check-btn" title="Check the print: what needs fixing, ringed on the sheet"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7.5 12.5l3 3 6-6.5" fill="none" stroke="currentColor" stroke-width="2.4"/></svg><span>Check Print<b class="badge" id="check-badge" hidden>0</b></span></button>
     </div><div class="gl">Check</div></div>
   </nav>
+  <div class="ribbon part" id="rp-part" hidden><div id="props"></div></div>
+  <div class="ribbon chk" id="rp-check" hidden>
+    <div class="grp"><div class="row col">
+      <label class="chk"><input type="checkbox" id="ring-chk"><span class="tog"></span>Ring them on the sheet</label>
+      <span class="ro" id="check-sum"></span>
+    </div><div class="gl">Check the Print</div></div>
+    <div class="chips" id="check-list"></div>
+  </div>
+  </div>
   <main class="mid">
     <aside class="pal" id="palette" aria-label="Symbols"></aside>
     <section class="desk" id="desk">
@@ -189,10 +230,6 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
       <div class="tip" id="tip" hidden></div>
       <div class="zoombar"><button id="z-out" title="Zoom out">−</button><span id="z-lvl">100%</span><button id="z-in" title="Zoom in">+</button><button id="z-fit" title="Fit the sheet">Fit</button></div>
     </section>
-    <aside class="side">
-      <div class="card" id="props"></div>
-      <div class="card" id="checks"><h4>Check the Print</h4><div id="check-list"></div></div>
-    </aside>
   </main>
   <footer class="bot"><div id="tabs" class="tabs"></div><span id="pageinfo"></span><span class="hint" id="hint"></span></footer>
 </div>
@@ -1194,7 +1231,7 @@ function putDown(q, keep) {
   const g = ghostPart(q), p = addPart(S, placing.t, g.x, g.y, { rot: placing.rot });
   sel = new Set([p.id]); selW = null;
   if (!keep) { placing = null; setTool('select'); }
-  refresh();
+  keepTab = true; refresh(); keepTab = false;   // (a part just put down: the tools stay in view; click it for its Part tab)
 }
 // the Wire tool: a click starts, bends or (on something to join) finishes a wire; a double click finishes it anywhere
 function wireClick(q, dbl) {
@@ -1324,8 +1361,10 @@ function updateButtons() {
   $('copy-btn').disabled = $('cut-btn').disabled = !any; $('del-btn').disabled = !sel.size && !selW; $('paste-btn').disabled = !hasClip();
   $('orient-lbl').textContent = S.land ? 'Landscape' : 'Portrait';
   $('pageinfo').textContent = `Letter · ${S.land ? 'Landscape' : 'Portrait'}`;
-  const n = ISSUES.filter(i => i.sev !== 'ok').length, b = $('check-badge');
-  b.hidden = !n; b.textContent = n; b.className = 'badge' + (ISSUES.some(i => i.sev === 'e') ? '' : ' w');
+  const n = ISSUES.filter(i => i.sev !== 'ok').length;
+  for (const b of [$('check-badge'), $('tab-badge')]) { b.hidden = !n; b.textContent = n; b.className = 'badge' + (ISSUES.some(i => i.sev === 'e') ? '' : ' w'); }
+  $('ring-chk').checked = checkOn;
+  $('check-sum').textContent = n ? `${n} thing${n > 1 ? 's' : ''} to look at · click one to go to it` : 'Nothing to fix';
   $('check-btn').setAttribute('aria-pressed', checkOn);
   for (const x of document.querySelectorAll('[data-tool]')) x.setAttribute('aria-pressed', x.dataset.tool === tool);
   for (const x of document.querySelectorAll('.pt')) x.classList.toggle('on', tool === 'place' && placing && x.dataset.t === placing.t);
@@ -1369,7 +1408,23 @@ document.addEventListener('click', e => { if (!e.target.closest('.menuwrap')) cl
 function focusProp(id) { setTimeout(() => { const el = $(id); if (el) { el.focus(); el.select && el.select(); } }, 0); }
 let editing = false;   // (one undo step for a run of typing in one box)
 const edit = fn => { if (!editing) { snapshot(); editing = true; } fn(); A = analyse(); ISSUES = checkPrint(A); drawInk(); drawEd(); renderChecks(); updateButtons(); autosave(); };
-function renderProps() {
+/* ---------- the ribbon's tabs ---------- */
+let ribTab = 'home', lastSelKey = '', keepTab = false;
+function setRib(t) {
+  ribTab = t;
+  $('ribbon').hidden = t !== 'home'; $('rp-part').hidden = t !== 'part'; $('rp-check').hidden = t !== 'check';
+  for (const [b, k] of [['rt-home', 'home'], ['rt-part', 'part'], ['rt-check', 'check']]) $(b).setAttribute('aria-pressed', String(t === k));
+}
+// the gold Part tab: there while something is picked, and opened when something new is picked (as in Circuit Builder)
+function partTab(title) {
+  const has = !!title, key = has ? [...sel].join() + '|' + (selW || '') : '';
+  $('rt-part').hidden = !has; if (has) $('rt-part').textContent = 'Part: ' + title;
+  if (has && key !== lastSelKey && !keepTab) setRib('part');
+  if (!has && ribTab === 'part') setRib('home');
+  lastSelKey = key;
+}
+function renderProps() { renderProps0(); const h = $('props').querySelector('h4'); partTab(tool === 'place' || !h || /^Drawing the Print/.test(h.textContent) ? '' : h.textContent); }
+function renderProps0() {
   const P = $('props'); editing = false;
   const ids = [...sel], one = ids.length === 1 ? ids[0] : null, p = one && partOf(S, one), t = one && S.texts.find(x => x.id === one), w = selW && S.wires.find(x => x.id === selW);
   if (tool === 'place' && placing) {
@@ -1447,7 +1502,7 @@ function renderChecks() {
     checkOn = true; const a = is.at[0]; if (a.k !== doc.cur) { doc.cur = a.k; }
     S = doc.sheets[doc.cur]; sel = new Set(is.at.filter(x => x.k === doc.cur && (partOf(S, x.id) || nodeOf(S, x.id))).map(x => x.id));
     selW = is.at.find(x => S.wires.some(w => w.id === x.id))?.id || null;
-    refresh(); showPoint(a.x, a.y);
+    keepTab = true; refresh(); keepTab = false; showPoint(a.x, a.y);
   });
 }
 // the view scrolled to put a point on the sheet in the middle
@@ -1558,7 +1613,10 @@ $('print-btn').addEventListener('click', printAll);
 
 /* ---------- the ribbon's other buttons, and the keyboard ---------- */
 for (const b of document.querySelectorAll('[data-tool]')) b.addEventListener('click', () => setTool(b.dataset.tool));
-$('check-btn').addEventListener('click', () => { checkOn = !checkOn; updateButtons(); drawEd(); });
+$('check-btn').addEventListener('click', () => { checkOn = true; setRib('check'); updateButtons(); drawEd(); });
+$('ring-chk').addEventListener('change', e => { checkOn = e.target.checked; updateButtons(); drawEd(); });
+$('rt-home').addEventListener('click', () => setRib('home')); $('rt-part').addEventListener('click', () => setRib('part'));
+$('rt-check').addEventListener('click', () => { checkOn = true; setRib('check'); updateButtons(); drawEd(); });
 $('copy-btn').addEventListener('click', copySel); $('cut-btn').addEventListener('click', cutSel); $('paste-btn').addEventListener('click', () => pasteClip(null)); $('del-btn').addEventListener('click', removeSelection);
 $('undo-btn').addEventListener('click', () => { if (undo()) { sel = new Set(); selW = null; refresh(true); } });
 $('redo-btn').addEventListener('click', () => { if (redo()) { sel = new Set(); selW = null; refresh(true); } });
