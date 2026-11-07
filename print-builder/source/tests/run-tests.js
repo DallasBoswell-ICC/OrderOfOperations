@@ -142,6 +142,22 @@ let passed = 0, failed = 0;
     return r.join('|') === '|true|true' ? [] : ['over symbols | moved | hidden: ' + r.join(' | ')];
   });
 
+  await check('Rung numbers: left of everything on the rung, even one fed by a wire instead of the L1 rail', async p => {
+    const r = await p.evaluate(() => { loadDoc(template('blank')); S.parts = S.parts.filter(q => q.t !== 'rail');
+      addWire(S, [[300, 300], [300, 600], [700, 600]]); addPart(S, 'estop', 740, 600); addWire(S, [[780, 600], [1200, 600]]); addPart(S, 'coil', 1240, 600); addWire(S, [[1280, 600], [1600, 600]]); refresh(true);
+      const t = [...svg.querySelectorAll('g.ink text')].find(e => +e.getAttribute('y') === 609 && e.getAttribute('text-anchor') === 'end' && e.textContent === '1');
+      return t ? +t.getAttribute('x') : null; });
+    return r != null && r <= 260 ? [] : ['rung number x (should be left of the wire at 300): ' + r];
+  });
+
+  await check('App: the manifest and its icons are next to the page, under their new names', async p => {
+    const fs = require('fs'), path = require('path'), dist = path.join(__dirname, '..', 'dist');
+    const m = JSON.parse(fs.readFileSync(path.join(dist, 'print-builder.webmanifest'), 'utf8'));
+    const missing = m.icons.map(i => i.src).filter(f => !fs.existsSync(path.join(dist, f)));
+    const linked = await p.evaluate(() => document.querySelector('link[rel=manifest]').getAttribute('href'));
+    return !missing.length && m.icons.every(i => i.src.includes('pb-')) && linked.startsWith('print-builder.webmanifest') ? [] : ['missing: ' + missing + ', linked: ' + linked];
+  });
+
   await check('Title block: boxes added, changed and taken away show on the sheet; saved and opened again', async p => {
     await p.click('#tb-btn'); await p.click('#tb-add'); await p.keyboard.type('Instructor');
     await p.locator('.tbrow[data-i]').last().locator('[data-k=value]').fill('D. Boswell');

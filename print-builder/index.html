@@ -7,8 +7,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22%3E %3Crect width=%22512%22 height=%22512%22 rx=%22112%22 fill=%22%23ffffff%22/%3E %3Crect x=%2210%22 y=%2210%22 width=%22492%22 height=%22492%22 rx=%22104%22 fill=%22none%22 stroke=%22%23d5d9de%22 stroke-width=%228%22/%3E %3Cellipse cx=%22208%22 cy=%22296%22 rx=%22128%22 ry=%22146%22 fill=%22none%22 stroke=%22%231f5fbf%22 stroke-width=%2262%22/%3E %3Ctext x=%22402%22 y=%22232%22 text-anchor=%22middle%22 font-family=%22Arial, Helvetica, 'DejaVu Sans', sans-serif%22 font-weight=%22700%22 font-size=%22200%22 fill=%22%231f5fbf%22%3E3%3C/text%3E %3C/svg%3E">
 <!-- installing it from the website as an app (Chrome: the install button in the address bar); the manifest and
      icons/ sit next to the page on the site -->
-<link rel="manifest" href="print-builder.webmanifest">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="print-builder.webmanifest?v=2">
+<link rel="apple-touch-icon" href="icons/pb-apple-touch-icon.png">
 <meta name="theme-color" content="#1c1d1f">
 <style>:root {
   --page: #1b1d20; --bar: #202326; --rib: #232528; --line: #2e3237; --line2: #3a3f45; --card: #25282c;
@@ -903,8 +903,12 @@ function drawSheet(s, k, A) {
   // rung numbers, left of L1; cross-references, right of L2
   const rL1 = rails.find(r => r.label === 'L1'), rL2 = rails.find(r => r.label === 'L2');
   if (SHOW.rn) for (const { y, n } of A.rows[k] || []) {
-    const xs = s.parts.filter(p => p.t !== 'rail' && p.y === y).map(p => p.x);
-    text(rL1 ? rL1.x - 50 : Math.min(...xs) - 110, y + 9, n, 24, 'end');
+    // (left of everything on its row: L1, the symbols, and any wire that runs along the row or comes down across it)
+    const xs = s.parts.filter(p => p.t !== 'rail' && p.y === y).map(p => p.x + extentOf(p.t).x0);
+    for (const w of s.wires) { const P = wirePts(s, w); for (let i = 0; i < P.length - 1; i++) { const [a, b] = [P[i], P[i + 1]];
+      if (a[1] === y && b[1] === y) xs.push(Math.min(a[0], b[0])); else if (a[0] === b[0] && Math.min(a[1], b[1]) <= y && Math.max(a[1], b[1]) >= y) xs.push(a[0]); } }
+    if (rL1 && y >= rL1.y0 && y <= rL1.y1) xs.push(rL1.x);
+    if (xs.length) text(Math.min(...xs) - 50, y + 9, n, 24, 'end');
   }
   if (SHOW.xr) for (const p of s.parts) { const r = A.xref.get(p.id); if (!r || !r.length) continue;
     const x = rL2 && p.x < rL2.x ? rL2.x + 26 : p.x + 90;

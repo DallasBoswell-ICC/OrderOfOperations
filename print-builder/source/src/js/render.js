@@ -50,8 +50,12 @@ function drawSheet(s, k, A) {
   // rung numbers, left of L1; cross-references, right of L2
   const rL1 = rails.find(r => r.label === 'L1'), rL2 = rails.find(r => r.label === 'L2');
   if (SHOW.rn) for (const { y, n } of A.rows[k] || []) {
-    const xs = s.parts.filter(p => p.t !== 'rail' && p.y === y).map(p => p.x);
-    text(rL1 ? rL1.x - 50 : Math.min(...xs) - 110, y + 9, n, 24, 'end');
+    // (left of everything on its row: L1, the symbols, and any wire that runs along the row or comes down across it)
+    const xs = s.parts.filter(p => p.t !== 'rail' && p.y === y).map(p => p.x + extentOf(p.t).x0);
+    for (const w of s.wires) { const P = wirePts(s, w); for (let i = 0; i < P.length - 1; i++) { const [a, b] = [P[i], P[i + 1]];
+      if (a[1] === y && b[1] === y) xs.push(Math.min(a[0], b[0])); else if (a[0] === b[0] && Math.min(a[1], b[1]) <= y && Math.max(a[1], b[1]) >= y) xs.push(a[0]); } }
+    if (rL1 && y >= rL1.y0 && y <= rL1.y1) xs.push(rL1.x);
+    if (xs.length) text(Math.min(...xs) - 50, y + 9, n, 24, 'end');
   }
   if (SHOW.xr) for (const p of s.parts) { const r = A.xref.get(p.id); if (!r || !r.length) continue;
     const x = rL2 && p.x < rL2.x ? rL2.x + 26 : p.x + 90;

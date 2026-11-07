@@ -38,7 +38,7 @@ def build() -> Path:
     js = "\n".join(f"/* ---- js/{n} ---- */\n" + (SRC / "js" / n).read_text(encoding="utf-8") for n in MODULES)
     if "</script" in js.lower():
         raise SystemExit("A script contains </script, which would end the page's <script> early")
-    icon = "data:image/svg+xml," + quote(" ".join((SRC / "icons" / "icon.svg").read_text(encoding="utf-8").split()), safe=" =:/'(),")
+    icon = "data:image/svg+xml," + quote(" ".join((SRC / "icons" / "pb-icon.svg").read_text(encoding="utf-8").split()), safe=" =:/'(),")
     page = page.replace("%ICON%", icon).replace("%CSS%", css).replace("%JS%", js)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(page, encoding="utf-8")
