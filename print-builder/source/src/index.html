@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Print Builder</title>
+<link rel="icon" href="%ICON%">
+<style>%CSS%</style>
+<style id="print-page"></style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <img class="logo" src="%ICON%" alt="O³">
+    <h1>Order of Operations: <span>Print Builder</span></h1>
+    <div class="tb-btns">
+      <div class="menuwrap"><button class="btn" id="new-btn" aria-haspopup="menu">New ▾</button>
+        <div class="dmenu" id="new-menu" hidden>
+          <button data-new="blank">Blank Ladder</button>
+          <button data-new="starter">Example: Motor Starter</button>
+                  </div></div>
+      <button class="btn" id="open-btn">Open</button>
+      <button class="btn" id="save-btn">Save</button>
+      <button class="btn" id="print-btn">Print</button>
+      <button class="btn icon" id="undo-btn" title="Undo (Ctrl+Z)">↶</button>
+      <button class="btn icon" id="redo-btn" title="Redo (Ctrl+Y)">↷</button>
+    </div>
+  </header>
+  <nav class="ribbon" id="ribbon">
+    <div class="grp"><div class="row" id="tools">
+      <button class="rb" data-tool="select" title="Select and move (V)"><svg viewBox="0 0 24 24"><path d="M6 3l12 9-5 1 3 6-2 1-3-6-4 4z" fill="currentColor"/></svg><span>Select</span></button>
+      <button class="rb" data-tool="wire" title="Draw a wire (W): click to start, click to bend, click on a terminal, rail or wire to finish"><svg viewBox="0 0 24 24"><path d="M4 18h6V6h10" fill="none" stroke="currentColor" stroke-width="2.2"/></svg><span>Wire</span></button>
+      <button class="rb" data-tool="rung" title="Add a rung (R): click between the rails"><svg viewBox="0 0 24 24"><path d="M4 3v18M20 3v18M4 9h16M4 15h16" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>Rung</span></button>
+      <button class="rb" data-tool="note" title="Add a note (N)"><svg viewBox="0 0 24 24"><path d="M5 5h14M12 5v14" stroke="currentColor" stroke-width="2.4" fill="none"/></svg><span>Note</span></button>
+    </div><div class="gl">Tools</div></div>
+    <div class="grp"><div class="row" id="sym-menus"></div><div class="gl">Symbols</div></div>
+    <div class="grp"><div class="row col">
+      <label class="chk"><input type="checkbox" id="show-wn" checked><span class="tog"></span>Wire Numbers</label>
+      <label class="chk"><input type="checkbox" id="show-rn" checked><span class="tog"></span>Rung Numbers</label>
+      <label class="chk"><input type="checkbox" id="show-xr" checked><span class="tog"></span>Cross-References</label>
+    </div><div class="gl">Numbering (Automatic)</div></div>
+    <div class="grp"><div class="row">
+      <button class="rb" id="tb-btn" title="Change what the title block shows"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 13h18M10 13v6M15 13v6" stroke="currentColor" stroke-width="1.6"/></svg><span>Title Block</span></button>
+      <button class="rb" id="orient-btn" title="Turn the sheet (portrait / landscape)"><svg viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><span id="orient-lbl">Portrait</span></button>
+      <button class="rb" id="addsheet-btn" title="Add a sheet"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2"/></svg><span>Add Sheet</span></button>
+    </div><div class="gl">Sheet</div></div>
+    <div class="grp last"><div class="row">
+      <button class="rb chkbtn" id="check-btn" title="Ring what Check Print found, on the sheet"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7.5 12.5l3 3 6-6.5" fill="none" stroke="currentColor" stroke-width="2.4"/></svg><span>Check Print<b class="badge" id="check-badge" hidden>0</b></span></button>
+    </div><div class="gl">Check</div></div>
+  </nav>
+  <main class="mid">
+    <aside class="pal" id="palette" aria-label="Symbols"></aside>
+    <section class="desk" id="desk">
+      <div class="zoomer" id="zoomer"><div class="sizer" id="sizer"><div class="pagehost" id="pagehost"></div></div></div>
+      <div class="tip" id="tip" hidden></div>
+      <div class="zoombar"><button id="z-out" title="Zoom out">−</button><span id="z-lvl">100%</span><button id="z-in" title="Zoom in">+</button><button id="z-fit" title="Fit the sheet">Fit</button></div>
+    </section>
+    <aside class="side">
+      <div class="card" id="props"></div>
+      <div class="card" id="checks"><h4>Check the Print</h4><div id="check-list"></div></div>
+    </aside>
+  </main>
+  <footer class="bot"><div id="tabs" class="tabs"></div><span id="pageinfo"></span><span class="hint" id="hint"></span></footer>
+</div>
+<dialog id="tb-dlg" class="dlg">
+  <h3>Title Block</h3>
+  <p class="sub">Change any box, add your own, or take one away. Widths are out of 12 across the sheet. Type <code>{sheet}</code> for “1 of 2”, <code>{date}</code> for today.</p>
+  <div class="tbrows" id="tb-rows"></div>
+  <button class="btn" id="tb-add">+ Add a Box</button>
+  <label class="notes-row"><input type="checkbox" id="tb-shownotes"> Notes under the boxes (one a line)</label>
+  <textarea id="tb-notes" rows="3"></textarea>
+  <div class="dlg-foot"><button class="btn" id="tb-reset">Back to the Standard Boxes</button><button class="btn primary" id="tb-done">Done</button></div>
+</dialog>
+<input type="file" id="file-in" accept=".json,application/json" hidden>
+<div id="print-host"></div>
+<script>%JS%</script>
+</body>
+</html>

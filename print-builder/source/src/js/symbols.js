@@ -1,0 +1,74 @@
+/* =====================================================================
+   The library: every device Print Builder can place, on the print symbols (psym.js).
+   cat     its group in the palette and the ribbon's menus
+   sym     its print symbol (PSYM's name)
+   pre     the start of its tag (PB1, LS2, FU3...); none for a contact, which takes its coil's tag
+   kind    what it is to the numbering and the check:
+             sw       a switch or pushbutton (control)        contact  a relay contact (its coil's tag)
+             coil     a coil (relay, starter, timer)          load     a pilot light, solenoid, heating element
+             olc      an overload's contact (its OL's tag)    fuse     a fuse (power or control)
+             ol       an overload heater (power)              power    a disconnect, fuse block (power)
+             starter  a starter's power contacts (its coil's tag)
+             motor    a motor                                 xfmr     a control transformer
+             supply   a line coming in (L1, L2, L3)
+   poles   pairs of its terminals that carry a line through it, line side first (power and fuses)
+   flip    the same device the other way (NO <-> NC)
+   ===================================================================== */
+const LIB = {
+  pb_no:   { cat: 'Buttons', name: 'NO Pushbutton', sym: 'NO Pushbutton', pre: 'PB', kind: 'sw', flip: 'pb_nc' },
+  pb_nc:   { cat: 'Buttons', name: 'NC Pushbutton', sym: 'NC Pushbutton', pre: 'PB', kind: 'sw', flip: 'pb_no' },
+  estop:   { cat: 'Buttons', name: 'E-Stop', sym: 'NC EStop Pushbutton', pre: 'ES', kind: 'sw' },
+  sel:     { cat: 'Buttons', name: 'Selector Switch', sym: 'Selector Switch', pre: 'SS', kind: 'sw' },
+  ls_no:   { cat: 'Switches', name: 'NO Limit Switch', sym: 'NO Limit Switch', pre: 'LS', kind: 'sw', flip: 'ls_nc' },
+  ls_nc:   { cat: 'Switches', name: 'NC Limit Switch', sym: 'NC Limit Switch', pre: 'LS', kind: 'sw', flip: 'ls_no' },
+  ls_hc:   { cat: 'Switches', name: 'NO Limit Switch, Held Closed', sym: 'NO HC Limit Switch', pre: 'LS', kind: 'sw', flip: 'ls_ho' },
+  ls_ho:   { cat: 'Switches', name: 'NC Limit Switch, Held Open', sym: 'NC HO Limit Switch', pre: 'LS', kind: 'sw', flip: 'ls_hc' },
+  ts_no:   { cat: 'Switches', name: 'NO Temperature Switch', sym: 'NO Temperature Switch', pre: 'TS', kind: 'sw', flip: 'ts_nc' },
+  ts_nc:   { cat: 'Switches', name: 'NC Temperature Switch', sym: 'NC Temperature Switch', pre: 'TS', kind: 'sw', flip: 'ts_no' },
+  ps_no:   { cat: 'Switches', name: 'NO Pressure Switch', sym: 'NO Pressure Switch', pre: 'PS', kind: 'sw', flip: 'ps_nc' },
+  ps_nc:   { cat: 'Switches', name: 'NC Pressure Switch', sym: 'NC Pressure Switch', pre: 'PS', kind: 'sw', flip: 'ps_no' },
+  fs_no:   { cat: 'Switches', name: 'NO Float Switch', sym: 'NO Float Switch', pre: 'FS', kind: 'sw', flip: 'fs_nc' },
+  fs_nc:   { cat: 'Switches', name: 'NC Float Switch', sym: 'NC Float Switch', pre: 'FS', kind: 'sw', flip: 'fs_no' },
+  fls_no:  { cat: 'Switches', name: 'NO Flow Switch', sym: 'NO Flow Switch', pre: 'FLS', kind: 'sw', flip: 'fls_nc' },
+  fls_nc:  { cat: 'Switches', name: 'NC Flow Switch', sym: 'NC Flow Switch', pre: 'FLS', kind: 'sw', flip: 'fls_no' },
+  prs_no:  { cat: 'Switches', name: 'NO Proximity Switch', sym: 'NO Proximity Switch', pre: 'PRS', kind: 'sw', flip: 'prs_nc' },
+  prs_nc:  { cat: 'Switches', name: 'NC Proximity Switch', sym: 'NC Proximity Switch', pre: 'PRS', kind: 'sw', flip: 'prs_no' },
+  spst:    { cat: 'Switches', name: 'Toggle Switch (SPST)', sym: 'SPST Switch', pre: 'SW', kind: 'sw' },
+  con_no:  { cat: 'Contacts', name: 'NO Contact', sym: 'NO Contact', kind: 'contact', flip: 'con_nc' },
+  con_nc:  { cat: 'Contacts', name: 'NC Contact', sym: 'NC Contact', kind: 'contact', flip: 'con_no' },
+  olc:     { cat: 'Contacts', name: 'Overload Contact (NC)', sym: 'NC Contact', kind: 'olc' },
+  coil:    { cat: 'Coils & Outputs', name: 'Coil', sym: 'Relay', pre: 'CR', kind: 'coil' },
+  pl:      { cat: 'Coils & Outputs', name: 'Pilot Light', sym: 'Pilot Light', pre: 'PL', kind: 'load' },
+  sol:     { cat: 'Coils & Outputs', name: 'Solenoid', sym: 'Solenoid', pre: 'SOL', kind: 'load' },
+  htr:     { cat: 'Coils & Outputs', name: 'Heating Element', sym: 'Heating Element', pre: 'HTR', kind: 'load' },
+  fuse:    { cat: 'Protection', name: 'Fuse', sym: 'Fuse', pre: 'FU', kind: 'fuse', poles: [[0, 1]] },
+  ol:      { cat: 'Protection', name: 'Overload Heater', sym: 'Thermal Overload', pre: 'OL', kind: 'ol', poles: [[0, 1]] },
+  fus3:    { cat: 'Protection', name: '3-Phase Fuses', sym: '3PH Fuses', pre: 'FU', kind: 'power', poles: [[0, 1], [2, 3], [4, 5]] },
+  ol3:     { cat: 'Protection', name: '3-Phase Overload', sym: '3PH Thermal Overload', pre: 'OL', kind: 'ol', poles: [[0, 1], [2, 3], [4, 5]] },
+  sup:     { cat: 'Power', name: 'Line In (L1, L2, L3)', kind: 'supply' },
+  dsc3:    { cat: 'Power', name: '3-Phase Disconnect', sym: '3PH Disconnect', pre: 'DS', kind: 'power', poles: [[0, 1], [2, 3], [4, 5]] },
+  fdsc3:   { cat: 'Power', name: 'Fused Disconnect', sym: '3PH Fusible Disconnect', pre: 'DS', kind: 'power', poles: [[0, 1], [2, 3], [4, 5]] },
+  mst3:    { cat: 'Power', name: 'Starter Contacts (3-Phase)', sym: '3PH Starter Contacts', kind: 'starter', poles: [[0, 1], [2, 3], [4, 5]] },
+  xfmr:    { cat: 'Power', name: 'Control Transformer', sym: 'Control Transformer', pre: 'CPT', kind: 'xfmr' },
+  motor:   { cat: 'Power', name: 'Motor', sym: 'Motor', pre: 'MTR', kind: 'motor' },
+};
+const CATS = ['Buttons', 'Switches', 'Contacts', 'Coils & Outputs', 'Protection', 'Power'];
+const CAT_COL = { 'Buttons': '#00B050', 'Switches': '#0070C0', 'Contacts': '#c9c9c9', 'Coils & Outputs': '#FFC000', 'Protection': '#e5484d', 'Power': '#FF9C37' };
+// a coil's kinds: the start of its tag
+const COIL_PRE = [['CR', 'Control Relay'], ['M', 'Starter'], ['TR', 'Timer'], ['CON', 'Contactor']];
+// the line-in arrow: its one terminal at its middle, the arrow pointing into it from the left
+const SUP_T = [[0, 0]];
+// a device's own terminals (its symbol's, or the line-in arrow's), before it is turned
+const termsOf = t => t === 'sup' ? SUP_T : PSYM[LIB[t].sym].t;
+// how far its drawing reaches either side of its middle, and above and below (for picking it, and its labels)
+function extentOf(t) {
+  if (t === 'sup') return { x0: -70, x1: 4, y0: -20, y1: 20 };
+  const s = PSYM[LIB[t].sym], xs = s.t.map(p => p[0]);
+  let x0 = Math.min(...xs), x1 = Math.max(...xs);
+  if (t === 'motor') { x0 = -66; x1 = 66; }
+  if (t === 'xfmr') { x0 = -64; x1 = 64; }
+  return { x0, x1, y0: s.y0, y1: s.y1 };
+}
+// the poles a device carries a line through (a two-ended device: its two ends)
+const polesOf = t => LIB[t].poles || (termsOf(t).length === 2 ? [[0, 1]] : []);
+const isPowerKind = k => k === 'power' || k === 'ol' || k === 'starter' || k === 'motor' || k === 'supply';
