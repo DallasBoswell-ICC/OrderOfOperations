@@ -98,7 +98,7 @@ function renderProps() {
     const list = k === 'contact' || k === 'starter' ? coils : k === 'olc' ? ols : [];
     const rn = A.rung.get(p.id), xr = A.xref.get(p.id);
     const termNums = [...Array(termsN(p)).keys()].map(i => A.label.get(A.rootT(p, S, i))).filter(Boolean);
-    P.innerHTML = `<h4>${esc(d.name)}${p.tag ? ' ' + esc(p.tag) : ''}</h4>
+    P.innerHTML = `<h4>${esc(d.name)}${p.tag ? ' ' + esc(tagsOf(p).length > 1 ? tagsOf(p)[0] + '–' + tagsOf(p)[2] : p.tag) : ''}</h4>
       ${p.t === 'sup' ? `<div class="f">Line<div class="seg">${['L1', 'L2', 'L3'].map(l => `<button data-line="${l}" aria-pressed="${p.tag === l}">${l}</button>`).join('')}</div></div>` : `
       <div class="f">Tag<input class="in" id="p-tag" value="${esc(p.tag)}" list="p-tags" autocomplete="off"><datalist id="p-tags">${list.map(x => `<option value="${esc(x)}">`).join('')}</datalist></div>`}
       ${k === 'coil' ? `<div class="f">Coil<select id="p-pre">${COIL_PRE.map(([v, n]) => `<option value="${v}"${(p.pre || 'CR') === v ? ' selected' : ''}>${n} (${v})</option>`).join('')}</select></div>` : ''}

@@ -11,7 +11,7 @@ function checkPrint(A = analyse()) {
   const sheetName = k => doc.sheets.length > 1 ? ` (sheet ${k + 1})` : '';
   // tags: the same one on two devices that must each have their own; none at all
   const byTag = new Map();
-  for (const x of parts) if (UNIQUE.has(kindOf(x.p)) && x.p.tag) { const k = (kindOf(x.p) === 'motor' ? 'motor:' : '') + x.p.tag; if (!byTag.has(k)) byTag.set(k, []); byTag.get(k).push(x); }
+  for (const x of parts) if (UNIQUE.has(kindOf(x.p)) && x.p.tag) for (const tg of tagsOf(x.p)) { const k = (kindOf(x.p) === 'motor' ? 'motor:' : '') + tg; if (!byTag.has(k)) byTag.set(k, []); byTag.get(k).push(x); }
   let dups = 0;
   for (const [k, xs] of byTag) if (xs.length > 1) { const t = k.replace('motor:', ''); dups++;
     add('e', `${xs.length} devices are tagged ${t}`, `${[...new Set(xs.map(x => LIB[x.p.t].name))].join(' and ')}: each needs a tag of its own (only contacts share their coil’s).`, xs.map(pk)); }

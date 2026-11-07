@@ -53,7 +53,8 @@ function drawSheet(s, k, A) {
     if (up) { const off = Math.max(Math.abs(sym.y0), Math.abs(sym.y1)) + 10; text(p.x + off, p.y + 9, p.tag, 26, 'start'); if (p.desc) text(p.x + off, p.y + 34, p.desc, 20, 'start', 500); }
     else {
       const y0 = r === 180 ? -sym.y1 : sym.y0, y1 = r === 180 ? -sym.y0 : sym.y1;
-      if (inside) text(p.x, p.y + (kind === 'motor' ? 11 : 9), p.tag, kind === 'motor' ? 30 : 24); else text(p.x, p.y + y0 - 8, p.tag, 26);
+      if (p.t === 'fus3' && !r) tagsOf(p).forEach((tg, i) => text(p.x, termPos(p, 2 * i)[1] - 24, tg, 26));   // (each fuse its own number)
+      else if (inside) text(p.x, p.y + (kind === 'motor' ? 11 : 9), p.tag, kind === 'motor' ? 30 : 24); else text(p.x, p.y + y0 - 8, p.tag, 26);
       if (p.desc) text(p.x, p.y + y1 + 22, p.desc, 20, 'middle', 500);
     }
     if (p.t === 'xfmr') { const t = [0, 1, 2, 3].map(i => termPos(p, i)), nm = ['H1', 'H2', 'X1', 'X2'];

@@ -71,4 +71,6 @@ function extentOf(t) {
 }
 // the poles a device carries a line through (a two-ended device: its two ends)
 const polesOf = t => LIB[t].poles || (termsOf(t).length === 2 ? [[0, 1]] : []);
+// the tags a device carries: a block of three fuses, one for each fuse (FU1 → FU1, FU2, FU3)
+function tagsOf(p) { const r = /^(\D+)(\d+)$/.exec(p.tag || ''); return p.t === 'fus3' && r ? [0, 1, 2].map(i => r[1] + (+r[2] + i)) : [p.tag]; }
 const isPowerKind = k => k === 'power' || k === 'ol' || k === 'starter' || k === 'motor' || k === 'supply';

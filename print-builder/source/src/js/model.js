@@ -244,7 +244,7 @@ const tagPre = p => p.t === 'coil' ? (p.pre || 'CR') : LIB[p.t] && LIB[p.t].pre;
 // the next free tag starting pre: one more than the highest in use (FU1, FU2, FU3...: never the same twice)
 function nextTag(pre, motor = false) {   // (motors are counted among themselves: motor M1 and its starter M1 go together)
   let m = 0; const re = new RegExp('^' + pre + '(\\d+)$');
-  for (const { p } of allParts()) { if (['contact', 'starter', 'olc'].includes(LIB[p.t].kind) || (LIB[p.t].kind === 'motor') !== motor) continue; const r = re.exec(p.tag || ''); if (r) m = Math.max(m, +r[1]); }   // (contacts borrow their coil's tag: they take none of their own)
+  for (const { p } of allParts()) { if (['contact', 'starter', 'olc'].includes(LIB[p.t].kind) || (LIB[p.t].kind === 'motor') !== motor) continue; const r = re.exec(p.tag || ''); if (r) m = Math.max(m, +r[1] + (p.t === 'fus3' ? 2 : 0)); }   // (a block of three fuses takes three numbers: FU1, FU2, FU3)   // (contacts borrow their coil's tag: they take none of their own)
   return pre + (m + 1);
 }
 // a new part's tag: its own next one; a contact, its coil's (the last coil put down or picked); starter contacts, a starter's

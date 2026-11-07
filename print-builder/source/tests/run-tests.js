@@ -39,7 +39,7 @@ let passed = 0, failed = 0;
         S.wires.map(w => A.label.get(A.wireRoot(S, w))).filter(l => /^L[12]C$/.test(l)).length, ISSUES.filter(i => i.sev !== 'ok').map(i => i.title).join('; ')];
     });
     const out = [];
-    if (r[0] !== 'FU2,FU3,FU4') out.push('the fuses’ tags (each its own): ' + r[0]);
+    if (r[0] !== 'FU4,FU5,FU6') out.push('the fuses’ tags (each its own): ' + r[0]);
     if (r[1] !== before) out.push('control numbers changed: ' + before + ' → ' + r[1]);
     if (r[2] < 2) out.push('the primary leads past their fuses are not L1C and L2C');
     if (r[3]) out.push('Check Print found: ' + r[3]);
@@ -50,6 +50,10 @@ let passed = 0, failed = 0;
     const t = await p.evaluate(() => { loadDoc(template('blank')); const s = S;
       return ['fuse', 'fuse', 'fus3', 'ol', 'ol3', 'coil', 'con_no', 'coil', 'con_nc', 'pb_no', 'pb_nc', 'pl', 'pl'].map((t, i) => addPart(s, t, 400 + (i % 4) * 300, 400 + Math.floor(i / 4) * 200).tag).join(','); });
     return t === 'FU1,FU2,FU3,OL1,OL2,CR1,CR1,CR2,CR2,PB1,PB2,PL1,PL2' ? [] : ['tags: ' + t];
+  });
+  await check('Fuses: a block of three is FU1-FU3, then single fuses FU4, FU5, FU6; each fuse labelled on the sheet', async p => {
+    const t = await p.evaluate(() => { loadDoc(template('blank')); const f = ['fus3', 'fuse', 'fuse', 'fuse'].map((t, i) => addPart(S, t, 400 + i * 300, 600).tag); refresh(); return [f.join(','), [...svg.querySelectorAll('text')].map(e => e.textContent).filter(x => /^FU\d$/.test(x)).sort().join(','), ISSUES.filter(i => /tagged/.test(i.title)).length]; });
+    return t.join('|') === 'FU1,FU4,FU5,FU6|FU1,FU2,FU3,FU4,FU5,FU6|0' ? [] : ['tags | labels | duplicate errors: ' + t.join(' | ')];
   });
 
   await check('Dropping a symbol on a rung cuts it into the wire; taking it away heals the rung', async p => {

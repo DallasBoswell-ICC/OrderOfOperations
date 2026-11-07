@@ -2293,7 +2293,7 @@ function drawEstop(p, v, x, y, g) {
     el('path', { d: `M ${P1[0] + tx * L} ${P1[1] + ty * L} L ${P1[0] + nx * w} ${P1[1] + ny * w} L ${P1[0] - nx * w} ${P1[1] - ny * w} Z`, fill: ESTOP_PLATE }, v.twist);
   }
 }
-const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -4501,7 +4501,9 @@ function printSheet(drawnBy, fit = false) {
       case 'psw': two(q, `${p.nc ? 'NC' : 'NO'} Pressure Switch`); break;
       case 'lsw': two(q, p.held ? (p.nc ? 'NC HO Limit Switch' : 'NO HC Limit Switch') : `${p.nc ? 'NC' : 'NO'} Limit Switch`); break;
       case 'dsc': three(q, '3PH Disconnect'); break;
-      case 'fus': three(q, '3PH Fuses'); break;
+      case 'fus': { // (each fuse its own number: FU1, FU2, FU3 down the block)
+        const s = put('3PH Fuses', q.x, q.y), sp = pts(s, q.x, q.y, false); q.terms.forEach((t, i) => line(t[0], t[1], sp[i][0], sp[i][1]));
+        for (let i = 0; i < 3; i++) text(q.x, sp[2 * i][1] - 24, 'FU' + (+q.L + i), 26); break; }
       case 'mst': three(q, '3PH Starter Contacts'); break;
       case 'olh': three(q, '3PH Thermal Overload'); break;
       case 'mtr': { // the circle level with T2, the leads in to it, T1 and T3 bending in
@@ -4685,7 +4687,11 @@ const btnLetters = () => new Set(parts.filter(p => p.t === 'btn').map(p => p.L))
 const selLetters = () => new Set(parts.filter(p => p.t === 'sel').map(p => p.L));
 const opLetters = () => new Set([...btnLetters(), ...selLetters()]);   // letters taken by pushbuttons and selector switches
 const solNums = () => new Set(parts.filter(p => p.t === 'sol').map(p => p.L));
-const nextNum = taken => { let n = 1; while (taken.has(String(n))) n++; return String(n); }, nextSol = (taken = solNums()) => nextNum(taken);
+const nextNum = taken => { let n = 1; while (taken.has(String(n))) n++; return String(n); }
+// fuse numbers: each fuse its own, a three-pole block taking three (FU1, FU2, FU3), a single fuse one (FU4)
+const fuseNums = (skip = null, more = []) => { const t = new Set(more.map(String)); for (const q of parts) if (q !== skip && (q.t === 'fus' || q.t === 'fu1')) for (let i = 0; i < (q.t === 'fus' ? 3 : 1); i++) t.add(String(+q.L + i)); return t; };
+const fuseFits = (n, k, taken) => [...Array(k).keys()].every(i => !taken.has(String(n + i)));
+const nextFuse = (k, taken = fuseNums()) => { let n = 1; while (!fuseFits(n, k, taken)) n++; return String(n); }, nextSol = (taken = solNums()) => nextNum(taken);
 const coilLetters = () => new Set(parts.filter(p => p.t === 'coil').map(p => p.L));
 function newPart(kind, x, y) {
   if (kind === 'coil') { const u = new Set([...coilLetters(), ...opLetters()]); const L = [...'XYZW', ...LETTERS].find(c => !u.has(c)); return P('coil', x, y, { L, color: COIL_COL[L] || '#FFDC00' }); }
@@ -4702,7 +4708,7 @@ function newPart(kind, x, y) {
   if (kind.startsWith('psw')) return P('psw', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'psw').map(q => q.L))), nc: kind === 'psw-nc', color: PSW_COL });
   if (kind.startsWith('tsw')) return P('tsw', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'tsw').map(q => q.L))), nc: kind.startsWith('tsw-nc'), ...(kind.endsWith('l') ? { low: true } : {}), color: TSW_COL });   // (tsw-no, tsw-nc: high temperature; tsw-nol, tsw-ncl: low)
   if (kind.startsWith('lsw')) return P('lsw', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'lsw').map(q => q.L))), nc: kind === 'lsw-nc' || kind === 'lsw-nch', held: kind.endsWith('h'), color: LSW_COL });   // a limit switch: the next number
-  if (kind === 'fus' || kind === 'fu1') return P(kind, x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'fus' || q.t === 'fu1').map(q => q.L))) });   // (fuses, single or three-pole, number from one count)
+  if (kind === 'fus' || kind === 'fu1') return P(kind, x, y, { L: nextFuse(kind === 'fus' ? 3 : 1) });   // (fuses: one count, a block taking three numbers)
   if (kind === 'dsc' || kind === 'olh' || kind === 'mtr') return P(kind, x, y, { L: nextNum(new Set(parts.filter(q => q.t === kind).map(q => q.L))) });   // the next number
   if (kind === 'mst') return P('mst', x, y, { L: 'M' });   // a starter: worked by the M coil (change it in its settings)
   if (kind === 'olc') { const ols = parts.filter(q => q.t === 'olh').map(q => q.L), free = ols.find(L => !parts.some(q => q.t === 'olc' && q.L === L)); return P('olc', x, y, { L: free || ols[0] || '1', nc: true }); }   // an overload's contact: one not yet in the control circuit
@@ -5762,7 +5768,8 @@ function pasteClip() {
     if (p.t === 'lamp' && p.L && map['b' + p.L]) q.L = map['b' + p.L];
     if (p.t === 'jmp') { if (!jm[p.L]) jm[p.L] = nextNum(new Set([...parts.filter(isJmp).map(q => q.L), ...Object.values(jm)])); q.L = jm[p.L]; }   // (pasted continuations pair among themselves)
     // (numbered parts get the next number of their own; fuses, single or three-pole, count together, so a pasted fuse is never FU2 twice)
-    if (['dsc', 'fus', 'fu1', 'olh', 'mtr', 'lsw', 'tsw', 'psw'].includes(p.t)) { const grp = t => t === 'fu1' ? 'fus' : t, g = grp(p.t);
+    if (p.t === 'fus' || p.t === 'fu1') { const k = p.t === 'fus' ? 3 : 1; q.L = nextFuse(k, fuseNums(null, xf.filter(([t]) => t === 'fuse').map(([, L]) => L))); for (let i = 0; i < k; i++) xf.push(['fuse', String(+q.L + i)]); }
+    else if (['dsc', 'olh', 'mtr', 'lsw', 'tsw', 'psw'].includes(p.t)) { const grp = t => t === 'fu1' ? 'fus' : t, g = grp(p.t);
       q.L = nextNum(new Set([...parts.filter(z => grp(z.t) === g).map(z => z.L), ...xf.filter(([t]) => t === g).map(([, L]) => L)])); xf.push([g, q.L]); }
     if (p.t === 'xfm') { q.L = nextNum(new Set([...parts.filter(z => z.t === 'xfm').map(z => z.L), ...xf.filter(([t]) => t === 'xfm').map(([, L]) => L)])); xf.push(['xfm', q.L]); }   // (a pasted transformer gets a number of its own)
     if (p.t === 'htr') { q.L = nextNum(new Set([...parts.filter(z => z.t === 'htr').map(z => z.L), ...xf.filter(([t]) => t === 'htr').map(([, L]) => L)])); xf.push(['htr', q.L]); }
@@ -5920,6 +5927,10 @@ function renderProps() {
     } else {
       lab.textContent = 'Number';
       const pre = { dsc: 'DS', fus: 'FU', fu1: 'FU', olh: 'OL', mtr: 'MTR' }[p.t], fuse = q => q.t === 'fus' || q.t === 'fu1', taken = new Set(parts.filter(q => (q.t === p.t || fuse(p) && fuse(q)) && q !== p).map(q => q.L));   // (fuses, single or three-pole, number from one count)
+      if (fuse(p)) {   // (fuses: a block takes three numbers, FU1-FU3; each number once)
+        const k = p.t === 'fus' ? 3 : 1, tk = fuseNums(p);
+        for (let n = 1; n <= Math.max(12, ...[...tk].map(Number)) + 3; n++) { const ok = fuseFits(n, k, tk); if (ok || String(n) === p.L) ns.add(new Option(pre + n + (k > 1 ? '–' + pre + (n + 2) : '') + (ok ? '' : ' (used twice)'), String(n), false, String(n) === p.L)); }
+      } else
       for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n)) || String(n) === p.L) ns.add(new Option(pre + n + (taken.has(String(n)) ? ' (used twice)' : ''), String(n), false, String(n) === p.L));   // (its own number always shown, even one another part has too)
     }
     document.getElementById('pw-how').textContent = { dsc: 'In Run: click it to turn it off or on', fus: 'In Run: click a fuse to blow it, or to put a new one in', fu1: 'Blows on a short through it. In Run: click it to blow it, or to put a new one in', mst: 'Its contacts close while its coil is in', olh: 'In Run: click it to trip it, or to reset it', olc: 'Opens while its overload is tripped (click it in Run to reset)', mtr: 'Runs on three phases; two swapped, it runs backward' }[p.t];

@@ -270,6 +270,8 @@ function extentOf(t) {
 }
 // the poles a device carries a line through (a two-ended device: its two ends)
 const polesOf = t => LIB[t].poles || (termsOf(t).length === 2 ? [[0, 1]] : []);
+// the tags a device carries: a block of three fuses, one for each fuse (FU1 → FU1, FU2, FU3)
+function tagsOf(p) { const r = /^(\D+)(\d+)$/.exec(p.tag || ''); return p.t === 'fus3' && r ? [0, 1, 2].map(i => r[1] + (+r[2] + i)) : [p.tag]; }
 const isPowerKind = k => k === 'power' || k === 'ol' || k === 'starter' || k === 'motor' || k === 'supply';
 
 /* ---- js/model.js ---- */
@@ -519,7 +521,7 @@ const tagPre = p => p.t === 'coil' ? (p.pre || 'CR') : LIB[p.t] && LIB[p.t].pre;
 // the next free tag starting pre: one more than the highest in use (FU1, FU2, FU3...: never the same twice)
 function nextTag(pre, motor = false) {   // (motors are counted among themselves: motor M1 and its starter M1 go together)
   let m = 0; const re = new RegExp('^' + pre + '(\\d+)$');
-  for (const { p } of allParts()) { if (['contact', 'starter', 'olc'].includes(LIB[p.t].kind) || (LIB[p.t].kind === 'motor') !== motor) continue; const r = re.exec(p.tag || ''); if (r) m = Math.max(m, +r[1]); }   // (contacts borrow their coil's tag: they take none of their own)
+  for (const { p } of allParts()) { if (['contact', 'starter', 'olc'].includes(LIB[p.t].kind) || (LIB[p.t].kind === 'motor') !== motor) continue; const r = re.exec(p.tag || ''); if (r) m = Math.max(m, +r[1] + (p.t === 'fus3' ? 2 : 0)); }   // (a block of three fuses takes three numbers: FU1, FU2, FU3)   // (contacts borrow their coil's tag: they take none of their own)
   return pre + (m + 1);
 }
 // a new part's tag: its own next one; a contact, its coil's (the last coil put down or picked); starter contacts, a starter's
@@ -730,7 +732,7 @@ function checkPrint(A = analyse()) {
   const sheetName = k => doc.sheets.length > 1 ? ` (sheet ${k + 1})` : '';
   // tags: the same one on two devices that must each have their own; none at all
   const byTag = new Map();
-  for (const x of parts) if (UNIQUE.has(kindOf(x.p)) && x.p.tag) { const k = (kindOf(x.p) === 'motor' ? 'motor:' : '') + x.p.tag; if (!byTag.has(k)) byTag.set(k, []); byTag.get(k).push(x); }
+  for (const x of parts) if (UNIQUE.has(kindOf(x.p)) && x.p.tag) for (const tg of tagsOf(x.p)) { const k = (kindOf(x.p) === 'motor' ? 'motor:' : '') + tg; if (!byTag.has(k)) byTag.set(k, []); byTag.get(k).push(x); }
   let dups = 0;
   for (const [k, xs] of byTag) if (xs.length > 1) { const t = k.replace('motor:', ''); dups++;
     add('e', `${xs.length} devices are tagged ${t}`, `${[...new Set(xs.map(x => LIB[x.p.t].name))].join(' and ')}: each needs a tag of its own (only contacts share their coil’s).`, xs.map(pk)); }
@@ -839,7 +841,8 @@ function drawSheet(s, k, A) {
     if (up) { const off = Math.max(Math.abs(sym.y0), Math.abs(sym.y1)) + 10; text(p.x + off, p.y + 9, p.tag, 26, 'start'); if (p.desc) text(p.x + off, p.y + 34, p.desc, 20, 'start', 500); }
     else {
       const y0 = r === 180 ? -sym.y1 : sym.y0, y1 = r === 180 ? -sym.y0 : sym.y1;
-      if (inside) text(p.x, p.y + (kind === 'motor' ? 11 : 9), p.tag, kind === 'motor' ? 30 : 24); else text(p.x, p.y + y0 - 8, p.tag, 26);
+      if (p.t === 'fus3' && !r) tagsOf(p).forEach((tg, i) => text(p.x, termPos(p, 2 * i)[1] - 24, tg, 26));   // (each fuse its own number)
+      else if (inside) text(p.x, p.y + (kind === 'motor' ? 11 : 9), p.tag, kind === 'motor' ? 30 : 24); else text(p.x, p.y + y0 - 8, p.tag, 26);
       if (p.desc) text(p.x, p.y + y1 + 22, p.desc, 20, 'middle', 500);
     }
     if (p.t === 'xfmr') { const t = [0, 1, 2, 3].map(i => termPos(p, i)), nm = ['H1', 'H2', 'X1', 'X2'];
@@ -1244,7 +1247,7 @@ function renderProps() {
     const list = k === 'contact' || k === 'starter' ? coils : k === 'olc' ? ols : [];
     const rn = A.rung.get(p.id), xr = A.xref.get(p.id);
     const termNums = [...Array(termsN(p)).keys()].map(i => A.label.get(A.rootT(p, S, i))).filter(Boolean);
-    P.innerHTML = `<h4>${esc(d.name)}${p.tag ? ' ' + esc(p.tag) : ''}</h4>
+    P.innerHTML = `<h4>${esc(d.name)}${p.tag ? ' ' + esc(tagsOf(p).length > 1 ? tagsOf(p)[0] + '–' + tagsOf(p)[2] : p.tag) : ''}</h4>
       ${p.t === 'sup' ? `<div class="f">Line<div class="seg">${['L1', 'L2', 'L3'].map(l => `<button data-line="${l}" aria-pressed="${p.tag === l}">${l}</button>`).join('')}</div></div>` : `
       <div class="f">Tag<input class="in" id="p-tag" value="${esc(p.tag)}" list="p-tags" autocomplete="off"><datalist id="p-tags">${list.map(x => `<option value="${esc(x)}">`).join('')}</datalist></div>`}
       ${k === 'coil' ? `<div class="f">Coil<select id="p-pre">${COIL_PRE.map(([v, n]) => `<option value="${v}"${(p.pre || 'CR') === v ? ' selected' : ''}>${n} (${v})</option>`).join('')}</select></div>` : ''}
