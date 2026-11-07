@@ -348,7 +348,7 @@ body.fs .wrap { padding-top: 8px; }
 .pw-reset { font: 600 .76rem var(--ui); color: #222; background: #e8e8e8; border: 1px solid #888; border-radius: 5px; padding: 4px 12px; cursor: pointer; }
 .pw-reset:hover { background: #fff; }
 /* the Process values dialog */
-dialog#pv-dlg { width: min(760px, calc(100vw - 32px)); }
+dialog#pv-dlg { width: min(900px, calc(100vw - 32px)); }
 .pvtable { border-collapse: collapse; width: 100%; font-size: .84rem; }
 .pvtable th { text-align: left; font-weight: 600; color: var(--faint); font-size: .74rem; padding: 4px 5px; border-bottom: 1px solid var(--line); }
 .pvtable td { padding: 4px 5px; border-bottom: 1px solid #303135; }
@@ -401,6 +401,18 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
 
 /* an emergency stop's legend, round its plate */
 .eslegend { font-family: Inter, Arial, sans-serif; pointer-events: none; }
+/* process pictures on the panel (pictures.js) */
+.pic .piccard { fill: #1c1f23; stroke: #5b6672; stroke-width: 1.6; }
+.pic .piccard.on { stroke: #ffc000; stroke-width: 3; }
+.pic .picwell { fill: #121417; }
+.pic text { font-family: inherit; pointer-events: none; }
+.pic .picname { fill: #e8ecf0; font-weight: 600; }
+.pic .picnum { fill: #5ee08a; font-weight: 700; font-family: ui-monospace, Consolas, monospace; }
+.pic .piclinks { fill: #9aa6b2; font-weight: 500; }
+.pic .picstem { stroke: #7d8894; stroke-width: 2; stroke-dasharray: 3 4; }
+.picdock { fill: rgba(255,192,0,.05); stroke: #8a96a3; stroke-width: 1.6; stroke-dasharray: 6 5; pointer-events: none; }
+.picdocktext { fill: #8a96a3; font-size: 12px; pointer-events: none; }
+.piclink { fill: none; stroke: #ffc000; stroke-width: 2; stroke-dasharray: 6 5; opacity: .9; pointer-events: none; }
 
 .demo-badge { font-style: normal; font-size: .7rem; font-weight: 800; letter-spacing: .08em; color: #1c1d1f; background: #9be03a; border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }
 </style>
@@ -565,6 +577,7 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
         <div class="tgroup" id="d-rate-group"><span class="label" id="d-rate-label">At</span><input type="text" id="d-rate" class="labelbox pvnum" inputmode="decimal" autocomplete="off" aria-label="How fast it moves the value"><span class="unit d-unit"></span><select id="d-per" aria-label="A second or a minute"><option value="s">a second</option><option value="min">a minute</option></select></div>
         <div class="tgroup" id="d-off-group"><span class="label">When Off</span><select id="d-off" aria-label="What the value does once it stops"><option value="hold">Holds where it is</option><option value="back">Goes back to its start</option></select></div>
         <div class="tgroup" id="d-cool-group"><span class="label">Goes Back at</span><input type="text" id="d-cool" class="labelbox pvnum" inputmode="decimal" autocomplete="off" aria-label="How fast it goes back once it stops"><span class="unit d-unit d-unit-per"></span></div>
+        <div class="tgroup" id="d-pic-group"><span class="label">Picture</span><select id="d-pic" aria-label="Its process picture on the panel" data-tip="A small picture of the value under this output, following it while the circuit runs (drag it off to put it anywhere on the panel)"><option value="1">Under It</option><option value="0">Hidden</option></select></div>
       </div>
       <div class="props" id="props-coil" hidden>
         <div class="tgroup"><span class="label">Letter</span><select id="o-letter" aria-label="Coil letter"></select></div>
@@ -688,7 +701,7 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
   <form method="dialog" class="dlg pvdlg">
     <h2 id="pv-title">Process values</h2>
     <p class="hint">Numbers the simulation keeps in the background. Link limit, pressure and temperature switches to them on each switch's tab; while running, set them in the Process window.</p>
-    <table class="pvtable"><thead><tr><th>Name</th><th>Kind</th><th>Unit</th><th>Lowest</th><th>Highest</th><th>Starts at</th><th></th></tr></thead><tbody id="pv-rows"></tbody></table>
+    <table class="pvtable"><thead><tr><th>Name</th><th>Kind</th><th>Unit</th><th>Lowest</th><th>Highest</th><th>Starts at</th><th>Picture</th><th></th></tr></thead><tbody id="pv-rows"></tbody></table>
     <p class="hint" id="pv-none">No values yet.</p>
     <div class="dlg-row"><select id="pv-add-kind" aria-label="Kind of value to add"><option value="position">Position</option><option value="pressure">Pressure</option><option value="temperature">Temperature</option><option value="level">Level</option><option value="flow">Flow</option><option value="speed">Speed</option><option value="other">Other</option></select><button type="button" id="pv-add">＋ Add a value</button></div>
     <div class="dlg-end"><button value="close" class="primary">Done</button></div>
@@ -1020,9 +1033,10 @@ function contentRight(floor = W_MIN) {
   let m = floor;
   for (const p of parts) m = Math.max(m, p.x + TERM(p) + 40);
   for (const w of wires) for (const x of [w.x1, w.x2]) if (x !== W || !barsOn()) m = Math.max(m, x + 20);
+  m = Math.max(m, picExt().r + 30);   // (pictures on the panel)
   return Math.ceil(m / G) * G;
 }
-const contentH = () => { let m = 0; for (const p of parts) m = Math.max(m, p.y + 60); for (const w of wires) m = Math.max(m, w.y1, w.y2); return Math.max(400, snap(m + 120)); };
+const contentH = () => { let m = picExt().b - 60; for (const p of parts) m = Math.max(m, p.y + 60); for (const w of wires) m = Math.max(m, w.y1, w.y2); return Math.max(400, snap(m + 120)); };
 // move the L2 bar to x = nw: wire ends on it move with it
 function setWidth(nw) {
   if (nw === W) return false;
@@ -1046,6 +1060,7 @@ function leftRoom() {
 function shiftL1(dx) {
   if (!dx) return;
   for (const p of parts) p.x -= dx;
+  for (const v of PV) if (v.pic) v.pic.x -= dx;
   for (const w of wires) { if (w.x1 !== 0) w.x1 -= dx; if (w.x2 !== 0) w.x2 -= dx; }
   W -= dx; normalize();
 }
@@ -1055,6 +1070,7 @@ function canvasH() {
   let m = editing && typeof cam !== 'undefined' && !cam.fit ? cam.y + VIS_H1 / cam.z : 0;   // (zoomed out while building: down to the bottom of the view, room to build in)
   for (const p of parts) m = Math.max(m, p.y + 60);
   for (const w of wires) m = Math.max(m, w.y1, w.y2);
+  m = Math.max(m, picExt().b - 100);   // (pictures on the panel: room below them too)
   return Math.max(400, VIS_H1, snap(m + 120));
 }
 // how far right things can go: to the L2 bar, or with supply boxes, on past the sheet's edge (which then moves out)
@@ -3143,7 +3159,7 @@ function renderInto(target, V, L) {
     if (editing && selHasT(fd.t === 'L1' ? 0 : W, fd.y)) el('rect', { x: fd.t === 'L1' ? 1.5 : W - BAR - 18.5, y: fd.y - 19, width: BAR + 17, height: 38, rx: 7, fill: 'rgba(255,192,0,.16)', stroke: '#ffc000', 'stroke-width': 2.2, 'stroke-dasharray': '7 5', 'pointer-events': 'none' }, B(fd.y).top);
   }
   const issues = editing ? wiringIssues(net) : new Map();
-  for (const bd of bands) { bd.links = el('g', {}, bd.g); bd.parts = el('g', {}, bd.g); bd.ends = el('g', {}, bd.g); }
+  for (const bd of bands) { bd.pics = el('g', {}, bd.g); bd.links = el('g', {}, bd.g); bd.parts = el('g', {}, bd.g); bd.ends = el('g', {}, bd.g); }
   selLinks(B);
   V.parts = new Map();
   for (const p of parts) {
@@ -3167,6 +3183,7 @@ function renderInto(target, V, L) {
     else if ((isPwr3(p) && p.t !== 'mst') || p.t === 'olc' || p.t === 'fu1') bindPower(g, p);
     else if (p.t === 'sel') bindSelector(g, p);
   }
+  drawPics(V, B);
   if (SHOW.rungs) drawRefs(V, B, net);
   fitCaps(V);
   if (editing && V === view) {
@@ -3972,6 +3989,7 @@ function buildProcess() {
   showProcess();
 }
 function showProcessValue(id) {
+  picsShow(id);   // (its pictures on the panel too)
   const row = procEl.querySelector(`[data-pv="${id}"]`), v = PV.find(q => q.id === id); if (!row || !v) return;
   const x = PVV[id] ?? v.start, sl = row.querySelector('.pvslide'), box = row.querySelector('.pvval');
   if (document.activeElement !== sl) sl.value = x;
@@ -4038,8 +4056,8 @@ window.addEventListener('resize', () => { if (!procEl.hidden) placeProcess(); })
    temperature, an oven warming inside, its element glowing; a level, a tank and its liquid; a flow, a pipe, arrows moving
    along it as fast as it flows; a speed, a wheel turning as fast; anything else, a bar. */
 const VIS_COL = { position: '#cfd3d8', pressure: '#FF9C37', temperature: '#FF3333', level: '#3F9BFF', flow: '#5ee08a', speed: '#cfd3d8', other: '#5ee08a' };
-function pvVisDraw(s, v) {
-  const q = {}, defs = el('defs', {}, s), id = 'pvm' + v.id, box = (x, y, w, h, rx) => el('rect', { x, y, width: w, height: h, rx, fill: '#2a2d31', stroke: '#9aa6b2', 'stroke-width': 1.2 }, s);
+function pvVisDraw(s, v, pfx = 'pvm') {
+  const q = {}, defs = el('defs', {}, s), id = pfx + v.id, box = (x, y, w, h, rx) => el('rect', { x, y, width: w, height: h, rx, fill: '#2a2d31', stroke: '#9aa6b2', 'stroke-width': 1.2 }, s);
   const mg = el('linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 }, defs); for (const [o, c] of [[0, '#e8e8e8'], [.5, '#9a9a9a'], [1, '#5a5a5a']]) el('stop', { offset: o, 'stop-color': c }, mg);
   const k = v.kind;
   if (k === 'position') {   // (the barrel, its end caps; the piston seen through it; the rod and its end)
@@ -4091,8 +4109,8 @@ function pvVisSet(s, v, x) {
 let visT = 0;
 function pvVisAnim() {
   const now = performance.now(), dt = visT ? Math.min(.1, (now - visT) / 1000) : 0; visT = now;
-  if (!dt || editing || procEl.hidden) return;
-  for (const s of procEl.querySelectorAll('.pvvis')) {
+  if (!dt || editing) return;
+  for (const s of [...(procEl.hidden ? [] : procEl.querySelectorAll('.pvvis')), ...picsAll()]) {
     const q = s._q, f = s._f || 0; if (!q || !f) continue;
     if (s._k === 'flow') { q.phase = (q.phase + f * 44 * dt) % 22; q.ag.setAttribute('transform', `translate(${q.phase.toFixed(2)} 0)`); }
     if (s._k === 'speed') { q.phase = (q.phase + f * 540 * dt) % 360; q.wheel.setAttribute('transform', `rotate(${q.phase.toFixed(1)} 48 28)`); }
@@ -4110,6 +4128,7 @@ function buildPvDialog() {
       <td><select class="pvin" data-f="kind">${Object.entries(PV_KINDS).map(([k, [n]]) => `<option value="${k}">${n}</option>`).join('')}</select></td>
       <td>${units.length ? `<select class="pvin" data-f="unit">${units.map(u => `<option>${u}</option>`).join('')}</select>` : '<input class="pvin w5" data-f="unit" maxlength="8" placeholder="unit">'}</td>
       <td><input class="pvin w5" data-f="min" inputmode="decimal"></td><td><input class="pvin w5" data-f="max" inputmode="decimal"></td><td><input class="pvin w5" data-f="start" inputmode="decimal"></td>
+      <td><select class="pvin" data-pic aria-label="Its picture on the panel"><option value="">${parts.some(p => picShown(p) && p.pv === v.id) ? 'Under its output' : 'Not on the panel'}</option><option value="1">Placed on the panel</option></select></td>
       <td><button type="button" class="pvdel" aria-label="Remove ${v.name.replace(/"/g, '')}" data-tip="Remove this value (switches it worked go back to being clicked by hand)">✕</button></td>`;
     for (const f of tr.querySelectorAll('[data-f]')) {
       f.value = v[f.dataset.f];
@@ -4123,6 +4142,8 @@ function buildPvDialog() {
         buildPvDialog(); draw(); if (sel) renderProps();
       });
     }
+    const pk = tr.querySelector('[data-pic]'); pk.value = v.pic ? '1' : '';
+    pk.addEventListener('change', () => { if (pk.value) picPlace(v); else delete v.pic; draw(); });
     tr.querySelector('.pvdel').addEventListener('click', () => { snapshot(); PV = PV.filter(q => q !== v); for (const p of parts) if (p.pv === v.id) unlinkPv(p); buildPvDialog(); draw(); if (sel) renderProps(); });
     tb.append(tr);
   }
@@ -4132,6 +4153,161 @@ function unlinkPv(p) { delete p.pv; delete p.sp; delete p.rs; delete p.side; }
 document.getElementById('pv-btn').addEventListener('click', () => { snapshot(); buildPvDialog(); pvDlg.showModal(); });
 document.getElementById('pv-add').addEventListener('click', () => { PV.push(pvNew(document.getElementById('pv-add-kind').value)); buildPvDialog(); const r = document.querySelectorAll('#pv-rows tr'); r[r.length - 1]?.querySelector('[data-f="name"]')?.focus(); });
 pvDlg.addEventListener('close', () => { draw(); if (sel) renderProps(); });
+
+/* ---- js/pictures.js ---- */
+/* Process pictures on the panel: the Process window's pictures (a cylinder, a gauge, an oven...), drawn on the circuit
+   itself, following their values while it runs.
+   - Docked: under each solenoid, motor or heating element that drives a value, a small picture of it and its value
+     (unless that output's picture is hidden: p.nopic, on its tab).
+   - Placed: dragged off its output (or put on the panel from Process values, for a value no output drives), a value's
+     picture becomes a card of its own (v.pic, its top left corner) with its name, its value, and what drives it and
+     the switches it works. Selected, dashed lines run to those parts, and a dashed "dock" shows under each output it
+     can go back to: dropped there, or double-clicked, it docks again. Delete takes it off the panel.
+   Pictures are not parts: they take no wires, and are drawn under the parts. */
+var PIC_READY = false;   // (set at the foot of this file: nothing is drawn before it has run)
+const PIC_W = 260, PIC_H = 100, DOCK_W = 150, DOCK_H = 50, DOCK_GAP = 14;
+let picSel = null, picDragV = null, picN = 0, picClick = { v: null, t: 0 };   // the value whose card is selected (Build); the one being dragged
+const picTag = p => ({ sol: 'SOL', mtr: 'MTR', htr: 'HTR', lsw: 'LS', psw: 'PS', tsw: 'TS' }[p.t] || '') + p.L;
+const picShown = p => isDrv(p) && !p.nopic && !!pvOf(p);
+/* where output p's docked picture sits ({ x, y: its top left corner; w, h; small }): under it, unless a part, a name or
+   a wire is in the way there; then the first clear spot of a few round it (beside it, below or above its rung's wire;
+   over its name). Where the circuit is too close for any of those, a small badge instead, just above the rung's wire
+   beside the output (where a temperature switch has its thermometer); and with no room even for that, under it all
+   the same (drag it off, or hide it on the output's tab). */
+const BADGE_W = 104, BADGE_H = 26;
+function dockAt(p) {
+  const w = DOCK_W, h = DOCK_H, hw = halfW(p.t), yb = p.y + BODYH(p.t) / 2 + DOCK_GAP;
+  const spots = [[p.x - w / 2, yb], [p.x - 30, yb], [p.x + 30 - w, yb], [p.x + hw + 14, p.y + 20], [p.x - hw - 14 - w, p.y + 20],
+    [p.x + hw + 14, p.y - 20 - h], [p.x - hw - 14 - w, p.y - 20 - h], [p.x - w / 2, p.y - capTop(p) - 22 - h]].map(([x, y]) => ({ x, y, w, h }));
+  spots.push(...[[p.x + hw + 4, p.y - 14 - BADGE_H], [p.x - hw - 4 - BADGE_W, p.y - 14 - BADGE_H]].map(([x, y]) => ({ x, y, w: BADGE_W, h: BADGE_H, small: true })));
+  const lo = barsOn() ? BAR + 6 : 0, hi = barsOn() ? W - BAR - 6 : Infinity;
+  const hit = ({ x, y, w, h }) => x < lo || x + w > hi || y < 4
+    || parts.some(q => q !== p && x < q.x + halfW(q.t) + 10 && x + w > q.x - halfW(q.t) - 10 && y < q.y + halfH(q.t) + 6 && y + h > q.y - capTop(q) - 16)
+    || wires.some(z => x < Math.max(z.x1, z.x2) + 12 && x + w > Math.min(z.x1, z.x2) - 12 && y < Math.max(z.y1, z.y2) + 12 && y + h > Math.min(z.y1, z.y2) - 12)
+    || parts.some(q => q !== p && picShown(q) && !pvOf(q).pic && (q.y < p.y || q.y === p.y && q.x < p.x) && (d => x < d.x + d.w + 8 && x + w > d.x - 8 && y < d.y + d.h + 8 && y + h > d.y - 8)(dockAt(q)));
+  const d = spots.find(z => !hit(z)) || spots[0];
+  return { ...d, x: snapHalf(d.x), y: snapHalf(d.y) };
+}
+const snapHalf = n => Math.round(n / 5) * 5;
+const picDocks = v => parts.filter(p => picShown(p) && p.pv === v.id);
+const picVal = v => editing || PVV[v.id] === undefined ? v.start : PVV[v.id];
+const picText = v => pvFmt(v, picVal(v)) + (v.unit ? ' ' + v.unit : '');
+// how far right and down the pictures reach (so the sheet makes room for them)
+function picExt() {
+  let r = 0, b = 0; if (!PIC_READY) return { r, b };
+  for (const v of PV) {
+    if (v.pic) { r = Math.max(r, v.pic.x + PIC_W); b = Math.max(b, v.pic.y + PIC_H); continue; }
+    for (const p of picDocks(v)) { const d = dockAt(p); r = Math.max(r, d.x + d.w); b = Math.max(b, d.y + d.h); }
+  }
+  return { r, b };
+}
+// every picture drawn on the panel (for the animation of flows and speeds)
+const picsAll = () => PIC_READY ? VIEWS.flatMap(V => (V.pics || []).map(q => q.s)) : [];
+// value id has changed: its pictures on the panel follow it
+function picsShow(id) {
+  if (!PIC_READY) return;
+  for (const V of VIEWS) for (const q of V.pics || []) if (q.v.id === id) { pvVisSet(q.s, q.v, picVal(q.v)); q.t.textContent = picText(q.v); }
+}
+// a value's text, shrunk to fit the room it has
+function picNum(g, x, y, v, px, room, a) {
+  const s = picText(v), t = el('text', { x, y, 'text-anchor': a, class: 'picnum', 'font-size': Math.min(px, room / (s.length * .62)).toFixed(1) }, g);
+  t.textContent = s; return t;
+}
+function drawPics(V, B) {
+  V.pics = [];
+  if (!PIC_READY || !PV.length) return;
+  const live = editing && V === view;
+  for (const v of PV) {
+    const docks = picDocks(v);
+    if (v.pic) {
+      const { x, y } = v.pic, on = live && picSel === v.id, band = B(y + PIC_H / 2), g0 = band.pics;
+      // (selected: dashed lines to the parts it goes with, and a dock under each output it can go back to)
+      if (on || (live && picDragV === v.id)) {
+        for (const p of docks) { const d = dockAt(p);
+          el('rect', { x: d.x, y: d.y, width: d.w, height: d.h, rx: d.small ? 6 : 9, class: 'picdock' }, g0);
+          el('text', { x: d.x + d.w / 2, y: d.y + d.h / 2 + 4, 'text-anchor': 'middle', class: 'picdocktext' }, g0).textContent = 'dock'; }
+        for (const p of parts.filter(p => p.pv === v.id && (isDrv(p) || isLim(p)))) {
+          const tx = p.x + (p.x < x ? 30 : -30), ty = p.y + BODYH(p.t) / 2 * (p.y < y ? 1 : -1), sx = p.x < x ? x : x + PIC_W, sy = y + PIC_H / 2;
+          el('path', { d: `M${sx} ${sy}C${sx + (p.x < x ? -80 : 80)} ${sy} ${tx} ${ty + (p.y < y ? 60 : -60)} ${tx} ${ty}`, class: 'piclink' }, g0);
+        }
+      }
+      const g = el('g', { class: 'pic', 'data-pic': v.id, style: live ? 'cursor:grab' : '' }, g0);
+      el('rect', { x, y, width: PIC_W, height: PIC_H, rx: 12, class: on ? 'piccard on' : 'piccard' }, g);
+      el('rect', { x: x + 10, y: y + 10, width: 128, height: 80, rx: 6, class: 'picwell' }, g);
+      const s = el('g', { transform: `translate(${x + 14} ${y + 16}) scale(1.25)` }, g); pvVisDraw(s, v, 'pp' + (picN++) + '_'); pvVisSet(s, v, picVal(v));
+      const nm = el('text', { x: x + 150, y: y + 32, class: 'picname', 'font-size': Math.min(16, 100 / (v.name.length * .55)).toFixed(1) }, g); nm.textContent = v.name;
+      const t = picNum(g, x + 150, y + 64, v, 22, 102, 'start');
+      const by = parts.filter(p => isDrv(p) && p.pv === v.id).map(picTag), wk = parts.filter(p => isLim(p) && p.pv === v.id).map(picTag);
+      const ln = (by.join(', ') || '') + (by.length && wk.length ? ' → ' : '') + wk.join(', ');
+      if (ln) { const lt = el('text', { x: x + 150, y: y + 86, class: 'piclinks', 'font-size': Math.min(12, 102 / (ln.length * .55)).toFixed(1) }, g); lt.textContent = ln; }
+      el('title', {}, g).textContent = editing ? `${v.name}: drag to move it${docks.length ? '; drop it on a dock under its output, or double-click it, to put it back there' : ''}. Delete takes it off the panel.` : v.name;
+      V.pics.push({ s, v, t });
+      if (live) {
+        g.addEventListener('pointerdown', e => picDrag(e, v, null));
+      }
+      continue;
+    }
+    for (const p of docks) {
+      const d = dockAt(p), { x, y } = d, band = B(p.y);
+      if (!d.small) el('line', { x1: p.x, y1: p.y, x2: x + d.w / 2, y2: y + d.h / 2, class: 'picstem' }, band.pics);   // (from the output's middle: under it, and under the picture)
+      const g = el('g', { class: 'pic docked' + (d.small ? ' small' : ''), 'data-pic': v.id, style: live ? 'cursor:grab' : '' }, band.pics);
+      el('rect', { x, y, width: d.w, height: d.h, rx: d.small ? 6 : 9, class: 'piccard' }, g);
+      const s = el('g', { transform: d.small ? `translate(${x + 3} ${y + 2}) scale(.4)` : `translate(${x + 4} ${y + 4}) scale(.75)` }, g); pvVisDraw(s, v, 'pp' + (picN++) + '_'); pvVisSet(s, v, picVal(v));
+      const t = d.small ? picNum(g, x + 72, y + 17.5, v, 12, 60, 'middle') : picNum(g, x + 113, y + 30, v, 15, 70, 'middle');
+      el('title', {}, g).textContent = editing ? `${v.name}: drag it off to put it anywhere on the panel` : `${v.name} (${picTag(p)})`;
+      V.pics.push({ s, v, t });
+      if (live) g.addEventListener('pointerdown', e => picDrag(e, v, p));
+    }
+  }
+}
+// dragging a picture (p: the output it was docked under, if it was): off its output it becomes a card; let go over a dock, it docks again
+function picDrag(e, v, p) {
+  if (e.button !== 0) return;
+  e.stopPropagation(); e.preventDefault();
+  const ae = document.activeElement; if (ae && /INPUT|SELECT|TEXTAREA/.test(ae.tagName)) ae.blur();
+  const s = pt(e), start = stateOf(), o = v.pic ? { ...v.pic } : (d => ({ x: d.x + d.w / 2 - PIC_W / 2, y: d.y }))(dockAt(p));
+  let moved = false;
+  dragNow = true; document.body.classList.add('dragging');
+  const lo = barsOn() ? BAR + 10 : 0, hi = () => (barsOn() ? W - BAR - 10 : rightEdge()) - PIC_W;
+  const mv = ev => {
+    const q = pt(ev); if (!moved && Math.hypot(q.x - s.x, q.y - s.y) < 6) return;
+    if (!moved) { moved = true; picDragV = v.id; picSel = v.id; sel = null; }
+    const nx = Math.max(lo, Math.min(hi(), snap(o.x + q.x - s.x))), ny = Math.max(10, snap(o.y + q.y - s.y));
+    if (v.pic && v.pic.x === nx && v.pic.y === ny) return;
+    v.pic = { x: nx, y: ny }; draw();
+  };
+  const up = () => {
+    document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
+    dragNow = false; picDragV = null; document.body.classList.remove('dragging');
+    if (!moved) {   // a click: a docked picture picks its output; a card is selected
+      // (a card clicked twice, a double-click: back under its output, if it has one; the picture is redrawn on each click, so the browser's own dblclick never reaches it)
+      const now = performance.now(), dbl = !p && picClick.v === v.id && now - picClick.t < 450; picClick = { v: v.id, t: now };
+      if (dbl && picDocks(v).length) { remember(start); delete v.pic; picSel = null; return draw(); }
+      if (p) { sel = selOne('p', p.id); picSel = null; ribbonTab = 'part'; } else { picSel = v.id; sel = null; }
+      say(''); return draw();
+    }
+    // let go over a dock (its centre near a dock's): docked again
+    const cx = v.pic.x + PIC_W / 2, cy = v.pic.y + PIC_H / 2;
+    if (picDocks(v).some(q => { const d = dockAt(q); return Math.abs(cx - (d.x + d.w / 2)) < 90 && Math.abs(cy - (d.y + d.h / 2)) < 60; })) { delete v.pic; picSel = null; }
+    if (stateOf() !== start) remember(start);
+    draw();
+  };
+  document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+}
+// Delete, with a card selected: it comes off the panel (back under its output, if it has one)
+function picDel() {
+  const v = picSel && PV.find(q => q.id === picSel); if (!v || !v.pic) return false;
+  snapshot(); delete v.pic; picSel = null; draw(); return true;
+}
+// a spot for a new card: by the right of the panel, below any other cards
+function picPlace(v) {
+  const x = Math.max(BAR + 10, (barsOn() ? W - BAR - 30 : contentRight()) - PIC_W);
+  let y = 40; for (const q of PV) if (q !== v && q.pic && Math.abs(q.pic.x - x) < PIC_W) y = Math.max(y, q.pic.y + PIC_H + 20);
+  v.pic = { x: snap(x), y: snap(y) };
+}
+// pressing anywhere else on the panel lets go of a selected card
+svg.addEventListener('pointerdown', e => { if (picSel && !e.target.closest('.pic')) picSel = null; }, true);
+PIC_READY = true;
 
 /* ---- js/print-symbols.js ---- */
 /* =====================================================================
@@ -5397,6 +5573,7 @@ function setTool(t) {
 }
 document.querySelectorAll('.tool[data-tool]').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
 function del() {
+  if (picDel()) return;
   if (!sel) return;
   snapshot();
   parts = parts.filter(q => !sel.parts.has(q.id));
@@ -5772,6 +5949,8 @@ function renderProps() {
     document.getElementById('d-dir-group').hidden = !v || p.t === 'htr';
     for (const g of ['d-rate-group', 'd-off-group']) document.getElementById(g).hidden = !v;
     document.getElementById('d-cool-group').hidden = !v || drvOff(p) !== 'back';
+    document.getElementById('d-pic-group').hidden = !v;
+    if (v) { const ps = document.getElementById('d-pic'); ps.options[0].text = v.pic ? 'Placed on the Panel' : 'Under It'; ps.value = p.nopic ? '0' : '1'; }
     if (v) {
       const dir = document.getElementById('d-dir'); dir.options[0].text = p.t === 'mtr' ? 'Forward raises it' : 'Raises it'; dir.options[1].text = p.t === 'mtr' ? 'Forward lowers it' : 'Lowers it'; dir.value = p.dir === 'down' ? 'down' : 'up';
       document.getElementById('d-rate-label').textContent = p.t === 'htr' ? 'Heats at' : p.t === 'mtr' ? 'While It Runs, at' : 'While Energized, at';
@@ -5954,6 +6133,7 @@ document.getElementById('pw-num').addEventListener('change', e => { const G = se
 document.getElementById('ls-num').addEventListener('change', e => { const G = selGroup(); if (G.every(p => p.t === G[0].t && isLim(p))) each(p => p.L = e.target.value); });
 document.getElementById('h-num').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'htr') return; snapshot(); p.L = e.target.value; draw(); });
 // what an output drives (one panel for solenoids, motors and heating elements)
+document.getElementById('d-pic').addEventListener('change', e => each(p => { if (!isDrv(p)) return; if (e.target.value === '0') p.nopic = true; else delete p.nopic; }));
 document.getElementById('d-pv').addEventListener('change', e => { const id = e.target.value, G = selGroup(); if (!G.length || !G.every(q => isDrv(q) && q.t === G[0].t)) return;
   each(p => { if (!id) { delete p.pv; return; } p.pv = id; drvDefaults(p, pvOf(p)); }); });
 for (const [id, f] of [['d-dir', 'dir'], ['d-per', 'per'], ['d-off', 'off']]) document.getElementById(id).addEventListener('change', e => each(p => { if (isDrv(p)) p[f] = e.target.value; }));
@@ -5999,7 +6179,8 @@ function circuitData() {
       return a; }),
     wires: wires.map(q => [x(q.x1), q.y1, x(q.x2), q.y2]),
     // (its process values: id, name, kind, unit, lowest, highest, start; and the switches they work: part, value, setting, reset, side)
-    ...(PV.length ? { pv: PV.map(v => [v.id, v.name, v.kind, v.unit, v.min, v.max, v.start]), pd: parts.map((p, i) => isDrv(p) && pvOf(p) ? [i, p.pv, +p.rate || 0, +p.cool || 0, drvPer(p), p.dir === 'down' ? 'down' : 'up', drvOff(p)] : null).filter(Boolean), pl: parts.map((p, i) => pvLinked(p) ? [i, p.pv, +p.sp, +(p.rs ?? p.sp), p.side === 'lo' ? 'lo' : 'hi'] : null).filter(Boolean) } : {}),
+    ...(PV.length ? { pv: PV.map(v => [v.id, v.name, v.kind, v.unit, v.min, v.max, v.start]), pd: parts.map((p, i) => isDrv(p) && pvOf(p) ? [i, p.pv, +p.rate || 0, +p.cool || 0, drvPer(p), p.dir === 'down' ? 'down' : 'up', drvOff(p)] : null).filter(Boolean), pl: parts.map((p, i) => pvLinked(p) ? [i, p.pv, +p.sp, +(p.rs ?? p.sp), p.side === 'lo' ? 'lo' : 'hi'] : null).filter(Boolean),
+      ...(PV.some(v => v.pic) ? { pp: PV.filter(v => v.pic).map(v => [v.id, v.pic.x, v.pic.y]) } : {}), ...(parts.some(p => p.nopic) ? { pn: parts.map((p, i) => p.nopic ? i : -1).filter(i => i >= 0) } : {}) } : {}),
   };
 }
 // check a circuit read from a file or code, and turn it back into parts and wires (throws a readable message)
@@ -6042,6 +6223,9 @@ function readCircuit(d) {
   for (const a of Array.isArray(d.pd) ? d.pd : []) { const p = Array.isArray(a) && ps[a[0]], v = p && pv.find(q => q.id === a[1]);
     if (p && v && isDrv(p) && (p.t !== 'htr' || v.kind === 'temperature')) Object.assign(p, { pv: v.id, rate: Math.max(0, fin(a[2], 1)), cool: Math.max(0, fin(a[3], 1)), per: a[4] === 'min' ? 'min' : 's', dir: a[5] === 'down' ? 'down' : 'up', off: a[6] === 'back' ? 'back' : 'hold' }); }
   for (const a of Array.isArray(d.ph) ? d.ph : []) { const p = Array.isArray(a) && ps[a[0]], v = p && pv.find(q => q.id === a[1]); if (p && v && p.t === 'htr' && v.kind === 'temperature') { p.pv = v.id; p.rate = Math.max(0, fin(a[2], 30)); p.cool = Math.max(0, fin(a[3], 10)); } }
+  // (process pictures: placed on the panel (pp), and outputs whose picture is hidden (pn))
+  for (const a of Array.isArray(d.pp) ? d.pp : []) { const v = Array.isArray(a) && pv.find(q => q.id === a[0]); if (v) v.pic = { x: snap(Math.max(0, Math.min(20000, fin(a[1], 0)))), y: snap(Math.max(0, Math.min(20000, fin(a[2], 0)))) }; }
+  for (const i of Array.isArray(d.pn) ? d.pn : []) { const p = ps[i]; if (p && isDrv(p)) p.nopic = true; }
   const w = Math.max(d.fw ? BAR_MIN : W_MIN, Math.min(20000, d.w === undefined ? W_MIN : num(d.w)));
   const ws = d.wires.slice(0, 2000).map(a => [num(a[0]), num(a[1]), num(a[2]), num(a[3])])
     .filter(([x1, y1, x2, y2]) => (x1 === x2 || y1 === y2) && (x1 !== x2 || y1 !== y2))
