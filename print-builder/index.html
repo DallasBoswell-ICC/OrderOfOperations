@@ -170,6 +170,13 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 
 /* the ribbon scrolls sideways when the interface is too big for the window */
 .ribwrap .ribbon { overflow-x: auto; overflow-y: hidden; }
+
+/* Save, and the file that is open */
+.split { display: flex; } .split #save-btn { border-radius: 8px 0 0 8px; } .split .more { border-radius: 0 8px 8px 0; border-left: 0; padding: 6px 8px; }
+#save-menu { left: auto; right: 0; } #save-menu .k { color: var(--faint); font-size: .8em; margin-left: 10px; }
+.file-label { font-size: .85rem; color: var(--muted); background: #26292d; border: 1px solid var(--line2); border-radius: 999px; padding: 3px 11px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-label.dirty { color: var(--gold); border-color: #5a4a14; }
+#save-menu button { white-space: nowrap; }
 </style>
 <style id="print-page"></style>
 </head>
@@ -178,6 +185,7 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
   <header class="top">
     <img class="logo" src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22%3E %3Crect width=%22512%22 height=%22512%22 rx=%22112%22 fill=%22%23ffffff%22/%3E %3Crect x=%2210%22 y=%2210%22 width=%22492%22 height=%22492%22 rx=%22104%22 fill=%22none%22 stroke=%22%23d5d9de%22 stroke-width=%228%22/%3E %3Cellipse cx=%22208%22 cy=%22296%22 rx=%22128%22 ry=%22146%22 fill=%22none%22 stroke=%22%231f5fbf%22 stroke-width=%2262%22/%3E %3Ctext x=%22402%22 y=%22232%22 text-anchor=%22middle%22 font-family=%22Arial, Helvetica, 'DejaVu Sans', sans-serif%22 font-weight=%22700%22 font-size=%22200%22 fill=%22%231f5fbf%22%3E3%3C/text%3E %3C/svg%3E" alt="O³">
     <h1>Order of Operations: <span>Print Builder</span></h1>
+    <span class="file-label" id="file-label" hidden></span>
     <div class="tb-btns">
       <div class="menuwrap"><button class="btn" id="new-btn" aria-haspopup="menu">New ▾</button>
         <div class="dmenu" id="new-menu" hidden>
@@ -185,7 +193,8 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
           <button data-new="starter">Example: Motor Starter</button>
                   </div></div>
       <button class="btn" id="open-btn">Open</button>
-      <button class="btn" id="save-btn">Save</button>
+      <div class="menuwrap split"><button class="btn" id="save-btn">Save</button><button class="btn more" id="save-more" title="More ways to save" aria-haspopup="menu">▾</button>
+        <div class="dmenu" id="save-menu" hidden><button id="saveas-btn">Save As a new file… <span class="k">Ctrl+Shift+S</span></button></div></div>
       <button class="btn" id="print-btn">Print</button>
       <label class="uisz" title="How big the buttons, menus and writing are (the sheet has its own zoom)">Size
         <select id="ui-size"><option value="1">Small</option><option value="1.15" selected>Medium</option><option value="1.3">Large</option><option value="1.5">Extra Large</option></select></label>
@@ -323,9 +332,11 @@ const LIB = {
   ol:      { cat: 'Protection', name: 'Overload Heater (1 line)', sym: 'Thermal Overload', pre: 'OL', kind: 'ol', poles: [[0, 1]] },
   sup:     { cat: 'Power', name: 'Phase (L1, L2, L3)', kind: 'supply' },
   xfmr:    { cat: 'Power', name: 'Transformer', sym: 'Control Transformer', pre: 'CPT', kind: 'xfmr' },
+  cnt_out: { cat: 'Continuation', name: 'Continues To (out)', sym: 'Continuation Out', kind: 'cont', flip: 'cnt_in' },
+  cnt_in:  { cat: 'Continuation', name: 'Continued From (in)', sym: 'Continuation In', kind: 'cont', flip: 'cnt_out' },
 };
-const CATS = ['Buttons', 'Switches', 'Outputs', 'Contacts', 'Protection', 'Power'];
-const CAT_COL = { 'Buttons': '#00B050', 'Switches': '#0070C0', 'Outputs': '#FFC000', 'Contacts': '#c9c9c9', 'Protection': '#e5484d', 'Power': '#FF9C37' };
+const CATS = ['Buttons', 'Switches', 'Outputs', 'Contacts', 'Protection', 'Power', 'Continuation'];
+const CAT_COL = { 'Buttons': '#00B050', 'Switches': '#0070C0', 'Outputs': '#FFC000', 'Contacts': '#c9c9c9', 'Protection': '#e5484d', 'Power': '#FF9C37', 'Continuation': '#a26bf5' };
 // the motor as Circuit Builder prints it: T1, T2, T3 on its left, a line apart like the power circuit's poles, T2's
 // lead straight in, T1's and T3's bending in to the circle (so its wires come in level, on the grid)
 // the fused disconnect, Dallas's design drawn at the same size as the plain disconnect and a single fuse (its switch
@@ -333,6 +344,11 @@ const CAT_COL = { 'Buttons': '#00B050', 'Switches': '#0070C0', 'Outputs': '#FFC0
 PSYM['3PH Fusible Disconnect'] = { b: '<path d="M-70 -120L-10 -150" fill="none"/><circle cx="-70" cy="-120" r="10" fill="#000" stroke="none"/><circle cx="-70" cy="-120" r="6" fill="#fff" stroke="none"/><circle cx="-10" cy="-120" r="10" fill="#000" stroke="none"/><circle cx="-10" cy="-120" r="6" fill="#fff" stroke="none"/><path d="M0 -120H14M66 -120H80" fill="none"/><rect x="14" y="-130" width="52" height="20" fill="#fff" stroke="#000" stroke-width="4"/><rect x="22" y="-130" width="36" height="20" fill="#fff" stroke="#000" stroke-width="4"/><path d="M-70 0L-10 -30" fill="none"/><circle cx="-70" cy="0" r="10" fill="#000" stroke="none"/><circle cx="-70" cy="0" r="6" fill="#fff" stroke="none"/><circle cx="-10" cy="0" r="10" fill="#000" stroke="none"/><circle cx="-10" cy="0" r="6" fill="#fff" stroke="none"/><path d="M0 0H14M66 0H80" fill="none"/><rect x="14" y="-10" width="52" height="20" fill="#fff" stroke="#000" stroke-width="4"/><rect x="22" y="-10" width="36" height="20" fill="#fff" stroke="#000" stroke-width="4"/><path d="M-70 120L-10 90" fill="none"/><circle cx="-70" cy="120" r="10" fill="#000" stroke="none"/><circle cx="-70" cy="120" r="6" fill="#fff" stroke="none"/><circle cx="-10" cy="120" r="10" fill="#000" stroke="none"/><circle cx="-10" cy="120" r="6" fill="#fff" stroke="none"/><path d="M0 120H14M66 120H80" fill="none"/><rect x="14" y="110" width="52" height="20" fill="#fff" stroke="#000" stroke-width="4"/><rect x="22" y="110" width="36" height="20" fill="#fff" stroke="#000" stroke-width="4"/><rect x="-42" y="-135" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="-125" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="-115" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="-105" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="-95" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="-85" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="-75" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="-65" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="-55" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="-45" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="-35" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="-25" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="-15" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="-5" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="5" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="15" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="25" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="35" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="45" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="55" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="65" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="75" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="85" width="4" height="6" fill="#000" stroke="none"/><rect x="-42" y="95" width="4" height="6" fill="#000" stroke="none"/>', t: [[-80, -120], [80, -120], [-80, 0], [80, 0], [-80, 120], [80, 120]], y0: -155, y1: 135 };
 // relay coils as wide as a contact (80, terminal to terminal), so they don't look small beside them
 PSYM.Relay = { b: '<circle cx="0" cy="0" r="40" fill="#000" stroke="none"/><circle cx="0" cy="0" r="36" fill="#fff" stroke="none"/>', t: [[-40, 0], [40, 0]], y0: -40, y1: 40 };
+// continuation arrows (off-page connectors): a wire that carries on elsewhere (another sheet, or further down this
+// one) ends in an arrow with a letter in it, and starts again from an arrow with the same letter. Out: the wire comes
+// in from the left and the arrow points on; In: the arrow points into the wire, which goes on to the right.
+PSYM['Continuation Out'] = { b: '<path d="M-40 0H-26" fill="none"/><path d="M-26 -22H14L36 0L14 22H-26Z" fill="#fff"/>', t: [[-40, 0]], y0: -22, y1: 22 };
+PSYM['Continuation In'] = { b: '<path d="M26 0H40" fill="none"/><path d="M-36 -22H4L26 0L4 22H-36Z" fill="#fff"/>', t: [[40, 0]], y0: -22, y1: 22 };
 PSYM['Motor Leads'] = { b: PSYM.Motor.b + '<path d="M-140 -120H-120L-42.426 -42.426M-140 0H-60M-140 120H-120L-42.426 42.426" fill="none"/>', t: [[-140, -120], [-140, 0], [-140, 120]], y0: -124, y1: 124 };
 // a coil's kinds: the start of its tag
 const COIL_PRE = [['CR', 'Control Relay'], ['M', 'Starter'], ['TR', 'Timer'], ['CON', 'Contactor']];
@@ -630,6 +646,10 @@ function defaultTag(t) {
   if (k === 'contact') return lastCoil || (allParts().find(q => q.p.t === 'coil') || {}).p?.tag || '';
   if (k === 'starter') { const m = allParts().find(q => q.p.t === 'coil' && /^M\d*$/.test(q.p.tag || '')); return m ? m.p.tag : 'M1'; }
   if (k === 'olc') { const o = allParts().find(q => LIB[q.p.t].kind === 'ol'); return o ? o.p.tag : 'OL1'; }
+  if (k === 'cont') {   // (an arrow out: the next letter not used yet; in: the first out with no in to match it)
+    const outs = allParts().filter(q => q.p.t === 'cnt_out').map(q => q.p.tag), ins = new Set(allParts().filter(q => q.p.t === 'cnt_in').map(q => q.p.tag));
+    if (t === 'cnt_in') { const open = outs.find(x => x && !ins.has(x)); if (open) return open; }
+    const used = new Set([...outs, ...ins]); for (const c of 'ABCDEFGHJKLMNPQRSTUVWXYZ') if (!used.has(c)) return c; return 'A'; }
   if (t === 'sup') { const used = new Set(allParts().filter(q => q.p.t === 'sup').map(q => q.p.tag)); return ['L1', 'L2', 'L3'].find(l => !used.has(l)) || 'L1'; }
   return nextTag(LIB[t].pre, LIB[t].kind === 'motor');
 }
@@ -706,6 +726,7 @@ function analyse(D = doc) {
       if (p.t === 'rail') { mk('RAIL:' + p.label); continue; }
       for (let i = 0; i < termsN(p); i++) { const kk = mk(s.id + ':p:' + p.id + ':' + i), [x, y] = termPos(p, i); terms.push({ s, k, p, i, key: kk, x, y }); here(x, y, kk); }
       if (p.t === 'sup' && p.tag) join(s.id + ':p:' + p.id + ':0', 'SUP:' + p.tag);
+      if (LIB[p.t] && LIB[p.t].kind === 'cont' && p.tag) join(s.id + ':p:' + p.id + ':0', 'CONT:' + p.tag);   // (continuations with one letter are one wire)
     }
     for (const n of s.nodes) here(n.x, n.y, s.id + ':n:' + n.id);
     for (const w of s.wires) join(key(s, w.a), key(s, w.b));
@@ -837,6 +858,9 @@ function checkPrint(A = analyse()) {
   for (const [k, xs] of byTag) if (xs.length > 1) { const t = k.replace('motor:', ''); dups++;
     add('e', `${xs.length} devices are tagged ${t}`, `${[...new Set(xs.map(x => LIB[x.p.t].name))].join(' and ')}: each needs a tag of its own (only contacts share their coil’s).`, xs.map(pk)); }
   for (const x of parts) if (!x.p.tag) add('w', `A ${LIB[x.p.t].name.toLowerCase()} has no tag`, 'Give it one in its properties.', [pk(x)]);
+  // continuations: each letter wants an arrow out and an arrow in
+  for (const x of parts) if (LIB[x.p.t].kind === 'cont' && x.p.tag) { const other = x.p.t === 'cnt_out' ? 'cnt_in' : 'cnt_out';
+    if (!parts.some(y => y.p.t === other && y.p.tag === x.p.tag)) add('w', `Continuation ${x.p.tag} goes nowhere`, x.p.t === 'cnt_out' ? `Put a “Continued From” arrow lettered ${x.p.tag} where the wire picks up again (on the next sheet).` : `Nothing continues to ${x.p.tag}: put a “Continues To” arrow lettered ${x.p.tag} where the wire leaves off.`, [pk(x)]); }
   // contacts and their coils
   const coils = new Set(parts.filter(x => kindOf(x.p) === 'coil').map(x => x.p.tag)), ols = new Set(parts.filter(x => kindOf(x.p) === 'ol').map(x => x.p.tag));
   const orphan = new Map();
@@ -897,6 +921,14 @@ let LABS = [], PLABS = [];                     // (PLABS: the parts' tags and la
 // how far a part's name, label or one of its fuse numbers has been dragged (each on its own), and setting it
 const labOff = (p, which) => (which === 'tag' ? p.lt : which === 'desc' ? p.ld : (p.lf || {})[which]) || [0, 0];
 function setLabOff(p, which, v) { if (which === 'tag') p.lt = v; else if (which === 'desc') p.ld = v; else (p.lf ||= {})[which] = v; }
+// a continuation's note: TO / FROM the other sheet with its letter (or, on the same sheet, the rung)
+function contNote(p, k) {
+  const other = p.t === 'cnt_out' ? 'cnt_in' : 'cnt_out', m = allParts().find(q => q.p.t === other && q.p.tag === p.tag);
+  if (!m) return p.t === 'cnt_out' ? 'TO ?' : 'FROM ?';
+  const w = p.t === 'cnt_out' ? 'TO' : 'FROM';
+  if (m.k !== k) return `${w} SHEET ${m.k + 1}`;
+  const rn = A && A.rung && A.rung.get(m.p.id); return rn ? `${w} RUNG ${rn}` : `${w} ${m.p.tag}`;
+}
 function lblBox(x, y, t, size, anchor) { const w = String(t).length * size * .62, x0 = anchor === 'start' ? x : anchor === 'end' ? x - w : x - w / 2; return { x0, x1: x0 + w, y0: y - size * .8, y1: y + size * .15 }; }                                 // the wire numbers on the sheet on screen: { id (its wire), l, x, y, anchor, x0..y1 }
 const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -933,6 +965,9 @@ function drawSheet(s, k, A) {
     if (p.t === 'sup') { arrow(p.x, p.y, 1, 0); tagT(p.x - 30, p.y + 10, p.tag, 28, 'end'); continue; }
     const sym = PSYM[LIB[p.t].sym], r = p.rot || 0, kind = LIB[p.t].kind;
     g += `<g class="sym" transform="translate(${p.x} ${p.y})${r ? ` rotate(${r})` : ''}">${sym.b}</g>`;
+    if (kind === 'cont') {   // (its letter inside the arrow; under it, where it goes or comes from)
+      const cx = p.x + (p.t === 'cnt_out' ? -6 : -6); text(cx, p.y + 9, p.tag, (p.tag || '').length > 2 ? 18 : 24);
+      descT(p.x, p.y + 46, p.desc || contNote(p, k), 18); continue; }
     const up = r % 180 !== 0, inside = (kind === 'coil' && (p.tag || '').length <= 4) || kind === 'motor';
     if (up) { const off = Math.max(Math.abs(sym.y0), Math.abs(sym.y1)) + 10; tagT(p.x + off, p.y + 9, p.tag, 26, 'start'); if (p.desc) descT(p.x + off, p.y + 34, p.desc, 20, 'start'); }
     else {
@@ -1373,7 +1408,7 @@ function pasteClip(where = null) {
     const k = kindOf(p);
     if (k === 'contact' || k === 'starter') p.tag = tagMap.get(p.tag) || p.tag;
     else if (k === 'olc') p.tag = tagMap.get('OL:' + p.tag) || p.tag;
-    else if (k !== 'supply') p.tag = nextTag(LIB[p.t].pre, k === 'motor');
+    else if (k !== 'supply' && k !== 'cont') p.tag = nextTag(LIB[p.t].pre, k === 'motor');
     if (p.t === 'fdsc3') { p.fu = ''; p.tag = nextTag(LIB[p.t].pre); p.fu = nextTag('FU'); }
     p.id = id(p.id); p.x += dx; p.y += dy; add(p);
   }
@@ -1447,7 +1482,7 @@ function startPlacing(t) { placing = { t, rot: 0 }; sel = new Set(); selW = null
 /* ---------- the palette and the ribbon's menus ---------- */
 const thumb = t => { if (t === 'sup') return `<svg viewBox="-80 -30 100 60"><path d="M-22 -13L-22 13L0 0Z" fill="#000"/><line x1="0" y1="0" x2="18" y2="0" stroke="#000" stroke-width="4"/><text x="-30" y="9" font-size="26" font-weight="700" text-anchor="end" font-family="Arial">L1</text></svg>`;
   const s = PSYM[LIB[t].sym], e = extentOf(t), pad = 8; return `<svg viewBox="${e.x0 - pad} ${s.y0 - pad} ${e.x1 - e.x0 + 2 * pad} ${s.y1 - s.y0 + 2 * pad}"><g fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${s.b}</g></svg>`; };
-const short = n => n.replace('Pushbutton', 'PB').replace('Emergency Stop', 'E-Stop').replace('Temperature', 'Temp.').replace('Proximity', 'Prox.').replace('Selector Switch', 'Selector').replace(', Held Closed', ' (HC)').replace(', Held Open', ' (HO)').replace('Toggle Switch (SPST)', 'Toggle').replace('Overload Heater (1 line)', 'OL Heater').replace('Phase (L1, L2, L3)', 'Phase').replace('3-Phase', '3Ø');
+const short = n => n.replace(' (out)', '').replace(' (in)', '').replace('Pushbutton', 'PB').replace('Emergency Stop', 'E-Stop').replace('Temperature', 'Temp.').replace('Proximity', 'Prox.').replace('Selector Switch', 'Selector').replace(', Held Closed', ' (HC)').replace(', Held Open', ' (HO)').replace('Toggle Switch (SPST)', 'Toggle').replace('Overload Heater (1 line)', 'OL Heater').replace('Phase (L1, L2, L3)', 'Phase').replace('3-Phase', '3Ø');
 function buildPalette() {
   let h = '';
   for (const c of CATS) { h += `<div class="ph">${c}</div><div class="pg">`;
@@ -1536,10 +1571,11 @@ function renderProps0() {
     P.innerHTML = `<h4>${esc(d.name)}${p.tag ? ' ' + esc(p.t === 'fus3' ? tagsOf(p)[0] + '–' + tagsOf(p)[2] : p.tag) : ''}</h4>
       ${p.t === 'sup' ? `<div class="f">Line<div class="seg">${['L1', 'L2', 'L3'].map(l => `<button data-line="${l}" aria-pressed="${p.tag === l}">${l}</button>`).join('')}</div></div>` : `
       ${k === 'contact' || k === 'starter' || k === 'olc' ? `<div class="f">Worked by<select id="p-of">${[...new Set([...list, p.tag].filter(Boolean))].map(x => `<option value="${esc(x)}"${x === p.tag ? ' selected' : ''}>${esc(x)}${list.includes(x) ? '' : ' (no ' + (k === 'olc' ? 'overload' : 'coil') + ' yet)'}</option>`).join('')}${list.length || p.tag ? '' : `<option value="">(place a ${k === 'olc' ? 'overload' : 'coil'} first)</option>`}<option value="__other">Other…</option></select></div>`
-        : `<div class="f">${k === 'coil' || k === 'sw' ? 'Letter' : 'Number'}<input class="in" id="p-tag" value="${esc(p.tag)}" autocomplete="off"></div>`}`}
+        : `<div class="f">${k === 'coil' || k === 'sw' || k === 'cont' ? 'Letter' : 'Number'}<input class="in" id="p-tag" value="${esc(p.tag)}" autocomplete="off"></div>`}`}
       ${p.t === 'fdsc3' ? `<div class="f">Fuses<input class="in" id="p-fu" value="${esc(p.fu || '')}" autocomplete="off" title="The first of its three fuses: FU1 makes them FU1, FU2, FU3"></div><div class="f">&nbsp;<span class="ro">${esc(tagsOf(p).slice(1).join(', '))}</span></div>` : ''}
       ${k === 'coil' ? `<div class="f">Kind<select id="p-pre">${COIL_PRE.map(([v, n]) => `<option value="${v}"${(p.pre || 'CR') === v ? ' selected' : ''}>${n} (${v})</option>`).join('')}</select></div>` : ''}
-      ${d.flip ? `<div class="f">Contact<div class="seg"><button data-flip="${/_no$|_hc$/.test(p.t) ? p.t : d.flip}" aria-pressed="${/_no$|_hc$/.test(p.t)}">${/_h[co]$/.test(p.t) ? 'NO (HC)' : 'NO'}</button><button data-flip="${/_nc$|_ho$/.test(p.t) ? p.t : d.flip}" aria-pressed="${/_nc$|_ho$/.test(p.t)}">${/_h[co]$/.test(p.t) ? 'NC (HO)' : 'NC'}</button></div></div>` : ''}
+      ${k === 'cont' ? `<div class="f">Direction<div class="seg"><button data-flip="cnt_out" aria-pressed="${p.t === 'cnt_out'}">Continues To</button><button data-flip="cnt_in" aria-pressed="${p.t === 'cnt_in'}">Continued From</button></div></div><p class="help">Give the arrow where the wire leaves off and the arrow where it picks up the same letter: they are one wire, numbered alike, and each says where the other is.</p>` : ''}
+      ${d.flip && k !== 'cont' ? `<div class="f">Contact<div class="seg"><button data-flip="${/_no$|_hc$/.test(p.t) ? p.t : d.flip}" aria-pressed="${/_no$|_hc$/.test(p.t)}">${/_h[co]$/.test(p.t) ? 'NO (HC)' : 'NO'}</button><button data-flip="${/_nc$|_ho$/.test(p.t) ? p.t : d.flip}" aria-pressed="${/_nc$|_ho$/.test(p.t)}">${/_h[co]$/.test(p.t) ? 'NC (HO)' : 'NC'}</button></div></div>` : ''}
       ${p.t !== 'sup' ? `<div class="f">Label<input class="in" id="p-desc" value="${esc(p.desc)}" placeholder="${k === 'load' && p.t === 'pl' ? 'e.g. RED' : 'e.g. HIGH TEMP'}"></div>` : ''}
       ${rn ? `<div class="f">Rung<span class="ro">${rn} (automatic)</span></div>` : ''}
       ${termNums.length ? `<div class="f">Wires<span class="ro">${termNums.join(' → ')} (automatic)</span></div>` : ''}
@@ -1672,7 +1708,7 @@ window.addEventListener('resize', () => { if (svg) { VB = fitDraw(host.firstElem
 
 /* ---------- files ---------- */
 let saveT = null;
-function autosave() { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(AUTOSAVE, JSON.stringify(doc)); localStorage.setItem(SHOWKEY, JSON.stringify(SHOW)); } catch (_) {} }, 400); }
+function autosave() { showFileLabel(); clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(AUTOSAVE, JSON.stringify(doc)); localStorage.setItem(SHOWKEY, JSON.stringify(SHOW)); } catch (_) {} }, 400); }
 function loadDoc(d) {
   if (!d || d.kind !== 'o3-print' || !Array.isArray(d.sheets) || !d.sheets.length) throw new Error('not a Print Builder file');
   for (const s of d.sheets) { s.parts ||= []; s.wires ||= []; s.nodes ||= []; s.texts ||= []; for (const p of s.parts) if (p.t !== 'rail' && !LIB[p.t]) throw new Error('unknown symbol ' + p.t); }
@@ -1682,19 +1718,56 @@ function loadDoc(d) {
   for (const s of d.sheets) for (const p of s.parts) if (p.t === 'fdsc3' && !p.fu) p.fu = nextTag('FU');
 }
 const fileName = () => ((doc.tb.fields.find(f => /title/i.test(f.label)) || {}).value || 'Print').replace(/[\\/:*?"<>|]+/g, '').trim() || 'Print';
-$('save-btn').addEventListener('click', () => {
+/* ---------- files, as in Circuit Builder: where the browser allows it (Chrome and Edge, and the installed app), the
+   print keeps hold of the file it was opened from or first saved to, and Save writes straight back into that file;
+   Save As makes a new one. Elsewhere Save hands over a new copy to download. ---------- */
+let fileHandle = null, savedJSON = null;
+const FILE_TYPES = [{ description: 'Print Builder print', accept: { 'application/json': ['.json'] } }];
+const canUseFiles = () => typeof window.showSaveFilePicker === 'function' && typeof window.showOpenFilePicker === 'function' && window.self === window.top;
+const docJSON = () => JSON.stringify(doc);
+function markSaved() { savedJSON = docJSON(); showFileLabel(); }
+function forgetFile() { fileHandle = null; savedJSON = null; showFileLabel(); }
+function showFileLabel() {
+  const lab = $('file-label'), dirty = !!fileHandle && savedJSON !== null && docJSON() !== savedJSON;
+  lab.hidden = !fileHandle; lab.textContent = fileHandle ? (dirty ? '● ' : '') + fileHandle.name : ''; lab.classList.toggle('dirty', dirty);
+  lab.title = fileHandle ? (dirty ? 'Changes not saved yet: Save (Ctrl+S) writes them into ' : 'Everything is saved in ') + fileHandle.name : '';
+  $('save-btn').title = fileHandle ? `Save into ${fileHandle.name} (Ctrl+S)` : 'Save this print as a file (Ctrl+S)';
+}
+function downloadCopy() {
   const b = new Blob([JSON.stringify(doc, null, 1)], { type: 'application/json' }), a = document.createElement('a');
   a.href = URL.createObjectURL(b); a.download = fileName() + '.o3print.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-  say('Saved to your Downloads as ' + a.download);
-});
-$('open-btn').addEventListener('click', () => $('file-in').click());
-$('file-in').addEventListener('change', async e => {
-  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-  try { const d = JSON.parse(await f.text()); snapshot(); const keep = UNDO.slice(); loadDoc(d); UNDO.push(...keep); refresh(true); fitZoom(); say('Opened ' + f.name); }
+  return 'Saved to your Downloads as ' + a.download + '. (This browser saves a new copy each time; Chrome or Edge save back into the same file.)';
+}
+async function saveToFile(asNew) {
+  if (!canUseFiles()) return downloadCopy();
+  try {
+    if (!fileHandle || asNew) fileHandle = await window.showSaveFilePicker({ suggestedName: fileName() + '.o3print.json', types: FILE_TYPES });
+    const w = await fileHandle.createWritable(); await w.write(JSON.stringify(doc, null, 1)); await w.close();
+    markSaved(); return 'Saved into ' + fileHandle.name + '.';
+  } catch (e) {
+    if (e && e.name === 'AbortError') return 'Not saved.';
+    if (e && (e.name === 'SecurityError' || e.name === 'NotAllowedError')) return downloadCopy();
+    return 'Could not save: ' + (e && e.message || e);
+  }
+}
+async function openFile(f, handle) {
+  try { const d = JSON.parse(await f.text()); snapshot(); const keep = UNDO.slice(); loadDoc(d); UNDO.push(...keep); fileHandle = handle || null; refresh(true); fitZoom(); markSaved(); say('Opened ' + f.name + (handle ? '. Save writes your changes back into it.' : '')); }
   catch (err) { alert('That file could not be opened: it is not a Print Builder file (' + err.message + ').'); }
-});
+}
+async function pickAndOpen() {
+  if (canUseFiles()) {
+    try { const [h] = await window.showOpenFilePicker({ types: FILE_TYPES }); await openFile(await h.getFile(), h); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; if (!(e && (e.name === 'SecurityError' || e.name === 'NotAllowedError'))) { alert('Could not open: ' + (e.message || e)); return; } }
+  }
+  $('file-in').click();
+}
+$('save-btn').addEventListener('click', async () => say(await saveToFile(false)));
+$('saveas-btn').addEventListener('click', async e => { e.stopPropagation(); closeMenus(); say(await saveToFile(true)); });
+$('save-more').addEventListener('click', e => { e.stopPropagation(); const m = $('save-menu'), o = m.hidden; closeMenus(); m.hidden = !o; });
+$('open-btn').addEventListener('click', pickAndOpen);
+$('file-in').addEventListener('change', async e => { const f = e.target.files[0]; e.target.value = ''; if (f) openFile(f, null); });
 $('new-btn').addEventListener('click', e => { e.stopPropagation(); const m = $('new-menu'), o = m.hidden; closeMenus(); m.hidden = !o; });
-for (const b of document.querySelectorAll('[data-new]')) b.addEventListener('click', () => { closeMenus(); snapshot(); const keep = UNDO.slice(); loadDoc(template(b.dataset.new)); UNDO.push(...keep); refresh(true); fitZoom(); });
+for (const b of document.querySelectorAll('[data-new]')) b.addEventListener('click', () => { closeMenus(); snapshot(); const keep = UNDO.slice(); loadDoc(template(b.dataset.new)); UNDO.push(...keep); forgetFile(); refresh(true); fitZoom(); });
 
 /* ---------- printing: every sheet, each on its own page the right way round ---------- */
 function printAll() {
@@ -1725,7 +1798,7 @@ document.addEventListener('keydown', e => {
     const k = e.key.toLowerCase();
     if (k === 'z' && !e.shiftKey) { e.preventDefault(); $('undo-btn').click(); return; }
     if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); $('redo-btn').click(); return; }
-    if (k === 's') { e.preventDefault(); $('save-btn').click(); return; }
+    if (k === 's') { e.preventDefault(); (async () => say(await saveToFile(e.shiftKey)))(); return; }
     if (k === 'p') { e.preventDefault(); printAll(); return; }
     if (k === 'c') { e.preventDefault(); copySel(); return; }
     if (k === 'x') { e.preventDefault(); cutSel(); return; }

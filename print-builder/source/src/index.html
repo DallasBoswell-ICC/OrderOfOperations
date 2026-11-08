@@ -18,6 +18,7 @@
   <header class="top">
     <img class="logo" src="%ICON%" alt="O³">
     <h1>Order of Operations: <span>Print Builder</span></h1>
+    <span class="file-label" id="file-label" hidden></span>
     <div class="tb-btns">
       <div class="menuwrap"><button class="btn" id="new-btn" aria-haspopup="menu">New ▾</button>
         <div class="dmenu" id="new-menu" hidden>
@@ -25,7 +26,8 @@
           <button data-new="starter">Example: Motor Starter</button>
                   </div></div>
       <button class="btn" id="open-btn">Open</button>
-      <button class="btn" id="save-btn">Save</button>
+      <div class="menuwrap split"><button class="btn" id="save-btn">Save</button><button class="btn more" id="save-more" title="More ways to save" aria-haspopup="menu">▾</button>
+        <div class="dmenu" id="save-menu" hidden><button id="saveas-btn">Save As a new file… <span class="k">Ctrl+Shift+S</span></button></div></div>
       <button class="btn" id="print-btn">Print</button>
       <label class="uisz" title="How big the buttons, menus and writing are (the sheet has its own zoom)">Size
         <select id="ui-size"><option value="1">Small</option><option value="1.15" selected>Medium</option><option value="1.3">Large</option><option value="1.5">Extra Large</option></select></label>

@@ -158,3 +158,10 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 
 /* the ribbon scrolls sideways when the interface is too big for the window */
 .ribwrap .ribbon { overflow-x: auto; overflow-y: hidden; }
+
+/* Save, and the file that is open */
+.split { display: flex; } .split #save-btn { border-radius: 8px 0 0 8px; } .split .more { border-radius: 0 8px 8px 0; border-left: 0; padding: 6px 8px; }
+#save-menu { left: auto; right: 0; } #save-menu .k { color: var(--faint); font-size: .8em; margin-left: 10px; }
+.file-label { font-size: .85rem; color: var(--muted); background: #26292d; border: 1px solid var(--line2); border-radius: 999px; padding: 3px 11px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-label.dirty { color: var(--gold); border-color: #5a4a14; }
+#save-menu button { white-space: nowrap; }

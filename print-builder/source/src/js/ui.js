@@ -57,7 +57,7 @@ function startPlacing(t) { placing = { t, rot: 0 }; sel = new Set(); selW = null
 /* ---------- the palette and the ribbon's menus ---------- */
 const thumb = t => { if (t === 'sup') return `<svg viewBox="-80 -30 100 60"><path d="M-22 -13L-22 13L0 0Z" fill="#000"/><line x1="0" y1="0" x2="18" y2="0" stroke="#000" stroke-width="4"/><text x="-30" y="9" font-size="26" font-weight="700" text-anchor="end" font-family="Arial">L1</text></svg>`;
   const s = PSYM[LIB[t].sym], e = extentOf(t), pad = 8; return `<svg viewBox="${e.x0 - pad} ${s.y0 - pad} ${e.x1 - e.x0 + 2 * pad} ${s.y1 - s.y0 + 2 * pad}"><g fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${s.b}</g></svg>`; };
-const short = n => n.replace('Pushbutton', 'PB').replace('Emergency Stop', 'E-Stop').replace('Temperature', 'Temp.').replace('Proximity', 'Prox.').replace('Selector Switch', 'Selector').replace(', Held Closed', ' (HC)').replace(', Held Open', ' (HO)').replace('Toggle Switch (SPST)', 'Toggle').replace('Overload Heater (1 line)', 'OL Heater').replace('Phase (L1, L2, L3)', 'Phase').replace('3-Phase', '3Ø');
+const short = n => n.replace(' (out)', '').replace(' (in)', '').replace('Pushbutton', 'PB').replace('Emergency Stop', 'E-Stop').replace('Temperature', 'Temp.').replace('Proximity', 'Prox.').replace('Selector Switch', 'Selector').replace(', Held Closed', ' (HC)').replace(', Held Open', ' (HO)').replace('Toggle Switch (SPST)', 'Toggle').replace('Overload Heater (1 line)', 'OL Heater').replace('Phase (L1, L2, L3)', 'Phase').replace('3-Phase', '3Ø');
 function buildPalette() {
   let h = '';
   for (const c of CATS) { h += `<div class="ph">${c}</div><div class="pg">`;
@@ -146,10 +146,11 @@ function renderProps0() {
     P.innerHTML = `<h4>${esc(d.name)}${p.tag ? ' ' + esc(p.t === 'fus3' ? tagsOf(p)[0] + '–' + tagsOf(p)[2] : p.tag) : ''}</h4>
       ${p.t === 'sup' ? `<div class="f">Line<div class="seg">${['L1', 'L2', 'L3'].map(l => `<button data-line="${l}" aria-pressed="${p.tag === l}">${l}</button>`).join('')}</div></div>` : `
       ${k === 'contact' || k === 'starter' || k === 'olc' ? `<div class="f">Worked by<select id="p-of">${[...new Set([...list, p.tag].filter(Boolean))].map(x => `<option value="${esc(x)}"${x === p.tag ? ' selected' : ''}>${esc(x)}${list.includes(x) ? '' : ' (no ' + (k === 'olc' ? 'overload' : 'coil') + ' yet)'}</option>`).join('')}${list.length || p.tag ? '' : `<option value="">(place a ${k === 'olc' ? 'overload' : 'coil'} first)</option>`}<option value="__other">Other…</option></select></div>`
-        : `<div class="f">${k === 'coil' || k === 'sw' ? 'Letter' : 'Number'}<input class="in" id="p-tag" value="${esc(p.tag)}" autocomplete="off"></div>`}`}
+        : `<div class="f">${k === 'coil' || k === 'sw' || k === 'cont' ? 'Letter' : 'Number'}<input class="in" id="p-tag" value="${esc(p.tag)}" autocomplete="off"></div>`}`}
       ${p.t === 'fdsc3' ? `<div class="f">Fuses<input class="in" id="p-fu" value="${esc(p.fu || '')}" autocomplete="off" title="The first of its three fuses: FU1 makes them FU1, FU2, FU3"></div><div class="f">&nbsp;<span class="ro">${esc(tagsOf(p).slice(1).join(', '))}</span></div>` : ''}
       ${k === 'coil' ? `<div class="f">Kind<select id="p-pre">${COIL_PRE.map(([v, n]) => `<option value="${v}"${(p.pre || 'CR') === v ? ' selected' : ''}>${n} (${v})</option>`).join('')}</select></div>` : ''}
-      ${d.flip ? `<div class="f">Contact<div class="seg"><button data-flip="${/_no$|_hc$/.test(p.t) ? p.t : d.flip}" aria-pressed="${/_no$|_hc$/.test(p.t)}">${/_h[co]$/.test(p.t) ? 'NO (HC)' : 'NO'}</button><button data-flip="${/_nc$|_ho$/.test(p.t) ? p.t : d.flip}" aria-pressed="${/_nc$|_ho$/.test(p.t)}">${/_h[co]$/.test(p.t) ? 'NC (HO)' : 'NC'}</button></div></div>` : ''}
+      ${k === 'cont' ? `<div class="f">Direction<div class="seg"><button data-flip="cnt_out" aria-pressed="${p.t === 'cnt_out'}">Continues To</button><button data-flip="cnt_in" aria-pressed="${p.t === 'cnt_in'}">Continued From</button></div></div><p class="help">Give the arrow where the wire leaves off and the arrow where it picks up the same letter: they are one wire, numbered alike, and each says where the other is.</p>` : ''}
+      ${d.flip && k !== 'cont' ? `<div class="f">Contact<div class="seg"><button data-flip="${/_no$|_hc$/.test(p.t) ? p.t : d.flip}" aria-pressed="${/_no$|_hc$/.test(p.t)}">${/_h[co]$/.test(p.t) ? 'NO (HC)' : 'NO'}</button><button data-flip="${/_nc$|_ho$/.test(p.t) ? p.t : d.flip}" aria-pressed="${/_nc$|_ho$/.test(p.t)}">${/_h[co]$/.test(p.t) ? 'NC (HO)' : 'NC'}</button></div></div>` : ''}
       ${p.t !== 'sup' ? `<div class="f">Label<input class="in" id="p-desc" value="${esc(p.desc)}" placeholder="${k === 'load' && p.t === 'pl' ? 'e.g. RED' : 'e.g. HIGH TEMP'}"></div>` : ''}
       ${rn ? `<div class="f">Rung<span class="ro">${rn} (automatic)</span></div>` : ''}
       ${termNums.length ? `<div class="f">Wires<span class="ro">${termNums.join(' → ')} (automatic)</span></div>` : ''}
@@ -282,7 +283,7 @@ window.addEventListener('resize', () => { if (svg) { VB = fitDraw(host.firstElem
 
 /* ---------- files ---------- */
 let saveT = null;
-function autosave() { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(AUTOSAVE, JSON.stringify(doc)); localStorage.setItem(SHOWKEY, JSON.stringify(SHOW)); } catch (_) {} }, 400); }
+function autosave() { showFileLabel(); clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(AUTOSAVE, JSON.stringify(doc)); localStorage.setItem(SHOWKEY, JSON.stringify(SHOW)); } catch (_) {} }, 400); }
 function loadDoc(d) {
   if (!d || d.kind !== 'o3-print' || !Array.isArray(d.sheets) || !d.sheets.length) throw new Error('not a Print Builder file');
   for (const s of d.sheets) { s.parts ||= []; s.wires ||= []; s.nodes ||= []; s.texts ||= []; for (const p of s.parts) if (p.t !== 'rail' && !LIB[p.t]) throw new Error('unknown symbol ' + p.t); }
@@ -292,19 +293,56 @@ function loadDoc(d) {
   for (const s of d.sheets) for (const p of s.parts) if (p.t === 'fdsc3' && !p.fu) p.fu = nextTag('FU');
 }
 const fileName = () => ((doc.tb.fields.find(f => /title/i.test(f.label)) || {}).value || 'Print').replace(/[\\/:*?"<>|]+/g, '').trim() || 'Print';
-$('save-btn').addEventListener('click', () => {
+/* ---------- files, as in Circuit Builder: where the browser allows it (Chrome and Edge, and the installed app), the
+   print keeps hold of the file it was opened from or first saved to, and Save writes straight back into that file;
+   Save As makes a new one. Elsewhere Save hands over a new copy to download. ---------- */
+let fileHandle = null, savedJSON = null;
+const FILE_TYPES = [{ description: 'Print Builder print', accept: { 'application/json': ['.json'] } }];
+const canUseFiles = () => typeof window.showSaveFilePicker === 'function' && typeof window.showOpenFilePicker === 'function' && window.self === window.top;
+const docJSON = () => JSON.stringify(doc);
+function markSaved() { savedJSON = docJSON(); showFileLabel(); }
+function forgetFile() { fileHandle = null; savedJSON = null; showFileLabel(); }
+function showFileLabel() {
+  const lab = $('file-label'), dirty = !!fileHandle && savedJSON !== null && docJSON() !== savedJSON;
+  lab.hidden = !fileHandle; lab.textContent = fileHandle ? (dirty ? '● ' : '') + fileHandle.name : ''; lab.classList.toggle('dirty', dirty);
+  lab.title = fileHandle ? (dirty ? 'Changes not saved yet: Save (Ctrl+S) writes them into ' : 'Everything is saved in ') + fileHandle.name : '';
+  $('save-btn').title = fileHandle ? `Save into ${fileHandle.name} (Ctrl+S)` : 'Save this print as a file (Ctrl+S)';
+}
+function downloadCopy() {
   const b = new Blob([JSON.stringify(doc, null, 1)], { type: 'application/json' }), a = document.createElement('a');
   a.href = URL.createObjectURL(b); a.download = fileName() + '.o3print.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-  say('Saved to your Downloads as ' + a.download);
-});
-$('open-btn').addEventListener('click', () => $('file-in').click());
-$('file-in').addEventListener('change', async e => {
-  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-  try { const d = JSON.parse(await f.text()); snapshot(); const keep = UNDO.slice(); loadDoc(d); UNDO.push(...keep); refresh(true); fitZoom(); say('Opened ' + f.name); }
+  return 'Saved to your Downloads as ' + a.download + '. (This browser saves a new copy each time; Chrome or Edge save back into the same file.)';
+}
+async function saveToFile(asNew) {
+  if (!canUseFiles()) return downloadCopy();
+  try {
+    if (!fileHandle || asNew) fileHandle = await window.showSaveFilePicker({ suggestedName: fileName() + '.o3print.json', types: FILE_TYPES });
+    const w = await fileHandle.createWritable(); await w.write(JSON.stringify(doc, null, 1)); await w.close();
+    markSaved(); return 'Saved into ' + fileHandle.name + '.';
+  } catch (e) {
+    if (e && e.name === 'AbortError') return 'Not saved.';
+    if (e && (e.name === 'SecurityError' || e.name === 'NotAllowedError')) return downloadCopy();
+    return 'Could not save: ' + (e && e.message || e);
+  }
+}
+async function openFile(f, handle) {
+  try { const d = JSON.parse(await f.text()); snapshot(); const keep = UNDO.slice(); loadDoc(d); UNDO.push(...keep); fileHandle = handle || null; refresh(true); fitZoom(); markSaved(); say('Opened ' + f.name + (handle ? '. Save writes your changes back into it.' : '')); }
   catch (err) { alert('That file could not be opened: it is not a Print Builder file (' + err.message + ').'); }
-});
+}
+async function pickAndOpen() {
+  if (canUseFiles()) {
+    try { const [h] = await window.showOpenFilePicker({ types: FILE_TYPES }); await openFile(await h.getFile(), h); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; if (!(e && (e.name === 'SecurityError' || e.name === 'NotAllowedError'))) { alert('Could not open: ' + (e.message || e)); return; } }
+  }
+  $('file-in').click();
+}
+$('save-btn').addEventListener('click', async () => say(await saveToFile(false)));
+$('saveas-btn').addEventListener('click', async e => { e.stopPropagation(); closeMenus(); say(await saveToFile(true)); });
+$('save-more').addEventListener('click', e => { e.stopPropagation(); const m = $('save-menu'), o = m.hidden; closeMenus(); m.hidden = !o; });
+$('open-btn').addEventListener('click', pickAndOpen);
+$('file-in').addEventListener('change', async e => { const f = e.target.files[0]; e.target.value = ''; if (f) openFile(f, null); });
 $('new-btn').addEventListener('click', e => { e.stopPropagation(); const m = $('new-menu'), o = m.hidden; closeMenus(); m.hidden = !o; });
-for (const b of document.querySelectorAll('[data-new]')) b.addEventListener('click', () => { closeMenus(); snapshot(); const keep = UNDO.slice(); loadDoc(template(b.dataset.new)); UNDO.push(...keep); refresh(true); fitZoom(); });
+for (const b of document.querySelectorAll('[data-new]')) b.addEventListener('click', () => { closeMenus(); snapshot(); const keep = UNDO.slice(); loadDoc(template(b.dataset.new)); UNDO.push(...keep); forgetFile(); refresh(true); fitZoom(); });
 
 /* ---------- printing: every sheet, each on its own page the right way round ---------- */
 function printAll() {
@@ -335,7 +373,7 @@ document.addEventListener('keydown', e => {
     const k = e.key.toLowerCase();
     if (k === 'z' && !e.shiftKey) { e.preventDefault(); $('undo-btn').click(); return; }
     if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); $('redo-btn').click(); return; }
-    if (k === 's') { e.preventDefault(); $('save-btn').click(); return; }
+    if (k === 's') { e.preventDefault(); (async () => say(await saveToFile(e.shiftKey)))(); return; }
     if (k === 'p') { e.preventDefault(); printAll(); return; }
     if (k === 'c') { e.preventDefault(); copySel(); return; }
     if (k === 'x') { e.preventDefault(); cutSel(); return; }

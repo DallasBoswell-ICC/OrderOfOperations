@@ -215,6 +215,28 @@ let passed = 0, failed = 0;
     return r === '0,0,40,0' ? [] : ['moved by (DS1, FU1, FU2, FU3): ' + r];
   });
 
+  await check('Continuation arrows: A on sheet 1 and A on sheet 2 are one wire, each says where the other is', async p => {
+    const r = await p.evaluate(() => { loadDoc(template('blank')); const L1 = S.parts.find(q => q.label === 'L1');
+      addWire(S, [[L1.x, 400], [500, 400]]); addPart(S, 'pb_no', 540, 400); addWire(S, [[580, 400], [900, 400]]); const o = addPart(S, 'cnt_out', 940, 400);
+      const s2 = newSheet(); doc.sheets.push(s2); doc.cur = 1; S = s2; const L2 = S.parts.find(q => q.label === 'L2');
+      const i = addPart(S, 'cnt_in', 400, 600); addWire(S, [[440, 600], [800, 600]]); addPart(S, 'coil', 840, 600); addWire(S, [[880, 600], [L2.x, 600]]); refresh(true);
+      const A2 = analyse(), n1 = A2.label.get(A2.rootT(o, doc.sheets[0], 0)), n2 = A2.label.get(A2.rootT(i, doc.sheets[1], 0));
+      const notes = [...svg.querySelectorAll('g.ink text')].map(e => e.textContent).filter(t => /SHEET/.test(t)).join(',');
+      return [o.tag, i.tag, n1 === n2, notes, checkPrint(A2).filter(x => /Continuation/.test(x.title)).length]; });
+    return r.join('|') === 'A|A|true|FROM SHEET 1|0' ? [] : ['out | in | same number | note on sheet 2 | warnings: ' + r.join(' | ')];
+  });
+
+  await check('Save: writes back into the same file after the first save; Save As asks again', async p => {
+    const r = await p.evaluate(async () => { let picks = 0; const writes = [];
+      const handle = name => ({ name, createWritable: async () => ({ write: async t => writes.push(name), close: async () => {} }) });
+      window.showSaveFilePicker = async () => handle('Print ' + (++picks) + '.o3print.json'); window.showOpenFilePicker = async () => [];
+      forgetFile(); await saveToFile(false); await saveToFile(false); const lab1 = $('file-label').textContent;
+      S.texts.push({ id: uid('t'), x: 300, y: 300, text: 'x' }); refresh(); const dirty = $('file-label').textContent;
+      await saveToFile(false); await saveToFile(true);
+      return [picks, writes.join(','), lab1, dirty]; });
+    return r.join('|') === '2|Print 1.o3print.json,Print 1.o3print.json,Print 1.o3print.json,Print 2.o3print.json|Print 1.o3print.json|● Print 1.o3print.json' ? [] : ['picks | writes | label | after a change: ' + r.join(' | ')];
+  });
+
   await check('Title block: boxes added, changed and taken away show on the sheet; saved and opened again', async p => {
     await p.click('#tb-btn'); await p.click('#tb-add'); await p.keyboard.type('Instructor');
     await p.locator('.tbrow[data-i]').last().locator('[data-k=value]').fill('D. Boswell');

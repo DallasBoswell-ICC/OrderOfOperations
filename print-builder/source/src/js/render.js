@@ -9,6 +9,14 @@ let LABS = [], PLABS = [];                     // (PLABS: the parts' tags and la
 // how far a part's name, label or one of its fuse numbers has been dragged (each on its own), and setting it
 const labOff = (p, which) => (which === 'tag' ? p.lt : which === 'desc' ? p.ld : (p.lf || {})[which]) || [0, 0];
 function setLabOff(p, which, v) { if (which === 'tag') p.lt = v; else if (which === 'desc') p.ld = v; else (p.lf ||= {})[which] = v; }
+// a continuation's note: TO / FROM the other sheet with its letter (or, on the same sheet, the rung)
+function contNote(p, k) {
+  const other = p.t === 'cnt_out' ? 'cnt_in' : 'cnt_out', m = allParts().find(q => q.p.t === other && q.p.tag === p.tag);
+  if (!m) return p.t === 'cnt_out' ? 'TO ?' : 'FROM ?';
+  const w = p.t === 'cnt_out' ? 'TO' : 'FROM';
+  if (m.k !== k) return `${w} SHEET ${m.k + 1}`;
+  const rn = A && A.rung && A.rung.get(m.p.id); return rn ? `${w} RUNG ${rn}` : `${w} ${m.p.tag}`;
+}
 function lblBox(x, y, t, size, anchor) { const w = String(t).length * size * .62, x0 = anchor === 'start' ? x : anchor === 'end' ? x - w : x - w / 2; return { x0, x1: x0 + w, y0: y - size * .8, y1: y + size * .15 }; }                                 // the wire numbers on the sheet on screen: { id (its wire), l, x, y, anchor, x0..y1 }
 const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -45,6 +53,9 @@ function drawSheet(s, k, A) {
     if (p.t === 'sup') { arrow(p.x, p.y, 1, 0); tagT(p.x - 30, p.y + 10, p.tag, 28, 'end'); continue; }
     const sym = PSYM[LIB[p.t].sym], r = p.rot || 0, kind = LIB[p.t].kind;
     g += `<g class="sym" transform="translate(${p.x} ${p.y})${r ? ` rotate(${r})` : ''}">${sym.b}</g>`;
+    if (kind === 'cont') {   // (its letter inside the arrow; under it, where it goes or comes from)
+      const cx = p.x + (p.t === 'cnt_out' ? -6 : -6); text(cx, p.y + 9, p.tag, (p.tag || '').length > 2 ? 18 : 24);
+      descT(p.x, p.y + 46, p.desc || contNote(p, k), 18); continue; }
     const up = r % 180 !== 0, inside = (kind === 'coil' && (p.tag || '').length <= 4) || kind === 'motor';
     if (up) { const off = Math.max(Math.abs(sym.y0), Math.abs(sym.y1)) + 10; tagT(p.x + off, p.y + 9, p.tag, 26, 'start'); if (p.desc) descT(p.x + off, p.y + 34, p.desc, 20, 'start'); }
     else {

@@ -267,6 +267,10 @@ function defaultTag(t) {
   if (k === 'contact') return lastCoil || (allParts().find(q => q.p.t === 'coil') || {}).p?.tag || '';
   if (k === 'starter') { const m = allParts().find(q => q.p.t === 'coil' && /^M\d*$/.test(q.p.tag || '')); return m ? m.p.tag : 'M1'; }
   if (k === 'olc') { const o = allParts().find(q => LIB[q.p.t].kind === 'ol'); return o ? o.p.tag : 'OL1'; }
+  if (k === 'cont') {   // (an arrow out: the next letter not used yet; in: the first out with no in to match it)
+    const outs = allParts().filter(q => q.p.t === 'cnt_out').map(q => q.p.tag), ins = new Set(allParts().filter(q => q.p.t === 'cnt_in').map(q => q.p.tag));
+    if (t === 'cnt_in') { const open = outs.find(x => x && !ins.has(x)); if (open) return open; }
+    const used = new Set([...outs, ...ins]); for (const c of 'ABCDEFGHJKLMNPQRSTUVWXYZ') if (!used.has(c)) return c; return 'A'; }
   if (t === 'sup') { const used = new Set(allParts().filter(q => q.p.t === 'sup').map(q => q.p.tag)); return ['L1', 'L2', 'L3'].find(l => !used.has(l)) || 'L1'; }
   return nextTag(LIB[t].pre, LIB[t].kind === 'motor');
 }
