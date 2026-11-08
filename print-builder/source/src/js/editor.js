@@ -146,7 +146,7 @@ function onDown(e) {
   if (ta) { drag = { from: [ta.x, ta.y], q0: q }; svg.setPointerCapture(e.pointerId); return; }
   const h = pick(q);
   if (!h) { if (!e.shiftKey) { sel = new Set(); selW = null; } drag = { box: [q, q], add: e.shiftKey }; svg.setPointerCapture(e.pointerId); refresh(); return; }
-  if (h.kind === 'plabel') { const p = partOf(S, h.id); sel = new Set([h.id]); selW = null; drag = { plab: h, at: clone(p[h.which === 'tag' ? 'lt' : 'ld'] || [0, 0]), q0: q, pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
+  if (h.kind === 'plabel') { const p = partOf(S, h.id); sel = new Set([h.id]); selW = null; drag = { plab: h, at: clone(labOff(p, h.which)), q0: q, pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
   if (h.kind === 'label') { sel = new Set(); selW = h.id; drag = { lab: h.id, at: [h.x, h.y], q0: q, orig: clone(S), pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
   if (h.kind === 'wire') { sel = new Set(); selW = h.id; drag = { wire: h.id, k: h.k, q0: q, orig: clone(S), pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
   if (h.kind === 'end') { sel = new Set([h.id]); selW = null; drag = { rail: h.id, k: h.k, pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
@@ -163,7 +163,7 @@ function onMove(e) {
   if (drag.box) { drag.box[1] = q; drawEd(); return; }
   if (drag.from) { drawEd(); return; }
   if (drag.plab) { const p = partOf(S, drag.plab.id); if (!p) return; const dx = Math.round((q[0] - drag.q0[0]) / 5) * 5, dy = Math.round((q[1] - drag.q0[1]) / 5) * 5;
-    if (!drag.moved && !dx && !dy) return; drag.moved = true; p[drag.plab.which === 'tag' ? 'lt' : 'ld'] = [drag.at[0] + dx, drag.at[1] + dy]; frame(); return; }
+    if (!drag.moved && !dx && !dy) return; drag.moved = true; setLabOff(p, drag.plab.which, [drag.at[0] + dx, drag.at[1] + dy]); frame(); return; }
   if (drag.lab) { const w = S.wires.find(w => w.id === drag.lab); if (!w) return; const dx = Math.round((q[0] - drag.q0[0]) / 5) * 5, dy = Math.round((q[1] - drag.q0[1]) / 5) * 5;
     if (!drag.moved && !dx && !dy) return; drag.moved = true; w.lab = [drag.at[0] + dx, drag.at[1] + dy]; frame(); return; }
   const dx = snap(q[0] - (drag.q0 ? drag.q0[0] : q[0])), dy = snap(q[1] - (drag.q0 ? drag.q0[1] : q[1]));
@@ -245,7 +245,7 @@ function tipFor(q, e) {
   if (tool === 'wire') { const t = snapTarget(q); s = wd ? (t.kind === 'grid' ? 'Click to bend · double-click to end here' : 'Click to join here') : (t.kind === 'grid' ? 'Click to start a wire' : `Click to start from this ${({ term: 'terminal', node: 'joint', rail: 'rail', wire: 'wire' })[t.kind]}`); }
   if (tool === 'rung') { const r = rungAt(q); s = r ? (r.ok ? 'Click to add a rung here' : 'There is a rung here already') : 'Rungs go between the L1 and L2 rails'; }
   if (tool === 'select' && termAt(q)) s = 'Drag from here to draw a wire';
-  else if (tool === 'select') { const h = pick(q); if (h && h.kind === 'plabel') s = 'Drag to move this ' + (h.which === 'tag' ? 'name' : 'label'); else if (h && h.kind === 'label') s = 'Drag to move this wire number'; }
+  else if (tool === 'select') { const h = pick(q); if (h && h.kind === 'plabel') s = 'Drag to move this ' + (h.which === 'desc' ? 'label' : h.which === 'tag' ? 'name' : 'fuse number'); else if (h && h.kind === 'label') s = 'Drag to move this wire number'; }
   if (!s) { tip.hidden = true; return; }
   const dr = desk.getBoundingClientRect(); tip.innerHTML = s; tip.hidden = false;
   tip.style.left = (e.clientX - dr.left + 18) + 'px'; tip.style.top = (e.clientY - dr.top - 34) + 'px';

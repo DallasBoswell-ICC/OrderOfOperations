@@ -207,6 +207,14 @@ let passed = 0, failed = 0;
     return [a, lt, z].join('|') === 'false,false,true,select|[60,-40]|1.5,1.5' ? [] : ['overlap,onWire,picked,tool | label offset | size: ' + [a, lt, z].join(' | ')];
   });
 
+  await check('Fused disconnect and 3-phase fuses: the name and each fuse number drag on their own', async p => {
+    const r = await p.evaluate(() => { loadDoc(template('blank')); const d = addPart(S, 'fdsc3', 600, 500); refresh();
+      const L = w => PLABS.find(L => L.id === d.id && L.which === w), before = ['tag', 'fu0', 'fu1', 'fu2'].map(w => L(w).x0);
+      setLabOff(d, 'fu1', [40, 0]); drawInk(); const after = ['tag', 'fu0', 'fu1', 'fu2'].map(w => L(w).x0);
+      return after.map((x, i) => x - before[i]).join(','); });
+    return r === '0,0,40,0' ? [] : ['moved by (DS1, FU1, FU2, FU3): ' + r];
+  });
+
   await check('Title block: boxes added, changed and taken away show on the sheet; saved and opened again', async p => {
     await p.click('#tb-btn'); await p.click('#tb-add'); await p.keyboard.type('Instructor');
     await p.locator('.tbrow[data-i]').last().locator('[data-k=value]').fill('D. Boswell');

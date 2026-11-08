@@ -894,6 +894,9 @@ const PW = 4;                                  // the wires' weight (the symbols
 let SHOW = { wn: true, rn: true, xr: true };   // wire numbers, rung numbers, cross-references
 let LABS = [], PLABS = [];                     // (PLABS: the parts' tags and labels on the sheet on screen, for dragging)
 // the box a line of text takes up (Arial bold, roughly)
+// how far a part's name, label or one of its fuse numbers has been dragged (each on its own), and setting it
+const labOff = (p, which) => (which === 'tag' ? p.lt : which === 'desc' ? p.ld : (p.lf || {})[which]) || [0, 0];
+function setLabOff(p, which, v) { if (which === 'tag') p.lt = v; else if (which === 'desc') p.ld = v; else (p.lf ||= {})[which] = v; }
 function lblBox(x, y, t, size, anchor) { const w = String(t).length * size * .62, x0 = anchor === 'start' ? x : anchor === 'end' ? x - w : x - w / 2; return { x0, x1: x0 + w, y0: y - size * .8, y1: y + size * .15 }; }                                 // the wire numbers on the sheet on screen: { id (its wire), l, x, y, anchor, x0..y1 }
 const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -925,7 +928,7 @@ function drawSheet(s, k, A) {
     if (p.t === 'rail') continue;
     // (a part's tag and label: where they go, moved by however far they have been dragged; each one's box kept for picking)
     const lt = p.lt || [0, 0], ld = p.ld || [0, 0];
-    const tagT = (x, y, t, size, anchor = 'middle') => { if (!t) return; x += lt[0]; y += lt[1]; text(x, y, t, size, anchor); PLABS.push({ id: p.id, which: 'tag', ...lblBox(x, y, t, size, anchor) }); };
+    const tagT = (x, y, t, size, anchor = 'middle', which = 'tag') => { if (!t) return; const o = labOff(p, which); x += o[0]; y += o[1]; text(x, y, t, size, anchor); PLABS.push({ id: p.id, which, ...lblBox(x, y, t, size, anchor) }); };
     const descT = (x, y, t, size, anchor = 'middle') => { if (!t) return; x += ld[0]; y += ld[1]; text(x, y, t, size, anchor, 500); PLABS.push({ id: p.id, which: 'desc', ...lblBox(x, y, t, size, anchor) }); };
     if (p.t === 'sup') { arrow(p.x, p.y, 1, 0); tagT(p.x - 30, p.y + 10, p.tag, 28, 'end'); continue; }
     const sym = PSYM[LIB[p.t].sym], r = p.rot || 0, kind = LIB[p.t].kind;
@@ -934,9 +937,9 @@ function drawSheet(s, k, A) {
     if (up) { const off = Math.max(Math.abs(sym.y0), Math.abs(sym.y1)) + 10; tagT(p.x + off, p.y + 9, p.tag, 26, 'start'); if (p.desc) descT(p.x + off, p.y + 34, p.desc, 20, 'start'); }
     else {
       const y0 = r === 180 ? -sym.y1 : sym.y0, y1 = r === 180 ? -sym.y0 : sym.y1;
-      if (p.t === 'fdsc3' && !r) tagsOf(p).slice(1).forEach((tg, i) => tagT(p.x + 40, termPos(p, 2 * i)[1] - 24, tg, 26));   // (a fused disconnect's fuses, each its number)
-      if (p.t === 'fus3' && !r) tagsOf(p).forEach((tg, i) => tagT(p.x, termPos(p, 2 * i)[1] - 24, tg, 26));   // (each fuse its own number)
-      else if (inside) text(p.x, p.y + (kind === 'motor' ? 11 : 10), p.tag, kind === 'motor' ? 30 : (p.tag || '').length > 3 ? 22 : 27); else tagT(p.x, p.y + y0 - 8, p.tag, 26);
+      if (p.t === 'fdsc3' && !r) tagsOf(p).slice(1).forEach((tg, i) => tagT(p.x + 40, termPos(p, 2 * i)[1] - 24, tg, 26, 'middle', 'fu' + i));   // (a fused disconnect's fuses, each its number)
+      if (p.t === 'fus3' && !r) tagsOf(p).forEach((tg, i) => tagT(p.x, termPos(p, 2 * i)[1] - 24, tg, 26, 'middle', 'fu' + i));   // (each fuse its own number)
+      else if (inside) text(p.x, p.y + (kind === 'motor' ? 11 : 10), p.tag, kind === 'motor' ? 30 : (p.tag || '').length > 3 ? 22 : 27); else tagT(p.x + (p.t === 'fdsc3' && !r ? -40 : 0), p.y + y0 - 8, p.tag, 26);   // (a fused disconnect's name over its switch, clear of its fuse numbers)
       if (p.desc) descT(p.x, p.y + y1 + 22, p.desc, 20);
     }
     if (p.t === 'xfmr') { const t = [0, 1, 2, 3].map(i => termPos(p, i)), nm = ['H1', 'H2', 'X1', 'X2'];
@@ -1222,7 +1225,7 @@ function onDown(e) {
   if (ta) { drag = { from: [ta.x, ta.y], q0: q }; svg.setPointerCapture(e.pointerId); return; }
   const h = pick(q);
   if (!h) { if (!e.shiftKey) { sel = new Set(); selW = null; } drag = { box: [q, q], add: e.shiftKey }; svg.setPointerCapture(e.pointerId); refresh(); return; }
-  if (h.kind === 'plabel') { const p = partOf(S, h.id); sel = new Set([h.id]); selW = null; drag = { plab: h, at: clone(p[h.which === 'tag' ? 'lt' : 'ld'] || [0, 0]), q0: q, pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
+  if (h.kind === 'plabel') { const p = partOf(S, h.id); sel = new Set([h.id]); selW = null; drag = { plab: h, at: clone(labOff(p, h.which)), q0: q, pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
   if (h.kind === 'label') { sel = new Set(); selW = h.id; drag = { lab: h.id, at: [h.x, h.y], q0: q, orig: clone(S), pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
   if (h.kind === 'wire') { sel = new Set(); selW = h.id; drag = { wire: h.id, k: h.k, q0: q, orig: clone(S), pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
   if (h.kind === 'end') { sel = new Set([h.id]); selW = null; drag = { rail: h.id, k: h.k, pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
@@ -1239,7 +1242,7 @@ function onMove(e) {
   if (drag.box) { drag.box[1] = q; drawEd(); return; }
   if (drag.from) { drawEd(); return; }
   if (drag.plab) { const p = partOf(S, drag.plab.id); if (!p) return; const dx = Math.round((q[0] - drag.q0[0]) / 5) * 5, dy = Math.round((q[1] - drag.q0[1]) / 5) * 5;
-    if (!drag.moved && !dx && !dy) return; drag.moved = true; p[drag.plab.which === 'tag' ? 'lt' : 'ld'] = [drag.at[0] + dx, drag.at[1] + dy]; frame(); return; }
+    if (!drag.moved && !dx && !dy) return; drag.moved = true; setLabOff(p, drag.plab.which, [drag.at[0] + dx, drag.at[1] + dy]); frame(); return; }
   if (drag.lab) { const w = S.wires.find(w => w.id === drag.lab); if (!w) return; const dx = Math.round((q[0] - drag.q0[0]) / 5) * 5, dy = Math.round((q[1] - drag.q0[1]) / 5) * 5;
     if (!drag.moved && !dx && !dy) return; drag.moved = true; w.lab = [drag.at[0] + dx, drag.at[1] + dy]; frame(); return; }
   const dx = snap(q[0] - (drag.q0 ? drag.q0[0] : q[0])), dy = snap(q[1] - (drag.q0 ? drag.q0[1] : q[1]));
@@ -1321,7 +1324,7 @@ function tipFor(q, e) {
   if (tool === 'wire') { const t = snapTarget(q); s = wd ? (t.kind === 'grid' ? 'Click to bend · double-click to end here' : 'Click to join here') : (t.kind === 'grid' ? 'Click to start a wire' : `Click to start from this ${({ term: 'terminal', node: 'joint', rail: 'rail', wire: 'wire' })[t.kind]}`); }
   if (tool === 'rung') { const r = rungAt(q); s = r ? (r.ok ? 'Click to add a rung here' : 'There is a rung here already') : 'Rungs go between the L1 and L2 rails'; }
   if (tool === 'select' && termAt(q)) s = 'Drag from here to draw a wire';
-  else if (tool === 'select') { const h = pick(q); if (h && h.kind === 'plabel') s = 'Drag to move this ' + (h.which === 'tag' ? 'name' : 'label'); else if (h && h.kind === 'label') s = 'Drag to move this wire number'; }
+  else if (tool === 'select') { const h = pick(q); if (h && h.kind === 'plabel') s = 'Drag to move this ' + (h.which === 'desc' ? 'label' : h.which === 'tag' ? 'name' : 'fuse number'); else if (h && h.kind === 'label') s = 'Drag to move this wire number'; }
   if (!s) { tip.hidden = true; return; }
   const dr = desk.getBoundingClientRect(); tip.innerHTML = s; tip.hidden = false;
   tip.style.left = (e.clientX - dr.left + 18) + 'px'; tip.style.top = (e.clientY - dr.top - 34) + 'px';
@@ -1541,12 +1544,12 @@ function renderProps0() {
       ${rn ? `<div class="f">Rung<span class="ro">${rn} (automatic)</span></div>` : ''}
       ${termNums.length ? `<div class="f">Wires<span class="ro">${termNums.join(' → ')} (automatic)</span></div>` : ''}
       ${xr && xr.length ? `<div class="f">Contacts on<span class="ro">${xr.map(o => o.n + (o.nc ? ' (NC)' : '')).join(', ')}</span></div>` : ''}
-      <div class="acts">${termsN(p) === 2 ? '<button class="btn" id="p-rot">Rotate (R)</button>' : ''}${p.lt || p.ld ? '<button class="btn" id="p-lab">Put Labels Back</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
+      <div class="acts">${termsN(p) === 2 ? '<button class="btn" id="p-rot">Rotate (R)</button>' : ''}${p.lt || p.ld || p.lf ? '<button class="btn" id="p-lab">Put Labels Back</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
     const of = $('p-of'); if (of) of.addEventListener('change', () => { let v = of.value; if (v === '__other') { v = (prompt(k === 'olc' ? 'The overload this contact belongs to (e.g. OL2):' : 'The coil that works this contact (e.g. CR3):', p.tag || '') || '').trim().toUpperCase(); if (!v) { renderProps(); return; } }
       snapshot(); p.tag = v; refresh(); });
     const tg = $('p-tag'); if (tg) tg.addEventListener('input', () => edit(() => { p.tag = tg.value.trim().toUpperCase(); if (k === 'coil') lastCoil = p.tag; }));
     if (tg) tg.addEventListener('change', () => renderProps());
-    const pl = $('p-lab'); if (pl) pl.addEventListener('click', () => { snapshot(); delete p.lt; delete p.ld; refresh(); });
+    const pl = $('p-lab'); if (pl) pl.addEventListener('click', () => { snapshot(); delete p.lt; delete p.ld; delete p.lf; refresh(); });
     const fu = $('p-fu'); if (fu) { fu.addEventListener('input', () => edit(() => { p.fu = fu.value.trim().toUpperCase(); })); fu.addEventListener('change', () => renderProps()); }
     const ds = $('p-desc'); if (ds) ds.addEventListener('input', () => edit(() => { p.desc = ds.value.toUpperCase(); }));
     const pr = $('p-pre'); if (pr) pr.addEventListener('change', () => { snapshot(); p.pre = pr.value; p.tag = ''; p.tag = nextTag(p.pre); lastCoil = p.tag; refresh(); });

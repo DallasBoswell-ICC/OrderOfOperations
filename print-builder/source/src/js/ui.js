@@ -154,12 +154,12 @@ function renderProps0() {
       ${rn ? `<div class="f">Rung<span class="ro">${rn} (automatic)</span></div>` : ''}
       ${termNums.length ? `<div class="f">Wires<span class="ro">${termNums.join(' → ')} (automatic)</span></div>` : ''}
       ${xr && xr.length ? `<div class="f">Contacts on<span class="ro">${xr.map(o => o.n + (o.nc ? ' (NC)' : '')).join(', ')}</span></div>` : ''}
-      <div class="acts">${termsN(p) === 2 ? '<button class="btn" id="p-rot">Rotate (R)</button>' : ''}${p.lt || p.ld ? '<button class="btn" id="p-lab">Put Labels Back</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
+      <div class="acts">${termsN(p) === 2 ? '<button class="btn" id="p-rot">Rotate (R)</button>' : ''}${p.lt || p.ld || p.lf ? '<button class="btn" id="p-lab">Put Labels Back</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
     const of = $('p-of'); if (of) of.addEventListener('change', () => { let v = of.value; if (v === '__other') { v = (prompt(k === 'olc' ? 'The overload this contact belongs to (e.g. OL2):' : 'The coil that works this contact (e.g. CR3):', p.tag || '') || '').trim().toUpperCase(); if (!v) { renderProps(); return; } }
       snapshot(); p.tag = v; refresh(); });
     const tg = $('p-tag'); if (tg) tg.addEventListener('input', () => edit(() => { p.tag = tg.value.trim().toUpperCase(); if (k === 'coil') lastCoil = p.tag; }));
     if (tg) tg.addEventListener('change', () => renderProps());
-    const pl = $('p-lab'); if (pl) pl.addEventListener('click', () => { snapshot(); delete p.lt; delete p.ld; refresh(); });
+    const pl = $('p-lab'); if (pl) pl.addEventListener('click', () => { snapshot(); delete p.lt; delete p.ld; delete p.lf; refresh(); });
     const fu = $('p-fu'); if (fu) { fu.addEventListener('input', () => edit(() => { p.fu = fu.value.trim().toUpperCase(); })); fu.addEventListener('change', () => renderProps()); }
     const ds = $('p-desc'); if (ds) ds.addEventListener('input', () => edit(() => { p.desc = ds.value.toUpperCase(); }));
     const pr = $('p-pre'); if (pr) pr.addEventListener('change', () => { snapshot(); p.pre = pr.value; p.tag = ''; p.tag = nextTag(p.pre); lastCoil = p.tag; refresh(); });
