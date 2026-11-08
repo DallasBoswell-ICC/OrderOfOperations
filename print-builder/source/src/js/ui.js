@@ -55,9 +55,9 @@ function setTool(t) {
 function startPlacing(t) { placing = { t, rot: 0 }; sel = new Set(); selW = null; setTool('place'); renderProps(); }
 
 /* ---------- the palette and the ribbon's menus ---------- */
-const thumb = t => { if (t === 'sup') return `<svg viewBox="-80 -30 100 60"><path d="M-22 -13L-22 13L0 0Z" fill="#000"/><line x1="0" y1="0" x2="18" y2="0" stroke="#000" stroke-width="4"/><text x="-30" y="9" font-size="26" font-weight="700" text-anchor="end" font-family="Arial">L1</text></svg>`;
+const thumb = t => { if (isArrowIn(t)) return `<svg viewBox="-80 -30 100 60"><path d="M-22 -13L-22 13L0 0Z" fill="#000"/><line x1="0" y1="0" x2="18" y2="0" stroke="#000" stroke-width="4"/><text x="-30" y="9" font-size="26" font-weight="700" text-anchor="end" font-family="Arial">${t === 'src_l2' ? 'L2' : 'L1'}</text></svg>`;
   const s = PSYM[LIB[t].sym], e = extentOf(t), pad = 8; return `<svg viewBox="${e.x0 - pad} ${s.y0 - pad} ${e.x1 - e.x0 + 2 * pad} ${s.y1 - s.y0 + 2 * pad}"><g fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${s.b}</g></svg>`; };
-const short = n => n.replace(' (out)', '').replace(' (in)', '').replace('Pushbutton', 'PB').replace('Emergency Stop', 'E-Stop').replace('Temperature', 'Temp.').replace('Proximity', 'Prox.').replace('Selector Switch', 'Selector').replace(', Held Closed', ' (HC)').replace(', Held Open', ' (HO)').replace('Toggle Switch (SPST)', 'Toggle').replace('Overload Heater (1 line)', 'OL Heater').replace('Phase (L1, L2, L3)', 'Phase').replace('3-Phase', '3Ø');
+const short = n => n.replace(' Maintained Pushbutton', ' Maint. PB').replace(', Low Temp', ' (Low)').replace(' (control)', '').replace(' (out)', '').replace(' (in)', '').replace('Pushbutton', 'PB').replace('Emergency Stop', 'E-Stop').replace('Temperature', 'Temp.').replace('Proximity', 'Prox.').replace('Selector Switch', 'Selector').replace(', Held Closed', ' (HC)').replace(', Held Open', ' (HO)').replace('Toggle Switch (SPST)', 'Toggle').replace('Overload Heater (1 line)', 'OL Heater').replace('Phase (L1, L2, L3)', 'Phase').replace('3-Phase', '3Ø');
 function buildPalette() {
   let h = '';
   for (const c of CATS) { h += `<div class="ph">${c}</div><div class="pg">`;
@@ -144,12 +144,12 @@ function renderProps0() {
     const rn = A.rung.get(p.id), xr = A.xref.get(p.id);
     const termNums = [...Array(termsN(p)).keys()].map(i => A.label.get(A.rootT(p, S, i))).filter(Boolean);
     P.innerHTML = `<h4>${esc(d.name)}${p.tag ? ' ' + esc(p.t === 'fus3' ? tagsOf(p)[0] + '–' + tagsOf(p)[2] : p.tag) : ''}</h4>
-      ${p.t === 'sup' ? `<div class="f">Line<div class="seg">${['L1', 'L2', 'L3'].map(l => `<button data-line="${l}" aria-pressed="${p.tag === l}">${l}</button>`).join('')}</div></div>` : `
+      ${p.t === 'src_l1' || p.t === 'src_l2' ? '' : p.t === 'sup' ? `<div class="f">Line<div class="seg">${['L1', 'L2', 'L3'].map(l => `<button data-line="${l}" aria-pressed="${p.tag === l}">${l}</button>`).join('')}</div></div>` : `
       ${k === 'contact' || k === 'starter' || k === 'olc' ? `<div class="f">Worked by<select id="p-of">${[...new Set([...list, p.tag].filter(Boolean))].map(x => `<option value="${esc(x)}"${x === p.tag ? ' selected' : ''}>${esc(x)}${list.includes(x) ? '' : ' (no ' + (k === 'olc' ? 'overload' : 'coil') + ' yet)'}</option>`).join('')}${list.length || p.tag ? '' : `<option value="">(place a ${k === 'olc' ? 'overload' : 'coil'} first)</option>`}<option value="__other">Other…</option></select></div>`
         : `<div class="f">${k === 'coil' || k === 'sw' || k === 'cont' ? 'Letter' : 'Number'}<input class="in" id="p-tag" value="${esc(p.tag)}" autocomplete="off"></div>`}`}
       ${p.t === 'fdsc3' ? `<div class="f">Fuses<input class="in" id="p-fu" value="${esc(p.fu || '')}" autocomplete="off" title="The first of its three fuses: FU1 makes them FU1, FU2, FU3"></div><div class="f">&nbsp;<span class="ro">${esc(tagsOf(p).slice(1).join(', '))}</span></div>` : ''}
       ${k === 'coil' && /^TR/.test(p.tag || '') ? `<div class="f">Delay<div class="seg"><button data-tof="0" aria-pressed="${!p.tof}">On-Delay</button><button data-tof="1" aria-pressed="${!!p.tof}">Off-Delay</button></div></div><div class="f">Seconds<input class="in" id="p-delay" type="number" min="0" step="0.5" value="${esc(p.delay ?? '')}" style="min-width:80px;width:90px"></div>` : ''}
-      ${(p.t === 'con_no' || p.t === 'con_nc') && timerOf(p) ? `<div class="f">Timed<div class="seg"><button data-inst="0" aria-pressed="${!p.inst}">Timed</button><button data-inst="1" aria-pressed="${!!p.inst}">Instant</button></div></div>` : ''}
+      ${/^(con|tc)_n[oc]$/.test(p.t) && (timerOf(p) || p.t.startsWith('tc')) ? `<div class="f">Contact Type<div class="seg"><button data-ctype="tc" aria-pressed="${p.t.startsWith('tc')}">Timed</button><button data-ctype="con" aria-pressed="${p.t.startsWith('con')}">Instant</button></div></div>` : ''}
       ${p.t === 'sel' ? `<div class="f">Positions<input class="in" id="p-pos" value="${esc(selNames(p).join('/'))}" title="2 to 4 positions, with slashes: HAND/OFF/AUTO"></div><div class="f">Closed In<div class="seg">${selNames(p).map((n, i) => `<button data-cl="${i}" aria-pressed="${(p.closedIn || []).includes(i)}">${esc(n)}</button>`).join('')}</div></div>` : ''}
       ${p.t === 'pl' ? `<div class="f">Built Into<select id="p-inpb"><option value="">None (a light of its own)</option>${[...new Set(allParts().filter(q => isPB(q.p) && q.p.tag).map(q => q.p.tag).concat(p.inPB ? [p.inPB] : []))].map(t => `<option value="${esc(t)}"${t === p.inPB ? ' selected' : ''}>${esc(t)} (lighted pushbutton)</option>`).join('')}</select></div>` : ''}
       ${isPB(p) || p.t === 'sel' ? `<p class="help">${blocksOf(p).length > 1 ? (mainBlock(p) === p ? `The main one of ${blocksOf(p).length} blocks of ${esc(p.tag)}` : `An extra contact block of ${esc(p.tag)}`) + ': they work together.' : `To give it another contact block on another rung, put down another ${p.t === 'sel' ? 'selector' : 'pushbutton'} and give it the same number (${esc(p.tag)}).`}</p>` : ''}
@@ -170,7 +170,7 @@ function renderProps0() {
     const ds = $('p-desc'); if (ds) ds.addEventListener('input', () => edit(() => { p.desc = ds.value.toUpperCase(); }));
     for (const b of P.querySelectorAll('[data-tof]')) b.addEventListener('click', () => { snapshot(); p.tof = b.dataset.tof === '1'; if (!p.tof) delete p.tof; refresh(); });
     const dl = $('p-delay'); if (dl) dl.addEventListener('input', () => edit(() => { const v = parseFloat(dl.value); if (isFinite(v) && v >= 0) p.delay = v; else delete p.delay; }));
-    for (const b of P.querySelectorAll('[data-inst]')) b.addEventListener('click', () => { snapshot(); p.inst = b.dataset.inst === '1'; if (!p.inst) delete p.inst; refresh(); });
+    for (const b of P.querySelectorAll('[data-ctype]')) b.addEventListener('click', () => { snapshot(); p.t = b.dataset.ctype + '_' + p.t.split('_')[1]; delete p.inst; refresh(); });
     const ps = $('p-pos'); if (ps) ps.addEventListener('change', () => { snapshot(); const n = ps.value.split(/[\/,]+/).map(x => x.trim().toUpperCase()).filter(Boolean).slice(0, 4); p.pos = (n.length >= 2 ? n : ['OFF', 'ON']).join('/'); p.closedIn = (p.closedIn || []).filter(i => i < n.length); refresh(); });
     for (const b of P.querySelectorAll('[data-cl]')) b.addEventListener('click', () => { snapshot(); const i = +b.dataset.cl, s = new Set(p.closedIn || []); s.has(i) ? s.delete(i) : s.add(i); p.closedIn = [...s].sort(); refresh(); });
     const ib = $('p-inpb'); if (ib) ib.addEventListener('change', () => { snapshot(); if (ib.value) p.inPB = ib.value; else delete p.inPB; refresh(); });
@@ -302,6 +302,8 @@ function loadDoc(d) {
   doc = d; S = doc.sheets[doc.cur]; sel = new Set(); selW = null; UNDO.length = 0; REDO.length = 0;
   // (a fused disconnect from before its fuses were numbered: the next three numbers)
   for (const s of d.sheets) for (const p of s.parts) if (p.t === 'fdsc3' && !p.fu) p.fu = nextTag('FU');
+  // (a timer's contact drawn timed before there were timed contacts of their own: one now)
+  for (const s of d.sheets) for (const p of s.parts) if ((p.t === 'con_no' || p.t === 'con_nc') && !p.inst && d.sheets.some(t => t.parts.some(c => c.t === 'coil' && c.tag === p.tag && /^TR/.test(c.tag || '')))) p.t = 'tc_' + p.t.split('_')[1];
 }
 const fileName = () => ((doc.tb.fields.find(f => /title/i.test(f.label)) || {}).value || 'Print').replace(/[\\/:*?"<>|]+/g, '').trim() || 'Print';
 /* ---------- files, as in Circuit Builder: where the browser allows it (Chrome and Edge, and the installed app), the

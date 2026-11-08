@@ -20,7 +20,7 @@ function contNote(p, k) {
 /* ---------- what Circuit Builder's devices carry into the print ---------- */
 // one pushbutton (or selector switch) drawn in several rungs: the parts with its number are its contact blocks; the top
 // one is the operator itself (a selector's turning arrow is drawn on it only)
-const isPB = p => p.t === 'pb_no' || p.t === 'pb_nc';
+const isPB = p => p.t === 'pb_no' || p.t === 'pb_nc' || p.t === 'pbm_no' || p.t === 'pbm_nc';
 const blocksOf = p => allParts().map(q => q.p).filter(q => q.tag && q.tag === p.tag && (isPB(p) ? isPB(q) : q.t === p.t)).sort((a, b) => a.y - b.y || a.x - b.x);
 const mainBlock = p => blocksOf(p)[0] || p;
 function blockGroups(s) { const g = new Map(); for (const p of s.parts) if ((isPB(p) || p.t === 'sel') && p.tag) { const k = (p.t === 'sel' ? 'S:' : 'P:') + p.tag; if (!g.has(k)) g.set(k, []); g.get(k).push(p); }
@@ -29,14 +29,14 @@ function blockGroups(s) { const g = new Map(); for (const p of s.parts) if ((isP
 const timerOf = p => { const c = allParts().find(q => q.p.t === 'coil' && q.p.tag === p.tag); return c && /^TR/.test(c.p.tag) ? c.p : null; };
 // the print symbol a part is drawn with: a timer's contacts timed (unless instant); a selector's extra blocks without the arrow
 function symOf(p) {
-  if ((p.t === 'con_no' || p.t === 'con_nc') && !p.inst) { const tm = timerOf(p); if (tm) return `${p.t === 'con_no' ? 'NO' : 'NC'} ${tm.tof ? 'FD' : 'ND'} Switch`; }
+  if (p.t === 'tc_no' || p.t === 'tc_nc') { const tm = timerOf(p); return `${p.t === 'tc_no' ? 'NO' : 'NC'} ${tm && tm.tof ? 'FD' : 'ND'} Switch`; }   // (timed: on- or off-delay as its timer is)
   if (p.t === 'sel' && mainBlock(p) !== p) return 'Selector Switch';
   return LIB[p.t].sym;
 }
 // what is written under a part: its label, and what Circuit Builder would add (a timer's delay, the positions a selector's
 // block is closed in, the button a light is built into, the light built into a button)
 function noteOf(p) {
-  const n = [p.desc];
+  const n = [p.desc || LIB[p.t].note];
   if (p.t === 'coil' && /^TR/.test(p.tag || '')) n.push(`${p.tof ? 'OFF' : 'ON'}-DELAY${p.delay ? ' ' + p.delay + ' s' : ''}`);
   if (p.t === 'sel') { const names = selNames(p), cl = (p.closedIn || []).map(i => names[i]).filter(Boolean); n.push(cl.length ? 'CLOSED: ' + cl.join(', ') : 'OPEN IN ALL'); }
   if (p.t === 'pl' && p.inPB) n.push('IN ' + p.inPB);
@@ -96,7 +96,7 @@ function drawSheet(s, k, A) {
     const halo = linked.has(p.id) ? ' stroke="#fff" stroke-width="8" stroke-linejoin="round" paint-order="stroke"' : '';
     const tagT = (x, y, t, size, anchor = 'middle', which = 'tag') => { if (!t) return; const o = labOff(p, which); x += o[0]; y += o[1]; text(x, y, t, size, anchor, 700, halo); PLABS.push({ id: p.id, which, ...lblBox(x, y, t, size, anchor) }); };
     const descT = (x, y, t, size, anchor = 'middle') => { if (!t) return; x += ld[0]; y += ld[1]; text(x, y, t, size, anchor, 500, halo); PLABS.push({ id: p.id, which: 'desc', ...lblBox(x, y, t, size, anchor) }); };
-    if (p.t === 'sup') { arrow(p.x, p.y, 1, 0); tagT(p.x - 30, p.y + 10, p.tag, 28, 'end'); continue; }
+    if (isArrowIn(p.t)) { arrow(p.x, p.y, 1, 0); tagT(p.x - 30, p.y + 10, p.tag, 28, 'end'); continue; }
     const sym = PSYM[symOf(p)], r = p.rot || 0, kind = LIB[p.t].kind;
     g += `<g class="sym" transform="translate(${p.x} ${p.y})${r ? ` rotate(${r})` : ''}">${sym.b}</g>`;
     if (kind === 'cont') {   // (its letter inside the arrow; under it, where it goes or comes from)

@@ -298,14 +298,18 @@ const LIB = {
   // (in Circuit Builder's order: its menus, and what is in each)
   pb_no:   { cat: 'Buttons', name: 'NO Pushbutton', sym: 'NO Pushbutton', pre: 'PB', kind: 'sw', flip: 'pb_nc' },
   pb_nc:   { cat: 'Buttons', name: 'NC Pushbutton', sym: 'NC Pushbutton', pre: 'PB', kind: 'sw', flip: 'pb_no' },
+  pbm_no:  { cat: 'Buttons', name: 'NO Maintained Pushbutton', sym: 'NO Pushbutton', pre: 'PB', kind: 'sw', flip: 'pbm_nc', note: 'MAINTAINED' },
+  pbm_nc:  { cat: 'Buttons', name: 'NC Maintained Pushbutton', sym: 'NC Pushbutton', pre: 'PB', kind: 'sw', flip: 'pbm_no', note: 'MAINTAINED' },
   estop:   { cat: 'Buttons', name: 'Emergency Stop', sym: 'NC EStop Pushbutton', pre: 'ES', kind: 'sw' },
   sel:     { cat: 'Switches', name: 'Selector Switch', sym: 'Selector Switch Operator', pre: 'SS', kind: 'sw' },
   ls_no:   { cat: 'Switches', name: 'NO Limit Switch', sym: 'NO Limit Switch', pre: 'LS', kind: 'sw', flip: 'ls_nc' },
   ls_nc:   { cat: 'Switches', name: 'NC Limit Switch', sym: 'NC Limit Switch', pre: 'LS', kind: 'sw', flip: 'ls_no' },
   ls_hc:   { cat: 'Switches', name: 'NO Limit Switch, Held Closed', sym: 'NO HC Limit Switch', pre: 'LS', kind: 'sw', flip: 'ls_ho' },
   ls_ho:   { cat: 'Switches', name: 'NC Limit Switch, Held Open', sym: 'NC HO Limit Switch', pre: 'LS', kind: 'sw', flip: 'ls_hc' },
-  ts_no:   { cat: 'Switches', name: 'NO Temperature Switch', sym: 'NO Temperature Switch', pre: 'TS', kind: 'sw', flip: 'ts_nc' },
-  ts_nc:   { cat: 'Switches', name: 'NC Temperature Switch', sym: 'NC Temperature Switch', pre: 'TS', kind: 'sw', flip: 'ts_no' },
+  ts_no:   { cat: 'Switches', name: 'NO Temperature Switch', sym: 'NO Temperature Switch', pre: 'TS', kind: 'sw', flip: 'ts_nc', note: 'HIGH TEMP' },
+  ts_nc:   { cat: 'Switches', name: 'NC Temperature Switch', sym: 'NC Temperature Switch', pre: 'TS', kind: 'sw', flip: 'ts_no', note: 'HIGH TEMP' },
+  ts_nol:  { cat: 'Switches', name: 'NO Temperature Switch, Low Temp', sym: 'NO Temperature Switch', pre: 'TS', kind: 'sw', flip: 'ts_ncl', note: 'LOW TEMP' },
+  ts_ncl:  { cat: 'Switches', name: 'NC Temperature Switch, Low Temp', sym: 'NC Temperature Switch', pre: 'TS', kind: 'sw', flip: 'ts_nol', note: 'LOW TEMP' },
   ps_no:   { cat: 'Switches', name: 'NO Pressure Switch', sym: 'NO Pressure Switch', pre: 'PS', kind: 'sw', flip: 'ps_nc' },
   ps_nc:   { cat: 'Switches', name: 'NC Pressure Switch', sym: 'NC Pressure Switch', pre: 'PS', kind: 'sw', flip: 'ps_no' },
   fs_no:   { cat: 'Switches', name: 'NO Float Switch', sym: 'NO Float Switch', pre: 'FS', kind: 'sw', flip: 'fs_nc' },
@@ -316,12 +320,16 @@ const LIB = {
   prs_nc:  { cat: 'Switches', name: 'NC Proximity Switch', sym: 'NC Proximity Switch', pre: 'PRS', kind: 'sw', flip: 'prs_no' },
   spst:    { cat: 'Switches', name: 'Toggle Switch (SPST)', sym: 'SPST Switch', pre: 'SW', kind: 'sw' },
   coil:    { cat: 'Outputs', name: 'Relay Coil', sym: 'Relay', pre: 'CR', kind: 'coil' },
+  tmr_on:  { cat: 'Outputs', name: 'On-Delay Timer', sym: 'Relay', kind: 'coil', as: 'coil', preset: { pre: 'TR' } },
+  tmr_off: { cat: 'Outputs', name: 'Off-Delay Timer', sym: 'Relay', kind: 'coil', as: 'coil', preset: { pre: 'TR', tof: true } },
   pl:      { cat: 'Outputs', name: 'Pilot Light', sym: 'Pilot Light', pre: 'PL', kind: 'load' },
   sol:     { cat: 'Outputs', name: 'Solenoid', sym: 'Solenoid', pre: 'SOL', kind: 'load' },
   htr:     { cat: 'Outputs', name: 'Heating Element', sym: 'Heating Element', pre: 'HTR', kind: 'load' },
   motor:   { cat: 'Outputs', name: 'Motor', sym: 'Motor Leads', pre: 'M', kind: 'motor' },
   con_no:  { cat: 'Contacts', name: 'NO Contact', sym: 'NO Contact', kind: 'contact', flip: 'con_nc' },
   con_nc:  { cat: 'Contacts', name: 'NC Contact', sym: 'NC Contact', kind: 'contact', flip: 'con_no' },
+  tc_no:   { cat: 'Contacts', name: 'NO Timed Contact', sym: 'NO ND Switch', kind: 'contact', flip: 'tc_nc' },
+  tc_nc:   { cat: 'Contacts', name: 'NC Timed Contact', sym: 'NC ND Switch', kind: 'contact', flip: 'tc_no' },
   mst3:    { cat: 'Contacts', name: 'Starter', sym: '3PH Starter Contacts', kind: 'starter', poles: [[0, 1], [2, 3], [4, 5]] },
   olc:     { cat: 'Contacts', name: 'OL Contact', sym: 'NC Contact', kind: 'olc' },
   dsc3:    { cat: 'Protection', name: 'Disconnect', sym: '3PH Disconnect', pre: 'DS', kind: 'power', poles: [[0, 1], [2, 3], [4, 5]] },
@@ -331,6 +339,8 @@ const LIB = {
   ol3:     { cat: 'Protection', name: 'Overload', sym: '3PH Thermal Overload', pre: 'OL', kind: 'ol', poles: [[0, 1], [2, 3], [4, 5]] },
   ol:      { cat: 'Protection', name: 'Overload Heater (1 line)', sym: 'Thermal Overload', pre: 'OL', kind: 'ol', poles: [[0, 1]] },
   sup:     { cat: 'Power', name: 'Phase (L1, L2, L3)', kind: 'supply' },
+  src_l1:  { cat: 'Power', name: 'Source L1 (control)', kind: 'source' },
+  src_l2:  { cat: 'Power', name: 'Return L2 (control)', kind: 'source' },
   xfmr:    { cat: 'Power', name: 'Transformer', sym: 'Control Transformer', pre: 'CPT', kind: 'xfmr' },
   cnt_out: { cat: 'Continuation', name: 'Continues To (out)', sym: 'Continuation Out', kind: 'cont', flip: 'cnt_in' },
   cnt_in:  { cat: 'Continuation', name: 'Continued From (in)', sym: 'Continuation In', kind: 'cont', flip: 'cnt_out' },
@@ -357,14 +367,17 @@ const COIL_PRE = [['CR', 'Control Relay'], ['M', 'Starter'], ['TR', 'Timer'], ['
 // the line-in arrow: its one terminal at its middle, the arrow pointing into it from the left
 const SUP_T = [[0, 0]];
 // a device's own terminals (its symbol's, or the line-in arrow's), before it is turned
-const termsOf = t => t === 'sup' ? SUP_T : PSYM[LIB[t].sym].t;
+// the line-in arrows: a phase (L1, L2, L3 of the power), and the control circuit's source (L1) and return (L2)
+const isArrowIn = t => t === 'sup' || t === 'src_l1' || t === 'src_l2';
+const termsOf = t => isArrowIn(t) ? SUP_T : PSYM[LIB[t].sym].t;
 // how far its drawing reaches either side of its middle, and above and below (for picking it, and its labels)
 function extentOf(t) {
-  if (t === 'sup') return { x0: -70, x1: 4, y0: -20, y1: 20 };
+  if (isArrowIn(t)) return { x0: -70, x1: 4, y0: -20, y1: 20 };
   const s = PSYM[LIB[t].sym], xs = s.t.map(p => p[0]);
   let x0 = Math.min(...xs), x1 = Math.max(...xs);
   if (t === 'motor') { x0 = -140; x1 = 66; }
   if (t === 'xfmr') { x0 = -64; x1 = 64; }
+  if (t === 'cnt_out') { x0 = -40; x1 = 36; } if (t === 'cnt_in') { x0 = -36; x1 = 40; }   // (one terminal: the arrow's own width)
   return { x0, x1, y0: s.y0, y1: s.y1 };
 }
 // the poles a device carries a line through (a two-ended device: its two ends)
@@ -527,7 +540,7 @@ function endAt(s, x, y, skipPart = null, split = true) {
 // a part just put down: dropped across a wire, the wire cut and the part put in it (each pole along its own wire);
 // a terminal on a wire's loose end, or on a wire's run, joined to it
 function settle(s, p) {
-  if (p.t === 'rail' || p.t === 'sup') return attachTerms(s, p);
+  if (p.t === 'rail' || isArrowIn(p.t)) return attachTerms(s, p);
   for (const [i, j] of polesOf(p.t)) {
     if (wiresAt(s, { p: p.id, i }).length || wiresAt(s, { p: p.id, i: j }).length) continue;
     const A = termPos(p, i), B = termPos(p, j);
@@ -645,6 +658,7 @@ function nextTag(pre, motor = false) {   // (motors are counted among themselves
 let lastCoil = '';
 function defaultTag(t) {
   const k = LIB[t].kind;
+  if (t === 'tc_no' || t === 'tc_nc') { const tm = allParts().filter(q => q.p.t === 'coil' && /^TR/.test(q.p.tag || '')); return (tm.find(q => q.p.tag === lastCoil) || tm[tm.length - 1] || {}).p?.tag || 'TR1'; }   // (a timed contact: the last timer's)
   if (k === 'contact') return lastCoil || (allParts().find(q => q.p.t === 'coil') || {}).p?.tag || '';
   if (k === 'starter') { const m = allParts().find(q => q.p.t === 'coil' && /^M\d*$/.test(q.p.tag || '')); return m ? m.p.tag : 'M1'; }
   if (k === 'olc') { const o = allParts().find(q => LIB[q.p.t].kind === 'ol'); return o ? o.p.tag : 'OL1'; }
@@ -652,6 +666,7 @@ function defaultTag(t) {
     const outs = allParts().filter(q => q.p.t === 'cnt_out').map(q => q.p.tag), ins = new Set(allParts().filter(q => q.p.t === 'cnt_in').map(q => q.p.tag));
     if (t === 'cnt_in') { const open = outs.find(x => x && !ins.has(x)); if (open) return open; }
     const used = new Set([...outs, ...ins]); for (const c of 'ABCDEFGHJKLMNPQRSTUVWXYZ') if (!used.has(c)) return c; return 'A'; }
+  if (t === 'src_l1') return 'L1'; if (t === 'src_l2') return 'L2';
   if (t === 'sup') { const used = new Set(allParts().filter(q => q.p.t === 'sup').map(q => q.p.tag)); return ['L1', 'L2', 'L3'].find(l => !used.has(l)) || 'L1'; }
   return nextTag(LIB[t].pre, LIB[t].kind === 'motor');
 }
@@ -665,7 +680,9 @@ function redo() { if (!REDO.length) return false; UNDO.push(JSON.stringify(doc))
 /* ---------- building by hand (templates, tests) ---------- */
 // a part put down at x, y: given its next tag, cut into the wire it lands across
 function addPart(s, t, x, y, o = {}) {
+  if (LIB[t].as) { o = { ...LIB[t].preset, ...o }; t = LIB[t].as; }   // (an on- or off-delay timer: a coil set up as one)
   const p = { id: uid('p'), t, x, y, rot: o.rot || 0, desc: o.desc || '' };
+  if (o.tof) p.tof = true;
   if (t === 'coil') p.pre = o.pre || 'CR';
   if (t === 'fdsc3') p.fu = o.fu || nextTag('FU');   // (its three fuses: FU1, FU2, FU3, counted with the rest)
   p.tag = o.tag != null ? o.tag : t === 'coil' ? nextTag(p.pre) : defaultTag(t);
@@ -686,7 +703,7 @@ function addWire(s, pts) {
 function rotateParts(s, ids) {
   const touched = s.wires.filter(w => [w.a, w.b].some(e => e.p && ids.has(e.p)));
   const before = new Map(touched.map(w => [w.id, { a: pos(s, w.a), b: pos(s, w.b), pts: w.pts.map(q => [...q]) }]));
-  for (const p of s.parts) if (ids.has(p.id) && p.t !== 'rail' && p.t !== 'sup') p.rot = ((p.rot || 0) + 90) % 360;
+  for (const p of s.parts) if (ids.has(p.id) && p.t !== 'rail' && !isArrowIn(p.t)) p.rot = ((p.rot || 0) + 90) % 360;
   for (const w of touched) { const o = before.get(w.id); reroute(s, w, o.a, o.b, o.pts, 0, !!(w.a.p && ids.has(w.a.p))); simplify(s, w); }
 }
 
@@ -728,6 +745,7 @@ function analyse(D = doc) {
       if (p.t === 'rail') { mk('RAIL:' + p.label); continue; }
       for (let i = 0; i < termsN(p); i++) { const kk = mk(s.id + ':p:' + p.id + ':' + i), [x, y] = termPos(p, i); terms.push({ s, k, p, i, key: kk, x, y }); here(x, y, kk); }
       if (p.t === 'sup' && p.tag) join(s.id + ':p:' + p.id + ':0', 'SUP:' + p.tag);
+      if (p.t === 'src_l1' || p.t === 'src_l2') join(s.id + ':p:' + p.id + ':0', p.t === 'src_l1' ? 'RAIL:L1' : 'RAIL:L2');   // (the control source and return: the L1 and L2 rails)
       if (LIB[p.t] && LIB[p.t].kind === 'cont' && p.tag) join(s.id + ':p:' + p.id + ':0', 'CONT:' + p.tag);   // (continuations with one letter are one wire)
     }
     for (const n of s.nodes) here(n.x, n.y, s.id + ':n:' + n.id);
@@ -878,7 +896,7 @@ function checkPrint(A = analyse()) {
   // wiring: terminals with nothing on them, wires that end in the air
   let open = 0;
   for (const x of parts) { const loose = [];
-    for (let i = 0; i < termsN(x.p); i++) { const r = A.rootT(x.p, x.s, i); if (!WIRED.has(r) && (TERMS.get(r) || []).length < 2 && !(x.p.t === 'sup')) loose.push(i); }
+    for (let i = 0; i < termsN(x.p); i++) { const r = A.rootT(x.p, x.s, i); if (!WIRED.has(r) && (TERMS.get(r) || []).length < 2 && !isArrowIn(x.p.t)) loose.push(i); }
     if (loose.length) { open++; add('e', `${name(x.p)} is not wired${loose.length < termsN(x.p) ? ' at one end' : ''}${sheetName(x.k)}`, loose.length < termsN(x.p) ? 'A terminal with no wire on it.' : 'No wire reaches it.', [pk(x)]); } }
   doc.sheets.forEach((s, k) => { for (const n of s.nodes) if (wiresAt(s, { n: n.id }).length === 1 && !s.parts.some(p => p.t !== 'rail' && [...Array(termsN(p)).keys()].some(i => { const q = termPos(p, i); return q[0] === n.x && q[1] === n.y; })))
     { open++; add('e', `A wire ends without reaching anything${sheetName(k)}`, 'Its loose end is ringed: join it to a terminal, a rail or another wire.', [{ k, id: n.id, x: n.x, y: n.y }]); } });
@@ -937,7 +955,7 @@ function contNote(p, k) {
 /* ---------- what Circuit Builder's devices carry into the print ---------- */
 // one pushbutton (or selector switch) drawn in several rungs: the parts with its number are its contact blocks; the top
 // one is the operator itself (a selector's turning arrow is drawn on it only)
-const isPB = p => p.t === 'pb_no' || p.t === 'pb_nc';
+const isPB = p => p.t === 'pb_no' || p.t === 'pb_nc' || p.t === 'pbm_no' || p.t === 'pbm_nc';
 const blocksOf = p => allParts().map(q => q.p).filter(q => q.tag && q.tag === p.tag && (isPB(p) ? isPB(q) : q.t === p.t)).sort((a, b) => a.y - b.y || a.x - b.x);
 const mainBlock = p => blocksOf(p)[0] || p;
 function blockGroups(s) { const g = new Map(); for (const p of s.parts) if ((isPB(p) || p.t === 'sel') && p.tag) { const k = (p.t === 'sel' ? 'S:' : 'P:') + p.tag; if (!g.has(k)) g.set(k, []); g.get(k).push(p); }
@@ -946,14 +964,14 @@ function blockGroups(s) { const g = new Map(); for (const p of s.parts) if ((isP
 const timerOf = p => { const c = allParts().find(q => q.p.t === 'coil' && q.p.tag === p.tag); return c && /^TR/.test(c.p.tag) ? c.p : null; };
 // the print symbol a part is drawn with: a timer's contacts timed (unless instant); a selector's extra blocks without the arrow
 function symOf(p) {
-  if ((p.t === 'con_no' || p.t === 'con_nc') && !p.inst) { const tm = timerOf(p); if (tm) return `${p.t === 'con_no' ? 'NO' : 'NC'} ${tm.tof ? 'FD' : 'ND'} Switch`; }
+  if (p.t === 'tc_no' || p.t === 'tc_nc') { const tm = timerOf(p); return `${p.t === 'tc_no' ? 'NO' : 'NC'} ${tm && tm.tof ? 'FD' : 'ND'} Switch`; }   // (timed: on- or off-delay as its timer is)
   if (p.t === 'sel' && mainBlock(p) !== p) return 'Selector Switch';
   return LIB[p.t].sym;
 }
 // what is written under a part: its label, and what Circuit Builder would add (a timer's delay, the positions a selector's
 // block is closed in, the button a light is built into, the light built into a button)
 function noteOf(p) {
-  const n = [p.desc];
+  const n = [p.desc || LIB[p.t].note];
   if (p.t === 'coil' && /^TR/.test(p.tag || '')) n.push(`${p.tof ? 'OFF' : 'ON'}-DELAY${p.delay ? ' ' + p.delay + ' s' : ''}`);
   if (p.t === 'sel') { const names = selNames(p), cl = (p.closedIn || []).map(i => names[i]).filter(Boolean); n.push(cl.length ? 'CLOSED: ' + cl.join(', ') : 'OPEN IN ALL'); }
   if (p.t === 'pl' && p.inPB) n.push('IN ' + p.inPB);
@@ -1013,7 +1031,7 @@ function drawSheet(s, k, A) {
     const halo = linked.has(p.id) ? ' stroke="#fff" stroke-width="8" stroke-linejoin="round" paint-order="stroke"' : '';
     const tagT = (x, y, t, size, anchor = 'middle', which = 'tag') => { if (!t) return; const o = labOff(p, which); x += o[0]; y += o[1]; text(x, y, t, size, anchor, 700, halo); PLABS.push({ id: p.id, which, ...lblBox(x, y, t, size, anchor) }); };
     const descT = (x, y, t, size, anchor = 'middle') => { if (!t) return; x += ld[0]; y += ld[1]; text(x, y, t, size, anchor, 500, halo); PLABS.push({ id: p.id, which: 'desc', ...lblBox(x, y, t, size, anchor) }); };
-    if (p.t === 'sup') { arrow(p.x, p.y, 1, 0); tagT(p.x - 30, p.y + 10, p.tag, 28, 'end'); continue; }
+    if (isArrowIn(p.t)) { arrow(p.x, p.y, 1, 0); tagT(p.x - 30, p.y + 10, p.tag, 28, 'end'); continue; }
     const sym = PSYM[symOf(p)], r = p.rot || 0, kind = LIB[p.t].kind;
     g += `<g class="sym" transform="translate(${p.x} ${p.y})${r ? ` rotate(${r})` : ''}">${sym.b}</g>`;
     if (kind === 'cont') {   // (its letter inside the arrow; under it, where it goes or comes from)
@@ -1260,7 +1278,7 @@ function drawEd() {
     const p = ghostPart(cursor), sym = LIB[p.t].sym, sp = splicePreview(p);
     for (const w of sp.wires) g += `<polyline points="${wirePts(S, w).map(q => q.join(',')).join(' ')}" fill="none" stroke="#2f8cff" stroke-width="12" stroke-opacity=".3"/>`;
     g += `<g opacity=".55" fill="none" stroke="#1f6fd8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">`;
-    if (p.t === 'sup') g += `<path d="M${p.x - 22} ${p.y - 13}L${p.x - 22} ${p.y + 13}L${p.x} ${p.y}Z" fill="#1f6fd8"/>`;
+    if (isArrowIn(p.t)) g += `<path d="M${p.x - 22} ${p.y - 13}L${p.x - 22} ${p.y + 13}L${p.x} ${p.y}Z" fill="#1f6fd8"/>`;
     else g += `<g transform="translate(${p.x} ${p.y})${p.rot ? ` rotate(${p.rot})` : ''}">${PSYM[sym].b}</g>`;
     g += '</g>';
   }
@@ -1531,9 +1549,9 @@ function setTool(t) {
 function startPlacing(t) { placing = { t, rot: 0 }; sel = new Set(); selW = null; setTool('place'); renderProps(); }
 
 /* ---------- the palette and the ribbon's menus ---------- */
-const thumb = t => { if (t === 'sup') return `<svg viewBox="-80 -30 100 60"><path d="M-22 -13L-22 13L0 0Z" fill="#000"/><line x1="0" y1="0" x2="18" y2="0" stroke="#000" stroke-width="4"/><text x="-30" y="9" font-size="26" font-weight="700" text-anchor="end" font-family="Arial">L1</text></svg>`;
+const thumb = t => { if (isArrowIn(t)) return `<svg viewBox="-80 -30 100 60"><path d="M-22 -13L-22 13L0 0Z" fill="#000"/><line x1="0" y1="0" x2="18" y2="0" stroke="#000" stroke-width="4"/><text x="-30" y="9" font-size="26" font-weight="700" text-anchor="end" font-family="Arial">${t === 'src_l2' ? 'L2' : 'L1'}</text></svg>`;
   const s = PSYM[LIB[t].sym], e = extentOf(t), pad = 8; return `<svg viewBox="${e.x0 - pad} ${s.y0 - pad} ${e.x1 - e.x0 + 2 * pad} ${s.y1 - s.y0 + 2 * pad}"><g fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${s.b}</g></svg>`; };
-const short = n => n.replace(' (out)', '').replace(' (in)', '').replace('Pushbutton', 'PB').replace('Emergency Stop', 'E-Stop').replace('Temperature', 'Temp.').replace('Proximity', 'Prox.').replace('Selector Switch', 'Selector').replace(', Held Closed', ' (HC)').replace(', Held Open', ' (HO)').replace('Toggle Switch (SPST)', 'Toggle').replace('Overload Heater (1 line)', 'OL Heater').replace('Phase (L1, L2, L3)', 'Phase').replace('3-Phase', '3Ø');
+const short = n => n.replace(' Maintained Pushbutton', ' Maint. PB').replace(', Low Temp', ' (Low)').replace(' (control)', '').replace(' (out)', '').replace(' (in)', '').replace('Pushbutton', 'PB').replace('Emergency Stop', 'E-Stop').replace('Temperature', 'Temp.').replace('Proximity', 'Prox.').replace('Selector Switch', 'Selector').replace(', Held Closed', ' (HC)').replace(', Held Open', ' (HO)').replace('Toggle Switch (SPST)', 'Toggle').replace('Overload Heater (1 line)', 'OL Heater').replace('Phase (L1, L2, L3)', 'Phase').replace('3-Phase', '3Ø');
 function buildPalette() {
   let h = '';
   for (const c of CATS) { h += `<div class="ph">${c}</div><div class="pg">`;
@@ -1620,12 +1638,12 @@ function renderProps0() {
     const rn = A.rung.get(p.id), xr = A.xref.get(p.id);
     const termNums = [...Array(termsN(p)).keys()].map(i => A.label.get(A.rootT(p, S, i))).filter(Boolean);
     P.innerHTML = `<h4>${esc(d.name)}${p.tag ? ' ' + esc(p.t === 'fus3' ? tagsOf(p)[0] + '–' + tagsOf(p)[2] : p.tag) : ''}</h4>
-      ${p.t === 'sup' ? `<div class="f">Line<div class="seg">${['L1', 'L2', 'L3'].map(l => `<button data-line="${l}" aria-pressed="${p.tag === l}">${l}</button>`).join('')}</div></div>` : `
+      ${p.t === 'src_l1' || p.t === 'src_l2' ? '' : p.t === 'sup' ? `<div class="f">Line<div class="seg">${['L1', 'L2', 'L3'].map(l => `<button data-line="${l}" aria-pressed="${p.tag === l}">${l}</button>`).join('')}</div></div>` : `
       ${k === 'contact' || k === 'starter' || k === 'olc' ? `<div class="f">Worked by<select id="p-of">${[...new Set([...list, p.tag].filter(Boolean))].map(x => `<option value="${esc(x)}"${x === p.tag ? ' selected' : ''}>${esc(x)}${list.includes(x) ? '' : ' (no ' + (k === 'olc' ? 'overload' : 'coil') + ' yet)'}</option>`).join('')}${list.length || p.tag ? '' : `<option value="">(place a ${k === 'olc' ? 'overload' : 'coil'} first)</option>`}<option value="__other">Other…</option></select></div>`
         : `<div class="f">${k === 'coil' || k === 'sw' || k === 'cont' ? 'Letter' : 'Number'}<input class="in" id="p-tag" value="${esc(p.tag)}" autocomplete="off"></div>`}`}
       ${p.t === 'fdsc3' ? `<div class="f">Fuses<input class="in" id="p-fu" value="${esc(p.fu || '')}" autocomplete="off" title="The first of its three fuses: FU1 makes them FU1, FU2, FU3"></div><div class="f">&nbsp;<span class="ro">${esc(tagsOf(p).slice(1).join(', '))}</span></div>` : ''}
       ${k === 'coil' && /^TR/.test(p.tag || '') ? `<div class="f">Delay<div class="seg"><button data-tof="0" aria-pressed="${!p.tof}">On-Delay</button><button data-tof="1" aria-pressed="${!!p.tof}">Off-Delay</button></div></div><div class="f">Seconds<input class="in" id="p-delay" type="number" min="0" step="0.5" value="${esc(p.delay ?? '')}" style="min-width:80px;width:90px"></div>` : ''}
-      ${(p.t === 'con_no' || p.t === 'con_nc') && timerOf(p) ? `<div class="f">Timed<div class="seg"><button data-inst="0" aria-pressed="${!p.inst}">Timed</button><button data-inst="1" aria-pressed="${!!p.inst}">Instant</button></div></div>` : ''}
+      ${/^(con|tc)_n[oc]$/.test(p.t) && (timerOf(p) || p.t.startsWith('tc')) ? `<div class="f">Contact Type<div class="seg"><button data-ctype="tc" aria-pressed="${p.t.startsWith('tc')}">Timed</button><button data-ctype="con" aria-pressed="${p.t.startsWith('con')}">Instant</button></div></div>` : ''}
       ${p.t === 'sel' ? `<div class="f">Positions<input class="in" id="p-pos" value="${esc(selNames(p).join('/'))}" title="2 to 4 positions, with slashes: HAND/OFF/AUTO"></div><div class="f">Closed In<div class="seg">${selNames(p).map((n, i) => `<button data-cl="${i}" aria-pressed="${(p.closedIn || []).includes(i)}">${esc(n)}</button>`).join('')}</div></div>` : ''}
       ${p.t === 'pl' ? `<div class="f">Built Into<select id="p-inpb"><option value="">None (a light of its own)</option>${[...new Set(allParts().filter(q => isPB(q.p) && q.p.tag).map(q => q.p.tag).concat(p.inPB ? [p.inPB] : []))].map(t => `<option value="${esc(t)}"${t === p.inPB ? ' selected' : ''}>${esc(t)} (lighted pushbutton)</option>`).join('')}</select></div>` : ''}
       ${isPB(p) || p.t === 'sel' ? `<p class="help">${blocksOf(p).length > 1 ? (mainBlock(p) === p ? `The main one of ${blocksOf(p).length} blocks of ${esc(p.tag)}` : `An extra contact block of ${esc(p.tag)}`) + ': they work together.' : `To give it another contact block on another rung, put down another ${p.t === 'sel' ? 'selector' : 'pushbutton'} and give it the same number (${esc(p.tag)}).`}</p>` : ''}
@@ -1646,7 +1664,7 @@ function renderProps0() {
     const ds = $('p-desc'); if (ds) ds.addEventListener('input', () => edit(() => { p.desc = ds.value.toUpperCase(); }));
     for (const b of P.querySelectorAll('[data-tof]')) b.addEventListener('click', () => { snapshot(); p.tof = b.dataset.tof === '1'; if (!p.tof) delete p.tof; refresh(); });
     const dl = $('p-delay'); if (dl) dl.addEventListener('input', () => edit(() => { const v = parseFloat(dl.value); if (isFinite(v) && v >= 0) p.delay = v; else delete p.delay; }));
-    for (const b of P.querySelectorAll('[data-inst]')) b.addEventListener('click', () => { snapshot(); p.inst = b.dataset.inst === '1'; if (!p.inst) delete p.inst; refresh(); });
+    for (const b of P.querySelectorAll('[data-ctype]')) b.addEventListener('click', () => { snapshot(); p.t = b.dataset.ctype + '_' + p.t.split('_')[1]; delete p.inst; refresh(); });
     const ps = $('p-pos'); if (ps) ps.addEventListener('change', () => { snapshot(); const n = ps.value.split(/[\/,]+/).map(x => x.trim().toUpperCase()).filter(Boolean).slice(0, 4); p.pos = (n.length >= 2 ? n : ['OFF', 'ON']).join('/'); p.closedIn = (p.closedIn || []).filter(i => i < n.length); refresh(); });
     for (const b of P.querySelectorAll('[data-cl]')) b.addEventListener('click', () => { snapshot(); const i = +b.dataset.cl, s = new Set(p.closedIn || []); s.has(i) ? s.delete(i) : s.add(i); p.closedIn = [...s].sort(); refresh(); });
     const ib = $('p-inpb'); if (ib) ib.addEventListener('change', () => { snapshot(); if (ib.value) p.inPB = ib.value; else delete p.inPB; refresh(); });
@@ -1778,6 +1796,8 @@ function loadDoc(d) {
   doc = d; S = doc.sheets[doc.cur]; sel = new Set(); selW = null; UNDO.length = 0; REDO.length = 0;
   // (a fused disconnect from before its fuses were numbered: the next three numbers)
   for (const s of d.sheets) for (const p of s.parts) if (p.t === 'fdsc3' && !p.fu) p.fu = nextTag('FU');
+  // (a timer's contact drawn timed before there were timed contacts of their own: one now)
+  for (const s of d.sheets) for (const p of s.parts) if ((p.t === 'con_no' || p.t === 'con_nc') && !p.inst && d.sheets.some(t => t.parts.some(c => c.t === 'coil' && c.tag === p.tag && /^TR/.test(c.tag || '')))) p.t = 'tc_' + p.t.split('_')[1];
 }
 const fileName = () => ((doc.tb.fields.find(f => /title/i.test(f.label)) || {}).value || 'Print').replace(/[\\/:*?"<>|]+/g, '').trim() || 'Print';
 /* ---------- files, as in Circuit Builder: where the browser allows it (Chrome and Edge, and the installed app), the

@@ -240,12 +240,26 @@ let passed = 0, failed = 0;
   await check('From Circuit Builder: a lighted pushbutton, a pushbutton with two blocks, an on-delay timer’s contacts, a selector’s positions; pilot light as big as a relay', async p => {
     const r = await p.evaluate(() => { loadDoc(template('blank')); const L1 = S.parts.find(q => q.label === 'L1'), L2 = S.parts.find(q => q.label === 'L2');
       addWire(S, [[L1.x, 400], [L2.x, 400]]); const b1 = addPart(S, 'pb_no', 500, 400, { tag: 'PB1' }); Object.assign(addPart(S, 'coil', 1100, 400, { pre: 'TR', tag: 'TR1' }), { delay: 5 });
-      addWire(S, [[L1.x, 600], [L2.x, 600]]); addPart(S, 'pb_no', 500, 600, { tag: 'PB1' }); addPart(S, 'con_no', 700, 600, { tag: 'TR1' }); const pl = Object.assign(addPart(S, 'pl', 1100, 600), { inPB: 'PB1' });
+      addWire(S, [[L1.x, 600], [L2.x, 600]]); addPart(S, 'pb_no', 500, 600, { tag: 'PB1' }); addPart(S, 'tc_no', 700, 600, { tag: 'TR1' }); const pl = Object.assign(addPart(S, 'pl', 1100, 600), { inPB: 'PB1' });
       addWire(S, [[L1.x, 800], [L2.x, 800]]); Object.assign(addPart(S, 'sel', 500, 800, { tag: 'SS1' }), { pos: 'HAND/OFF/AUTO', closedIn: [0] }); addPart(S, 'pl', 1100, 800); refresh(true);
       const txt = [...svg.querySelectorAll('g.ink text')].map(e => e.textContent);
-      const dup = ISSUES.some(i => /tagged PB1/.test(i.title)), con = S.parts.find(q => q.t === 'con_no');
+      const dup = ISSUES.some(i => /tagged PB1/.test(i.title)), con = S.parts.find(q => q.t === 'tc_no');
       return [dup, symOf(con), txt.includes('ON-DELAY 5 s'), txt.includes('IN PB1'), txt.includes('LIGHTED (' + pl.tag + ')'), txt.includes('CLOSED: HAND'), !!svg.querySelector('g.ink line[stroke-dasharray="12 10"]') && !!svg.querySelector('g.ink polyline[stroke-dasharray="12 10"]'), termsOf('pl').map(t => t[0]).join('/')]; });
     return r.join('|') === 'false|NO ND Switch|true|true|true|true|true|-40/40' ? [] : ['dup error | contact symbol | timer note | light note | button note | selector note | block link and light link | pilot light: ' + r.join(' | ')];
+  });
+
+  await check('Every Circuit Builder part is in the palette: timers, timed contacts, maintained buttons, low-temp switches, control source and return', async p => {
+    const r = await p.evaluate(() => { loadDoc(template('blank')); S.parts = S.parts.filter(q => q.t !== 'rail');
+      const want = ['pb_no', 'pb_nc', 'pbm_no', 'pbm_nc', 'estop', 'sel', 'ls_no', 'ls_nc', 'ls_hc', 'ls_ho', 'ts_no', 'ts_nc', 'ts_nol', 'ts_ncl', 'ps_no', 'ps_nc', 'coil', 'tmr_on', 'tmr_off', 'pl', 'sol', 'htr', 'motor',
+        'con_no', 'con_nc', 'tc_no', 'tc_nc', 'mst3', 'olc', 'dsc3', 'fus3', 'fuse', 'ol3', 'sup', 'src_l1', 'src_l2', 'xfmr', 'cnt_out', 'cnt_in'];
+      const missing = want.filter(t => !document.querySelector(`.pt[data-t="${t}"]`));
+      // an off-delay timer and its timed contacts; a control source and return feeding a rung
+      const tm = addPart(S, 'tmr_off', 1000, 400), c = addPart(S, 'tc_nc', 600, 600), s1 = addPart(S, 'src_l1', 300, 800), s2 = addPart(S, 'src_l2', 300, 900);
+      addWire(S, [[300, 800], [500, 800]]); addPart(S, 'pb_no', 540, 800); addWire(S, [[580, 800], [800, 800]]); addPart(S, 'pl', 840, 800); addWire(S, [[880, 800], [1100, 800], [1100, 900], [300, 900]]);
+      const pm = addPart(S, 'pbm_no', 540, 1100), tl = addPart(S, 'ts_nol', 900, 1100); refresh(true); const A2 = analyse();
+      const lbl = A2.label.get(A2.rootT(S.parts.find(q => q.t === 'pb_no'), S, 0));
+      return [missing.join(',') || 'none', tm.t + ':' + tm.tag + ':' + !!tm.tof, c.tag, symOf(c), lbl, noteOf(pm), noteOf(tl)]; });
+    return r.join('|') === 'none|coil:TR1:true|TR1|NC FD Switch|1|MAINTAINED|LOW TEMP' ? [] : ['missing | timer | timed contact letter | its symbol | wire from source | maintained note | low temp note: ' + r.join(' | ')];
   });
 
   await check('Title block: boxes added, changed and taken away show on the sheet; saved and opened again', async p => {

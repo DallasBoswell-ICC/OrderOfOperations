@@ -35,6 +35,7 @@ function analyse(D = doc) {
       if (p.t === 'rail') { mk('RAIL:' + p.label); continue; }
       for (let i = 0; i < termsN(p); i++) { const kk = mk(s.id + ':p:' + p.id + ':' + i), [x, y] = termPos(p, i); terms.push({ s, k, p, i, key: kk, x, y }); here(x, y, kk); }
       if (p.t === 'sup' && p.tag) join(s.id + ':p:' + p.id + ':0', 'SUP:' + p.tag);
+      if (p.t === 'src_l1' || p.t === 'src_l2') join(s.id + ':p:' + p.id + ':0', p.t === 'src_l1' ? 'RAIL:L1' : 'RAIL:L2');   // (the control source and return: the L1 and L2 rails)
       if (LIB[p.t] && LIB[p.t].kind === 'cont' && p.tag) join(s.id + ':p:' + p.id + ':0', 'CONT:' + p.tag);   // (continuations with one letter are one wire)
     }
     for (const n of s.nodes) here(n.x, n.y, s.id + ':n:' + n.id);

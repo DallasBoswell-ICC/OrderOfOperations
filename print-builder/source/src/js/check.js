@@ -34,7 +34,7 @@ function checkPrint(A = analyse()) {
   // wiring: terminals with nothing on them, wires that end in the air
   let open = 0;
   for (const x of parts) { const loose = [];
-    for (let i = 0; i < termsN(x.p); i++) { const r = A.rootT(x.p, x.s, i); if (!WIRED.has(r) && (TERMS.get(r) || []).length < 2 && !(x.p.t === 'sup')) loose.push(i); }
+    for (let i = 0; i < termsN(x.p); i++) { const r = A.rootT(x.p, x.s, i); if (!WIRED.has(r) && (TERMS.get(r) || []).length < 2 && !isArrowIn(x.p.t)) loose.push(i); }
     if (loose.length) { open++; add('e', `${name(x.p)} is not wired${loose.length < termsN(x.p) ? ' at one end' : ''}${sheetName(x.k)}`, loose.length < termsN(x.p) ? 'A terminal with no wire on it.' : 'No wire reaches it.', [pk(x)]); } }
   doc.sheets.forEach((s, k) => { for (const n of s.nodes) if (wiresAt(s, { n: n.id }).length === 1 && !s.parts.some(p => p.t !== 'rail' && [...Array(termsN(p)).keys()].some(i => { const q = termPos(p, i); return q[0] === n.x && q[1] === n.y; })))
     { open++; add('e', `A wire ends without reaching anything${sheetName(k)}`, 'Its loose end is ringed: join it to a terminal, a rail or another wire.', [{ k, id: n.id, x: n.x, y: n.y }]); } });

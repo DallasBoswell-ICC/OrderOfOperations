@@ -18,14 +18,18 @@ const LIB = {
   // (in Circuit Builder's order: its menus, and what is in each)
   pb_no:   { cat: 'Buttons', name: 'NO Pushbutton', sym: 'NO Pushbutton', pre: 'PB', kind: 'sw', flip: 'pb_nc' },
   pb_nc:   { cat: 'Buttons', name: 'NC Pushbutton', sym: 'NC Pushbutton', pre: 'PB', kind: 'sw', flip: 'pb_no' },
+  pbm_no:  { cat: 'Buttons', name: 'NO Maintained Pushbutton', sym: 'NO Pushbutton', pre: 'PB', kind: 'sw', flip: 'pbm_nc', note: 'MAINTAINED' },
+  pbm_nc:  { cat: 'Buttons', name: 'NC Maintained Pushbutton', sym: 'NC Pushbutton', pre: 'PB', kind: 'sw', flip: 'pbm_no', note: 'MAINTAINED' },
   estop:   { cat: 'Buttons', name: 'Emergency Stop', sym: 'NC EStop Pushbutton', pre: 'ES', kind: 'sw' },
   sel:     { cat: 'Switches', name: 'Selector Switch', sym: 'Selector Switch Operator', pre: 'SS', kind: 'sw' },
   ls_no:   { cat: 'Switches', name: 'NO Limit Switch', sym: 'NO Limit Switch', pre: 'LS', kind: 'sw', flip: 'ls_nc' },
   ls_nc:   { cat: 'Switches', name: 'NC Limit Switch', sym: 'NC Limit Switch', pre: 'LS', kind: 'sw', flip: 'ls_no' },
   ls_hc:   { cat: 'Switches', name: 'NO Limit Switch, Held Closed', sym: 'NO HC Limit Switch', pre: 'LS', kind: 'sw', flip: 'ls_ho' },
   ls_ho:   { cat: 'Switches', name: 'NC Limit Switch, Held Open', sym: 'NC HO Limit Switch', pre: 'LS', kind: 'sw', flip: 'ls_hc' },
-  ts_no:   { cat: 'Switches', name: 'NO Temperature Switch', sym: 'NO Temperature Switch', pre: 'TS', kind: 'sw', flip: 'ts_nc' },
-  ts_nc:   { cat: 'Switches', name: 'NC Temperature Switch', sym: 'NC Temperature Switch', pre: 'TS', kind: 'sw', flip: 'ts_no' },
+  ts_no:   { cat: 'Switches', name: 'NO Temperature Switch', sym: 'NO Temperature Switch', pre: 'TS', kind: 'sw', flip: 'ts_nc', note: 'HIGH TEMP' },
+  ts_nc:   { cat: 'Switches', name: 'NC Temperature Switch', sym: 'NC Temperature Switch', pre: 'TS', kind: 'sw', flip: 'ts_no', note: 'HIGH TEMP' },
+  ts_nol:  { cat: 'Switches', name: 'NO Temperature Switch, Low Temp', sym: 'NO Temperature Switch', pre: 'TS', kind: 'sw', flip: 'ts_ncl', note: 'LOW TEMP' },
+  ts_ncl:  { cat: 'Switches', name: 'NC Temperature Switch, Low Temp', sym: 'NC Temperature Switch', pre: 'TS', kind: 'sw', flip: 'ts_nol', note: 'LOW TEMP' },
   ps_no:   { cat: 'Switches', name: 'NO Pressure Switch', sym: 'NO Pressure Switch', pre: 'PS', kind: 'sw', flip: 'ps_nc' },
   ps_nc:   { cat: 'Switches', name: 'NC Pressure Switch', sym: 'NC Pressure Switch', pre: 'PS', kind: 'sw', flip: 'ps_no' },
   fs_no:   { cat: 'Switches', name: 'NO Float Switch', sym: 'NO Float Switch', pre: 'FS', kind: 'sw', flip: 'fs_nc' },
@@ -36,12 +40,16 @@ const LIB = {
   prs_nc:  { cat: 'Switches', name: 'NC Proximity Switch', sym: 'NC Proximity Switch', pre: 'PRS', kind: 'sw', flip: 'prs_no' },
   spst:    { cat: 'Switches', name: 'Toggle Switch (SPST)', sym: 'SPST Switch', pre: 'SW', kind: 'sw' },
   coil:    { cat: 'Outputs', name: 'Relay Coil', sym: 'Relay', pre: 'CR', kind: 'coil' },
+  tmr_on:  { cat: 'Outputs', name: 'On-Delay Timer', sym: 'Relay', kind: 'coil', as: 'coil', preset: { pre: 'TR' } },
+  tmr_off: { cat: 'Outputs', name: 'Off-Delay Timer', sym: 'Relay', kind: 'coil', as: 'coil', preset: { pre: 'TR', tof: true } },
   pl:      { cat: 'Outputs', name: 'Pilot Light', sym: 'Pilot Light', pre: 'PL', kind: 'load' },
   sol:     { cat: 'Outputs', name: 'Solenoid', sym: 'Solenoid', pre: 'SOL', kind: 'load' },
   htr:     { cat: 'Outputs', name: 'Heating Element', sym: 'Heating Element', pre: 'HTR', kind: 'load' },
   motor:   { cat: 'Outputs', name: 'Motor', sym: 'Motor Leads', pre: 'M', kind: 'motor' },
   con_no:  { cat: 'Contacts', name: 'NO Contact', sym: 'NO Contact', kind: 'contact', flip: 'con_nc' },
   con_nc:  { cat: 'Contacts', name: 'NC Contact', sym: 'NC Contact', kind: 'contact', flip: 'con_no' },
+  tc_no:   { cat: 'Contacts', name: 'NO Timed Contact', sym: 'NO ND Switch', kind: 'contact', flip: 'tc_nc' },
+  tc_nc:   { cat: 'Contacts', name: 'NC Timed Contact', sym: 'NC ND Switch', kind: 'contact', flip: 'tc_no' },
   mst3:    { cat: 'Contacts', name: 'Starter', sym: '3PH Starter Contacts', kind: 'starter', poles: [[0, 1], [2, 3], [4, 5]] },
   olc:     { cat: 'Contacts', name: 'OL Contact', sym: 'NC Contact', kind: 'olc' },
   dsc3:    { cat: 'Protection', name: 'Disconnect', sym: '3PH Disconnect', pre: 'DS', kind: 'power', poles: [[0, 1], [2, 3], [4, 5]] },
@@ -51,6 +59,8 @@ const LIB = {
   ol3:     { cat: 'Protection', name: 'Overload', sym: '3PH Thermal Overload', pre: 'OL', kind: 'ol', poles: [[0, 1], [2, 3], [4, 5]] },
   ol:      { cat: 'Protection', name: 'Overload Heater (1 line)', sym: 'Thermal Overload', pre: 'OL', kind: 'ol', poles: [[0, 1]] },
   sup:     { cat: 'Power', name: 'Phase (L1, L2, L3)', kind: 'supply' },
+  src_l1:  { cat: 'Power', name: 'Source L1 (control)', kind: 'source' },
+  src_l2:  { cat: 'Power', name: 'Return L2 (control)', kind: 'source' },
   xfmr:    { cat: 'Power', name: 'Transformer', sym: 'Control Transformer', pre: 'CPT', kind: 'xfmr' },
   cnt_out: { cat: 'Continuation', name: 'Continues To (out)', sym: 'Continuation Out', kind: 'cont', flip: 'cnt_in' },
   cnt_in:  { cat: 'Continuation', name: 'Continued From (in)', sym: 'Continuation In', kind: 'cont', flip: 'cnt_out' },
@@ -77,14 +87,17 @@ const COIL_PRE = [['CR', 'Control Relay'], ['M', 'Starter'], ['TR', 'Timer'], ['
 // the line-in arrow: its one terminal at its middle, the arrow pointing into it from the left
 const SUP_T = [[0, 0]];
 // a device's own terminals (its symbol's, or the line-in arrow's), before it is turned
-const termsOf = t => t === 'sup' ? SUP_T : PSYM[LIB[t].sym].t;
+// the line-in arrows: a phase (L1, L2, L3 of the power), and the control circuit's source (L1) and return (L2)
+const isArrowIn = t => t === 'sup' || t === 'src_l1' || t === 'src_l2';
+const termsOf = t => isArrowIn(t) ? SUP_T : PSYM[LIB[t].sym].t;
 // how far its drawing reaches either side of its middle, and above and below (for picking it, and its labels)
 function extentOf(t) {
-  if (t === 'sup') return { x0: -70, x1: 4, y0: -20, y1: 20 };
+  if (isArrowIn(t)) return { x0: -70, x1: 4, y0: -20, y1: 20 };
   const s = PSYM[LIB[t].sym], xs = s.t.map(p => p[0]);
   let x0 = Math.min(...xs), x1 = Math.max(...xs);
   if (t === 'motor') { x0 = -140; x1 = 66; }
   if (t === 'xfmr') { x0 = -64; x1 = 64; }
+  if (t === 'cnt_out') { x0 = -40; x1 = 36; } if (t === 'cnt_in') { x0 = -36; x1 = 40; }   // (one terminal: the arrow's own width)
   return { x0, x1, y0: s.y0, y1: s.y1 };
 }
 // the poles a device carries a line through (a two-ended device: its two ends)

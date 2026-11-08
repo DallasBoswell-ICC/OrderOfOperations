@@ -146,7 +146,7 @@ function endAt(s, x, y, skipPart = null, split = true) {
 // a part just put down: dropped across a wire, the wire cut and the part put in it (each pole along its own wire);
 // a terminal on a wire's loose end, or on a wire's run, joined to it
 function settle(s, p) {
-  if (p.t === 'rail' || p.t === 'sup') return attachTerms(s, p);
+  if (p.t === 'rail' || isArrowIn(p.t)) return attachTerms(s, p);
   for (const [i, j] of polesOf(p.t)) {
     if (wiresAt(s, { p: p.id, i }).length || wiresAt(s, { p: p.id, i: j }).length) continue;
     const A = termPos(p, i), B = termPos(p, j);
@@ -264,6 +264,7 @@ function nextTag(pre, motor = false) {   // (motors are counted among themselves
 let lastCoil = '';
 function defaultTag(t) {
   const k = LIB[t].kind;
+  if (t === 'tc_no' || t === 'tc_nc') { const tm = allParts().filter(q => q.p.t === 'coil' && /^TR/.test(q.p.tag || '')); return (tm.find(q => q.p.tag === lastCoil) || tm[tm.length - 1] || {}).p?.tag || 'TR1'; }   // (a timed contact: the last timer's)
   if (k === 'contact') return lastCoil || (allParts().find(q => q.p.t === 'coil') || {}).p?.tag || '';
   if (k === 'starter') { const m = allParts().find(q => q.p.t === 'coil' && /^M\d*$/.test(q.p.tag || '')); return m ? m.p.tag : 'M1'; }
   if (k === 'olc') { const o = allParts().find(q => LIB[q.p.t].kind === 'ol'); return o ? o.p.tag : 'OL1'; }
@@ -271,6 +272,7 @@ function defaultTag(t) {
     const outs = allParts().filter(q => q.p.t === 'cnt_out').map(q => q.p.tag), ins = new Set(allParts().filter(q => q.p.t === 'cnt_in').map(q => q.p.tag));
     if (t === 'cnt_in') { const open = outs.find(x => x && !ins.has(x)); if (open) return open; }
     const used = new Set([...outs, ...ins]); for (const c of 'ABCDEFGHJKLMNPQRSTUVWXYZ') if (!used.has(c)) return c; return 'A'; }
+  if (t === 'src_l1') return 'L1'; if (t === 'src_l2') return 'L2';
   if (t === 'sup') { const used = new Set(allParts().filter(q => q.p.t === 'sup').map(q => q.p.tag)); return ['L1', 'L2', 'L3'].find(l => !used.has(l)) || 'L1'; }
   return nextTag(LIB[t].pre, LIB[t].kind === 'motor');
 }
@@ -284,7 +286,9 @@ function redo() { if (!REDO.length) return false; UNDO.push(JSON.stringify(doc))
 /* ---------- building by hand (templates, tests) ---------- */
 // a part put down at x, y: given its next tag, cut into the wire it lands across
 function addPart(s, t, x, y, o = {}) {
+  if (LIB[t].as) { o = { ...LIB[t].preset, ...o }; t = LIB[t].as; }   // (an on- or off-delay timer: a coil set up as one)
   const p = { id: uid('p'), t, x, y, rot: o.rot || 0, desc: o.desc || '' };
+  if (o.tof) p.tof = true;
   if (t === 'coil') p.pre = o.pre || 'CR';
   if (t === 'fdsc3') p.fu = o.fu || nextTag('FU');   // (its three fuses: FU1, FU2, FU3, counted with the rest)
   p.tag = o.tag != null ? o.tag : t === 'coil' ? nextTag(p.pre) : defaultTag(t);
@@ -305,6 +309,6 @@ function addWire(s, pts) {
 function rotateParts(s, ids) {
   const touched = s.wires.filter(w => [w.a, w.b].some(e => e.p && ids.has(e.p)));
   const before = new Map(touched.map(w => [w.id, { a: pos(s, w.a), b: pos(s, w.b), pts: w.pts.map(q => [...q]) }]));
-  for (const p of s.parts) if (ids.has(p.id) && p.t !== 'rail' && p.t !== 'sup') p.rot = ((p.rot || 0) + 90) % 360;
+  for (const p of s.parts) if (ids.has(p.id) && p.t !== 'rail' && !isArrowIn(p.t)) p.rot = ((p.rot || 0) + 90) % 360;
   for (const w of touched) { const o = before.get(w.id); reroute(s, w, o.a, o.b, o.pts, 0, !!(w.a.p && ids.has(w.a.p))); simplify(s, w); }
 }
