@@ -69,6 +69,8 @@ PSYM.Relay = { b: '<circle cx="0" cy="0" r="40" fill="#000" stroke="none"/><circ
 // in from the left and the arrow points on; In: the arrow points into the wire, which goes on to the right.
 PSYM['Continuation Out'] = { b: '<path d="M-40 0H-26" fill="none"/><path d="M-26 -22H14L36 0L14 22H-26Z" fill="#fff"/>', t: [[-40, 0]], y0: -22, y1: 22 };
 PSYM['Continuation In'] = { b: '<path d="M26 0H40" fill="none"/><path d="M-36 -22H4L26 0L4 22H-36Z" fill="#fff"/>', t: [[40, 0]], y0: -22, y1: 22 };
+// the pilot light as big as a relay coil (80, terminal to terminal), its X reaching in to the ring
+PSYM['Pilot Light'] = { b: '<circle cx="0" cy="0" r="40" fill="#000" stroke="none"/><circle cx="0" cy="0" r="36" fill="#fff" stroke="none"/><path d="M-25.5 -25.5L25.5 25.5M25.5 -25.5L-25.5 25.5" fill="none" stroke="#000" stroke-width="2.8"/>', t: [[-40, 0], [40, 0]], y0: -40, y1: 40 };
 PSYM['Motor Leads'] = { b: PSYM.Motor.b + '<path d="M-140 -120H-120L-42.426 -42.426M-140 0H-60M-140 120H-120L-42.426 42.426" fill="none"/>', t: [[-140, -120], [-140, 0], [-140, 120]], y0: -124, y1: 124 };
 // a coil's kinds: the start of its tag
 const COIL_PRE = [['CR', 'Control Relay'], ['M', 'Starter'], ['TR', 'Timer'], ['CON', 'Contactor']];

@@ -9,9 +9,10 @@ function checkPrint(A = analyse()) {
   const { parts, kindOf, label, TERMS, WIRED } = A;
   const name = p => p.tag || LIB[p.t].name;
   const sheetName = k => doc.sheets.length > 1 ? ` (sheet ${k + 1})` : '';
+  // (a pushbutton's or selector's extra contact blocks share its number)
   // tags: the same one on two devices that must each have their own; none at all
   const byTag = new Map();
-  for (const x of parts) if (UNIQUE.has(kindOf(x.p)) && x.p.tag) for (const tg of tagsOf(x.p)) { const k = (kindOf(x.p) === 'motor' ? 'motor:' : '') + tg; if (!byTag.has(k)) byTag.set(k, []); byTag.get(k).push(x); }
+  for (const x of parts) if (UNIQUE.has(kindOf(x.p)) && x.p.tag && !(blocksOf(x.p).length > 1 && mainBlock(x.p) !== x.p)) for (const tg of tagsOf(x.p)) { const k = (kindOf(x.p) === 'motor' ? 'motor:' : '') + tg; if (!byTag.has(k)) byTag.set(k, []); byTag.get(k).push(x); }
   let dups = 0;
   for (const [k, xs] of byTag) if (xs.length > 1) { const t = k.replace('motor:', ''); dups++;
     add('e', `${xs.length} devices are tagged ${t}`, `${[...new Set(xs.map(x => LIB[x.p.t].name))].join(' and ')}: each needs a tag of its own (only contacts share their coil’s).`, xs.map(pk)); }
@@ -19,6 +20,8 @@ function checkPrint(A = analyse()) {
   // continuations: each letter wants an arrow out and an arrow in
   for (const x of parts) if (LIB[x.p.t].kind === 'cont' && x.p.tag) { const other = x.p.t === 'cnt_out' ? 'cnt_in' : 'cnt_out';
     if (!parts.some(y => y.p.t === other && y.p.tag === x.p.tag)) add('w', `Continuation ${x.p.tag} goes nowhere`, x.p.t === 'cnt_out' ? `Put a “Continued From” arrow lettered ${x.p.tag} where the wire picks up again (on the next sheet).` : `Nothing continues to ${x.p.tag}: put a “Continues To” arrow lettered ${x.p.tag} where the wire leaves off.`, [pk(x)]); }
+  // a light built into a pushbutton that isn't on the print
+  for (const x of parts) if (x.p.t === 'pl' && x.p.inPB && !parts.some(y => isPB(y.p) && y.p.tag === x.p.inPB)) add('w', `${name(x.p)} is built into ${x.p.inPB}, which isn't on the print`, 'Put the pushbutton on the print, or pick another in the light’s Part tab.', [pk(x)]);
   // contacts and their coils
   const coils = new Set(parts.filter(x => kindOf(x.p) === 'coil').map(x => x.p.tag)), ols = new Set(parts.filter(x => kindOf(x.p) === 'ol').map(x => x.p.tag));
   const orphan = new Map();

@@ -87,7 +87,7 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .pr-frame { position: absolute; inset: .4in; border: 2px solid #000; display: flex; flex-direction: column; }
 .pr-draw { flex: 1 1 0; display: flex; padding: .12in; min-height: 0; }
 .pr-draw > svg { width: 100%; height: 100%; display: block; overflow: visible; }
-.pr-draw text { fill: #000; stroke: none; font-family: "Liberation Sans", Arial, Helvetica, sans-serif; }
+.pr-draw text { fill: #000; stroke: none; } .pr-draw text[paint-order] { stroke: #fff; } .pr-draw text { font-family: "Liberation Sans", Arial, Helvetica, sans-serif; }
 .pr-tb { border-top: 2px solid #000; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 1px; background: #000; font-size: 8pt; }
 .tbf { background: #fff; padding: 3px 6px 4px; min-width: 0; }
 .pr-tb .k { font-size: 6pt; text-transform: uppercase; letter-spacing: .06em; color: #333; }

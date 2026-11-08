@@ -17,6 +17,33 @@ function contNote(p, k) {
   if (m.k !== k) return `${w} SHEET ${m.k + 1}`;
   const rn = A && A.rung && A.rung.get(m.p.id); return rn ? `${w} RUNG ${rn}` : `${w} ${m.p.tag}`;
 }
+/* ---------- what Circuit Builder's devices carry into the print ---------- */
+// one pushbutton (or selector switch) drawn in several rungs: the parts with its number are its contact blocks; the top
+// one is the operator itself (a selector's turning arrow is drawn on it only)
+const isPB = p => p.t === 'pb_no' || p.t === 'pb_nc';
+const blocksOf = p => allParts().map(q => q.p).filter(q => q.tag && q.tag === p.tag && (isPB(p) ? isPB(q) : q.t === p.t)).sort((a, b) => a.y - b.y || a.x - b.x);
+const mainBlock = p => blocksOf(p)[0] || p;
+function blockGroups(s) { const g = new Map(); for (const p of s.parts) if ((isPB(p) || p.t === 'sel') && p.tag) { const k = (p.t === 'sel' ? 'S:' : 'P:') + p.tag; if (!g.has(k)) g.set(k, []); g.get(k).push(p); }
+  return [...g.values()].map(bs => bs.sort((a, b) => a.y - b.y)).filter(bs => bs.length > 1); }
+// the timer a contact belongs to (its coil, if that is a timer)
+const timerOf = p => { const c = allParts().find(q => q.p.t === 'coil' && q.p.tag === p.tag); return c && /^TR/.test(c.p.tag) ? c.p : null; };
+// the print symbol a part is drawn with: a timer's contacts timed (unless instant); a selector's extra blocks without the arrow
+function symOf(p) {
+  if ((p.t === 'con_no' || p.t === 'con_nc') && !p.inst) { const tm = timerOf(p); if (tm) return `${p.t === 'con_no' ? 'NO' : 'NC'} ${tm.tof ? 'FD' : 'ND'} Switch`; }
+  if (p.t === 'sel' && mainBlock(p) !== p) return 'Selector Switch';
+  return LIB[p.t].sym;
+}
+// what is written under a part: its label, and what Circuit Builder would add (a timer's delay, the positions a selector's
+// block is closed in, the button a light is built into, the light built into a button)
+function noteOf(p) {
+  const n = [p.desc];
+  if (p.t === 'coil' && /^TR/.test(p.tag || '')) n.push(`${p.tof ? 'OFF' : 'ON'}-DELAY${p.delay ? ' ' + p.delay + ' s' : ''}`);
+  if (p.t === 'sel') { const names = selNames(p), cl = (p.closedIn || []).map(i => names[i]).filter(Boolean); n.push(cl.length ? 'CLOSED: ' + cl.join(', ') : 'OPEN IN ALL'); }
+  if (p.t === 'pl' && p.inPB) n.push('IN ' + p.inPB);
+  if (isPB(p) && mainBlock(p) === p) { const ls = allParts().filter(q => q.p.t === 'pl' && q.p.inPB === p.tag).map(q => q.p.tag); if (ls.length) n.push('LIGHTED (' + ls.join(', ') + ')'); }
+  return n.filter(Boolean).join(' · ');
+}
+const selNames = p => (p.pos || 'OFF/ON').split(/[\/,]+/).map(x => x.trim().toUpperCase()).filter(Boolean).slice(0, 4);
 function lblBox(x, y, t, size, anchor) { const w = String(t).length * size * .62, x0 = anchor === 'start' ? x : anchor === 'end' ? x - w : x - w / 2; return { x0, x1: x0 + w, y0: y - size * .8, y1: y + size * .15 }; }                                 // the wire numbers on the sheet on screen: { id (its wire), l, x, y, anchor, x0..y1 }
 const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -43,27 +70,33 @@ function drawSheet(s, k, A) {
   for (const w of s.wires) for (const e of [w.a, w.b]) { const [x, y] = pos(s, e); if (e.r) { const r = partOf(s, e.r); if (r && y > r.y0 && y < r.y1) { deg.set(x + ',' + y, 9); continue; } } bump(x, y); }
   for (const [c, n] of deg) { if (n < 3) { const [x, y] = c.split(',').map(Number); if (!(n === 2 && s.parts.some(p => p.t !== 'rail' && [...Array(termsN(p)).keys()].some(i => { const q = termPos(p, i); return q[0] === x && q[1] === y; })))) continue; }
     const [x, y] = c.split(',').map(Number); g += `<circle cx="${x}" cy="${y}" r="7" fill="#000" stroke="none"/>`; }
+  // (the contact blocks of one pushbutton or selector switch, one above another: a dashed line links each to the next down)
+  const linked = new Set(blockGroups(s).flat().map(p => p.id));
+  for (const bs of blockGroups(s)) for (let i = 1; i < bs.length; i++) if (bs[i].x === bs[i - 1].x && !(bs[i].rot || bs[i - 1].rot))
+    g += `<line x1="${bs[i].x}" y1="${bs[i - 1].y - 20}" x2="${bs[i].x}" y2="${bs[i].y - 40}" stroke-width="3" stroke-dasharray="12 10" stroke-linecap="butt"/>`;
   // devices
   for (const p of s.parts) {
     if (p.t === 'rail') continue;
     // (a part's tag and label: where they go, moved by however far they have been dragged; each one's box kept for picking)
     const lt = p.lt || [0, 0], ld = p.ld || [0, 0];
-    const tagT = (x, y, t, size, anchor = 'middle', which = 'tag') => { if (!t) return; const o = labOff(p, which); x += o[0]; y += o[1]; text(x, y, t, size, anchor); PLABS.push({ id: p.id, which, ...lblBox(x, y, t, size, anchor) }); };
-    const descT = (x, y, t, size, anchor = 'middle') => { if (!t) return; x += ld[0]; y += ld[1]; text(x, y, t, size, anchor, 500); PLABS.push({ id: p.id, which: 'desc', ...lblBox(x, y, t, size, anchor) }); };
+    // (a linked block's name and note: a white edge, so the dashed link between the blocks breaks around them)
+    const halo = (isPB(p) || p.t === 'sel') && linked.has(p.id) ? ' stroke="#fff" stroke-width="8" stroke-linejoin="round" paint-order="stroke"' : '';
+    const tagT = (x, y, t, size, anchor = 'middle', which = 'tag') => { if (!t) return; const o = labOff(p, which); x += o[0]; y += o[1]; text(x, y, t, size, anchor, 700, halo); PLABS.push({ id: p.id, which, ...lblBox(x, y, t, size, anchor) }); };
+    const descT = (x, y, t, size, anchor = 'middle') => { if (!t) return; x += ld[0]; y += ld[1]; text(x, y, t, size, anchor, 500, halo); PLABS.push({ id: p.id, which: 'desc', ...lblBox(x, y, t, size, anchor) }); };
     if (p.t === 'sup') { arrow(p.x, p.y, 1, 0); tagT(p.x - 30, p.y + 10, p.tag, 28, 'end'); continue; }
-    const sym = PSYM[LIB[p.t].sym], r = p.rot || 0, kind = LIB[p.t].kind;
+    const sym = PSYM[symOf(p)], r = p.rot || 0, kind = LIB[p.t].kind;
     g += `<g class="sym" transform="translate(${p.x} ${p.y})${r ? ` rotate(${r})` : ''}">${sym.b}</g>`;
     if (kind === 'cont') {   // (its letter inside the arrow; under it, where it goes or comes from)
       const cx = p.x + (p.t === 'cnt_out' ? -6 : -6); text(cx, p.y + 9, p.tag, (p.tag || '').length > 2 ? 18 : 24);
       descT(p.x, p.y + 46, p.desc || contNote(p, k), 18); continue; }
     const up = r % 180 !== 0, inside = (kind === 'coil' && (p.tag || '').length <= 4) || kind === 'motor';
-    if (up) { const off = Math.max(Math.abs(sym.y0), Math.abs(sym.y1)) + 10; tagT(p.x + off, p.y + 9, p.tag, 26, 'start'); if (p.desc) descT(p.x + off, p.y + 34, p.desc, 20, 'start'); }
+    if (up) { const off = Math.max(Math.abs(sym.y0), Math.abs(sym.y1)) + 10; tagT(p.x + off, p.y + 9, p.tag, 26, 'start'); if (noteOf(p)) descT(p.x + off, p.y + 34, noteOf(p), 20, 'start'); }
     else {
       const y0 = r === 180 ? -sym.y1 : sym.y0, y1 = r === 180 ? -sym.y0 : sym.y1;
       if (p.t === 'fdsc3' && !r) tagsOf(p).slice(1).forEach((tg, i) => tagT(p.x + 40, termPos(p, 2 * i)[1] - 24, tg, 26, 'middle', 'fu' + i));   // (a fused disconnect's fuses, each its number)
       if (p.t === 'fus3' && !r) tagsOf(p).forEach((tg, i) => tagT(p.x, termPos(p, 2 * i)[1] - 24, tg, 26, 'middle', 'fu' + i));   // (each fuse its own number)
       else if (inside) text(p.x, p.y + (kind === 'motor' ? 11 : 10), p.tag, kind === 'motor' ? 30 : (p.tag || '').length > 3 ? 22 : 27); else tagT(p.x + (p.t === 'fdsc3' && !r ? -40 : 0), p.y + y0 - 8, p.tag, 26);   // (a fused disconnect's name over its switch, clear of its fuse numbers)
-      if (p.desc) descT(p.x, p.y + y1 + 22, p.desc, 20);
+      if (noteOf(p)) descT(p.x, p.y + y1 + 22, noteOf(p), 20);
     }
     if (p.t === 'xfmr') { const t = [0, 1, 2, 3].map(i => termPos(p, i)), nm = ['H1', 'H2', 'X1', 'X2'];
       t.forEach((q, i) => text(q[0] + (i % 2 ? 12 : -12), q[1] + (i < 2 ? -8 : 22), nm[i], 18, i % 2 ? 'start' : 'end', 600)); }
