@@ -100,8 +100,9 @@ function drawSheet(s, k, A) {
     const sym = PSYM[symOf(p)], r = p.rot || 0, kind = LIB[p.t].kind;
     g += `<g class="sym" transform="translate(${p.x} ${p.y})${r ? ` rotate(${r})` : ''}">${sym.b}</g>`;
     if (kind === 'cont') {   // (its letter inside the arrow; under it, where it goes or comes from)
-      const cx = p.x + (p.t === 'cnt_out' ? -6 : -6); text(cx, p.y + 9, p.tag, (p.tag || '').length > 2 ? 18 : 24);
-      descT(p.x, p.y + 46, p.desc || contNote(p, k), 18); continue; }
+      const c = turn([-6, 0], r); text(p.x + c[0], p.y + c[1] + 9, p.tag, (p.tag || '').length > 2 ? 18 : 24);
+      // (lying down: its note under it; standing up: beside it)
+      if (r % 180) descT(p.x + 34, p.y + c[1] + 7, p.desc || contNote(p, k), 18, 'start'); else descT(p.x, p.y + 46, p.desc || contNote(p, k), 18); continue; }
     const up = r % 180 !== 0, inside = (kind === 'coil' && (p.tag || '').length <= 4) || kind === 'motor';
     if (up) { const off = Math.max(Math.abs(sym.y0), Math.abs(sym.y1)) + 10; tagT(p.x + off, p.y + 9, p.tag, 26, 'start'); if (noteOf(p)) descT(p.x + off, p.y + 34, noteOf(p), 20, 'start'); }
     else {

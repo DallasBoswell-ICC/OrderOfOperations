@@ -306,9 +306,11 @@ function addWire(s, pts) {
 
 /* ---------- turning ---------- */
 // parts turned a quarter (clockwise) about their middles; their wires bend to follow, as when moved
-function rotateParts(s, ids) {
+// the parts that turn (Rotate, R, the turning handle): two-terminal symbols and continuation arrows
+const canTurn = p => !!p && p.t !== 'rail' && !isArrowIn(p.t) && (termsOf(p.t).length === 2 || LIB[p.t].kind === 'cont');
+function rotateParts(s, ids, by = 90) {
   const touched = s.wires.filter(w => [w.a, w.b].some(e => e.p && ids.has(e.p)));
   const before = new Map(touched.map(w => [w.id, { a: pos(s, w.a), b: pos(s, w.b), pts: w.pts.map(q => [...q]) }]));
-  for (const p of s.parts) if (ids.has(p.id) && p.t !== 'rail' && !isArrowIn(p.t)) p.rot = ((p.rot || 0) + 90) % 360;
+  for (const p of s.parts) if (ids.has(p.id) && p.t !== 'rail' && !isArrowIn(p.t)) p.rot = (((p.rot || 0) + by) % 360 + 360) % 360;
   for (const w of touched) { const o = before.get(w.id); reroute(s, w, o.a, o.b, o.pts, 0, !!(w.a.p && ids.has(w.a.p))); simplify(s, w); }
 }

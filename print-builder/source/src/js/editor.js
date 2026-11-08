@@ -6,6 +6,7 @@ let tool = 'select', placing = null;       // the tool; the symbol being put dow
 let sel = new Set(), selW = null;          // what is picked: parts, rails, nodes, notes (ids); a wire (id)
 let checkOn = false, hover = null, drag = null, wd = null, cursor = null;
 let svg = null, VB = [0, 0], wireDown = null, hoverT = false;
+let ROTH = null;                           // the turning handle on screen ({ id, x, y })
 
 // a point on the sheet from the pointer
 function sheetPt(e) { const m = svg.getScreenCTM().inverse(), p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; const q = p.matrixTransform(m); return [q.x, q.y]; }
@@ -80,6 +81,13 @@ function drawEd() {
   if (selW) for (const L of LABS) if (L.id === selW) g += `<rect x="${L.x0 - 5}" y="${L.y0 - 4}" width="${L.x1 - L.x0 + 10}" height="${L.y1 - L.y0 + 8}" rx="5" fill="rgba(47,140,255,.12)" stroke="#2f8cff" stroke-width="3"/>`;
   // (a picked part's tag and label: dashed boxes, as they can be dragged)
   if (sel.size === 1) for (const L of PLABS) if (sel.has(L.id)) g += `<rect x="${L.x0 - 4}" y="${L.y0 - 3}" width="${L.x1 - L.x0 + 8}" height="${L.y1 - L.y0 + 6}" rx="4" fill="none" stroke="#2f8cff" stroke-width="2" stroke-dasharray="6 4"/>`;
+  // one part picked that turns: the turning handle at the top right corner of its box (drag it round, or click it)
+  ROTH = null;
+  if (tool === 'select' && sel.size === 1 && !selW) { const p = partOf(S, [...sel][0]);
+    if (canTurn(p)) { const b = partBox(p); ROTH = { id: p.id, x: b.x1 + 26, y: b.y0 - 18 };
+      g += `<g class="rot-h" transform="translate(${ROTH.x} ${ROTH.y})"><circle r="22" fill="#fff" stroke="#2f8cff" stroke-width="4"/>`
+        + `<path d="M10 0A10 10 0 1 1 7.1 -7.1" fill="none" stroke="#2f8cff" stroke-width="4" stroke-linecap="round"/>`
+        + `<path d="M8.4 -14V-6H0.4" fill="none" stroke="#2f8cff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>`; } }
   // a terminal under the pointer in Select: drag from it for a wire
   if (tool === 'select' && cursor && !drag) { const t = termAt(cursor); if (t) g += `<circle cx="${t.x}" cy="${t.y}" r="13" fill="rgba(47,140,255,.15)" stroke="#2f8cff" stroke-width="4"/>`; }
   if (drag && drag.from && cursor) { const t = snapTarget(cursor), P = [drag.from, ...lRoute(drag.from, [t.x, t.y])];
@@ -141,6 +149,9 @@ function onDown(e) {
   if (tool === 'wire') { svg.setPointerCapture(e.pointerId); wireDown = q; return wireClick(q, e.detail >= 2); }
   if (tool === 'rung') { const r = rungAt(q); if (r && r.ok) { snapshot(); addWire(S, [[r.x1, r.y], [r.x2, r.y]]); refresh(); } else if (r) say('There is a rung there already.'); return; }
   if (tool === 'note') { snapshot(); const t = { id: uid('t'), x: snap(q[0]), y: snap(q[1]), s: 'Note' }; S.texts.push(t); sel = new Set([t.id]); selW = null; setTool('select'); refresh(); focusProp('note-text'); return; }
+  // Select: the turning handle (drag it round the part a quarter turn at a time; a click turns it clockwise)
+  if (ROTH && Math.hypot(q[0] - ROTH.x, q[1] - ROTH.y) <= 26) { const p = partOf(S, ROTH.id);
+    if (p) { drag = { turn: p.id, c: [p.x, p.y], a0: Math.atan2(q[1] - p.y, q[0] - p.x), n: 0, orig: clone(S), pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); return; } }
   // Select: from a terminal, a drag draws a wire
   const ta = termAt(q);
   if (ta) { drag = { from: [ta.x, ta.y], q0: q }; svg.setPointerCapture(e.pointerId); return; }
@@ -159,7 +170,11 @@ function onDown(e) {
 function onMove(e) {
   const q = sheetPt(e); cursor = q;
   if (pan) return doPan(e);
-  if (!drag) { if (tool !== 'select') { drawEd(); tipFor(q, e); } else { const t = termAt(q); svg.classList.toggle('on-term', !!t); if (t || hoverT) drawEd(); hoverT = !!t; tipFor(q, e); } return; }
+  if (!drag) { if (tool !== 'select') { drawEd(); tipFor(q, e); } else { const t = termAt(q); svg.classList.toggle('on-term', !!t); svg.classList.toggle('on-rot', !!ROTH && Math.hypot(q[0] - ROTH.x, q[1] - ROTH.y) <= 26); if (t || hoverT) drawEd(); hoverT = !!t; tipFor(q, e); } return; }
+  if (drag.turn) { let d = Math.atan2(q[1] - drag.c[1], q[0] - drag.c[0]) - drag.a0; d = Math.atan2(Math.sin(d), Math.cos(d));
+    if (!drag.moved && Math.abs(d) < .25) return; drag.moved = true;
+    const n = Math.round(d / (Math.PI / 2)); if (n === drag.n) return; drag.n = n;
+    const s = clone(drag.orig); doc.sheets[doc.cur] = S = s; if (n) rotateParts(S, new Set([drag.turn]), 90 * n); frame(); return; }
   if (drag.box) { drag.box[1] = q; drawEd(); return; }
   if (drag.from) { drawEd(); return; }
   if (drag.plab) { const p = partOf(S, drag.plab.id); if (!p) return; const dx = Math.round((q[0] - drag.q0[0]) / 5) * 5, dy = Math.round((q[1] - drag.q0[1]) / 5) * 5;
@@ -181,6 +196,7 @@ function onUp(e) {
   wireDown = null;
   if (!drag) return;
   const d = drag; drag = null;
+  if (d.turn) { if (!d.moved) { snapshot(); rotateParts(S, new Set([d.turn])); } else if (d.n) { UNDO.push(d.pre); REDO.length = 0; } refresh(); return; }
   if (d.from) { const q = sheetPt(e), t = snapTarget(q), b = [t.x, t.y];
     if (Math.hypot(q[0] - d.q0[0], q[1] - d.q0[1]) < G * .75 || (b[0] === d.from[0] && b[1] === d.from[1])) {   // (a click on a terminal: pick its part)
       const h = pick(d.q0); if (h && h.kind === 'part') { sel = new Set([h.id]); selW = null; } refresh(); return; }
