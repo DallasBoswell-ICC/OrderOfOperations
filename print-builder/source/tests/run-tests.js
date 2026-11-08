@@ -103,12 +103,12 @@ let passed = 0, failed = 0;
     return r.join('|') === 'PB1,PB2,CR1,CR1|1,2,3,4|0' ? [] : ['tags | numbers | issues: ' + r.join(' | ')];
   });
 
-  await check('Motor: T1, T2, T3 come in level on the grid; selector uses the operator symbol; fused disconnect circles Dallas’s size, outlined as heavy as its lines', async p => {
+  await check('Motor: T1, T2, T3 come in level on the grid; selector uses the operator symbol; fused disconnect drawn at the size of a disconnect and a single fuse', async p => {
     const r = await p.evaluate(() => { loadDoc(template('starter')); refresh(true); const m = S.parts.find(q => q.t === 'motor');
       const ts = [0, 1, 2].map(i => termPos(m, i)), ws = [0, 1, 2].map(i => wiresAt(S, { p: m.id, i }).length);
       const level = [0, 1, 2].every(i => { const w = wiresAt(S, { p: m.id, i })[0]; const P = wirePts(S, w); return P.every(q => q[1] === ts[i][1]); });
       const tl = [...new Set(S.wires.filter(w => [w.a, w.b].some(e => e.p === m.id)).map(w => A.label.get(A.wireRoot(S, w))))].sort().join(',');
-      return [ts.every(t => t[0] % 20 === 0 && t[1] % 20 === 0), ws.join(''), level, tl, LIB.sel.sym, /r="3\.667" transform="matrix\(3/.test(PSYM['3PH Fusible Disconnect'].b) && /r="5" transform="matrix\(3/.test(PSYM['3PH Fusible Disconnect'].b)]; });
+      return [ts.every(t => t[0] % 20 === 0 && t[1] % 20 === 0), ws.join(''), level, tl, LIB.sel.sym, termsOf('fdsc3').map(q => q[0]).join('/') === '-80/80/-80/80/-80/80' && /width="52" height="20"/.test(PSYM['3PH Fusible Disconnect'].b) && /r="10"/.test(PSYM['3PH Fusible Disconnect'].b)]; });
     return r.join('|') === 'true|111|true|T1A,T2A,T3A|Selector Switch Operator|true' ? [] : ['grid | wired | level | numbers | selector | fusible: ' + r.join(' | ')];
   });
 
