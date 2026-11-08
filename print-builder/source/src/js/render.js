@@ -72,6 +72,19 @@ function drawSheet(s, k, A) {
     const [x, y] = c.split(',').map(Number); g += `<circle cx="${x}" cy="${y}" r="7" fill="#000" stroke="none"/>`; }
   // (the contact blocks of one pushbutton or selector switch, one above another: a dashed line links each to the next down)
   const linked = new Set(blockGroups(s).flat().map(p => p.id));
+  // (a light built into a pushbutton: a dashed link from the nearest block of that button to the light; straight when they
+  // line up, otherwise across in the gap between their rungs, so it never runs along a rung)
+  for (const l of s.parts) if (l.t === 'pl' && l.inPB && !l.rot) {
+    const bs = s.parts.filter(q => isPB(q) && q.tag === l.inPB && !q.rot); if (!bs.length) continue;
+    const b = bs.sort((u, v) => Math.hypot(u.x - l.x, u.y - l.y) - Math.hypot(v.x - l.x, v.y - l.y))[0];
+    linked.add(l.id); linked.add(b.id);
+    const [hi, lo] = b.y <= l.y ? [b, l] : [l, b], top = q => q.y + PSYM[symOf(q)].y0, bot = q => q.y + PSYM[symOf(q)].y1;
+    let P;
+    if (hi.y === lo.y) { const [a, c] = hi.x < lo.x ? [hi, lo] : [lo, hi]; const y = Math.min(top(a), top(c)) - 50; P = [[a.x, top(a)], [a.x, y], [c.x, y], [c.x, top(c)]]; }   // (side by side on one rung: over the top)
+    else if (hi.x === lo.x) P = [[hi.x, bot(hi)], [lo.x, top(lo)]];
+    else { const my = snap((bot(hi) + top(lo)) / 2); P = [[hi.x, bot(hi)], [hi.x, my], [lo.x, my], [lo.x, top(lo)]]; }
+    g += `<polyline points="${P.map(q => q.join(',')).join(' ')}" fill="none" stroke-width="3" stroke-dasharray="12 10" stroke-linecap="butt" stroke-linejoin="miter"/>`;
+  }
   for (const bs of blockGroups(s)) for (let i = 1; i < bs.length; i++) if (bs[i].x === bs[i - 1].x && !(bs[i].rot || bs[i - 1].rot))
     g += `<line x1="${bs[i].x}" y1="${bs[i - 1].y - 20}" x2="${bs[i].x}" y2="${bs[i].y - 40}" stroke-width="3" stroke-dasharray="12 10" stroke-linecap="butt"/>`;
   // devices
@@ -80,7 +93,7 @@ function drawSheet(s, k, A) {
     // (a part's tag and label: where they go, moved by however far they have been dragged; each one's box kept for picking)
     const lt = p.lt || [0, 0], ld = p.ld || [0, 0];
     // (a linked block's name and note: a white edge, so the dashed link between the blocks breaks around them)
-    const halo = (isPB(p) || p.t === 'sel') && linked.has(p.id) ? ' stroke="#fff" stroke-width="8" stroke-linejoin="round" paint-order="stroke"' : '';
+    const halo = linked.has(p.id) ? ' stroke="#fff" stroke-width="8" stroke-linejoin="round" paint-order="stroke"' : '';
     const tagT = (x, y, t, size, anchor = 'middle', which = 'tag') => { if (!t) return; const o = labOff(p, which); x += o[0]; y += o[1]; text(x, y, t, size, anchor, 700, halo); PLABS.push({ id: p.id, which, ...lblBox(x, y, t, size, anchor) }); };
     const descT = (x, y, t, size, anchor = 'middle') => { if (!t) return; x += ld[0]; y += ld[1]; text(x, y, t, size, anchor, 500, halo); PLABS.push({ id: p.id, which: 'desc', ...lblBox(x, y, t, size, anchor) }); };
     if (p.t === 'sup') { arrow(p.x, p.y, 1, 0); tagT(p.x - 30, p.y + 10, p.tag, 28, 'end'); continue; }

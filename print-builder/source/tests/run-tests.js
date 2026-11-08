@@ -244,8 +244,8 @@ let passed = 0, failed = 0;
       addWire(S, [[L1.x, 800], [L2.x, 800]]); Object.assign(addPart(S, 'sel', 500, 800, { tag: 'SS1' }), { pos: 'HAND/OFF/AUTO', closedIn: [0] }); addPart(S, 'pl', 1100, 800); refresh(true);
       const txt = [...svg.querySelectorAll('g.ink text')].map(e => e.textContent);
       const dup = ISSUES.some(i => /tagged PB1/.test(i.title)), con = S.parts.find(q => q.t === 'con_no');
-      return [dup, symOf(con), txt.includes('ON-DELAY 5 s'), txt.includes('IN PB1'), txt.includes('LIGHTED (' + pl.tag + ')'), txt.includes('CLOSED: HAND'), !!svg.querySelector('g.ink line[stroke-dasharray="12 10"]'), termsOf('pl').map(t => t[0]).join('/')]; });
-    return r.join('|') === 'false|NO ND Switch|true|true|true|true|true|-40/40' ? [] : ['dup error | contact symbol | timer note | light note | button note | selector note | block link | pilot light: ' + r.join(' | ')];
+      return [dup, symOf(con), txt.includes('ON-DELAY 5 s'), txt.includes('IN PB1'), txt.includes('LIGHTED (' + pl.tag + ')'), txt.includes('CLOSED: HAND'), !!svg.querySelector('g.ink line[stroke-dasharray="12 10"]') && !!svg.querySelector('g.ink polyline[stroke-dasharray="12 10"]'), termsOf('pl').map(t => t[0]).join('/')]; });
+    return r.join('|') === 'false|NO ND Switch|true|true|true|true|true|-40/40' ? [] : ['dup error | contact symbol | timer note | light note | button note | selector note | block link and light link | pilot light: ' + r.join(' | ')];
   });
 
   await check('Title block: boxes added, changed and taken away show on the sheet; saved and opened again', async p => {
