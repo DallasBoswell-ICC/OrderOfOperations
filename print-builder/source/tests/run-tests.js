@@ -93,7 +93,7 @@ let passed = 0, failed = 0;
     await p.click('#new-btn'); await p.click('[data-new="blank"]'); await p.waitForTimeout(100);
     const scr = (x, y) => p.evaluate(([x, y]) => { const m = svg.getScreenCTM(); return [m.a * x + m.e, m.d * y + m.f]; }, [x, y]);
     await p.click('[data-tool="rung"]'); const [rx, ry] = await scr(1000, 400); await p.mouse.move(rx, ry); await p.mouse.click(rx, ry);
-    const drop = async (t, x, y) => { const tile = await p.locator(`.pt[data-t="${t}"]`).boundingBox(), [sx, sy] = await scr(x, y);
+    const drop = async (t, x, y) => { await p.locator(`.pt[data-t="${t}"]`).scrollIntoViewIfNeeded(); const tile = await p.locator(`.pt[data-t="${t}"]`).boundingBox(), [sx, sy] = await scr(x, y);
       await p.mouse.move(tile.x + 20, tile.y + 20); await p.mouse.down(); await p.mouse.move(sx, sy, { steps: 5 }); await p.mouse.up(); };
     await drop('pb_nc', 400, 400); await drop('pb_no', 700, 400); await drop('coil', 1400, 400);
     await p.click('[data-tool="wire"]');
@@ -188,6 +188,23 @@ let passed = 0, failed = 0;
         if (bad) out.push(`${t} ${dx},${dy}: ${bad} overlaps`); }
       return out; });
     return r;
+  });
+
+  await check('Clicking a part in the palette puts it in view in a clear spot; names and labels drag; the interface size changes', async p => {
+    await p.click('#new-btn'); await p.click('[data-new="starter"]'); await p.waitForTimeout(100);
+    await p.locator('.pt[data-t="pl"]').scrollIntoViewIfNeeded(); await p.click('.pt[data-t="pl"]'); await p.waitForTimeout(80);
+    const a = await p.evaluate(() => { const q = S.parts.find(x => x.t === 'pl' && x.tag === 'PL3'); if (!q) return 'none';
+      const b = partBox(q), hit = S.parts.filter(o => o !== q && o.t !== 'rail').some(o => { const c = partBox(o); return b.x0 < c.x1 && b.x1 > c.x0 && b.y0 < c.y1 && b.y1 > c.y0; });
+      const onWire = [0, 1].some(i => wiresAt(S, { p: q.id, i }).length); return [hit, onWire, sel.has(q.id), tool].join(','); });
+    // drag PB1's name up and to the right
+    const scr = (x, y) => p.evaluate(([x, y]) => { const m = svg.getScreenCTM(); return [m.a * x + m.e, m.d * y + m.f]; }, [x, y]);
+    const L = await p.evaluate(() => { const q = S.parts.find(x => x.tag === 'PB1'); const L = PLABS.find(L => L.id === q.id && L.which === 'tag'); return [(L.x0 + L.x1) / 2, (L.y0 + L.y1) / 2]; });
+    const [x0, y0] = await scr(...L), [x1, y1] = await scr(L[0] + 60, L[1] - 40);
+    await p.mouse.move(x0, y0); await p.mouse.down(); await p.mouse.move(x1, y1, { steps: 5 }); await p.mouse.up();
+    const lt = await p.evaluate(() => JSON.stringify(S.parts.find(x => x.tag === 'PB1').lt));
+    await p.selectOption('#ui-size', '1.5'); const z = await p.evaluate(() => [uiZoom(), localStorage.getItem('oo-print-builder:ui-size')].join(','));
+    await p.selectOption('#ui-size', '1.15');
+    return [a, lt, z].join('|') === 'false,false,true,select|[60,-40]|1.5,1.5' ? [] : ['overlap,onWire,picked,tool | label offset | size: ' + [a, lt, z].join(' | ')];
   });
 
   await check('Title block: boxes added, changed and taken away show on the sheet; saved and opened again', async p => {

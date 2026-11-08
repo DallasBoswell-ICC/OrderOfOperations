@@ -129,7 +129,7 @@ function analyse(D = doc) {
       if (p.t === 'rail' || (p.rot || 0) % 180) continue;
       const kd = kindOf(p);
       const ctl = isCtrlKind(kd) || (kd === 'fuse' && p !== x1fuse && [0, 1].every(i => !power.has(rootT(p, s, i))));
-      if (ctl) ys.add(p.y);
+      if (ctl && [...Array(termsN(p)).keys()].some(i => wiresAt(s, { p: p.id, i }).length)) ys.add(p.y);   // (one not wired in yet takes no rung number)
     }
     const sorted = [...ys].sort((a, b) => a - b), map = new Map(sorted.map(y => [y, ++rn]));
     rows.push(sorted.map(y => ({ y, n: map.get(y) })));

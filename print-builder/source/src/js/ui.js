@@ -65,10 +65,12 @@ function buildPalette() {
     h += '</div>'; }
   $('palette').innerHTML = h;
   for (const el of document.querySelectorAll('.pt')) el.addEventListener('pointerdown', e => {
-    e.preventDefault(); const t = el.dataset.t; startPlacing(t);
-    // (dragged out onto the sheet: put down where it is let go)
+    e.preventDefault(); const t = el.dataset.t, x0 = e.clientX, y0 = e.clientY; startPlacing(t);
+    // dragged out onto the sheet: put down where it is let go; just clicked: put in view, in a clear spot (as in Circuit Builder)
     const up = ev => { window.removeEventListener('pointerup', up);
-      const r = svg.getBoundingClientRect(); if (ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom && tool === 'place') putDown(sheetPt(ev), ev.shiftKey); };
+      const r = svg.getBoundingClientRect(), onSheet = ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
+      if (onSheet && tool === 'place') putDown(sheetPt(ev), ev.shiftKey);
+      else if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < 8 && tool === 'place') placeInView(t); };
     window.addEventListener('pointerup', up);
   });
   let m = '';
@@ -76,9 +78,32 @@ function buildPalette() {
     for (const [t, d] of Object.entries(LIB)) if (d.cat === c) m += `<button data-t="${t}">${thumb(t).replace('<svg', '<svg style="width:46px;height:26px;background:#f4f5f6;border-radius:4px;padding:2px"')}${esc(d.name)}</button>`;
     m += '</div></div>'; }
   $('sym-menus').innerHTML = m;
-  for (const b of document.querySelectorAll('[data-menu]')) b.addEventListener('click', e => { e.stopPropagation(); const d = b.nextElementSibling, open = d.hidden; closeMenus(); d.hidden = !open; if (open) { const r = b.getBoundingClientRect(); d.style.position = 'fixed'; d.style.left = r.left + 'px'; d.style.top = (r.bottom + 6) + 'px'; } });
-  for (const b of document.querySelectorAll('#sym-menus .dmenu button')) b.addEventListener('click', () => { closeMenus(); startPlacing(b.dataset.t); });
+  for (const b of document.querySelectorAll('[data-menu]')) b.addEventListener('click', e => { e.stopPropagation(); const d = b.nextElementSibling, open = d.hidden; closeMenus(); d.hidden = !open; if (open) { const r = b.getBoundingClientRect(); const z = uiZoom(); d.style.position = 'fixed'; d.style.left = r.left / z + 'px'; d.style.top = (r.bottom + 6) / z + 'px'; } });
+  for (const b of document.querySelectorAll('#sym-menus .dmenu button')) b.addEventListener('click', () => { closeMenus(); placeInView(b.dataset.t); });
 }
+// a part put straight onto the sheet, in the middle of what is in view, at the nearest spot clear of the other symbols,
+// their names and the wires (so it never lands in a wire); it comes picked, ready to drag where it goes
+function placeInView(t) {
+  placing = null; setTool('select');
+  const r = zoomer.getBoundingClientRect(), m = svg.getScreenCTM().inverse(), toS = (x, y) => [m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f];
+  const [ax, ay] = toS(r.left + 40, r.top + 40), [bx, by] = toS(r.right - 40, r.bottom - 40), D = { x0: 40, y0: 60, x1: drawW(S.land) - 40, y1: drawH(S.land) - 40 };
+  const lo = [Math.max(ax, D.x0), Math.max(ay, D.y0)], hi = [Math.min(bx, D.x1), Math.min(by, D.y1)], c = [snap((lo[0] + hi[0]) / 2), snap((lo[1] + hi[1]) / 2)];
+  const boxes = S.parts.map(partBox), segs = S.wires.flatMap(w => { const P = wirePts(S, w); return P.slice(1).map((b, i) => [P[i], b]); });
+  const free = (x, y) => { const b = partBox({ t, x, y, rot: 0 }); b.x0 -= 20; b.x1 += 20; b.y0 -= 10; b.y1 += 20;
+    if (b.x0 < D.x0 || b.x1 > D.x1 || b.y0 < D.y0 || b.y1 > D.y1) return false;
+    return !boxes.some(o => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0) && !segs.some(([a, q]) => Math.max(a[0], q[0]) >= b.x0 && Math.min(a[0], q[0]) <= b.x1 && Math.max(a[1], q[1]) >= b.y0 && Math.min(a[1], q[1]) <= b.y1); };
+  let at = null;
+  for (let ring = 0; ring <= 40 && !at; ring++) for (let i = -ring; i <= ring && !at; i++) for (const [dx, dy] of [[i, -ring], [i, ring], [-ring, i], [ring, i]]) { const x = c[0] + dx * 2 * G, y = c[1] + dy * 2 * G; if (free(x, y)) { at = [x, y]; break; } }
+  at ||= c;
+  snapshot(); const p = addPart(S, t, at[0], at[1]);
+  sel = new Set([p.id]); selW = null; keepTab = true; refresh(); keepTab = false;
+  const sr = svg.getScreenCTM(), sx = sr.a * at[0] + sr.e, sy = sr.d * at[1] + sr.f; if (sx < r.left || sx > r.right || sy < r.top || sy > r.bottom) showPoint(at[0], at[1]);
+  say(`${LIB[t].name} added${p.tag ? ' as ' + p.tag : ''}. Drag it into place, onto a wire to put it in the wire.`);
+}
+// the interface's size: kept for next time
+const UIKEY = 'oo-print-builder:ui-size';
+const uiZoom = () => parseFloat(getComputedStyle(document.querySelector('.app')).getPropertyValue('--uiz')) || 1;
+function setUiSize(v) { document.querySelector('.app').style.setProperty('--uiz', v); $('ui-size').value = String(v); try { localStorage.setItem(UIKEY, String(v)); } catch (_) {} if (svg) applyZoom(); }
 const closeMenus = () => { for (const d of document.querySelectorAll('.dmenu')) d.hidden = true; };
 document.addEventListener('click', e => { if (!e.target.closest('.menuwrap')) closeMenus(); });
 
@@ -129,11 +154,12 @@ function renderProps0() {
       ${rn ? `<div class="f">Rung<span class="ro">${rn} (automatic)</span></div>` : ''}
       ${termNums.length ? `<div class="f">Wires<span class="ro">${termNums.join(' → ')} (automatic)</span></div>` : ''}
       ${xr && xr.length ? `<div class="f">Contacts on<span class="ro">${xr.map(o => o.n + (o.nc ? ' (NC)' : '')).join(', ')}</span></div>` : ''}
-      <div class="acts">${termsN(p) === 2 ? '<button class="btn" id="p-rot">Rotate (R)</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
+      <div class="acts">${termsN(p) === 2 ? '<button class="btn" id="p-rot">Rotate (R)</button>' : ''}${p.lt || p.ld ? '<button class="btn" id="p-lab">Put Labels Back</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
     const of = $('p-of'); if (of) of.addEventListener('change', () => { let v = of.value; if (v === '__other') { v = (prompt(k === 'olc' ? 'The overload this contact belongs to (e.g. OL2):' : 'The coil that works this contact (e.g. CR3):', p.tag || '') || '').trim().toUpperCase(); if (!v) { renderProps(); return; } }
       snapshot(); p.tag = v; refresh(); });
     const tg = $('p-tag'); if (tg) tg.addEventListener('input', () => edit(() => { p.tag = tg.value.trim().toUpperCase(); if (k === 'coil') lastCoil = p.tag; }));
     if (tg) tg.addEventListener('change', () => renderProps());
+    const pl = $('p-lab'); if (pl) pl.addEventListener('click', () => { snapshot(); delete p.lt; delete p.ld; refresh(); });
     const fu = $('p-fu'); if (fu) { fu.addEventListener('input', () => edit(() => { p.fu = fu.value.trim().toUpperCase(); })); fu.addEventListener('change', () => renderProps()); }
     const ds = $('p-desc'); if (ds) ds.addEventListener('input', () => edit(() => { p.desc = ds.value.toUpperCase(); }));
     const pr = $('p-pre'); if (pr) pr.addEventListener('change', () => { snapshot(); p.pre = pr.value; p.tag = ''; p.tag = nextTag(p.pre); lastCoil = p.tag; refresh(); });
@@ -339,6 +365,8 @@ function start() {
   $('show-wn').checked = SHOW.wn; $('show-rn').checked = SHOW.rn; $('show-xr').checked = SHOW.xr;
   let d = null; try { d = JSON.parse(localStorage.getItem(AUTOSAVE) || 'null'); } catch (_) {}
   try { if (d) loadDoc(d); else loadDoc(template('starter')); } catch (_) { loadDoc(template('blank')); }
+  try { const z = parseFloat(localStorage.getItem(UIKEY)); if (z) setUiSize(z); } catch (_) {}
+  $('ui-size').addEventListener('change', e => setUiSize(parseFloat(e.target.value)));
   buildPalette(); refresh(true); setTool('select'); requestAnimationFrame(fitZoom);
 }
 start();

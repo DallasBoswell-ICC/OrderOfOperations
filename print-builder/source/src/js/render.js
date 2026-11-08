@@ -4,12 +4,14 @@
    ===================================================================== */
 const PW = 4;                                  // the wires' weight (the symbols' lines are drawn to it)
 let SHOW = { wn: true, rn: true, xr: true };   // wire numbers, rung numbers, cross-references
-let LABS = [];                                 // the wire numbers on the sheet on screen: { id (its wire), l, x, y, anchor, x0..y1 }
+let LABS = [], PLABS = [];                     // (PLABS: the parts' tags and labels on the sheet on screen, for dragging)
+// the box a line of text takes up (Arial bold, roughly)
+function lblBox(x, y, t, size, anchor) { const w = String(t).length * size * .62, x0 = anchor === 'start' ? x : anchor === 'end' ? x - w : x - w / 2; return { x0, x1: x0 + w, y0: y - size * .8, y1: y + size * .15 }; }                                 // the wire numbers on the sheet on screen: { id (its wire), l, x, y, anchor, x0..y1 }
 const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 // the sheet's drawing (no editor marks): an SVG group's insides
 function drawSheet(s, k, A) {
-  let g = '';
+  let g = ''; PLABS = [];
   const line = (x1, y1, x2, y2, w = PW) => { g += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke-width="${w}"/>`; };
   const text = (x, y, t, size = 26, anchor = 'middle', weight = 700, extra = '') => { if (t !== '' && t != null) g += `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}" font-weight="${weight}"${extra}>${esc(t)}</text>`; };
   const arrow = (x, y, ux, uy) => { const bx = x - ux * 22, by = y - uy * 22, px = -uy * 13, py = ux * 13;
@@ -33,17 +35,21 @@ function drawSheet(s, k, A) {
   // devices
   for (const p of s.parts) {
     if (p.t === 'rail') continue;
-    if (p.t === 'sup') { arrow(p.x, p.y, 1, 0); text(p.x - 30, p.y + 10, p.tag, 28, 'end'); continue; }
+    // (a part's tag and label: where they go, moved by however far they have been dragged; each one's box kept for picking)
+    const lt = p.lt || [0, 0], ld = p.ld || [0, 0];
+    const tagT = (x, y, t, size, anchor = 'middle') => { if (!t) return; x += lt[0]; y += lt[1]; text(x, y, t, size, anchor); PLABS.push({ id: p.id, which: 'tag', ...lblBox(x, y, t, size, anchor) }); };
+    const descT = (x, y, t, size, anchor = 'middle') => { if (!t) return; x += ld[0]; y += ld[1]; text(x, y, t, size, anchor, 500); PLABS.push({ id: p.id, which: 'desc', ...lblBox(x, y, t, size, anchor) }); };
+    if (p.t === 'sup') { arrow(p.x, p.y, 1, 0); tagT(p.x - 30, p.y + 10, p.tag, 28, 'end'); continue; }
     const sym = PSYM[LIB[p.t].sym], r = p.rot || 0, kind = LIB[p.t].kind;
     g += `<g class="sym" transform="translate(${p.x} ${p.y})${r ? ` rotate(${r})` : ''}">${sym.b}</g>`;
     const up = r % 180 !== 0, inside = (kind === 'coil' && (p.tag || '').length <= 4) || kind === 'motor';
-    if (up) { const off = Math.max(Math.abs(sym.y0), Math.abs(sym.y1)) + 10; text(p.x + off, p.y + 9, p.tag, 26, 'start'); if (p.desc) text(p.x + off, p.y + 34, p.desc, 20, 'start', 500); }
+    if (up) { const off = Math.max(Math.abs(sym.y0), Math.abs(sym.y1)) + 10; tagT(p.x + off, p.y + 9, p.tag, 26, 'start'); if (p.desc) descT(p.x + off, p.y + 34, p.desc, 20, 'start'); }
     else {
       const y0 = r === 180 ? -sym.y1 : sym.y0, y1 = r === 180 ? -sym.y0 : sym.y1;
-      if (p.t === 'fdsc3' && !r) tagsOf(p).slice(1).forEach((tg, i) => text(p.x + 40, termPos(p, 2 * i)[1] - 24, tg, 26));   // (a fused disconnect's fuses, each its number)
-      if (p.t === 'fus3' && !r) tagsOf(p).forEach((tg, i) => text(p.x, termPos(p, 2 * i)[1] - 24, tg, 26));   // (each fuse its own number)
-      else if (inside) text(p.x, p.y + (kind === 'motor' ? 11 : 10), p.tag, kind === 'motor' ? 30 : (p.tag || '').length > 3 ? 22 : 27); else text(p.x, p.y + y0 - 8, p.tag, 26);
-      if (p.desc) text(p.x, p.y + y1 + 22, p.desc, 20, 'middle', 500);
+      if (p.t === 'fdsc3' && !r) tagsOf(p).slice(1).forEach((tg, i) => tagT(p.x + 40, termPos(p, 2 * i)[1] - 24, tg, 26));   // (a fused disconnect's fuses, each its number)
+      if (p.t === 'fus3' && !r) tagsOf(p).forEach((tg, i) => tagT(p.x, termPos(p, 2 * i)[1] - 24, tg, 26));   // (each fuse its own number)
+      else if (inside) text(p.x, p.y + (kind === 'motor' ? 11 : 10), p.tag, kind === 'motor' ? 30 : (p.tag || '').length > 3 ? 22 : 27); else tagT(p.x, p.y + y0 - 8, p.tag, 26);
+      if (p.desc) descT(p.x, p.y + y1 + 22, p.desc, 20);
     }
     if (p.t === 'xfmr') { const t = [0, 1, 2, 3].map(i => termPos(p, i)), nm = ['H1', 'H2', 'X1', 'X2'];
       t.forEach((q, i) => text(q[0] + (i % 2 ? 12 : -12), q[1] + (i < 2 ? -8 : 22), nm[i], 18, i % 2 ? 'start' : 'end', 600)); }

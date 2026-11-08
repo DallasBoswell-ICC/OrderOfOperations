@@ -26,6 +26,7 @@ const inBox = ([x, y], b) => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1;
 // what is under point q: { kind: 'node' | 'end' (a rail's end) | 'part' | 'text' | 'wire' | 'rail', ... }
 function pick(q) {
   for (const n of S.nodes) if (near(q, [n.x, n.y], 14)) return { kind: 'node', id: n.id };
+  for (const L of PLABS) if (q[0] >= L.x0 - 3 && q[0] <= L.x1 + 3 && q[1] >= L.y0 - 3 && q[1] <= L.y1 + 3) return { kind: 'plabel', id: L.id, which: L.which };
   for (const L of LABS) if (q[0] >= L.x0 - 4 && q[0] <= L.x1 + 4 && q[1] >= L.y0 - 4 && q[1] <= L.y1 + 4) return { kind: 'label', id: L.id, x: L.x, y: L.y };
   for (const r of S.parts) if (r.t === 'rail') for (const k of ['y0', 'y1']) if (near(q, [r.x, r[k]], 16)) return { kind: 'end', id: r.id, k };
   let best = null;
@@ -77,6 +78,8 @@ function drawEd() {
   }
   // (a wire's number picked: its box)
   if (selW) for (const L of LABS) if (L.id === selW) g += `<rect x="${L.x0 - 5}" y="${L.y0 - 4}" width="${L.x1 - L.x0 + 10}" height="${L.y1 - L.y0 + 8}" rx="5" fill="rgba(47,140,255,.12)" stroke="#2f8cff" stroke-width="3"/>`;
+  // (a picked part's tag and label: dashed boxes, as they can be dragged)
+  if (sel.size === 1) for (const L of PLABS) if (sel.has(L.id)) g += `<rect x="${L.x0 - 4}" y="${L.y0 - 3}" width="${L.x1 - L.x0 + 8}" height="${L.y1 - L.y0 + 6}" rx="4" fill="none" stroke="#2f8cff" stroke-width="2" stroke-dasharray="6 4"/>`;
   // a terminal under the pointer in Select: drag from it for a wire
   if (tool === 'select' && cursor && !drag) { const t = termAt(cursor); if (t) g += `<circle cx="${t.x}" cy="${t.y}" r="13" fill="rgba(47,140,255,.15)" stroke="#2f8cff" stroke-width="4"/>`; }
   if (drag && drag.from && cursor) { const t = snapTarget(cursor), P = [drag.from, ...lRoute(drag.from, [t.x, t.y])];
@@ -143,6 +146,7 @@ function onDown(e) {
   if (ta) { drag = { from: [ta.x, ta.y], q0: q }; svg.setPointerCapture(e.pointerId); return; }
   const h = pick(q);
   if (!h) { if (!e.shiftKey) { sel = new Set(); selW = null; } drag = { box: [q, q], add: e.shiftKey }; svg.setPointerCapture(e.pointerId); refresh(); return; }
+  if (h.kind === 'plabel') { const p = partOf(S, h.id); sel = new Set([h.id]); selW = null; drag = { plab: h, at: clone(p[h.which === 'tag' ? 'lt' : 'ld'] || [0, 0]), q0: q, pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
   if (h.kind === 'label') { sel = new Set(); selW = h.id; drag = { lab: h.id, at: [h.x, h.y], q0: q, orig: clone(S), pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
   if (h.kind === 'wire') { sel = new Set(); selW = h.id; drag = { wire: h.id, k: h.k, q0: q, orig: clone(S), pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
   if (h.kind === 'end') { sel = new Set([h.id]); selW = null; drag = { rail: h.id, k: h.k, pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
@@ -158,6 +162,8 @@ function onMove(e) {
   if (!drag) { if (tool !== 'select') { drawEd(); tipFor(q, e); } else { const t = termAt(q); svg.classList.toggle('on-term', !!t); if (t || hoverT) drawEd(); hoverT = !!t; tipFor(q, e); } return; }
   if (drag.box) { drag.box[1] = q; drawEd(); return; }
   if (drag.from) { drawEd(); return; }
+  if (drag.plab) { const p = partOf(S, drag.plab.id); if (!p) return; const dx = Math.round((q[0] - drag.q0[0]) / 5) * 5, dy = Math.round((q[1] - drag.q0[1]) / 5) * 5;
+    if (!drag.moved && !dx && !dy) return; drag.moved = true; p[drag.plab.which === 'tag' ? 'lt' : 'ld'] = [drag.at[0] + dx, drag.at[1] + dy]; frame(); return; }
   if (drag.lab) { const w = S.wires.find(w => w.id === drag.lab); if (!w) return; const dx = Math.round((q[0] - drag.q0[0]) / 5) * 5, dy = Math.round((q[1] - drag.q0[1]) / 5) * 5;
     if (!drag.moved && !dx && !dy) return; drag.moved = true; w.lab = [drag.at[0] + dx, drag.at[1] + dy]; frame(); return; }
   const dx = snap(q[0] - (drag.q0 ? drag.q0[0] : q[0])), dy = snap(q[1] - (drag.q0 ? drag.q0[1] : q[1]));
@@ -179,6 +185,7 @@ function onUp(e) {
     if (Math.hypot(q[0] - d.q0[0], q[1] - d.q0[1]) < G * .75 || (b[0] === d.from[0] && b[1] === d.from[1])) {   // (a click on a terminal: pick its part)
       const h = pick(d.q0); if (h && h.kind === 'part') { sel = new Set([h.id]); selW = null; } refresh(); return; }
     snapshot(); addWire(S, [d.from, ...lRoute(d.from, b)]); refresh(); return; }
+  if (d.plab) { if (d.moved) { UNDO.push(d.pre); REDO.length = 0; } refresh(); return; }
   if (d.lab) { if (d.moved) { UNDO.push(d.pre); REDO.length = 0; } refresh(); return; }
   if (d.box) { const [a, b] = d.box, bx = { x0: Math.min(a[0], b[0]), x1: Math.max(a[0], b[0]), y0: Math.min(a[1], b[1]), y1: Math.max(a[1], b[1]) };
     if (bx.x1 - bx.x0 > 8 || bx.y1 - bx.y0 > 8) { if (!d.add) sel = new Set();
@@ -238,6 +245,7 @@ function tipFor(q, e) {
   if (tool === 'wire') { const t = snapTarget(q); s = wd ? (t.kind === 'grid' ? 'Click to bend · double-click to end here' : 'Click to join here') : (t.kind === 'grid' ? 'Click to start a wire' : `Click to start from this ${({ term: 'terminal', node: 'joint', rail: 'rail', wire: 'wire' })[t.kind]}`); }
   if (tool === 'rung') { const r = rungAt(q); s = r ? (r.ok ? 'Click to add a rung here' : 'There is a rung here already') : 'Rungs go between the L1 and L2 rails'; }
   if (tool === 'select' && termAt(q)) s = 'Drag from here to draw a wire';
+  else if (tool === 'select') { const h = pick(q); if (h && h.kind === 'plabel') s = 'Drag to move this ' + (h.which === 'tag' ? 'name' : 'label'); else if (h && h.kind === 'label') s = 'Drag to move this wire number'; }
   if (!s) { tip.hidden = true; return; }
   const dr = desk.getBoundingClientRect(); tip.innerHTML = s; tip.hidden = false;
   tip.style.left = (e.clientX - dr.left + 18) + 'px'; tip.style.top = (e.clientY - dr.top - 34) + 'px';

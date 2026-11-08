@@ -19,7 +19,13 @@
 html, body { height: 100%; }
 body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--ui); overflow: hidden; }
 button { font: inherit; color: inherit; }
-.app { height: 100vh; display: grid; grid-template-rows: 52px auto 1fr 34px; }
+.app { height: 100vh; display: grid; grid-template-rows: auto auto 1fr auto; --uiz: 1.15; }
+/* the interface's size (Size in the top bar): everything but the sheet scales; the sheet keeps its own zoom */
+.top, .ribwrap, .pal, .bot, .dlg { zoom: var(--uiz); }
+.top { height: 52px; } .bot { height: 34px; }
+.tip { font-size: calc(13px * var(--uiz)) !important; }
+.uisz { display: flex; align-items: center; gap: 6px; font-size: .85rem; color: var(--muted); margin-left: 6px; }
+.uisz select { background: #26292d; color: #d6dbe0; border: 1px solid var(--line2); border-radius: 8px; padding: 5px 6px; font: inherit; font-size: .85rem; }
 /* top bar */
 .top { display: flex; align-items: center; gap: 12px; padding: 0 16px; background: var(--bar); border-bottom: 1px solid var(--line); }
 .logo { width: 30px; height: 30px; border-radius: 7px; }
@@ -50,7 +56,7 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .tog:after { content: ''; position: absolute; left: 2px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: #ddd; transition: left .12s; }
 .chk input:checked + .tog { background: var(--gold); } .chk input:checked + .tog:after { left: 14px; background: #111; }
 /* middle */
-.mid { display: grid; grid-template-columns: 224px 1fr; min-height: 0; }
+.mid { display: grid; grid-template-columns: calc(224px * var(--uiz)) 1fr; min-height: 0; }
 .pal { background: #1f2124; border-right: 1px solid var(--line); padding: 8px 9px 16px; overflow-y: auto; }
 .ph { font-size: 11.5px; font-weight: 700; color: var(--muted); margin: 12px 2px 6px; text-transform: uppercase; letter-spacing: .05em; } .ph:first-child { margin-top: 2px; }
 .pg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
@@ -161,6 +167,9 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .chips .is { flex: none; width: 250px; background: #26292d; border: 1px solid #34383d; border-radius: 8px; padding: 7px 9px; }
 .chips .is:first-child { border-top: 1px solid #34383d; }
 .ribwrap [hidden] { display: none !important; }
+
+/* the ribbon scrolls sideways when the interface is too big for the window */
+.ribwrap .ribbon { overflow-x: auto; overflow-y: hidden; }
 </style>
 <style id="print-page"></style>
 </head>
@@ -178,6 +187,8 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
       <button class="btn" id="open-btn">Open</button>
       <button class="btn" id="save-btn">Save</button>
       <button class="btn" id="print-btn">Print</button>
+      <label class="uisz" title="How big the buttons, menus and writing are (the sheet has its own zoom)">Size
+        <select id="ui-size"><option value="1">Small</option><option value="1.15" selected>Medium</option><option value="1.3">Large</option><option value="1.5">Extra Large</option></select></label>
       <button class="btn icon" id="undo-btn" title="Undo (Ctrl+Z)">↶</button>
       <button class="btn icon" id="redo-btn" title="Redo (Ctrl+Y)">↷</button>
     </div>
@@ -789,7 +800,7 @@ function analyse(D = doc) {
       if (p.t === 'rail' || (p.rot || 0) % 180) continue;
       const kd = kindOf(p);
       const ctl = isCtrlKind(kd) || (kd === 'fuse' && p !== x1fuse && [0, 1].every(i => !power.has(rootT(p, s, i))));
-      if (ctl) ys.add(p.y);
+      if (ctl && [...Array(termsN(p)).keys()].some(i => wiresAt(s, { p: p.id, i }).length)) ys.add(p.y);   // (one not wired in yet takes no rung number)
     }
     const sorted = [...ys].sort((a, b) => a - b), map = new Map(sorted.map(y => [y, ++rn]));
     rows.push(sorted.map(y => ({ y, n: map.get(y) })));
@@ -881,12 +892,14 @@ function checkPrint(A = analyse()) {
    ===================================================================== */
 const PW = 4;                                  // the wires' weight (the symbols' lines are drawn to it)
 let SHOW = { wn: true, rn: true, xr: true };   // wire numbers, rung numbers, cross-references
-let LABS = [];                                 // the wire numbers on the sheet on screen: { id (its wire), l, x, y, anchor, x0..y1 }
+let LABS = [], PLABS = [];                     // (PLABS: the parts' tags and labels on the sheet on screen, for dragging)
+// the box a line of text takes up (Arial bold, roughly)
+function lblBox(x, y, t, size, anchor) { const w = String(t).length * size * .62, x0 = anchor === 'start' ? x : anchor === 'end' ? x - w : x - w / 2; return { x0, x1: x0 + w, y0: y - size * .8, y1: y + size * .15 }; }                                 // the wire numbers on the sheet on screen: { id (its wire), l, x, y, anchor, x0..y1 }
 const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 // the sheet's drawing (no editor marks): an SVG group's insides
 function drawSheet(s, k, A) {
-  let g = '';
+  let g = ''; PLABS = [];
   const line = (x1, y1, x2, y2, w = PW) => { g += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke-width="${w}"/>`; };
   const text = (x, y, t, size = 26, anchor = 'middle', weight = 700, extra = '') => { if (t !== '' && t != null) g += `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}" font-weight="${weight}"${extra}>${esc(t)}</text>`; };
   const arrow = (x, y, ux, uy) => { const bx = x - ux * 22, by = y - uy * 22, px = -uy * 13, py = ux * 13;
@@ -910,17 +923,21 @@ function drawSheet(s, k, A) {
   // devices
   for (const p of s.parts) {
     if (p.t === 'rail') continue;
-    if (p.t === 'sup') { arrow(p.x, p.y, 1, 0); text(p.x - 30, p.y + 10, p.tag, 28, 'end'); continue; }
+    // (a part's tag and label: where they go, moved by however far they have been dragged; each one's box kept for picking)
+    const lt = p.lt || [0, 0], ld = p.ld || [0, 0];
+    const tagT = (x, y, t, size, anchor = 'middle') => { if (!t) return; x += lt[0]; y += lt[1]; text(x, y, t, size, anchor); PLABS.push({ id: p.id, which: 'tag', ...lblBox(x, y, t, size, anchor) }); };
+    const descT = (x, y, t, size, anchor = 'middle') => { if (!t) return; x += ld[0]; y += ld[1]; text(x, y, t, size, anchor, 500); PLABS.push({ id: p.id, which: 'desc', ...lblBox(x, y, t, size, anchor) }); };
+    if (p.t === 'sup') { arrow(p.x, p.y, 1, 0); tagT(p.x - 30, p.y + 10, p.tag, 28, 'end'); continue; }
     const sym = PSYM[LIB[p.t].sym], r = p.rot || 0, kind = LIB[p.t].kind;
     g += `<g class="sym" transform="translate(${p.x} ${p.y})${r ? ` rotate(${r})` : ''}">${sym.b}</g>`;
     const up = r % 180 !== 0, inside = (kind === 'coil' && (p.tag || '').length <= 4) || kind === 'motor';
-    if (up) { const off = Math.max(Math.abs(sym.y0), Math.abs(sym.y1)) + 10; text(p.x + off, p.y + 9, p.tag, 26, 'start'); if (p.desc) text(p.x + off, p.y + 34, p.desc, 20, 'start', 500); }
+    if (up) { const off = Math.max(Math.abs(sym.y0), Math.abs(sym.y1)) + 10; tagT(p.x + off, p.y + 9, p.tag, 26, 'start'); if (p.desc) descT(p.x + off, p.y + 34, p.desc, 20, 'start'); }
     else {
       const y0 = r === 180 ? -sym.y1 : sym.y0, y1 = r === 180 ? -sym.y0 : sym.y1;
-      if (p.t === 'fdsc3' && !r) tagsOf(p).slice(1).forEach((tg, i) => text(p.x + 40, termPos(p, 2 * i)[1] - 24, tg, 26));   // (a fused disconnect's fuses, each its number)
-      if (p.t === 'fus3' && !r) tagsOf(p).forEach((tg, i) => text(p.x, termPos(p, 2 * i)[1] - 24, tg, 26));   // (each fuse its own number)
-      else if (inside) text(p.x, p.y + (kind === 'motor' ? 11 : 10), p.tag, kind === 'motor' ? 30 : (p.tag || '').length > 3 ? 22 : 27); else text(p.x, p.y + y0 - 8, p.tag, 26);
-      if (p.desc) text(p.x, p.y + y1 + 22, p.desc, 20, 'middle', 500);
+      if (p.t === 'fdsc3' && !r) tagsOf(p).slice(1).forEach((tg, i) => tagT(p.x + 40, termPos(p, 2 * i)[1] - 24, tg, 26));   // (a fused disconnect's fuses, each its number)
+      if (p.t === 'fus3' && !r) tagsOf(p).forEach((tg, i) => tagT(p.x, termPos(p, 2 * i)[1] - 24, tg, 26));   // (each fuse its own number)
+      else if (inside) text(p.x, p.y + (kind === 'motor' ? 11 : 10), p.tag, kind === 'motor' ? 30 : (p.tag || '').length > 3 ? 22 : 27); else tagT(p.x, p.y + y0 - 8, p.tag, 26);
+      if (p.desc) descT(p.x, p.y + y1 + 22, p.desc, 20);
     }
     if (p.t === 'xfmr') { const t = [0, 1, 2, 3].map(i => termPos(p, i)), nm = ['H1', 'H2', 'X1', 'X2'];
       t.forEach((q, i) => text(q[0] + (i % 2 ? 12 : -12), q[1] + (i < 2 ? -8 : 22), nm[i], 18, i % 2 ? 'start' : 'end', 600)); }
@@ -1085,6 +1102,7 @@ const inBox = ([x, y], b) => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1;
 // what is under point q: { kind: 'node' | 'end' (a rail's end) | 'part' | 'text' | 'wire' | 'rail', ... }
 function pick(q) {
   for (const n of S.nodes) if (near(q, [n.x, n.y], 14)) return { kind: 'node', id: n.id };
+  for (const L of PLABS) if (q[0] >= L.x0 - 3 && q[0] <= L.x1 + 3 && q[1] >= L.y0 - 3 && q[1] <= L.y1 + 3) return { kind: 'plabel', id: L.id, which: L.which };
   for (const L of LABS) if (q[0] >= L.x0 - 4 && q[0] <= L.x1 + 4 && q[1] >= L.y0 - 4 && q[1] <= L.y1 + 4) return { kind: 'label', id: L.id, x: L.x, y: L.y };
   for (const r of S.parts) if (r.t === 'rail') for (const k of ['y0', 'y1']) if (near(q, [r.x, r[k]], 16)) return { kind: 'end', id: r.id, k };
   let best = null;
@@ -1136,6 +1154,8 @@ function drawEd() {
   }
   // (a wire's number picked: its box)
   if (selW) for (const L of LABS) if (L.id === selW) g += `<rect x="${L.x0 - 5}" y="${L.y0 - 4}" width="${L.x1 - L.x0 + 10}" height="${L.y1 - L.y0 + 8}" rx="5" fill="rgba(47,140,255,.12)" stroke="#2f8cff" stroke-width="3"/>`;
+  // (a picked part's tag and label: dashed boxes, as they can be dragged)
+  if (sel.size === 1) for (const L of PLABS) if (sel.has(L.id)) g += `<rect x="${L.x0 - 4}" y="${L.y0 - 3}" width="${L.x1 - L.x0 + 8}" height="${L.y1 - L.y0 + 6}" rx="4" fill="none" stroke="#2f8cff" stroke-width="2" stroke-dasharray="6 4"/>`;
   // a terminal under the pointer in Select: drag from it for a wire
   if (tool === 'select' && cursor && !drag) { const t = termAt(cursor); if (t) g += `<circle cx="${t.x}" cy="${t.y}" r="13" fill="rgba(47,140,255,.15)" stroke="#2f8cff" stroke-width="4"/>`; }
   if (drag && drag.from && cursor) { const t = snapTarget(cursor), P = [drag.from, ...lRoute(drag.from, [t.x, t.y])];
@@ -1202,6 +1222,7 @@ function onDown(e) {
   if (ta) { drag = { from: [ta.x, ta.y], q0: q }; svg.setPointerCapture(e.pointerId); return; }
   const h = pick(q);
   if (!h) { if (!e.shiftKey) { sel = new Set(); selW = null; } drag = { box: [q, q], add: e.shiftKey }; svg.setPointerCapture(e.pointerId); refresh(); return; }
+  if (h.kind === 'plabel') { const p = partOf(S, h.id); sel = new Set([h.id]); selW = null; drag = { plab: h, at: clone(p[h.which === 'tag' ? 'lt' : 'ld'] || [0, 0]), q0: q, pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
   if (h.kind === 'label') { sel = new Set(); selW = h.id; drag = { lab: h.id, at: [h.x, h.y], q0: q, orig: clone(S), pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
   if (h.kind === 'wire') { sel = new Set(); selW = h.id; drag = { wire: h.id, k: h.k, q0: q, orig: clone(S), pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
   if (h.kind === 'end') { sel = new Set([h.id]); selW = null; drag = { rail: h.id, k: h.k, pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
@@ -1217,6 +1238,8 @@ function onMove(e) {
   if (!drag) { if (tool !== 'select') { drawEd(); tipFor(q, e); } else { const t = termAt(q); svg.classList.toggle('on-term', !!t); if (t || hoverT) drawEd(); hoverT = !!t; tipFor(q, e); } return; }
   if (drag.box) { drag.box[1] = q; drawEd(); return; }
   if (drag.from) { drawEd(); return; }
+  if (drag.plab) { const p = partOf(S, drag.plab.id); if (!p) return; const dx = Math.round((q[0] - drag.q0[0]) / 5) * 5, dy = Math.round((q[1] - drag.q0[1]) / 5) * 5;
+    if (!drag.moved && !dx && !dy) return; drag.moved = true; p[drag.plab.which === 'tag' ? 'lt' : 'ld'] = [drag.at[0] + dx, drag.at[1] + dy]; frame(); return; }
   if (drag.lab) { const w = S.wires.find(w => w.id === drag.lab); if (!w) return; const dx = Math.round((q[0] - drag.q0[0]) / 5) * 5, dy = Math.round((q[1] - drag.q0[1]) / 5) * 5;
     if (!drag.moved && !dx && !dy) return; drag.moved = true; w.lab = [drag.at[0] + dx, drag.at[1] + dy]; frame(); return; }
   const dx = snap(q[0] - (drag.q0 ? drag.q0[0] : q[0])), dy = snap(q[1] - (drag.q0 ? drag.q0[1] : q[1]));
@@ -1238,6 +1261,7 @@ function onUp(e) {
     if (Math.hypot(q[0] - d.q0[0], q[1] - d.q0[1]) < G * .75 || (b[0] === d.from[0] && b[1] === d.from[1])) {   // (a click on a terminal: pick its part)
       const h = pick(d.q0); if (h && h.kind === 'part') { sel = new Set([h.id]); selW = null; } refresh(); return; }
     snapshot(); addWire(S, [d.from, ...lRoute(d.from, b)]); refresh(); return; }
+  if (d.plab) { if (d.moved) { UNDO.push(d.pre); REDO.length = 0; } refresh(); return; }
   if (d.lab) { if (d.moved) { UNDO.push(d.pre); REDO.length = 0; } refresh(); return; }
   if (d.box) { const [a, b] = d.box, bx = { x0: Math.min(a[0], b[0]), x1: Math.max(a[0], b[0]), y0: Math.min(a[1], b[1]), y1: Math.max(a[1], b[1]) };
     if (bx.x1 - bx.x0 > 8 || bx.y1 - bx.y0 > 8) { if (!d.add) sel = new Set();
@@ -1297,6 +1321,7 @@ function tipFor(q, e) {
   if (tool === 'wire') { const t = snapTarget(q); s = wd ? (t.kind === 'grid' ? 'Click to bend · double-click to end here' : 'Click to join here') : (t.kind === 'grid' ? 'Click to start a wire' : `Click to start from this ${({ term: 'terminal', node: 'joint', rail: 'rail', wire: 'wire' })[t.kind]}`); }
   if (tool === 'rung') { const r = rungAt(q); s = r ? (r.ok ? 'Click to add a rung here' : 'There is a rung here already') : 'Rungs go between the L1 and L2 rails'; }
   if (tool === 'select' && termAt(q)) s = 'Drag from here to draw a wire';
+  else if (tool === 'select') { const h = pick(q); if (h && h.kind === 'plabel') s = 'Drag to move this ' + (h.which === 'tag' ? 'name' : 'label'); else if (h && h.kind === 'label') s = 'Drag to move this wire number'; }
   if (!s) { tip.hidden = true; return; }
   const dr = desk.getBoundingClientRect(); tip.innerHTML = s; tip.hidden = false;
   tip.style.left = (e.clientX - dr.left + 18) + 'px'; tip.style.top = (e.clientY - dr.top - 34) + 'px';
@@ -1427,10 +1452,12 @@ function buildPalette() {
     h += '</div>'; }
   $('palette').innerHTML = h;
   for (const el of document.querySelectorAll('.pt')) el.addEventListener('pointerdown', e => {
-    e.preventDefault(); const t = el.dataset.t; startPlacing(t);
-    // (dragged out onto the sheet: put down where it is let go)
+    e.preventDefault(); const t = el.dataset.t, x0 = e.clientX, y0 = e.clientY; startPlacing(t);
+    // dragged out onto the sheet: put down where it is let go; just clicked: put in view, in a clear spot (as in Circuit Builder)
     const up = ev => { window.removeEventListener('pointerup', up);
-      const r = svg.getBoundingClientRect(); if (ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom && tool === 'place') putDown(sheetPt(ev), ev.shiftKey); };
+      const r = svg.getBoundingClientRect(), onSheet = ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
+      if (onSheet && tool === 'place') putDown(sheetPt(ev), ev.shiftKey);
+      else if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < 8 && tool === 'place') placeInView(t); };
     window.addEventListener('pointerup', up);
   });
   let m = '';
@@ -1438,9 +1465,32 @@ function buildPalette() {
     for (const [t, d] of Object.entries(LIB)) if (d.cat === c) m += `<button data-t="${t}">${thumb(t).replace('<svg', '<svg style="width:46px;height:26px;background:#f4f5f6;border-radius:4px;padding:2px"')}${esc(d.name)}</button>`;
     m += '</div></div>'; }
   $('sym-menus').innerHTML = m;
-  for (const b of document.querySelectorAll('[data-menu]')) b.addEventListener('click', e => { e.stopPropagation(); const d = b.nextElementSibling, open = d.hidden; closeMenus(); d.hidden = !open; if (open) { const r = b.getBoundingClientRect(); d.style.position = 'fixed'; d.style.left = r.left + 'px'; d.style.top = (r.bottom + 6) + 'px'; } });
-  for (const b of document.querySelectorAll('#sym-menus .dmenu button')) b.addEventListener('click', () => { closeMenus(); startPlacing(b.dataset.t); });
+  for (const b of document.querySelectorAll('[data-menu]')) b.addEventListener('click', e => { e.stopPropagation(); const d = b.nextElementSibling, open = d.hidden; closeMenus(); d.hidden = !open; if (open) { const r = b.getBoundingClientRect(); const z = uiZoom(); d.style.position = 'fixed'; d.style.left = r.left / z + 'px'; d.style.top = (r.bottom + 6) / z + 'px'; } });
+  for (const b of document.querySelectorAll('#sym-menus .dmenu button')) b.addEventListener('click', () => { closeMenus(); placeInView(b.dataset.t); });
 }
+// a part put straight onto the sheet, in the middle of what is in view, at the nearest spot clear of the other symbols,
+// their names and the wires (so it never lands in a wire); it comes picked, ready to drag where it goes
+function placeInView(t) {
+  placing = null; setTool('select');
+  const r = zoomer.getBoundingClientRect(), m = svg.getScreenCTM().inverse(), toS = (x, y) => [m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f];
+  const [ax, ay] = toS(r.left + 40, r.top + 40), [bx, by] = toS(r.right - 40, r.bottom - 40), D = { x0: 40, y0: 60, x1: drawW(S.land) - 40, y1: drawH(S.land) - 40 };
+  const lo = [Math.max(ax, D.x0), Math.max(ay, D.y0)], hi = [Math.min(bx, D.x1), Math.min(by, D.y1)], c = [snap((lo[0] + hi[0]) / 2), snap((lo[1] + hi[1]) / 2)];
+  const boxes = S.parts.map(partBox), segs = S.wires.flatMap(w => { const P = wirePts(S, w); return P.slice(1).map((b, i) => [P[i], b]); });
+  const free = (x, y) => { const b = partBox({ t, x, y, rot: 0 }); b.x0 -= 20; b.x1 += 20; b.y0 -= 10; b.y1 += 20;
+    if (b.x0 < D.x0 || b.x1 > D.x1 || b.y0 < D.y0 || b.y1 > D.y1) return false;
+    return !boxes.some(o => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0) && !segs.some(([a, q]) => Math.max(a[0], q[0]) >= b.x0 && Math.min(a[0], q[0]) <= b.x1 && Math.max(a[1], q[1]) >= b.y0 && Math.min(a[1], q[1]) <= b.y1); };
+  let at = null;
+  for (let ring = 0; ring <= 40 && !at; ring++) for (let i = -ring; i <= ring && !at; i++) for (const [dx, dy] of [[i, -ring], [i, ring], [-ring, i], [ring, i]]) { const x = c[0] + dx * 2 * G, y = c[1] + dy * 2 * G; if (free(x, y)) { at = [x, y]; break; } }
+  at ||= c;
+  snapshot(); const p = addPart(S, t, at[0], at[1]);
+  sel = new Set([p.id]); selW = null; keepTab = true; refresh(); keepTab = false;
+  const sr = svg.getScreenCTM(), sx = sr.a * at[0] + sr.e, sy = sr.d * at[1] + sr.f; if (sx < r.left || sx > r.right || sy < r.top || sy > r.bottom) showPoint(at[0], at[1]);
+  say(`${LIB[t].name} added${p.tag ? ' as ' + p.tag : ''}. Drag it into place, onto a wire to put it in the wire.`);
+}
+// the interface's size: kept for next time
+const UIKEY = 'oo-print-builder:ui-size';
+const uiZoom = () => parseFloat(getComputedStyle(document.querySelector('.app')).getPropertyValue('--uiz')) || 1;
+function setUiSize(v) { document.querySelector('.app').style.setProperty('--uiz', v); $('ui-size').value = String(v); try { localStorage.setItem(UIKEY, String(v)); } catch (_) {} if (svg) applyZoom(); }
 const closeMenus = () => { for (const d of document.querySelectorAll('.dmenu')) d.hidden = true; };
 document.addEventListener('click', e => { if (!e.target.closest('.menuwrap')) closeMenus(); });
 
@@ -1491,11 +1541,12 @@ function renderProps0() {
       ${rn ? `<div class="f">Rung<span class="ro">${rn} (automatic)</span></div>` : ''}
       ${termNums.length ? `<div class="f">Wires<span class="ro">${termNums.join(' → ')} (automatic)</span></div>` : ''}
       ${xr && xr.length ? `<div class="f">Contacts on<span class="ro">${xr.map(o => o.n + (o.nc ? ' (NC)' : '')).join(', ')}</span></div>` : ''}
-      <div class="acts">${termsN(p) === 2 ? '<button class="btn" id="p-rot">Rotate (R)</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
+      <div class="acts">${termsN(p) === 2 ? '<button class="btn" id="p-rot">Rotate (R)</button>' : ''}${p.lt || p.ld ? '<button class="btn" id="p-lab">Put Labels Back</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
     const of = $('p-of'); if (of) of.addEventListener('change', () => { let v = of.value; if (v === '__other') { v = (prompt(k === 'olc' ? 'The overload this contact belongs to (e.g. OL2):' : 'The coil that works this contact (e.g. CR3):', p.tag || '') || '').trim().toUpperCase(); if (!v) { renderProps(); return; } }
       snapshot(); p.tag = v; refresh(); });
     const tg = $('p-tag'); if (tg) tg.addEventListener('input', () => edit(() => { p.tag = tg.value.trim().toUpperCase(); if (k === 'coil') lastCoil = p.tag; }));
     if (tg) tg.addEventListener('change', () => renderProps());
+    const pl = $('p-lab'); if (pl) pl.addEventListener('click', () => { snapshot(); delete p.lt; delete p.ld; refresh(); });
     const fu = $('p-fu'); if (fu) { fu.addEventListener('input', () => edit(() => { p.fu = fu.value.trim().toUpperCase(); })); fu.addEventListener('change', () => renderProps()); }
     const ds = $('p-desc'); if (ds) ds.addEventListener('input', () => edit(() => { p.desc = ds.value.toUpperCase(); }));
     const pr = $('p-pre'); if (pr) pr.addEventListener('change', () => { snapshot(); p.pre = pr.value; p.tag = ''; p.tag = nextTag(p.pre); lastCoil = p.tag; refresh(); });
@@ -1701,6 +1752,8 @@ function start() {
   $('show-wn').checked = SHOW.wn; $('show-rn').checked = SHOW.rn; $('show-xr').checked = SHOW.xr;
   let d = null; try { d = JSON.parse(localStorage.getItem(AUTOSAVE) || 'null'); } catch (_) {}
   try { if (d) loadDoc(d); else loadDoc(template('starter')); } catch (_) { loadDoc(template('blank')); }
+  try { const z = parseFloat(localStorage.getItem(UIKEY)); if (z) setUiSize(z); } catch (_) {}
+  $('ui-size').addEventListener('change', e => setUiSize(parseFloat(e.target.value)));
   buildPalette(); refresh(true); setTool('select'); requestAnimationFrame(fitZoom);
 }
 start();
