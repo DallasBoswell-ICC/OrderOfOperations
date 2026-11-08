@@ -267,11 +267,11 @@ let passed = 0, failed = 0;
     const g = await p.locator('#pal-grip').boundingBox(), w0 = (await p.locator('#palette').boundingBox()).width;
     await p.mouse.move(g.x + 3, g.y + 200); await p.mouse.down(); await p.mouse.move(g.x + 120, g.y + 200, { steps: 4 }); await p.mouse.up();
     const w1 = (await p.locator('#palette').boundingBox()).width;
-    await p.click('#pal-hide'); const hid = await p.evaluate(() => [getComputedStyle($('palette')).display, !$('pal-show').hidden, JSON.parse(localStorage.getItem('oo-print-builder:palette')).hidden].join(','));
+    await p.click('#pal-hide'); const hid = await p.evaluate(() => [getComputedStyle($('palette')).display, !$('pal-show').hidden, JSON.parse(localStorage.getItem('oo-print-builder:palette')).hidden, $('desk').getBoundingClientRect().width > 600].join(','));
     await p.click('#pal-show'); const back = await p.evaluate(() => getComputedStyle($('palette')).display);
     const sb = await p.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
     await p.evaluate(() => setPalette(224, false));
-    return w1 > w0 + 100 && hid === 'none,true,true' && back !== 'none' && sb === 'dark' ? [] : ['widths ' + w0 + ' → ' + w1 + ' | hidden: ' + hid + ' | shown: ' + back + ' | color scheme: ' + sb];
+    return w1 > w0 + 100 && hid === 'none,true,true,true' && back !== 'none' && sb === 'dark' ? [] : ['widths ' + w0 + ' → ' + w1 + ' | hidden: ' + hid + ' | shown: ' + back + ' | color scheme: ' + sb];
   });
 
   await check('Title block: boxes added, changed and taken away show on the sheet; saved and opened again', async p => {
