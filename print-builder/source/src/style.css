@@ -44,10 +44,11 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .tog:after { content: ''; position: absolute; left: 2px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: #ddd; transition: left .12s; }
 .chk input:checked + .tog { background: var(--gold); } .chk input:checked + .tog:after { left: 14px; background: #111; }
 /* middle */
-.mid { display: grid; grid-template-columns: calc(224px * var(--uiz)) 1fr; min-height: 0; }
+.mid { display: grid; grid-template-columns: calc(var(--palw, 224px) * var(--uiz)) 7px 1fr; min-height: 0; }
+.mid.palhide { grid-template-columns: 0 calc(22px * var(--uiz)) 1fr; } .mid.palhide .pal { display: none; }
 .pal { background: #1f2124; border-right: 1px solid var(--line); padding: 8px 9px 16px; overflow-y: auto; }
 .ph { font-size: 11.5px; font-weight: 700; color: var(--muted); margin: 12px 2px 6px; text-transform: uppercase; letter-spacing: .05em; } .ph:first-child { margin-top: 2px; }
-.pg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.pg { display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 6px; }
 .pt { background: #f4f5f6; border-radius: 7px; height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 2px solid transparent; cursor: grab; padding: 2px; user-select: none; touch-action: none; }
 .pt:hover { border-color: #9ec5ff; } .pt.on { border-color: var(--sel); box-shadow: 0 0 0 3px rgba(47,140,255,.25); }
 .pt svg { width: 52px; height: 30px; overflow: visible; } .pt span { font-size: 9.5px; color: #333; font-weight: 600; text-align: center; line-height: 1.05; }
@@ -165,3 +166,20 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .file-label { font-size: .85rem; color: var(--muted); background: #26292d; border: 1px solid var(--line2); border-radius: 999px; padding: 3px 11px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .file-label.dirty { color: var(--gold); border-color: #5a4a14; }
 #save-menu button { white-space: nowrap; }
+
+/* dark scrollbars and form controls, to match */
+:root { color-scheme: dark; }
+* { scrollbar-color: #4a4f57 #1f2124; scrollbar-width: thin; }
+::-webkit-scrollbar { width: 11px; height: 11px; background: #1f2124; }
+::-webkit-scrollbar-thumb { background: #4a4f57; border-radius: 6px; border: 2px solid #1f2124; } ::-webkit-scrollbar-thumb:hover { background: #5d636c; }
+::-webkit-scrollbar-corner { background: #1f2124; }
+.pr-page, .pr-page * { color-scheme: light; }
+/* the parts list: its edge drags it wider or narrower; « hides it, » brings it back */
+.pal-grip { background: #1f2124; border-right: 1px solid var(--line); cursor: col-resize; position: relative; z-index: 5; touch-action: none; }
+.pal-grip:hover, .pal-grip.drag { background: #2a3a52; }
+.mid.palhide .pal-grip { cursor: default; } .mid.palhide .pal-grip:hover { background: #1f2124; }
+#pal-show { position: absolute; top: 8px; left: 2px; width: 17px; height: 40px; border: 1px solid var(--line2); border-radius: 5px; background: #26292d; color: #d6dbe0; cursor: pointer; font-size: 13px; padding: 0; zoom: var(--uiz); }
+#pal-show:hover { background: #30343a; }
+.pal-top { display: flex; align-items: center; justify-content: space-between; margin: 0 0 4px; }
+.pal-top span { font-size: 11.5px; font-weight: 700; color: var(--faint); letter-spacing: .05em; text-transform: uppercase; }
+.pal-top button { border: 1px solid var(--line2); background: #26292d; color: #d6dbe0; border-radius: 6px; font-size: 12px; padding: 1px 8px; cursor: pointer; } .pal-top button:hover { background: #30343a; }

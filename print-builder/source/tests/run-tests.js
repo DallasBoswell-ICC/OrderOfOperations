@@ -262,6 +262,18 @@ let passed = 0, failed = 0;
     return r.join('|') === 'none|coil:TR1:true|TR1|NC FD Switch|1|MAINTAINED|LOW TEMP' ? [] : ['missing | timer | timed contact letter | its symbol | wire from source | maintained note | low temp note: ' + r.join(' | ')];
   });
 
+  await check('Parts list: dragging its edge resizes it; Hide and » hide and show it; remembered', async p => {
+    await p.evaluate(() => setPalette(224, false));
+    const g = await p.locator('#pal-grip').boundingBox(), w0 = (await p.locator('#palette').boundingBox()).width;
+    await p.mouse.move(g.x + 3, g.y + 200); await p.mouse.down(); await p.mouse.move(g.x + 120, g.y + 200, { steps: 4 }); await p.mouse.up();
+    const w1 = (await p.locator('#palette').boundingBox()).width;
+    await p.click('#pal-hide'); const hid = await p.evaluate(() => [getComputedStyle($('palette')).display, !$('pal-show').hidden, JSON.parse(localStorage.getItem('oo-print-builder:palette')).hidden].join(','));
+    await p.click('#pal-show'); const back = await p.evaluate(() => getComputedStyle($('palette')).display);
+    const sb = await p.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
+    await p.evaluate(() => setPalette(224, false));
+    return w1 > w0 + 100 && hid === 'none,true,true' && back !== 'none' && sb === 'dark' ? [] : ['widths ' + w0 + ' → ' + w1 + ' | hidden: ' + hid + ' | shown: ' + back + ' | color scheme: ' + sb];
+  });
+
   await check('Title block: boxes added, changed and taken away show on the sheet; saved and opened again', async p => {
     await p.click('#tb-btn'); await p.click('#tb-add'); await p.keyboard.type('Instructor');
     await p.locator('.tbrow[data-i]').last().locator('[data-k=value]').fill('D. Boswell');

@@ -63,7 +63,8 @@ function buildPalette() {
   for (const c of CATS) { h += `<div class="ph">${c}</div><div class="pg">`;
     for (const [t, d] of Object.entries(LIB)) if (d.cat === c) h += `<div class="pt" data-t="${t}" title="${esc(d.name)}">${thumb(t)}<span>${esc(short(d.name))}</span></div>`;
     h += '</div>'; }
-  $('palette').innerHTML = h;
+  $('palette').innerHTML = '<div class="pal-top"><span>Parts</span><button id="pal-hide" title="Hide the parts list (the » on the left brings it back)">« Hide</button></div>' + h;
+  $('pal-hide').addEventListener('click', () => setPalette(null, true));
   for (const el of document.querySelectorAll('.pt')) el.addEventListener('pointerdown', e => {
     e.preventDefault(); const t = el.dataset.t, x0 = e.clientX, y0 = e.clientY; startPlacing(t);
     // dragged out onto the sheet: put down where it is let go; just clicked: put in view, in a clear spot (as in Circuit Builder)
@@ -99,6 +100,28 @@ function placeInView(t) {
   sel = new Set([p.id]); selW = null; keepTab = true; refresh(); keepTab = false;
   const sr = svg.getScreenCTM(), sx = sr.a * at[0] + sr.e, sy = sr.d * at[1] + sr.f; if (sx < r.left || sx > r.right || sy < r.top || sy > r.bottom) showPoint(at[0], at[1]);
   say(`${LIB[t].name} added${p.tag ? ' as ' + p.tag : ''}. Drag it into place, onto a wire to put it in the wire.`);
+}
+// the parts list's width (dragged at its edge) and whether it is hidden: kept for next time
+const PALKEY = 'oo-print-builder:palette', PAL_MIN = 150, PAL_MAX = 560;
+let palW = 224, palHidden = false;
+function setPalette(w, hidden) {
+  if (w != null) palW = Math.max(PAL_MIN, Math.min(PAL_MAX, Math.round(w)));
+  if (hidden != null) palHidden = hidden;
+  const mid = document.querySelector('.mid'); mid.style.setProperty('--palw', palW + 'px'); mid.classList.toggle('palhide', palHidden); $('pal-show').hidden = !palHidden;
+  try { localStorage.setItem(PALKEY, JSON.stringify({ w: palW, hidden: palHidden })); } catch (_) {}
+}
+function palGrip() {
+  const g = $('pal-grip');
+  g.addEventListener('pointerdown', e => {
+    if (palHidden || e.target.id === 'pal-show') return; e.preventDefault(); g.setPointerCapture(e.pointerId); g.classList.add('drag');
+    const left = document.querySelector('.mid').getBoundingClientRect().left, z = uiZoom();
+    const mv = ev => { const w = (ev.clientX - left) / z; if (w < PAL_MIN - 60) setPalette(null, true); else setPalette(w, false); };
+    const up = () => { g.classList.remove('drag'); g.removeEventListener('pointermove', mv); g.removeEventListener('pointerup', up); };
+    g.addEventListener('pointermove', mv); g.addEventListener('pointerup', up);
+  });
+  g.addEventListener('dblclick', () => { if (!palHidden) setPalette(224, false); });
+  $('pal-show').addEventListener('click', () => setPalette(null, false));
+  try { const v = JSON.parse(localStorage.getItem(PALKEY) || 'null'); if (v) setPalette(v.w, !!v.hidden); } catch (_) {}
 }
 // the interface's size: kept for next time
 const UIKEY = 'oo-print-builder:ui-size';
@@ -418,6 +441,6 @@ function start() {
   try { if (d) loadDoc(d); else loadDoc(template('starter')); } catch (_) { loadDoc(template('blank')); }
   try { const z = parseFloat(localStorage.getItem(UIKEY)); if (z) setUiSize(z); } catch (_) {}
   $('ui-size').addEventListener('change', e => setUiSize(parseFloat(e.target.value)));
-  buildPalette(); refresh(true); setTool('select'); requestAnimationFrame(fitZoom);
+  buildPalette(); palGrip(); refresh(true); setTool('select'); requestAnimationFrame(fitZoom);
 }
 start();
