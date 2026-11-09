@@ -1,0 +1,17 @@
+{
+ "name": "Order of Operations: Print Builder (Demo)",
+ "short_name": "Print Builder Demo",
+ "id": "./?app=print-builder-demo",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#1c1d1f",
+ "theme_color": "#9be03a",
+ "description": "Draw ladder diagrams and power circuits with automatic wire numbers, rung numbers and cross-references, for the Order of Operations troubleshooting class.",
+ "icons": [
+  { "src": "icons/pbd-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+  { "src": "icons/pbd-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+  { "src": "icons/pbd-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+  { "src": "icons/pbd-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+ ]
+}

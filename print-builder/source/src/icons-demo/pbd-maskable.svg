@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#ffffff"/>
+  <g transform="translate(256 226) scale(.6) translate(-256 -296)">
+    <ellipse cx="208" cy="296" rx="128" ry="146" fill="none" stroke="#1f5fbf" stroke-width="62"/>
+    <text x="402" y="232" text-anchor="middle" font-family="Arial, Helvetica, 'DejaVu Sans', sans-serif" font-weight="700" font-size="200" fill="#1f5fbf">3</text>
+  </g>
+  <rect y="352" width="512" height="160" fill="#9be03a"/>
+  <text x="256" y="436" text-anchor="middle" font-family="Arial, Helvetica, 'DejaVu Sans', sans-serif" font-weight="800" font-size="72" letter-spacing="5" fill="#1c1d1f">DEMO</text>
+</svg>
