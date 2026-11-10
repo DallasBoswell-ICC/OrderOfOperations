@@ -592,9 +592,10 @@ let passed = 0, failed = 0;
       addWire(S, [[XL, 1080], [1200, 1080]]); addPart(S, 'coil', 1240, 1080); addWire(S, [[1280, 1080], [XR, 1080]]);
       refresh(true); const L0 = S.wires.map(w => A.label.get(A.wireRoot(S, w))).sort().join(), e0 = ISSUES.filter(i => i.sev === 'e').length;
       sel = new Set([c.id]); refresh(); $('org-btn').click(); refresh(true);
-      const xs = S.parts.filter(q => q.y === Y).map(q => q.x).sort((a, b) => a - b), j = S.nodes.find(n => n.y === Y && n.x > XL && n.x < XR);
-      const P = S.wires.map(w => wirePts(S, w)).find(P => P.some(q => q[1] === 840) && P.some(q => q[1] === Y));
-      return { hint: $('hint').textContent, spread: xs[xs.length - 1] - xs[0], joint: j && j.x, between: j && j.x > xs[6] + 40 && j.x < xs[7] - 40, straightUp: !!P && [P.slice(0, 2), P.slice(-2)].some(e => e.every(q => q[0] === j.x) && e.some(q => q[1] === Y)),
+      const xs = S.parts.filter(q => q.y === Y).map(q => q.x).sort((a, b) => a - b);
+      // (the branch from rung 2: the wire that runs from y 840 up to the rung; its end on the rung is the joint)
+      const P0 = S.wires.map(w => wirePts(S, w)).find(P => P.some(q => q[1] === 840) && [P[0], P[P.length - 1]].some(q => q[1] === Y && q[0] > XL && q[0] < XR)), P = P0 && (P0[0][1] === Y && P0[0][0] > XL ? P0 : [...P0].reverse()), j = P && { x: P[0][0] };
+      return { hint: $('hint').textContent, spread: xs[xs.length - 1] - xs[0], joint: j && j.x, between: j && j.x > xs[6] + 40 && j.x < xs[7] - 40, straightUp: !!P && P[1][0] === P[0][0] && P[1][1] !== Y,
         same: S.wires.map(w => A.label.get(A.wireRoot(S, w))).sort().join() === L0, errs: ISSUES.filter(i => i.sev === 'e').length === e0 }; });
     return /organized/.test(r.hint) && r.spread > 1600 && r.between && r.straightUp && r.same && r.errs ? [] : ['result: ' + JSON.stringify(r)];
   });
