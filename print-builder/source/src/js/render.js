@@ -155,7 +155,8 @@ function tbHTML(k, n) {
 }
 // a whole page; the drawing's viewBox is set once it is laid out (see fitDraw)
 function pageHTML(s, k, A, editor = false) {
-  return `<div class="pr-page${s.land ? ' land' : ''}" data-k="${k}"><div class="pr-frame"><div class="pr-draw"><svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet"${editor ? ' id="sv"' : ''}>${editor ? '<g id="ed-under"></g>' : ''}<g class="ink" fill="none" stroke="#000" stroke-width="${PW}" stroke-linecap="round" stroke-linejoin="round">${drawSheet(s, k, A)}</g>${editor ? '<g id="ed-over"></g>' : ''}</svg></div>${tbHTML(k, doc.sheets.length)}</div></div>`;
+  const [pw, ph] = paperIn(s);
+  return `<div class="pr-page${s.land ? ' land' : ''}" data-k="${k}" style="width:${pw}in;height:${ph}in;page:${pageName(pw, ph)}"><div class="pr-frame"><div class="pr-draw"><svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet"${editor ? ' id="sv"' : ''}>${editor ? '<g id="ed-under"></g>' : ''}<g class="ink" fill="none" stroke="#000" stroke-width="${PW}" stroke-linecap="round" stroke-linejoin="round">${drawSheet(s, k, A)}</g>${editor ? '<g id="ed-over"></g>' : ''}</svg></div>${tbHTML(k, doc.sheets.length)}</div></div>`;
 }
 // a page's drawing given its viewBox: a unit 1/312.5 in, whatever the room the title block leaves
 function fitDraw(page) {
@@ -260,3 +261,6 @@ function linkRoute(L) {
     mx += k.dx || 0; return [A_, [mx, A_[1]], [mx, B[1]], B]; }
   return va ? [A_, [A_[0], B[1]], B] : [A_, [B[0], A_[1]], B];
 }
+
+// a paper size's @page name (for printing each sheet on its own size)
+const pageName = (w, h) => 'pz' + String(w).replace('.', '_') + 'x' + String(h).replace('.', '_');

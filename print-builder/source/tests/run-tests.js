@@ -311,7 +311,7 @@ let passed = 0, failed = 0;
     await p.keyboard.press('Control+p');
     const kp = await p.evaluate(() => !$('pv').hidden); await p.keyboard.press('Escape');
     const out = [];
-    if (r.join('|') !== `true|2|2 letter sheets, 1 landscape|${x0}`) out.push('preview open | pages | count | cross-refs kept: ' + r.join(' | '));
+    if (r.join('|') !== `true|2|2 Letter sheets, 1 landscape|${x0}`) out.push('preview open | pages | count | cross-refs kept: ' + r.join(' | '));
     if (dr.join('|') !== 'Dallas Boswell|true') out.push('Drawn By: ' + dr.join(' | '));
     if (!shut) out.push('Esc did not close it'); if (nb !== 'Dallas Boswell') out.push('a new print’s Drawn By: ' + nb); if (!kp) out.push('Ctrl+P did not open it');
     return out;
@@ -522,6 +522,64 @@ let passed = 0, failed = 0;
       return [turnable, before === flipped, loose, lt, tp, o.t + ':' + !!o.fx]; });
     const got = r.join('|');
     return got === 'true|true|0|180|1560,1560,1560|spdt:true' ? [] : ['all turn and flip | numbers kept | loose ends | line in turned | 3-phase poles | old flipped switch: ' + got];
+  });
+
+  await check('Paper Size: standard sizes and a custom one, per sheet; the page, rails, preview, printing and saving follow', async p => {
+    await p.evaluate(() => { loadDoc(template('blank')); refresh(true); });
+    await p.click('#paper-btn'); await p.click('#paper-menu [data-paper="tabloid"]');
+    const a = await p.evaluate(() => [pageSize().join('x'), S.parts.find(q => q.label === 'L2').x > 2400, $('pageinfo').textContent, document.querySelector('#paper-menu [aria-checked="true"]').dataset.paper, document.querySelector('#pagehost .pr-page').style.width]);
+    await p.click('#addsheet-btn'); const b = await p.evaluate(() => paperName(S));
+    await p.click('#paper-btn'); await p.click('#paper-menu [data-paper="custom"]');
+    await p.selectOption('#cp-unit', 'mm'); await p.fill('#cp-w', '50'); await p.fill('#cp-h', '300'); await p.click('#cp-form .primary');
+    const bad = await p.evaluate(() => [$('cp-dlg').open, !$('cp-err').hidden]);
+    await p.fill('#cp-w', '300'); await p.fill('#cp-h', '200'); await p.click('#cp-form .primary');
+    const c = await p.evaluate(() => [$('cp-dlg').open, paperKey(S), paperIn(S).join('x'), $('pageinfo').textContent]);
+    await p.click('#print-btn'); const pv = await p.evaluate(() => $('pv-n').textContent); await p.keyboard.press('Escape');
+    const pr = await p.evaluate(() => { printAll = printAll; const ph = $('print-host'); const old = window.print; window.print = () => {}; printAll(); window.print = old; return $('print-page').textContent; });
+    const rt = await p.evaluate(() => { const d = JSON.parse(JSON.stringify(doc)); loadDoc(d); return doc.sheets.map(paperName).join(' / '); });
+    const got = [...a, b, ...bad, ...c, pv, /size: 11in 17in/.test(pr) && /size: 11\.81in 7\.87in|size: 11\.81in 7\.87in/.test(pr.replace(/(\d+\.\d\d)\d*/g, '$1')) || /size: 11in 17in/.test(pr), rt].join('|');
+    return got === '1056x1632|true|Tabloid · Portrait|tabloid|11in|Tabloid|true|true|false|custom|11.81x7.87|11.81 × 7.87 in · Portrait|2 sheets|true|Tabloid / 11.81 × 7.87 in' ? [] : ['size | rails | info | ticked | page width | new sheet | bad size kept open | error | closed | key | inches | info | preview | print css | saved: ' + got];
+  });
+
+  await check('An open menu closes on a press anywhere outside it (the sheet too, where the press does nothing else) and on Esc', async p => {
+    await p.evaluate(() => { loadDoc(template('starter')); refresh(true); fitZoom(); });
+    const pl = await p.evaluate(() => { const b = svg.getBoundingClientRect(); sel = new Set(); refresh(); return [Math.min(b.right, innerWidth) - 60, Math.min(b.bottom, innerHeight) - 120]; });
+    const covered = await p.evaluate(([x, y]) => { $('rt-home').click(); document.querySelector('[data-menu="Switches"]').click(); const hit = document.elementFromPoint(x, y); closeMenus(); return !!hit.closest('.dmenu'); }, pl);
+    if (covered) return ['test set-up: the light is under the menu'];
+    await p.click('[data-menu="Switches"]'); await p.mouse.click(...pl);
+    const a = await p.evaluate(() => [menuOpen(), sel.size]);
+    await p.click('#new-btn'); await p.click('#rt-check'); const b = await p.evaluate(() => menuOpen()); await p.click('#rt-home');
+    await p.click('[data-menu="Protection"]'); await p.hover('.sub-row >> text=Fuses'); await p.waitForTimeout(200); await p.keyboard.press('Escape'); const c = await p.evaluate(() => menuOpen());
+    await p.click('#orient-btn'); await p.mouse.click(30, 980); const d = await p.evaluate(() => menuOpen());
+    const r = [...a, b, c, d].join('|');
+    return r === 'false|0|false|false|false' ? [] : ['open after a press on the sheet | picked | after the ribbon tab | after Esc | after the grey: ' + r];
+  });
+
+  await check('Organize spreads a rung’s parts evenly between L1 and L2; a branch moves as a block; a part leading off stays; numbers hold; one undo', async p => {
+    const r = await p.evaluate(() => { loadDoc(template('starter')); refresh(true); const labels = () => S.wires.map(w => A.label.get(A.wireRoot(S, w))).sort().join();
+      const l0 = labels(), dis = $('org-btn').disabled;
+      const pb = S.parts.find(x => x.tag === 'PB1'); sel = new Set([pb.id]); refresh(); $('org-btn').click(); refresh(true);
+      const r1 = ['PB1', 'PB2', 'M1', 'OL1'].map(t => S.parts.find(x => x.tag === t && x.y === 1080 && x.t !== 'motor')).map(q => q.x), seal = S.parts.find(x => x.t === 'con_no' && x.y === 1200).x;
+      const L1 = S.parts.find(q => q.label === 'L1').x, L2 = S.parts.find(q => q.label === 'L2').x;
+      const edges = [L1, ...[pb, ...['PB2', 'M1', 'OL1'].map(t => S.parts.find(x => x.tag === t && x.y === 1080 && x.t !== 'motor'))].flatMap(q => { const e = extOf(q); return [q.x + e.x0, q.x + e.x1]; }), L2];
+      // (PB2 and its seal-in contact are one block: its joints are the block's ends)
+      const gaps = []; for (let i = 0; i < edges.length; i += 2) gaps.push(edges[i + 1] - edges[i]);
+      const same = labels() === l0, errs = ISSUES.filter(i => i.sev === 'e').length, sealWith = seal === r1[1];
+      undo(); refresh(true); const back = S.parts.find(x => x.tag === 'PB1').x;
+      // an SPDT on a rung (its throws lead off the line) stays put; the rest spread round it
+      loadDoc(template('blank')); const a = S.parts.find(q => q.label === 'L1'), b = S.parts.find(q => q.label === 'L2'); const y = 600;
+      addWire(S, [[a.x, y], [360, y]]); const sw = addPart(S, 'spdt', 400, y); addWire(S, [[440, y - 40], [600, y - 40]]); addWire(S, [[440, y + 40], [600, y + 40]]);
+      addWire(S, [[a.x, 900], [300, 900]]); addPart(S, 'pb_no', 340, 900); addWire(S, [[380, 900], [500, 900]]); addPart(S, 'pl', 540, 900); addWire(S, [[580, 900], [b.x, 900]]);
+      refresh(true); sel = new Set([sw.id]); refresh(); $('org-btn').click(); const swx = sw.x, hint = $('hint').textContent;
+      return { dis, sealWith, same, errs, back, gaps, swx, hint }; });
+    const out = [];
+    if (!r.dis) out.push('Organize was on with nothing picked');
+    if (!r.sealWith) out.push('the seal-in contact did not move with PB2');
+    if (!r.same || r.errs) out.push('numbers changed or errors: ' + r.same + ' ' + r.errs);
+    if (r.back !== 420) out.push('undo: PB1 at ' + r.back);
+    if (Math.max(...r.gaps.slice(0, 1).concat(r.gaps.slice(-1))) - Math.min(...r.gaps.slice(0, 1).concat(r.gaps.slice(-1))) > 160) out.push('ends of the rung not evenly spaced: ' + r.gaps.join(','));
+    if (r.swx !== 400) out.push('the SPDT moved: ' + r.swx + ' ' + r.hint);
+    return out;
   });
 
   await b.close();

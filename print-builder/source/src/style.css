@@ -118,7 +118,7 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
   .app, dialog { display: none !important; }
   #print-host { display: block; }
   #print-host .pr-page { box-shadow: none; page-break-after: always; break-after: page; }
-  #print-host .pr-page { page: port; } #print-host .pr-page.land { page: land; }
+  
 }
 /* the Edit group: small buttons, two to a column */
 .stk { display: flex; flex-direction: column; gap: 2px; }
@@ -237,3 +237,11 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .dmenu .sub-row.on { background: #34383d; }
 .sub-n { margin-left: auto; color: #8a9099; font-size: .78rem; } .sub-ar { color: #8a9099; font-size: .8rem; margin-left: 8px; }
 .dmenu.fly { position: absolute; top: 0; left: 100%; margin-left: 4px; min-width: 260px; }
+
+/* ---------- Paper Size menu and the custom size box ---------- */
+.paper-menu { min-width: 230px; } .paper-menu .dim { margin-left: auto; padding-left: 16px; color: #8a9099; font-size: .8rem; }
+.msep { height: 1px; background: var(--line2); margin: 4px 6px; }
+.cp-dlg h3 { margin: 0 0 6px; } .cp-row { display: flex; align-items: flex-end; gap: 10px; margin: 12px 0; } .cp-row label { display: grid; gap: 4px; font-size: .82rem; color: var(--muted); }
+.cp-row .in { width: 96px; } .cp-row span { padding-bottom: 8px; } .cp-err { color: #ff7b7b; margin: 0 0 8px; font-size: .85rem; }
+.cp-dlg .acts { display: flex; justify-content: flex-end; gap: 8px; }
+.cp-dlg { width: fit-content; max-width: 94vw; } .cp-row select.in { width: 80px; }

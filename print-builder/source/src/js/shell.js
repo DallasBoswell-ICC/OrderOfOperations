@@ -10,8 +10,8 @@ function renderPV() {
   box.style.transform = ''; box.innerHTML = doc.sheets.map((s, k) => pageHTML(s, k, A)).join('');
   for (const p of box.querySelectorAll('.pr-page')) fitDraw(p);
   drawInk();          // (drawing the other sheets used the editor's lists of labels and links: the current sheet's back)
-  const n = doc.sheets.length, land = doc.sheets.filter(s => s.land).length;
-  $('pv-n').textContent = `${n} letter sheet${n > 1 ? 's' : ''}${land ? (land === n ? ', landscape' : `, ${land} landscape`) : ''}`;
+  const n = doc.sheets.length, land = doc.sheets.filter(s => s.land).length, names = [...new Set(doc.sheets.map(paperName))];
+  $('pv-n').textContent = `${n} ${names.length === 1 ? names[0] + ' ' : ''}sheet${n > 1 ? 's' : ''}${land ? (land === n ? ', landscape' : `, ${land} landscape`) : ''}`;
   pvZoom(PV.fit ? 'fit' : PV.z);
 }
 // the sheets' size unscaled (stacked, 24px apart)
@@ -19,7 +19,7 @@ function pvSize() { const box = $('pv-pages'); return [box.scrollWidth, box.scro
 function pvZoom(z, cx, cy) {
   const sc = $('pv-scroll'), box = $('pv-pages'); box.style.transform = '';
   const [w, h] = pvSize(), r = sc.getBoundingClientRect();
-  const fit = Math.min((sc.clientWidth - 40) / w, (sc.clientHeight - 40) / Math.min(h, doc.sheets[0].land ? 816 : 1056));
+  const fit = Math.min((sc.clientWidth - 40) / w, (sc.clientHeight - 40) / Math.min(h, paperIn(doc.sheets[0])[1] * 96));
   PV.fit = z === 'fit'; const old = PV.z;
   PV.z = Math.max(.25, Math.min(3, PV.fit ? fit : z));
   // the point under the pointer stays put

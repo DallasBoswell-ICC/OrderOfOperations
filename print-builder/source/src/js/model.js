@@ -33,19 +33,28 @@ function defaultTB() {
     { id: uid('f'), label: 'Sheet', value: '{sheet}', span: 2 },
   ], notes: '1 = control L1 (X1, after its fuse); 2 = control L2 (X2).\nWire numbers on a coil’s right: the rungs its contacts are on. Underlined = NC; PWR = power contacts.', showNotes: true };
 }
-function newSheet(rails = true, land = false) {
+function newSheet(rails = true, land = false, paper = null) {
   const s = { id: uid('s'), land, parts: [], wires: [], nodes: [], texts: [] };
-  if (rails) {
-    const w = drawW(land);
-    s.parts.push({ id: uid('r'), t: 'rail', label: 'L1', x: 200, y0: 240, y1: snap(drawH(land) - 140) },
-                 { id: uid('r'), t: 'rail', label: 'L2', x: snap(w - 420), y0: 240, y1: snap(drawH(land) - 140) });
-  }
+  if (paper) setPaperOf(s, paper);
+  if (rails) s.parts.push(...railsFor(s));
   return s;
 }
+// a new sheet's L1 and L2 rails, laid out for its paper and the way round it is
+const railsFor = s => [{ id: uid('r'), t: 'rail', label: 'L1', x: 200, y0: 240, y1: snap(drawH(s) - 140) },
+                       { id: uid('r'), t: 'rail', label: 'L2', x: snap(drawW(s) - 420), y0: 240, y1: snap(drawH(s) - 140) }];
+/* ---------- paper: each sheet its own size (Letter unless set), portrait or landscape ---------- */
+// name, width and height in inches (portrait); a custom size is the sheet's own pw x ph
+const PAPERS = { letter: ['Letter', 8.5, 11], legal: ['Legal', 8.5, 14], tabloid: ['Tabloid', 11, 17], ansic: ['ANSI C', 17, 22], a4: ['A4', 8.27, 11.69], a3: ['A3', 11.69, 16.54] };
+const PAPER_MM = { a4: '210 × 297 mm', a3: '297 × 420 mm' };
+const paperKey = s => s.paper && (PAPERS[s.paper] || s.paper === 'custom') ? s.paper : 'letter';
+// the sheet's paper as it lies: [width, height] in inches
+function paperIn(s) { const k = paperKey(s), [w, h] = k === 'custom' ? [s.pw, s.ph] : PAPERS[k].slice(1); return s.land ? [h, w] : [w, h]; }
+const paperName = s => { const k = paperKey(s); if (k !== 'custom') return PAPERS[k][0]; const [w, h] = paperIn({ ...s, land: false }); return `${+w.toFixed(2)} × ${+h.toFixed(2)} in`; };
+function setPaperOf(s, p) { delete s.paper; delete s.pw; delete s.ph; if (typeof p === 'object') { s.paper = 'custom'; s.pw = p.w; s.ph = p.h; } else if (p && p !== 'letter') s.paper = p; }
 function newDoc() { const d = { kind: 'o3-print', v: 1, tb: defaultTB(), sheets: [newSheet()], cur: 0 }; return d; }
 // the drawing's room on a sheet (inside the frame, above the title block): its width; its height, about
-const drawW = land => Math.round(((land ? 11 : 8.5) - .8 - .24) * U_IN);
-const drawH = land => Math.round(((land ? 8.5 : 11) - .8 - .24 - 1.25) * U_IN);
+const drawW = s => Math.round((paperIn(s)[0] - .8 - .24) * U_IN);
+const drawH = s => Math.round((paperIn(s)[1] - .8 - .24 - 1.25) * U_IN);
 
 /* ---------- where things are ---------- */
 const partOf = (s, id) => s.parts.find(p => p.id === id);

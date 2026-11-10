@@ -19,7 +19,7 @@ const hintFor = () => ({
 function refresh(full = false) {
   S = doc.sheets[doc.cur];
   A = analyse(); ISSUES = checkPrint(A);
-  const key = JSON.stringify([doc.tb, doc.cur, doc.sheets.length, S.land, S.id]);
+  const key = JSON.stringify([doc.tb, doc.cur, doc.sheets.length, S.land, S.id, paperIn(S)]);
   if (full || key !== pageFor || !svg) buildPage(key); else drawInk();
   drawEd(); renderProps(); renderChecks(); renderTabs(); updateButtons(); autosave();
 }
@@ -45,11 +45,12 @@ function drawInk() { svg.querySelector('g.ink').innerHTML = drawSheet(S, doc.cur
 function updateButtons() {
   $('undo-btn').disabled = !UNDO.length; $('redo-btn').disabled = !REDO.length;
   const any = [...sel].some(id => { const p = partOf(S, id); return p ? p.t !== 'rail' : true; });
-  $('copy-btn').disabled = $('cut-btn').disabled = !any; $('del-btn').disabled = !sel.size && !selW; $('paste-btn').disabled = !hasClip();
+  $('copy-btn').disabled = $('cut-btn').disabled = !any; $('org-btn').disabled = !rungsPicked().length; $('del-btn').disabled = !sel.size && !selW; $('paste-btn').disabled = !hasClip();
   // (the Orientation menu ticks the way this sheet is round now; the button's icon shows it too)
   for (const b of document.querySelectorAll('#orient-menu [data-land]')) b.setAttribute('aria-checked', String(!!S.land === (b.dataset.land === '1')));
   const oi = $('orient-ic'); if (S.land) { oi.setAttribute('x', 3); oi.setAttribute('y', 6); oi.setAttribute('width', 18); oi.setAttribute('height', 12); } else { oi.setAttribute('x', 6); oi.setAttribute('y', 3); oi.setAttribute('width', 12); oi.setAttribute('height', 18); }
-  $('pageinfo').textContent = `Letter · ${S.land ? 'Landscape' : 'Portrait'}`;
+  $('pageinfo').textContent = `${paperName(S)} · ${S.land ? 'Landscape' : 'Portrait'}`;
+  for (const b of document.querySelectorAll('#paper-menu [data-paper]')) b.setAttribute('aria-checked', String(b.dataset.paper === paperKey(S))); $('paper-cust').textContent = paperKey(S) === 'custom' ? paperName(S) : '';
   const n = ISSUES.filter(i => i.sev !== 'ok').length;
   for (const b of [$('check-badge'), $('tab-badge')]) { b.hidden = !n; b.textContent = n; b.className = 'badge' + (ISSUES.some(i => i.sev === 'e') ? '' : ' w'); }
   $('ring-chk').checked = checkOn;
@@ -126,7 +127,7 @@ function buildPalette() {
 function placeInView(t) {
   placing = null; setTool('select');
   const r = zoomer.getBoundingClientRect(), m = svg.getScreenCTM().inverse(), toS = (x, y) => [m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f];
-  const [ax, ay] = toS(r.left + 40, r.top + 40), [bx, by] = toS(r.right - 40, r.bottom - 40), D = { x0: 40, y0: 60, x1: drawW(S.land) - 40, y1: drawH(S.land) - 40 };
+  const [ax, ay] = toS(r.left + 40, r.top + 40), [bx, by] = toS(r.right - 40, r.bottom - 40), D = { x0: 40, y0: 60, x1: drawW(S) - 40, y1: drawH(S) - 40 };
   const lo = [Math.max(ax, D.x0), Math.max(ay, D.y0)], hi = [Math.min(bx, D.x1), Math.min(by, D.y1)], c = [snap((lo[0] + hi[0]) / 2), snap((lo[1] + hi[1]) / 2)];
   const boxes = S.parts.map(partBox), segs = S.wires.flatMap(w => { const P = wirePts(S, w); return P.slice(1).map((b, i) => [P[i], b]); });
   const free = (x, y) => { const b = partBox({ t, x, y, rot: 0 }); b.x0 -= 20; b.x1 += 20; b.y0 -= 10; b.y1 += 20;
@@ -168,6 +169,12 @@ const uiZoom = () => parseFloat(getComputedStyle(document.querySelector('.app'))
 function setUiSize(v) { document.querySelector('.app').style.setProperty('--uiz', v); $('ui-size').value = String(v); try { localStorage.setItem(UIKEY, String(v)); } catch (_) {} if (svg) applyZoom(); }
 const closeMenus = () => { for (const d of document.querySelectorAll('.dmenu')) d.hidden = true; };
 document.addEventListener('click', e => { if (!e.target.closest('.menuwrap')) closeMenus(); });
+// a press anywhere outside an open menu closes it, on the sheet too (where the press then does nothing else, so
+// closing a menu never picks or moves a part); Esc, or leaving the window, closes it as well
+const menuOpen = () => [...document.querySelectorAll('.dmenu')].some(d => !d.hidden);
+document.addEventListener('pointerdown', e => { if (!menuOpen() || e.target.closest('.menuwrap')) return; closeMenus(); if (e.target.closest('#desk')) { e.stopPropagation(); e.preventDefault(); } }, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && menuOpen()) { closeMenus(); e.stopPropagation(); } }, true);
+window.addEventListener('blur', closeMenus);
 
 /* ---------- properties ---------- */
 function focusProp(id) { setTimeout(() => { const el = $(id); if (el) { el.focus(); el.select && el.select(); } }, 0); }
@@ -311,14 +318,33 @@ function renderTabs() {
     sel = new Set(); selW = null; refresh(); fitZoom();
   });
 }
-$('addsheet-btn').addEventListener('click', () => { snapshot(); doc.sheets.push(newSheet(true, S.land)); doc.cur = doc.sheets.length - 1; sel = new Set(); selW = null; refresh(); fitZoom(); });
+$('addsheet-btn').addEventListener('click', () => { snapshot(); doc.sheets.push(newSheet(true, S.land, S.paper === 'custom' ? { w: S.pw, h: S.ph } : paperKey(S))); doc.cur = doc.sheets.length - 1; sel = new Set(); selW = null; refresh(); fitZoom(); });
 for (const b of document.querySelectorAll('#orient-menu [data-land]')) b.addEventListener('click', () => { closeMenus(); setOrient(b.dataset.land === '1'); });
+for (const b of document.querySelectorAll('#paper-menu [data-paper]')) b.addEventListener('click', () => { closeMenus(); if (b.dataset.paper === 'custom') openCustomPaper(); else setPaper(b.dataset.paper); });
+// a size of your own: width and height, in inches or millimetres (4 to 48 in), for this sheet
+function openCustomPaper() {
+  const [w, h] = paperIn({ ...S, land: false }), u = $('cp-unit').value === 'mm' ? 25.4 : 1;
+  $('cp-w').value = +(w * u).toFixed(u > 1 ? 0 : 2); $('cp-h').value = +(h * u).toFixed(u > 1 ? 0 : 2); $('cp-err').hidden = true; $('cp-dlg').showModal(); $('cp-w').select();
+}
+$('cp-unit').addEventListener('change', e => { const to = e.target.value === 'mm' ? 25.4 : 1 / 25.4; for (const id of ['cp-w', 'cp-h']) { const v = parseFloat($(id).value); if (isFinite(v)) $(id).value = +(v * to).toFixed(to > 1 ? 0 : 2); } });
+$('cp-form').addEventListener('submit', e => { e.preventDefault(); const u = $('cp-unit').value === 'mm' ? 25.4 : 1, w = parseFloat($('cp-w').value) / u, h = parseFloat($('cp-h').value) / u;
+  if (!(w >= 4 && h >= 4 && w <= 48 && h <= 48)) { $('cp-err').hidden = false; return; }
+  $('cp-dlg').close(); setPaper({ w: Math.round(w * 100) / 100, h: Math.round(h * 100) / 100 }); });
+$('cp-cancel').addEventListener('click', () => $('cp-dlg').close());
 function setOrient(land) {
   if (!!S.land === land) return;
-  snapshot(); S.land = land;
+  snapshot(); S.land = land; relayout();
+}
+// a sheet's paper or way round changed: an empty sheet's rails laid out afresh; otherwise its rails kept on the paper
+function setPaper(p) {
+  const k = typeof p === 'object' ? 'custom' : p;
+  if (k === paperKey(S) && (k !== 'custom' || (S.pw === p.w && S.ph === p.h))) return;
+  snapshot(); setPaperOf(S, p); relayout(); say(`Sheet ${doc.cur + 1}: ${paperName(S)}, ${S.land ? 'landscape' : 'portrait'}.`);
+}
+function relayout() {
   // (an empty sheet: its rails laid out afresh for the new way round; otherwise kept on the paper)
   const rails = S.parts.filter(p => p.t === 'rail');
-  if (rails.length === S.parts.length && !S.wires.length && !S.texts.length) { const f = newSheet(true, S.land); S.parts = f.parts; }
+  if (rails.length === S.parts.length && !S.wires.length && !S.texts.length) S.parts = railsFor(S);
   refresh(true);
   for (const r of S.parts) if (r.t === 'rail') { r.y1 = Math.min(r.y1, snap(VB[1] - 60)); r.y0 = Math.min(r.y0, r.y1 - 200); r.x = Math.min(r.x, snap(VB[0] - 60)); }
   refresh(); fitZoom();
@@ -347,7 +373,7 @@ $('tb-reset').addEventListener('click', () => { doc.tb = defaultTB(); renderTB()
 $('tb-done').addEventListener('click', () => $('tb-dlg').close());
 
 /* ---------- zoom and panning ---------- */
-const pageSize = () => S.land ? [1056, 816] : [816, 1056];
+const pageSize = () => paperIn(S).map(v => Math.round(v * 96));
 // the room round the page: enough to bring any part of it (its edges too) to the middle of the window, so zooming
 // about the pointer never runs out of room (Fit puts the page back in the middle)
 const padX = () => zoomer.clientWidth * .6, padY = () => zoomer.clientHeight * .6;
@@ -442,7 +468,8 @@ function printAll() {
   ph.style.cssText = 'display:block;position:fixed;left:-30000px;top:0';
   for (const p of ph.querySelectorAll('.pr-page')) fitDraw(p);
   ph.style.cssText = ''; drawInk();
-  $('print-page').textContent = '@page port { size: 8.5in 11in; margin: 0; } @page land { size: 11in 8.5in; margin: 0; } @page { margin: 0; }';
+  // (each paper size its own @page, so the browser prints every sheet on its own size, the right way round)
+  $('print-page').textContent = [...new Set(doc.sheets.map(s => paperIn(s).join('x')))].map(z => { const [w, h] = z.split('x'); return `@page ${pageName(w, h)} { size: ${w}in ${h}in; margin: 0; }`; }).join(' ') + ' @page { margin: 0; }';
   setTimeout(() => window.print(), 30);
 }
 window.addEventListener('afterprint', () => { $('print-host').innerHTML = ''; });
@@ -569,4 +596,117 @@ $('clear-btn').addEventListener('click', () => {
   if (!S.parts.some(p => p.t !== 'rail') && !S.wires.length && !S.texts.length) { say('This sheet is already clear.'); return; }
   snapshot(); S.parts = S.parts.filter(p => p.t === 'rail'); S.wires = []; S.nodes = []; S.texts = [];
   sel = new Set(); selW = null; selL = null; refresh(); say(`Sheet ${doc.cur + 1} cleared. Ctrl+Z brings it all back.`);
+});
+
+/* ---------- Organize: a rung's parts spread out evenly along the room it has (Dallas, 10 Nov 2026) ----------
+   Pick a rung (click its wire, or any part on it; several rungs: pick something on each) and press Organize. The
+   parts in line on the rung are spaced evenly between its ends (L1 to L2, or wherever its wire starts and stops). A
+   branch (a seal-in under a button, say) moves as one block with the parts it is round; a part or joint that leads
+   off to another rung stays where it is, and the parts either side of it spread out in their own stretch. Wires
+   follow; one undo step. */
+// the rungs picked: the level of each picked level part, and of each picked wire's longest level run
+function rungsPicked() {
+  const ys = new Set();
+  for (const id of sel) { const p = partOf(S, id); if (p && p.t !== 'rail' && !((p.rot || 0) % 180)) ys.add(p.y); }
+  if (selW) { const w = S.wires.find(x => x.id === selW); if (w) { const P = wirePts(S, w); let best = null, bl = 0;
+    for (let i = 0; i < P.length - 1; i++) if (P[i][1] === P[i + 1][1]) { const l = Math.abs(P[i][0] - P[i + 1][0]); if (l > bl) { bl = l; best = P[i][1]; } }
+    if (best != null) ys.add(best); } }
+  return [...ys];
+}
+function organizeRung(s, Y, seedX) {
+  const termsAt = p => termsOf(p.t).map((_, i) => termPos(p, i));
+  const level = p => p.t !== 'rail' && !((p.rot || 0) % 180) && p.y === Y;
+  // the rung's own line: its level wire runs at Y and the parts in line on it, joined end to end
+  const iv = [];
+  for (const w of s.wires) { const P = wirePts(s, w); for (let i = 0; i < P.length - 1; i++) if (P[i][1] === Y && P[i + 1][1] === Y) iv.push([Math.min(P[i][0], P[i + 1][0]), Math.max(P[i][0], P[i + 1][0])]); }
+  for (const p of s.parts) if (level(p)) { const xs = termsAt(p).filter(q => q[1] === Y).map(q => q[0]); if (xs.length) iv.push([Math.min(...xs), Math.max(...xs)]); }
+  iv.sort((a, b) => a[0] - b[0]); const runs = [];
+  for (const r of iv) { const l = runs[runs.length - 1]; if (l && r[0] <= l[1]) l[1] = Math.max(l[1], r[1]); else runs.push([...r]); }
+  const run = runs.find(r => seedX == null || (seedX >= r[0] - 1 && seedX <= r[1] + 1)) || runs[0];
+  if (!run) return { moved: 0, why: 'no rung there' };
+  const [L, R] = run, inRun = x => x >= L && x <= R;
+  const onLine = new Set(), lineParts = [], lineNodes = [];
+  for (const p of s.parts) if (level(p) && inRun(p.x)) { lineParts.push(p); onLine.add(p.id); }
+  for (const n of s.nodes) if (n.y === Y && inRun(n.x)) { lineNodes.push(n); onLine.add(n.id); }
+  const idOf = e => e.p || e.n || null, endPos = e => pos(s, e);
+  const leaves = (w, at) => { const P = wirePts(s, w), q = sameEnd(w.a, at) ? P[1] : P[P.length - 2]; return q && q[1] !== Y; };   // (it leaves the rung's line)
+  // each part in line: fixed (it leads off the line: an SPDT's throws) or free; each joint: plain, or where a branch leaves
+  const units = [], fixed = [];
+  const extent = p => { const xs = termsAt(p).map(q => q[0]); return [Math.min(...xs), Math.max(...xs)]; };
+  for (const p of lineParts) { if (termsAt(p).some(q => q[1] !== Y)) fixed.push(extent(p)); }
+  // branches: from a joint (or terminal) on the line, everything reached off the line, until it comes back to the line
+  const parent = new Map(), find = x => { while (parent.get(x) !== x) x = parent.get(x); return x; }, uni = (a, b) => parent.set(find(a), find(b));
+  const blockOf = new Map(); let bad = new Set();
+  const starts = [];
+  for (const n of lineNodes) { const ws = wiresAt(s, { n: n.id }).filter(w => leaves(w, { n: n.id })); if (ws.length) starts.push({ id: n.id, x: n.x, ws, end: { n: n.id } }); }
+  for (const p of lineParts) termsOf(p.t).forEach((_, i) => { const q = termPos(p, i); if (q[1] !== Y) return; const ws = wiresAt(s, { p: p.id, i }).filter(w => leaves(w, { p: p.id, i })); if (ws.length) starts.push({ id: p.id, x: q[0], ws, end: { p: p.id, i } }); });
+  for (const st of starts) { parent.set(st.id, st.id); }
+  const off = new Map();   // block root -> ids off the line
+  for (const st of starts) {
+    const seen = new Set(), q = [], offIds = new Set(); let ok = true;
+    for (const w of st.ws) q.push([w, st.end]);
+    const doneW = new Set();
+    while (q.length && ok) {
+      const [w, from] = q.shift(); if (doneW.has(w.id)) continue; doneW.add(w.id);
+      const to = sameEnd(w.a, from) ? w.b : w.a;
+      if (to.r) { ok = false; break; }
+      const id = idOf(to); if (!id) continue;
+      if (onLine.has(id)) { if (!parent.has(id)) parent.set(id, id); uni(st.id, id); continue; }
+      if (seen.has(id)) continue; seen.add(id); offIds.add(id); if (offIds.size > 80) { ok = false; break; }
+      if (to.n) for (const w2 of wiresAt(s, to)) q.push([w2, to]);
+      else { const p = partOf(s, id); for (let i = 0; i < termsN(p); i++) for (const w2 of wiresAt(s, { p: id, i })) q.push([w2, { p: id, i }]); }
+    }
+    if (!ok) bad.add(st.id); else off.set(st.id, offIds);
+  }
+  // a branch that leads off to another rung (or a rail): its joint stays put, a fixed point on the line
+  for (const id of bad) { const st = starts.find(x => x.id === id); fixed.push([st.x, st.x]); }
+  // blocks: branches joined at their ends on the line, with everything on the line between those ends
+  const groups = new Map();
+  for (const st of starts) if (!bad.has(st.id)) { const r = find(st.id); if (!groups.has(r)) groups.set(r, { ids: new Set(), x0: Infinity, x1: -Infinity, badIn: false });
+    const g = groups.get(r); for (const x of off.get(st.id)) g.ids.add(x); g.x0 = Math.min(g.x0, st.x); g.x1 = Math.max(g.x1, st.x); }
+  for (const [r, g] of groups) { for (const st of starts) if (find(st.id) === r && bad.has(st.id)) g.badIn = true;
+    for (const id of parent.keys()) if (find(id) === r) { const n = nodeOf(s, id), p = partOf(s, id); if (n) { g.x0 = Math.min(g.x0, n.x); g.x1 = Math.max(g.x1, n.x); } if (p) { const e = extent(p); g.x0 = Math.min(g.x0, e[0]); g.x1 = Math.max(g.x1, e[1]); } } }
+  const blocks = [...groups.values()].filter(g => !g.badIn);
+  for (const g of [...groups.values()].filter(g => g.badIn)) fixed.push([g.x0, g.x1]);
+  // merge blocks that overlap; take in what lies on the line inside each
+  blocks.sort((a, b) => a.x0 - b.x0); const merged = [];
+  for (const b of blocks) { const l = merged[merged.length - 1]; if (l && b.x0 <= l.x1) { l.x1 = Math.max(l.x1, b.x1); for (const x of b.ids) l.ids.add(x); } else merged.push({ ...b, ids: new Set(b.ids) }); }
+  const inFixed = x => fixed.some(([a, b]) => x >= a && x <= b);
+  for (const b of merged) { if (fixed.some(([a, c]) => c >= b.x0 && a <= b.x1)) { fixed.push([b.x0, b.x1]); b.dead = true; continue; }
+    for (const p of lineParts) { const e = extent(p); if (e[0] >= b.x0 && e[1] <= b.x1) b.ids.add(p.id); }
+    for (const n of lineNodes) if (n.x >= b.x0 && n.x <= b.x1) b.ids.add(n.id);
+    units.push({ x0: b.x0, x1: b.x1, ids: b.ids }); }
+  const inBlock = x => merged.some(b => !b.dead && x >= b.x0 && x <= b.x1);
+  for (const p of lineParts) { const e = extent(p); if (!inBlock(p.x) && !termsAt(p).some(q => q[1] !== Y) && !inFixed(p.x)) units.push({ x0: e[0], x1: e[1], ids: new Set([p.id]) }); }
+  const pass = lineNodes.filter(n => !inBlock(n.x) && !starts.some(st => st.id === n.id));   // (plain joints in the run: put between their neighbours after)
+  if (!units.length) return { moved: 0, why: 'nothing on it to spread' };
+  // the stretches between the rung's ends and any fixed points (merged where they overlap); in each, its units spaced evenly
+  const fx = fixed.map(f => [Math.max(L, f[0]), Math.min(R, f[1])]).sort((u, v) => u[0] - v[0]), fm = [];
+  for (const f of fx) { const l = fm[fm.length - 1]; if (l && f[0] <= l[1]) l[1] = Math.max(l[1], f[1]); else fm.push([...f]); }
+  const segs = []; let a0 = L; for (const [f0, f1] of fm) { segs.push([a0, f0]); a0 = f1; } segs.push([a0, R]);
+  const plan = [];
+  for (const [a, b] of segs) {
+    const us = units.filter(u => u.x0 >= a && u.x1 <= b).sort((u, v) => u.x0 - v.x0); if (!us.length) continue;
+    const wsum = us.reduce((t, u) => t + (u.x1 - u.x0), 0), gap = (b - a - wsum) / (us.length + 1);
+    if (gap < G) return { moved: 0, why: 'not enough room on it' };
+    let cur = a + gap, prev = a;
+    for (const u of us) { let nl = snap(cur); if (nl < prev + G) nl = prev + G; plan.push({ u, dx: nl - u.x0 }); prev = nl + (u.x1 - u.x0); cur += (u.x1 - u.x0) + gap; }
+  }
+  // the rung's own level wires: straight from end to end (their bends and dragged numbers would not fit the new spacing)
+  for (const w of s.wires) { const P = wirePts(s, w); if (P.every(q => q[1] === Y) && P.every(q => inRun(q[0]))) { w.pts = []; delete w.lab; } }
+  let moved = 0;
+  for (const { u, dx } of plan) if (dx) { moveItems(s, u.ids, dx, 0); moved++; }
+  // plain joints: halfway between what now sits either side of them
+  for (const n of pass) { const xs = s.parts.filter(p => level(p)).flatMap(p => termsAt(p).filter(q => q[1] === Y).map(q => q[0])).concat(s.nodes.filter(m => m !== n && m.y === Y).map(m => m.x));
+    const lo = Math.max(L, ...xs.filter(x => x < n.x)), hi = Math.min(R, ...xs.filter(x => x > n.x)); const nx = snap((lo + hi) / 2); if (nx !== n.x && nx > lo && nx < hi) moveItems(s, new Set([n.id]), nx - n.x, 0); }
+  tidy(s);
+  return { moved, units: plan.length };
+}
+$('org-btn').addEventListener('click', () => {
+  const ys = rungsPicked(); if (!ys.length) { say('Pick a rung first: click its wire, or any part on it.'); return; }
+  const before = JSON.stringify(doc); snapshot();
+  const res = ys.map(y => organizeRung(S, y, (() => { for (const id of sel) { const p = partOf(S, id); if (p && p.y === y) return p.x; } if (selW) { const w = S.wires.find(x => x.id === selW); if (w) { const P = wirePts(S, w); for (let i = 0; i < P.length - 1; i++) if (P[i][1] === y && P[i + 1][1] === y) return (P[i][0] + P[i + 1][0]) / 2; } } return null; })()));
+  if (JSON.stringify(doc) === before) { UNDO.pop(); const why = res.find(r => r.why); say(why ? `Nothing to organize: ${why.why}.` : 'That rung is already spread out evenly.'); refresh(); return; }
+  const rn = ys.map(y => (A.rows[doc.cur] || []).find(r => r.y === y)).filter(Boolean).map(r => r.n);
+  refresh(); say(`${rn.length > 1 ? 'Rungs ' + rn.join(', ') : rn.length ? 'Rung ' + rn[0] : 'The rung'} organized: its parts spread out evenly.`);
 });
