@@ -600,6 +600,29 @@ let passed = 0, failed = 0;
     return /organized/.test(r.hint) && r.spread > 1600 && r.between && r.straightUp && r.same && r.errs ? [] : ['result: ' + JSON.stringify(r)];
   });
 
+  await check('Organize with two rungs picked (Dallas’s rungs 14 and 15): no branch wire ends up running through a part; wire numbers hold', async p => {
+    const r = await p.evaluate(() => { loadDoc(template('blank')); S.parts = S.parts.filter(q => q.t !== 'rail');
+      const XL = 300, XR = 2300, Y = 600, Y2 = 840;
+      addPart(S, 'cnt_in', XL - 40, 400, { tag: 'A' }); addPart(S, 'cnt_in', XR - 40, 400, { tag: 'B' }); addWire(S, [[XL, 400], [XL, 1100]]); addWire(S, [[XR, 400], [XR, 1100]]);
+      let x = 360; addWire(S, [[XL, Y], [x, Y]]);
+      for (const t of ['pb_no', 'pb_no', 'tc_nc', 'tc_nc', 'tc_nc', 'con_no', 'con_no']) { addPart(S, t, x + 40, Y); addWire(S, [[x + 80, Y], [x + 120, Y]]); x += 120; }
+      const J28 = x + 40; addWire(S, [[x, Y], [J28 + 40, Y]]); x = J28 + 40;
+      for (const t of ['con_nc', 'con_no', 'tc_no']) { addPart(S, t, x + 40, Y); addWire(S, [[x + 80, Y], [x + 120, Y]]); x += 120; }
+      const J31 = x + 40; addWire(S, [[x, Y], [J31 + 140, Y]]); addPart(S, 'coil', J31 + 180, Y, { tag: 'TR1' }); addWire(S, [[J31 + 220, Y], [XR, Y]]);
+      addWire(S, [[XL, Y2], [1000, Y2]]); addPart(S, 'con_no', 1040, Y2, { tag: 'CR5' }); addWire(S, [[1080, Y2], [J28, Y2], [J28, Y]]);
+      addWire(S, [[J31, Y], [J31, Y2], [J31 + 140, Y2]]); addPart(S, 'coil', J31 + 180, Y2, { tag: 'CR5' }); addWire(S, [[J31 + 220, Y2], [XR, Y2]]);
+      refresh(true); const L0 = S.wires.map(w => A.label.get(A.wireRoot(S, w))).sort().join(), e0 = ISSUES.filter(i => i.sev === 'e').length;
+      sel = new Set(S.parts.filter(q => (q.y === Y || q.y === Y2) && q.t !== 'cnt_in').map(q => q.id)); refresh(); $('org-btn').click(); refresh(true);
+      // every wire's runs against every part's box (bar its own ends): none may pass through a part
+      const hits = [];
+      for (const w of S.wires) { const P = wirePts(S, w); for (let i = 0; i < P.length - 1; i++) { const [a, b] = [P[i], P[i + 1]];
+        for (const q of S.parts) { if (q.t === 'rail' || q.t === 'cnt_in') continue; const e = extOf(q), x0 = q.x + e.x0 + 6, x1 = q.x + e.x1 - 6, y0 = q.y - 16, y1 = q.y + 16;
+          const sx0 = Math.min(a[0], b[0]), sx1 = Math.max(a[0], b[0]), sy0 = Math.min(a[1], b[1]), sy1 = Math.max(a[1], b[1]);
+          if (sx1 > x0 && sx0 < x1 && sy1 > y0 && sy0 < y1) hits.push(q.tag || q.t); } } }
+      return { hits: [...new Set(hits)], same: S.wires.map(w => A.label.get(A.wireRoot(S, w))).sort().join() === L0, errs: ISSUES.filter(i => i.sev === 'e').length === e0, hint: $('hint').textContent }; });
+    return !r.hits.length && r.same && r.errs && /their parts/.test(r.hint) ? [] : ['result: ' + JSON.stringify(r)];
+  });
+
   await b.close();
   console.log(`\n${passed} of ${passed + failed} checks passed.`);
   process.exit(failed ? 1 : 0);
