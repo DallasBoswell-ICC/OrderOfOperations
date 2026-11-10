@@ -582,6 +582,23 @@ let passed = 0, failed = 0;
     return out;
   });
 
+  await check('Organize on a rung fed by bus wires (continuation arrows, no rails): it spreads bus to bus; a joint leading to another rung slides along, its branch following', async p => {
+    const r = await p.evaluate(() => { loadDoc(template('blank')); S.parts = S.parts.filter(q => q.t !== 'rail');
+      const XL = 300, XR = 2300, Y = 600;
+      addPart(S, 'cnt_in', XL - 40, 400, { tag: 'A' }); addPart(S, 'cnt_in', XR - 40, 400, { tag: 'B' }); addWire(S, [[XL, 400], [XL, 1500]]); addWire(S, [[XR, 400], [XR, 1500]]);
+      addWire(S, [[XL, Y], [400, Y]]); let x = 440; for (let i = 0; i < 7; i++) { addPart(S, 'con_no', x, Y); addWire(S, [[x + 40, Y], [x + 80, Y]]); x += 120; }
+      addWire(S, [[x - 40, Y], [1400, Y]]); addPart(S, 'con_nc', 1440, Y); addWire(S, [[1480, Y], [1600, Y]]); addPart(S, 'tc_no', 1640, Y); addWire(S, [[1680, Y], [1900, Y]]); const c = addPart(S, 'coil', 1940, Y); addWire(S, [[1980, Y], [XR, Y]]);
+      addWire(S, [[XL, 840], [800, 840]]); addPart(S, 'con_no', 840, 840); addWire(S, [[880, 840], [1300, 840], [1300, Y]]);
+      addWire(S, [[XL, 1080], [1200, 1080]]); addPart(S, 'coil', 1240, 1080); addWire(S, [[1280, 1080], [XR, 1080]]);
+      refresh(true); const L0 = S.wires.map(w => A.label.get(A.wireRoot(S, w))).sort().join(), e0 = ISSUES.filter(i => i.sev === 'e').length;
+      sel = new Set([c.id]); refresh(); $('org-btn').click(); refresh(true);
+      const xs = S.parts.filter(q => q.y === Y).map(q => q.x).sort((a, b) => a - b), j = S.nodes.find(n => n.y === Y && n.x > XL && n.x < XR);
+      const P = S.wires.map(w => wirePts(S, w)).find(P => P.some(q => q[1] === 840) && P.some(q => q[1] === Y));
+      return { hint: $('hint').textContent, spread: xs[xs.length - 1] - xs[0], joint: j && j.x, between: j && j.x > xs[6] + 40 && j.x < xs[7] - 40, straightUp: !!P && [P.slice(0, 2), P.slice(-2)].some(e => e.every(q => q[0] === j.x) && e.some(q => q[1] === Y)),
+        same: S.wires.map(w => A.label.get(A.wireRoot(S, w))).sort().join() === L0, errs: ISSUES.filter(i => i.sev === 'e').length === e0 }; });
+    return /organized/.test(r.hint) && r.spread > 1600 && r.between && r.straightUp && r.same && r.errs ? [] : ['result: ' + JSON.stringify(r)];
+  });
+
   await b.close();
   console.log(`\n${passed} of ${passed + failed} checks passed.`);
   process.exit(failed ? 1 : 0);

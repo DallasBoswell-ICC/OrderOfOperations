@@ -2447,61 +2447,59 @@ function organizeRung(s, Y, seedX) {
   const units = [], fixed = [];
   const extent = p => { const xs = termsAt(p).map(q => q[0]); return [Math.min(...xs), Math.max(...xs)]; };
   for (const p of lineParts) { if (termsAt(p).some(q => q[1] !== Y)) fixed.push(extent(p)); }
-  // branches: from a joint (or terminal) on the line, everything reached off the line, until it comes back to the line
-  const parent = new Map(), find = x => { while (parent.get(x) !== x) x = parent.get(x); return x; }, uni = (a, b) => parent.set(find(a), find(b));
-  const blockOf = new Map(); let bad = new Set();
+  // branches: from a joint (or a terminal) on the line, everything reached off the line until it comes back to the line.
+  // (The rung's own two ends are just its ends, even where they sit on a wire that feeds other rungs too.)
+  const atEnd = x => x <= L || x >= R;
   const starts = [];
-  for (const n of lineNodes) { const ws = wiresAt(s, { n: n.id }).filter(w => leaves(w, { n: n.id })); if (ws.length) starts.push({ id: n.id, x: n.x, ws, end: { n: n.id } }); }
-  for (const p of lineParts) termsOf(p.t).forEach((_, i) => { const q = termPos(p, i); if (q[1] !== Y) return; const ws = wiresAt(s, { p: p.id, i }).filter(w => leaves(w, { p: p.id, i })); if (ws.length) starts.push({ id: p.id, x: q[0], ws, end: { p: p.id, i } }); });
-  for (const st of starts) { parent.set(st.id, st.id); }
-  const off = new Map();   // block root -> ids off the line
+  for (const n of lineNodes) { if (atEnd(n.x)) continue; const ws = wiresAt(s, { n: n.id }).filter(w => leaves(w, { n: n.id })); if (ws.length) starts.push({ id: n.id, x: n.x, ws, end: { n: n.id }, node: n }); }
+  for (const p of lineParts) termsOf(p.t).forEach((_, i) => { const q = termPos(p, i); if (q[1] !== Y || atEnd(q[0])) return; const ws = wiresAt(s, { p: p.id, i }).filter(w => leaves(w, { p: p.id, i })); if (ws.length) starts.push({ id: p.id, x: q[0], ws, end: { p: p.id, i } }); });
+  const xOn = id => { const n = nodeOf(s, id); if (n) return [n.x, n.x]; const p = partOf(s, id); return p ? extent(p) : [L, R]; };
+  // a branch that comes back to this rung, away from its ends, without reaching a rail: a block (a seal-in, say)
   for (const st of starts) {
-    const seen = new Set(), q = [], offIds = new Set(); let ok = true;
-    for (const w of st.ws) q.push([w, st.end]);
-    const doneW = new Set();
-    while (q.length && ok) {
+    const q = st.ws.map(w => [w, st.end]), doneW = new Set(), seen = new Set(); st.att = new Set(); st.off = new Set(); st.ok = true;
+    while (q.length) {
       const [w, from] = q.shift(); if (doneW.has(w.id)) continue; doneW.add(w.id);
       const to = sameEnd(w.a, from) ? w.b : w.a;
-      if (to.r) { ok = false; break; }
+      if (to.r) { st.ok = false; break; }
       const id = idOf(to); if (!id) continue;
-      if (onLine.has(id)) { if (!parent.has(id)) parent.set(id, id); uni(st.id, id); continue; }
-      if (seen.has(id)) continue; seen.add(id); offIds.add(id); if (offIds.size > 80) { ok = false; break; }
+      if (onLine.has(id)) { const [a, b] = xOn(id); if (atEnd(a) || atEnd(b)) { st.ok = false; break; } st.att.add(id); continue; }
+      if (seen.has(id)) continue; seen.add(id); st.off.add(id); if (st.off.size > 60) { st.ok = false; break; }
       if (to.n) for (const w2 of wiresAt(s, to)) q.push([w2, to]);
-      else { const p = partOf(s, id); for (let i = 0; i < termsN(p); i++) for (const w2 of wiresAt(s, { p: id, i })) q.push([w2, { p: id, i }]); }
+      else { const p = partOf(s, id); for (let k = 0; k < termsN(p); k++) for (const w2 of wiresAt(s, { p: id, i: k })) q.push([w2, { p: id, i: k }]); }
     }
-    if (!ok) bad.add(st.id); else off.set(st.id, offIds);
+    if (!st.att.size) st.ok = false;
   }
-  // a branch that leads off to another rung (or a rail): its joint stays put, a fixed point on the line
-  for (const id of bad) { const st = starts.find(x => x.id === id); fixed.push([st.x, st.x]); }
-  // blocks: branches joined at their ends on the line, with everything on the line between those ends
-  const groups = new Map();
-  for (const st of starts) if (!bad.has(st.id)) { const r = find(st.id); if (!groups.has(r)) groups.set(r, { ids: new Set(), x0: Infinity, x1: -Infinity, badIn: false });
-    const g = groups.get(r); for (const x of off.get(st.id)) g.ids.add(x); g.x0 = Math.min(g.x0, st.x); g.x1 = Math.max(g.x1, st.x); }
-  for (const [r, g] of groups) { for (const st of starts) if (find(st.id) === r && bad.has(st.id)) g.badIn = true;
-    for (const id of parent.keys()) if (find(id) === r) { const n = nodeOf(s, id), p = partOf(s, id); if (n) { g.x0 = Math.min(g.x0, n.x); g.x1 = Math.max(g.x1, n.x); } if (p) { const e = extent(p); g.x0 = Math.min(g.x0, e[0]); g.x1 = Math.max(g.x1, e[1]); } } }
-  const blocks = [...groups.values()].filter(g => !g.badIn);
-  for (const g of [...groups.values()].filter(g => g.badIn)) fixed.push([g.x0, g.x1]);
-  // merge blocks that overlap; take in what lies on the line inside each
+  // a joint whose branch leads off elsewhere (another rung, a rail, a bus): it slides along this rung like a part, its
+  // branch wire going straight down (or up) from it and stretching along wherever it turns; one that cannot (its wire
+  // runs straight on to something right below it) stays where it is
+  const slides = st => st.node && st.ws.every(w => { const P = sameEnd(w.a, st.end) ? wirePts(s, w) : wirePts(s, w).reverse(); return P.length >= 3 && P[1][0] === P[0][0] && P[2][1] === P[1][1]; });
+  for (const st of starts) if (!st.ok) { if (slides(st)) units.push({ x0: st.x, x1: st.x, ids: new Set([st.id]), joint: true }); else fixed.push(xOn(st.id)); }
+  // blocks: the branches that come back, joined where they share ends, with everything on the line between their ends
+  const blocks = [];
+  for (const st of starts) if (st.ok) { const xs = [st.x, ...[...st.att].flatMap(xOn)], b = { x0: Math.min(...xs), x1: Math.max(...xs), ids: new Set([...st.off, st.id, ...st.att]) }; blocks.push(b); }
   blocks.sort((a, b) => a.x0 - b.x0); const merged = [];
   for (const b of blocks) { const l = merged[merged.length - 1]; if (l && b.x0 <= l.x1) { l.x1 = Math.max(l.x1, b.x1); for (const x of b.ids) l.ids.add(x); } else merged.push({ ...b, ids: new Set(b.ids) }); }
-  const inFixed = x => fixed.some(([a, b]) => x >= a && x <= b);
-  for (const b of merged) { if (fixed.some(([a, c]) => c >= b.x0 && a <= b.x1)) { fixed.push([b.x0, b.x1]); b.dead = true; continue; }
-    for (const p of lineParts) { const e = extent(p); if (e[0] >= b.x0 && e[1] <= b.x1) b.ids.add(p.id); }
-    for (const n of lineNodes) if (n.x >= b.x0 && n.x <= b.x1) b.ids.add(n.id);
-    units.push({ x0: b.x0, x1: b.x1, ids: b.ids }); }
-  const inBlock = x => merged.some(b => !b.dead && x >= b.x0 && x <= b.x1);
-  for (const p of lineParts) { const e = extent(p); if (!inBlock(p.x) && !termsAt(p).some(q => q[1] !== Y) && !inFixed(p.x)) units.push({ x0: e[0], x1: e[1], ids: new Set([p.id]) }); }
-  const pass = lineNodes.filter(n => !inBlock(n.x) && !starts.some(st => st.id === n.id));   // (plain joints in the run: put between their neighbours after)
+  const inside = (x0, x1, b) => x0 >= b.x0 && x1 <= b.x1;
+  for (const b of merged) {
+    if (fixed.some(([a, c]) => c >= b.x0 && a <= b.x1)) { fixed.push([b.x0, b.x1]); b.dead = true; continue; }
+    for (const p of lineParts) { const e = extent(p); if (inside(e[0], e[1], b)) b.ids.add(p.id); }
+    for (const n of lineNodes) if (inside(n.x, n.x, b)) b.ids.add(n.id);
+    for (const u of units.filter(u => u.joint && inside(u.x0, u.x1, b))) { for (const x of u.ids) b.ids.add(x); units.splice(units.indexOf(u), 1); }
+    units.push({ x0: b.x0, x1: b.x1, ids: b.ids });
+  }
+  const inBlock = x => merged.some(b => !b.dead && x >= b.x0 && x <= b.x1), inFixed = x => fixed.some(([a, b]) => x >= a && x <= b);
+  for (const p of lineParts) { const e = extent(p); if (!inBlock(p.x) && !inFixed(p.x) && !termsAt(p).some(q => q[1] !== Y)) units.push({ x0: e[0], x1: e[1], ids: new Set([p.id]) }); }
+  const pass = lineNodes.filter(n => !atEnd(n.x) && !inBlock(n.x) && !starts.some(st => st.id === n.id));   // (plain joints in the run: put between their neighbours after)
   if (!units.length) return { moved: 0, why: 'nothing on it to spread' };
   // the stretches between the rung's ends and any fixed points (merged where they overlap); in each, its units spaced evenly
   const fx = fixed.map(f => [Math.max(L, f[0]), Math.min(R, f[1])]).sort((u, v) => u[0] - v[0]), fm = [];
   for (const f of fx) { const l = fm[fm.length - 1]; if (l && f[0] <= l[1]) l[1] = Math.max(l[1], f[1]); else fm.push([...f]); }
   const segs = []; let a0 = L; for (const [f0, f1] of fm) { segs.push([a0, f0]); a0 = f1; } segs.push([a0, R]);
-  const plan = [];
+  const plan = []; let crowded = 0;
   for (const [a, b] of segs) {
     const us = units.filter(u => u.x0 >= a && u.x1 <= b).sort((u, v) => u.x0 - v.x0); if (!us.length) continue;
     const wsum = us.reduce((t, u) => t + (u.x1 - u.x0), 0), gap = (b - a - wsum) / (us.length + 1);
-    if (gap < G) return { moved: 0, why: 'not enough room on it' };
+    if (gap < G) { crowded++; continue; }   // (too full to spread: left as it is; the rest still spread)
     let cur = a + gap, prev = a;
     for (const u of us) { let nl = snap(cur); if (nl < prev + G) nl = prev + G; plan.push({ u, dx: nl - u.x0 }); prev = nl + (u.x1 - u.x0); cur += (u.x1 - u.x0) + gap; }
   }
@@ -2513,7 +2511,7 @@ function organizeRung(s, Y, seedX) {
   for (const n of pass) { const xs = s.parts.filter(p => level(p)).flatMap(p => termsAt(p).filter(q => q[1] === Y).map(q => q[0])).concat(s.nodes.filter(m => m !== n && m.y === Y).map(m => m.x));
     const lo = Math.max(L, ...xs.filter(x => x < n.x)), hi = Math.min(R, ...xs.filter(x => x > n.x)); const nx = snap((lo + hi) / 2); if (nx !== n.x && nx > lo && nx < hi) moveItems(s, new Set([n.id]), nx - n.x, 0); }
   tidy(s);
-  return { moved, units: plan.length };
+  return { moved, units: plan.length, crowded, why: !plan.length && crowded ? 'not enough room on it' : null };
 }
 $('org-btn').addEventListener('click', () => {
   const ys = rungsPicked(); if (!ys.length) { say('Pick a rung first: click its wire, or any part on it.'); return; }
@@ -2521,7 +2519,7 @@ $('org-btn').addEventListener('click', () => {
   const res = ys.map(y => organizeRung(S, y, (() => { for (const id of sel) { const p = partOf(S, id); if (p && p.y === y) return p.x; } if (selW) { const w = S.wires.find(x => x.id === selW); if (w) { const P = wirePts(S, w); for (let i = 0; i < P.length - 1; i++) if (P[i][1] === y && P[i + 1][1] === y) return (P[i][0] + P[i + 1][0]) / 2; } } return null; })()));
   if (JSON.stringify(doc) === before) { UNDO.pop(); const why = res.find(r => r.why); say(why ? `Nothing to organize: ${why.why}.` : 'That rung is already spread out evenly.'); refresh(); return; }
   const rn = ys.map(y => (A.rows[doc.cur] || []).find(r => r.y === y)).filter(Boolean).map(r => r.n);
-  refresh(); say(`${rn.length > 1 ? 'Rungs ' + rn.join(', ') : rn.length ? 'Rung ' + rn[0] : 'The rung'} organized: its parts spread out evenly.`);
+  refresh(); const full = res.some(r => r.crowded); say(`${rn.length > 1 ? 'Rungs ' + rn.join(', ') : rn.length ? 'Rung ' + rn[0] : 'The rung'} organized: its parts spread out evenly${full ? ' (a stretch too full to spread was left as it is)' : ''}.`);
 });
 
 /* ---- js/shell.js ---- */
