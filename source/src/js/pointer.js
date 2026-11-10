@@ -200,12 +200,14 @@ svg.addEventListener('pointerdown', e => {
 });
 function boxSelect(e, p0) {
   e.preventDefault();
+  // (the panel keeps the pointer till the box is let go, even outside the window: the box then ends cleanly)
+  try { svg.setPointerCapture(e.pointerId); } catch (_) {}
   const keep = (e.shiftKey || e.ctrlKey || e.metaKey) && sel ? { parts: new Set(sel.parts), wires: new Set(sel.wires) } : null;
   let moved = false;
   const mv = ev => {
     const r = pt(ev); if (!moved && Math.hypot(r.x - p0.x, r.y - p0.y) > 4) moved = true; if (!moved) return;
     view.overlay.innerHTML = '';
-    el('rect', { x: Math.min(p0.x, r.x), y: Math.min(p0.y, r.y), width: Math.abs(r.x - p0.x), height: Math.abs(r.y - p0.y), fill: 'rgba(255,192,0,.08)', stroke: '#ffc000', 'stroke-width': 1.5, 'stroke-dasharray': '6 4' }, view.overlay);
+    el('rect', { x: Math.min(p0.x, r.x), y: Math.min(p0.y, r.y), width: Math.abs(r.x - p0.x), height: Math.abs(r.y - p0.y), fill: 'rgba(255,192,0,.08)', stroke: '#ffc000', 'stroke-width': 2, 'stroke-dasharray': '7 5', 'vector-effect': 'non-scaling-stroke', class: 'selbox' }, view.overlay);
   };
   const up = ev => {
     document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);

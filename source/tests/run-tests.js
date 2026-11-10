@@ -9,7 +9,7 @@
 const path = require('path');
 const { chromium } = require('playwright');
 
-const PAGE = 'file://' + path.resolve(__dirname, '..', 'dist', 'Circuit_Builder.html');
+const PAGE = 'file://' + path.resolve(__dirname, '..', 'dist', ...(process.argv.includes('--demo') ? ['demo'] : []), 'Circuit_Builder.html');   // (--demo: the demo build)
 const results = [];
 let browser;
 
@@ -2701,6 +2701,23 @@ const DEF_CIRCUIT = `
     await page.reload(); await page.waitForTimeout(300);
     const after = await page.evaluate(() => JSON.stringify(circuitData()));
     if (after !== before) out.push('circuit not restored after reload');
+    return out;
+  });
+
+  await check('A selection box can start anywhere, even on the grey round the sheet zoomed right out; its outline stays clear at any zoom', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'three');
+    for (let i = 0; i < 6; i++) await page.click('#zoom-out');
+    await page.waitForTimeout(150);
+    const r = await page.evaluate(() => { const m = svg.getScreenCTM(), b = svg.getBoundingClientRect(), xs = parts.map(q => m.a * q.x + m.e), ys = parts.map(q => m.d * q.y + m.f);
+      return { a: [(b.left + m.e) / 2, Math.min(...ys) - 40], c: [Math.max(...xs) + 30, Math.max(...ys) + 30], sheetL: m.e, n: parts.length }; });
+    if (r.a[0] >= r.sheetL) out.push('no grey to the left of the sheet at 25% (test set-up)');
+    await page.mouse.move(...r.a); await page.mouse.down(); await page.mouse.move(...r.c, { steps: 8 });
+    const o = await page.evaluate(() => { const b = svg.querySelector('rect.selbox'); return b ? [b.getAttribute('vector-effect'), b.getAttribute('stroke-width')].join() : 'none'; });
+    await page.mouse.up(); await page.waitForTimeout(40);
+    const got = await page.evaluate(() => sel ? sel.parts.size : 0);
+    if (o !== 'non-scaling-stroke,2') out.push('box outline: ' + o);
+    if (got !== r.n) out.push(`box from the grey picked ${got} of ${r.n} parts`);
     return out;
   });
 

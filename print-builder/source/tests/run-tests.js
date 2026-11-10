@@ -436,7 +436,7 @@ let passed = 0, failed = 0;
     const r = await p.evaluate(() => { const b = svg.getBoundingClientRect(), pl = S.parts.filter(q => q.t === 'pl'), m = svg.getScreenCTM();
       return { x0: b.left - 30, y: m.d * (pl[0].y - 60) + m.f, x1: m.a * (pl[0].x + 60) + m.e, y1: m.d * (pl[1].y + 60) + m.f, gray: document.elementFromPoint(b.left - 30, m.d * (pl[0].y - 60) + m.f).id }; });
     await p.mouse.move(r.x0, r.y); await p.mouse.down(); await p.mouse.move(r.x1, r.y1, { steps: 6 });
-    const mid = await p.evaluate(() => !!(drag && drag.box));
+    const mid = await p.evaluate(() => !!(drag && drag.box) && !!svg.querySelector('rect.selbox[vector-effect="non-scaling-stroke"]'));
     await p.mouse.up();
     const got = await p.evaluate(() => [...sel].map(id => partOf(S, id)).filter(Boolean).map(q => q.tag || q.t).sort().join());
     return mid && /PL1/.test(got) && /PL2/.test(got) && r.gray !== 'sv' ? [] : ['started on: ' + r.gray + ' | box: ' + mid + ' | picked: ' + got];
