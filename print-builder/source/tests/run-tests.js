@@ -468,6 +468,22 @@ let passed = 0, failed = 0;
     return got.startsWith(want) && /^1,\d+,\d+$/.test(String(r[8])) && new Set(String(r[8]).split(',')).size === 3 && r[9] === 0 && r[10] === 1 ? [] : ['palette missing | groups | tags | disconnect poles | breaker poles | DPDT ends | power numbers | control numbers | shorts before | after: ' + got];
   });
 
+  await check('The Switches menu is split by kind: each kind flies out beside it, inside the window, and its parts place as before', async p => {
+    await p.setViewportSize({ width: 1132, height: 640 });
+    await p.evaluate(() => { loadDoc(template('blank')); refresh(true); });
+    await p.click('[data-menu="Switches"]');
+    const rows = await p.evaluate(() => { const m = document.querySelector('[data-menu="Switches"]').nextElementSibling; return [[...m.querySelectorAll(':scope > button, :scope > .subwrap > .sub-row')].map(b => b.textContent.replace(/[▸\d]/g, '').trim()).join(';'), m.getBoundingClientRect().bottom <= innerHeight]; });
+    await p.hover('.sub-row >> text=Toggle'); await p.waitForTimeout(250);
+    const fly = await p.evaluate(() => { const f = [...document.querySelectorAll('.fly')].filter(x => !x.hidden), b = f[0] && f[0].getBoundingClientRect(); return [f.length, b && b.left >= 0 && b.right <= innerWidth && b.top >= 0 && b.bottom <= innerHeight, f[0] && f[0].querySelectorAll('button[data-t]').length]; });
+    await p.hover('.sub-row >> text=Limit'); await p.waitForTimeout(250);
+    const one = await p.evaluate(() => [...document.querySelectorAll('.fly')].filter(x => !x.hidden).map(x => x.querySelectorAll('button').length).join());
+    await p.click('.fly:not([hidden]) button[data-t="ls_hc"]');
+    const placed = await p.evaluate(() => [S.parts.at(-1).t, document.querySelectorAll('.dmenu:not([hidden])').length]);
+    await p.setViewportSize({ width: 1600, height: 1000 });
+    const r = [...rows, ...fly, one, ...placed].join('|');
+    return r === 'Selector Switch;Limit Switches;Temperature Switches;Pressure Switches;Float Switches;Flow Switches;Proximity Switches;Toggle & Multi-Pole Switches|true|1|true|5|4|ls_hc|0' ? [] : ['kinds | menu fits | fly-outs open | fly-out fits | its parts | one open at a time | placed | menus left open: ' + r];
+  });
+
   await b.close();
   console.log(`\n${passed} of ${passed + failed} checks passed.`);
   process.exit(failed ? 1 : 0);

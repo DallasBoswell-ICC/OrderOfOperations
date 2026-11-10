@@ -87,11 +87,39 @@ function buildPalette() {
   });
   let m = '';
   for (const c of CATS) { m += `<div class="menuwrap"><button class="rb" data-menu="${c}"><span class="sw" style="border-color:${CAT_COL[c]}"></span><span>${c} ▾</span></button><div class="dmenu" hidden>`;
-    for (const [t, d] of Object.entries(LIB)) if (d.cat === c) m += `<button data-t="${t}">${thumb(t).replace('<svg', '<svg style="width:46px;height:26px;background:#f4f5f6;border-radius:4px;padding:2px"')}${esc(d.name)}</button>`;
+    const item = (t, d) => `<button data-t="${t}">${thumb(t).replace('<svg', '<svg style="width:46px;height:26px;background:#f4f5f6;border-radius:4px;padding:2px"')}${esc(d.name)}</button>`;
+    const subs = new Map(), done = new Set();
+    for (const [t, d] of Object.entries(LIB)) if (d.cat === c && subOf(t)) { const g = subOf(t); if (!subs.has(g)) subs.set(g, []); subs.get(g).push(t); }
+    for (const [t, d] of Object.entries(LIB)) if (d.cat === c) {
+      const g = subOf(t);
+      if (!g) { m += item(t, d); continue; }
+      if (done.has(g)) continue; done.add(g);
+      // a kind with several parts: one line, its parts in a menu that flies out beside it
+      const ts = subs.get(g);
+      m += `<div class="subwrap"><button class="sub-row" aria-haspopup="true" aria-expanded="false">${thumb(ts[0]).replace('<svg', '<svg style="width:46px;height:26px;background:#f4f5f6;border-radius:4px;padding:2px"')}${esc(g)}<span class="sub-n">${ts.length}</span><span class="sub-ar">▸</span></button><div class="dmenu fly" hidden>${ts.map(x => item(x, LIB[x])).join('')}</div></div>`;
+    }
     m += '</div></div>'; }
   $('sym-menus').innerHTML = m;
+  // the fly-outs: resting on a kind (or clicking it) opens its parts beside it; the menu's other kinds close
+  for (const r of document.querySelectorAll('#sym-menus .sub-row')) {
+    const fly = r.nextElementSibling, menu = r.closest('.dmenu');
+    const open = () => { for (const o of menu.querySelectorAll('.fly')) if (o !== fly) { o.hidden = true; o.previousElementSibling.setAttribute('aria-expanded', 'false'); o.previousElementSibling.classList.remove('on'); }
+      if (!fly.hidden) return; fly.hidden = false; r.setAttribute('aria-expanded', 'true'); r.classList.add('on');
+      // beside the row: on its right, or its left if the window ends first; kept inside the window top to bottom
+      fly.style.left = '100%'; fly.style.right = 'auto'; fly.style.top = (r.offsetTop - 7) + 'px';
+      const b = fly.getBoundingClientRect(); if (b.right > innerWidth - 6) { fly.style.left = 'auto'; fly.style.right = '100%'; }
+      const z = uiZoom(), over = b.bottom - (innerHeight - 6); if (over > 0) fly.style.top = (r.offsetTop - 7 - over / z) + 'px'; };
+    let t0 = null;
+    r.addEventListener('pointerenter', () => { clearTimeout(t0); t0 = setTimeout(open, 120); });
+    r.addEventListener('pointerleave', () => clearTimeout(t0));
+    r.addEventListener('click', e => { e.stopPropagation(); clearTimeout(t0); open(); const f = fly.querySelector('button'); if (e.detail === 0 && f) f.focus(); });
+    r.addEventListener('keydown', e => { if (e.key === 'ArrowRight') { e.preventDefault(); open(); fly.querySelector('button').focus(); } });
+    fly.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fly.hidden = true; r.classList.remove('on'); r.setAttribute('aria-expanded', 'false'); r.focus(); } });
+  }
+  // (a part with no kind of its own in the menu closes any open fly-out when the pointer rests on it)
+  for (const b of document.querySelectorAll('#sym-menus .dmenu:not(.fly) > button[data-t]')) b.addEventListener('pointerenter', () => { for (const o of b.parentElement.querySelectorAll('.fly')) { o.hidden = true; o.previousElementSibling.classList.remove('on'); } });
   for (const b of document.querySelectorAll('[data-menu]')) b.addEventListener('click', e => { e.stopPropagation(); const d = b.nextElementSibling, open = d.hidden; closeMenus(); d.hidden = !open; if (open) { const r = b.getBoundingClientRect(); const z = uiZoom(); d.style.position = 'fixed'; d.style.left = r.left / z + 'px'; d.style.top = (r.bottom + 6) / z + 'px'; } });
-  for (const b of document.querySelectorAll('#sym-menus .dmenu button')) b.addEventListener('click', () => { closeMenus(); placeInView(b.dataset.t); });
+  for (const b of document.querySelectorAll('#sym-menus .dmenu button[data-t]')) b.addEventListener('click', () => { closeMenus(); placeInView(b.dataset.t); });
 }
 // a part put straight onto the sheet, in the middle of what is in view, at the nearest spot clear of the other symbols,
 // their names and the wires (so it never lands in a wire); it comes picked, ready to drag where it goes

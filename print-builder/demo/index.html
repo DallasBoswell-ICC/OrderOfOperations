@@ -243,6 +243,13 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 /* a selection box started on the grey can run off the paper */
 #sv { overflow: visible; }
 
+/* ---------- fly-out sub-menus (the Switches menu, by kind) ---------- */
+.subwrap { position: relative; }
+.dmenu .sub-row { width: 100%; }
+.dmenu .sub-row.on { background: #34383d; }
+.sub-n { margin-left: auto; color: #8a9099; font-size: .78rem; } .sub-ar { color: #8a9099; font-size: .8rem; margin-left: 8px; }
+.dmenu.fly { position: absolute; top: 0; left: 100%; margin-left: 4px; min-width: 260px; }
+
 .demo-badge { font-style: normal; font-size: .7rem; font-weight: 800; letter-spacing: .08em; color: #1c1d1f; background: #9be03a; border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }
 </style>
 <style id="print-page"></style>
@@ -442,6 +449,10 @@ const LIB = {
   cnt_out: { cat: 'Continuation', name: 'Continues To (Out)', sym: 'Continuation Out', kind: 'cont', flip: 'cnt_in' },
   cnt_in:  { cat: 'Continuation', name: 'Continued From (In)', sym: 'Continuation In', kind: 'cont', flip: 'cnt_out' },
 };
+// the kinds a long menu is split into (fly-out sub-menus in the ribbon's Switches menu); a part not listed sits on its own
+const SUBS = [['Limit Switches', /^ls_/], ['Temperature Switches', /^ts_/], ['Pressure Switches', /^ps_/], ['Float Switches', /^fs_/], ['Flow Switches', /^fls_/],
+  ['Proximity Switches', /^prs_/], ['Toggle & Multi-Pole Switches', /^(spst|spdt|dpst|dpdt|xover)$/]];
+const subOf = t => { const s = SUBS.find(([, re]) => re.test(t)); return s ? s[0] : null; };
 const CATS = ['Buttons', 'Switches', 'Outputs', 'Contacts', 'Protection', 'Power', 'Continuation'];
 const CAT_COL = { 'Buttons': '#00B050', 'Switches': '#0070C0', 'Outputs': '#FFC000', 'Contacts': '#c9c9c9', 'Protection': '#e5484d', 'Power': '#FF9C37', 'Continuation': '#a26bf5' };
 // the motor as Circuit Builder prints it: T1, T2, T3 on its left, a line apart like the power circuit's poles, T2's
@@ -1823,11 +1834,39 @@ function buildPalette() {
   });
   let m = '';
   for (const c of CATS) { m += `<div class="menuwrap"><button class="rb" data-menu="${c}"><span class="sw" style="border-color:${CAT_COL[c]}"></span><span>${c} ▾</span></button><div class="dmenu" hidden>`;
-    for (const [t, d] of Object.entries(LIB)) if (d.cat === c) m += `<button data-t="${t}">${thumb(t).replace('<svg', '<svg style="width:46px;height:26px;background:#f4f5f6;border-radius:4px;padding:2px"')}${esc(d.name)}</button>`;
+    const item = (t, d) => `<button data-t="${t}">${thumb(t).replace('<svg', '<svg style="width:46px;height:26px;background:#f4f5f6;border-radius:4px;padding:2px"')}${esc(d.name)}</button>`;
+    const subs = new Map(), done = new Set();
+    for (const [t, d] of Object.entries(LIB)) if (d.cat === c && subOf(t)) { const g = subOf(t); if (!subs.has(g)) subs.set(g, []); subs.get(g).push(t); }
+    for (const [t, d] of Object.entries(LIB)) if (d.cat === c) {
+      const g = subOf(t);
+      if (!g) { m += item(t, d); continue; }
+      if (done.has(g)) continue; done.add(g);
+      // a kind with several parts: one line, its parts in a menu that flies out beside it
+      const ts = subs.get(g);
+      m += `<div class="subwrap"><button class="sub-row" aria-haspopup="true" aria-expanded="false">${thumb(ts[0]).replace('<svg', '<svg style="width:46px;height:26px;background:#f4f5f6;border-radius:4px;padding:2px"')}${esc(g)}<span class="sub-n">${ts.length}</span><span class="sub-ar">▸</span></button><div class="dmenu fly" hidden>${ts.map(x => item(x, LIB[x])).join('')}</div></div>`;
+    }
     m += '</div></div>'; }
   $('sym-menus').innerHTML = m;
+  // the fly-outs: resting on a kind (or clicking it) opens its parts beside it; the menu's other kinds close
+  for (const r of document.querySelectorAll('#sym-menus .sub-row')) {
+    const fly = r.nextElementSibling, menu = r.closest('.dmenu');
+    const open = () => { for (const o of menu.querySelectorAll('.fly')) if (o !== fly) { o.hidden = true; o.previousElementSibling.setAttribute('aria-expanded', 'false'); o.previousElementSibling.classList.remove('on'); }
+      if (!fly.hidden) return; fly.hidden = false; r.setAttribute('aria-expanded', 'true'); r.classList.add('on');
+      // beside the row: on its right, or its left if the window ends first; kept inside the window top to bottom
+      fly.style.left = '100%'; fly.style.right = 'auto'; fly.style.top = (r.offsetTop - 7) + 'px';
+      const b = fly.getBoundingClientRect(); if (b.right > innerWidth - 6) { fly.style.left = 'auto'; fly.style.right = '100%'; }
+      const z = uiZoom(), over = b.bottom - (innerHeight - 6); if (over > 0) fly.style.top = (r.offsetTop - 7 - over / z) + 'px'; };
+    let t0 = null;
+    r.addEventListener('pointerenter', () => { clearTimeout(t0); t0 = setTimeout(open, 120); });
+    r.addEventListener('pointerleave', () => clearTimeout(t0));
+    r.addEventListener('click', e => { e.stopPropagation(); clearTimeout(t0); open(); const f = fly.querySelector('button'); if (e.detail === 0 && f) f.focus(); });
+    r.addEventListener('keydown', e => { if (e.key === 'ArrowRight') { e.preventDefault(); open(); fly.querySelector('button').focus(); } });
+    fly.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fly.hidden = true; r.classList.remove('on'); r.setAttribute('aria-expanded', 'false'); r.focus(); } });
+  }
+  // (a part with no kind of its own in the menu closes any open fly-out when the pointer rests on it)
+  for (const b of document.querySelectorAll('#sym-menus .dmenu:not(.fly) > button[data-t]')) b.addEventListener('pointerenter', () => { for (const o of b.parentElement.querySelectorAll('.fly')) { o.hidden = true; o.previousElementSibling.classList.remove('on'); } });
   for (const b of document.querySelectorAll('[data-menu]')) b.addEventListener('click', e => { e.stopPropagation(); const d = b.nextElementSibling, open = d.hidden; closeMenus(); d.hidden = !open; if (open) { const r = b.getBoundingClientRect(); const z = uiZoom(); d.style.position = 'fixed'; d.style.left = r.left / z + 'px'; d.style.top = (r.bottom + 6) / z + 'px'; } });
-  for (const b of document.querySelectorAll('#sym-menus .dmenu button')) b.addEventListener('click', () => { closeMenus(); placeInView(b.dataset.t); });
+  for (const b of document.querySelectorAll('#sym-menus .dmenu button[data-t]')) b.addEventListener('click', () => { closeMenus(); placeInView(b.dataset.t); });
 }
 // a part put straight onto the sheet, in the middle of what is in view, at the nearest spot clear of the other symbols,
 // their names and the wires (so it never lands in a wire); it comes picked, ready to drag where it goes

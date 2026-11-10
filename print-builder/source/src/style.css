@@ -230,3 +230,10 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .orient-menu [aria-checked="true"] { color: #fff; font-weight: 600; }
 /* a selection box started on the grey can run off the paper */
 #sv { overflow: visible; }
+
+/* ---------- fly-out sub-menus (the Switches menu, by kind) ---------- */
+.subwrap { position: relative; }
+.dmenu .sub-row { width: 100%; }
+.dmenu .sub-row.on { background: #34383d; }
+.sub-n { margin-left: auto; color: #8a9099; font-size: .78rem; } .sub-ar { color: #8a9099; font-size: .8rem; margin-left: 8px; }
+.dmenu.fly { position: absolute; top: 0; left: 100%; margin-left: 4px; min-width: 260px; }

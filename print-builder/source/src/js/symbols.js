@@ -73,6 +73,10 @@ const LIB = {
   cnt_out: { cat: 'Continuation', name: 'Continues To (Out)', sym: 'Continuation Out', kind: 'cont', flip: 'cnt_in' },
   cnt_in:  { cat: 'Continuation', name: 'Continued From (In)', sym: 'Continuation In', kind: 'cont', flip: 'cnt_out' },
 };
+// the kinds a long menu is split into (fly-out sub-menus in the ribbon's Switches menu); a part not listed sits on its own
+const SUBS = [['Limit Switches', /^ls_/], ['Temperature Switches', /^ts_/], ['Pressure Switches', /^ps_/], ['Float Switches', /^fs_/], ['Flow Switches', /^fls_/],
+  ['Proximity Switches', /^prs_/], ['Toggle & Multi-Pole Switches', /^(spst|spdt|dpst|dpdt|xover)$/]];
+const subOf = t => { const s = SUBS.find(([, re]) => re.test(t)); return s ? s[0] : null; };
 const CATS = ['Buttons', 'Switches', 'Outputs', 'Contacts', 'Protection', 'Power', 'Continuation'];
 const CAT_COL = { 'Buttons': '#00B050', 'Switches': '#0070C0', 'Outputs': '#FFC000', 'Contacts': '#c9c9c9', 'Protection': '#e5484d', 'Power': '#FF9C37', 'Continuation': '#a26bf5' };
 // the motor as Circuit Builder prints it: T1, T2, T3 on its left, a line apart like the power circuit's poles, T2's
