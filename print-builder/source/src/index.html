@@ -27,7 +27,7 @@
                   </div></div>
       <button class="btn" id="open-btn">Open</button>
       <div class="menuwrap split"><button class="btn" id="save-btn">Save</button><button class="btn more" id="save-more" title="More ways to save" aria-haspopup="menu">▾</button>
-        <div class="dmenu" id="save-menu" hidden><button id="saveas-btn">Save As a new file… <span class="k">Ctrl+Shift+S</span></button></div></div>
+        <div class="dmenu" id="save-menu" hidden><button id="saveas-btn">Save As a New File… <span class="k">Ctrl+Shift+S</span></button></div></div>
       <button class="btn" id="print-btn">Print</button>
       <label class="uisz" title="How big the buttons, menus and writing are (the sheet has its own zoom)">Size
         <select id="ui-size"><option value="1">Small</option><option value="1.15" selected>Medium</option><option value="1.3">Large</option><option value="1.5">Extra Large</option></select></label>
@@ -40,6 +40,7 @@
     <button class="rtab" id="rt-home" role="tab" aria-pressed="true">Home</button>
     <button class="rtab gold" id="rt-part" role="tab" aria-pressed="false" hidden>Part</button>
     <button class="rtab" id="rt-check" role="tab" aria-pressed="false">Check Print<span class="badge" id="tab-badge" hidden></span></button>
+    <span class="rt-end"><button class="rt-ic" id="fs-btn" title="Full screen: the sheet gets the whole screen (Esc or this button again to come back)"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="rt-ic" id="fold-btn" title="Fold the ribbon up out of the way (the tabs stay: click one to open it for a moment)" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></span>
   </div>
   <nav class="ribbon" id="ribbon">
     <div class="grp"><div class="row">
@@ -49,6 +50,8 @@
       </div><div class="stk">
         <button class="rb sm" id="cut-btn" title="Cut the picked symbols and wires (Ctrl+X)"><svg viewBox="0 0 24 24"><path d="M6 7a2.5 2.5 0 1 0 0 .01M6 17a2.5 2.5 0 1 0 0 .01M8 8.5l11 9M8 15.5l11-9" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Cut</span></button>
         <button class="rb sm danger" id="del-btn" title="Delete what is picked (Delete key)"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6.5 7l1 13h9l1-13" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Delete</span></button>
+      </div><div class="stk">
+        <button class="rb sm danger" id="clear-btn" title="Clear this sheet: everything on it but the rails taken away (Ctrl+Z brings it back)"><svg viewBox="0 0 24 24"><path d="M15 4l5 5-9 9H6l-2-2 11-12zM9 9l6 6M4 20h16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Clear</span></button>
       </div>
     </div><div class="gl">Edit</div></div>
     <div class="grp"><div class="row" id="tools">
@@ -75,7 +78,7 @@
   <div class="ribbon part" id="rp-part" hidden><div id="props"></div></div>
   <div class="ribbon chk" id="rp-check" hidden>
     <div class="grp"><div class="row col">
-      <label class="chk"><input type="checkbox" id="ring-chk"><span class="tog"></span>Ring them on the sheet</label>
+      <label class="chk"><input type="checkbox" id="ring-chk"><span class="tog"></span>Ring Them on the Sheet</label>
       <span class="ro" id="check-sum"></span>
     </div><div class="gl">Check the Print</div></div>
     <div class="chips" id="check-list"></div>
@@ -97,10 +100,25 @@
   <p class="sub">Change any box, add your own, or take one away. Widths are out of 12 across the sheet. Type <code>{sheet}</code> for “1 of 2”, <code>{date}</code> for today.</p>
   <div class="tbrows" id="tb-rows"></div>
   <button class="btn" id="tb-add">+ Add a Box</button>
-  <label class="notes-row"><input type="checkbox" id="tb-shownotes"> Notes under the boxes (one a line)</label>
+  <label class="notes-row"><input type="checkbox" id="tb-shownotes"> Notes Under the Boxes (One a Line)</label>
   <textarea id="tb-notes" rows="3"></textarea>
+  <label class="notes-row"><input type="checkbox" id="tb-powernote"> Explain Power Wire Numbers (a Note on Any Sheet That Has Power Wiring)</label>
   <div class="dlg-foot"><button class="btn" id="tb-reset">Back to the Standard Boxes</button><button class="btn primary" id="tb-done">Done</button></div>
 </dialog>
+<!-- Print Preview (as in Circuit Builder): every sheet as it will print, before the browser's print box -->
+<div class="pv" id="pv" hidden role="dialog" aria-label="Print Preview">
+  <div class="pv-bar">
+    <b>Print Preview</b><span class="pv-n" id="pv-n"></span>
+    <label class="pv-by">Drawn By<input class="in" id="pv-drawn" autocomplete="off" placeholder="Your name" title="Goes in the Drawn By box on every sheet, and is kept for your next new print"></label>
+    <span class="pv-z"><button id="pv-zo" title="Zoom out">−</button><span id="pv-zl">100%</span><button id="pv-zi" title="Zoom in">+</button><button id="pv-zf" title="Fit the sheets to the window">Fit</button></span>
+    <span class="pv-sp"></span>
+    <button class="btn primary" id="pv-print" title="Opens the browser's print box. To make a PDF, pick Save as PDF (or Microsoft Print to PDF) as the printer.">Print…</button>
+    <button class="btn" id="pv-close" title="Back to the print (Esc)">Close</button>
+  </div>
+  <div class="pv-scroll" id="pv-scroll"><div class="pv-sizer"><div class="pv-pages" id="pv-pages"></div></div></div>
+</div>
+<div class="ftip" id="ftip" hidden></div>
+<div class="drop" id="drop" hidden><div>Drop a print here to open it</div></div>
 <input type="file" id="file-in" accept=".json,application/json" hidden>
 <div id="print-host"></div>
 <script>%JS%</script>

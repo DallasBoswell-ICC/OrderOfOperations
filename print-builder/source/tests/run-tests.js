@@ -1,6 +1,6 @@
 // Print Builder's checks: node tests/run-tests.js (after python3 build.py). Needs Playwright.
 const { chromium } = require('playwright');
-const PAGE = 'file://' + require('path').resolve(__dirname, '../dist/Print_Builder.html');
+const PAGE = 'file://' + require('path').resolve(__dirname, process.argv.includes('--demo') ? '../dist/demo/Print_Builder.html' : '../dist/Print_Builder.html');   // (--demo: the demo build)
 let passed = 0, failed = 0;
 (async () => {
   const b = await chromium.launch();
@@ -202,7 +202,7 @@ let passed = 0, failed = 0;
     const [x0, y0] = await scr(...L), [x1, y1] = await scr(L[0] + 60, L[1] - 40);
     await p.mouse.move(x0, y0); await p.mouse.down(); await p.mouse.move(x1, y1, { steps: 5 }); await p.mouse.up();
     const lt = await p.evaluate(() => JSON.stringify(S.parts.find(x => x.tag === 'PB1').lt));
-    await p.selectOption('#ui-size', '1.5'); const z = await p.evaluate(() => [uiZoom(), localStorage.getItem('oo-print-builder:ui-size')].join(','));
+    await p.selectOption('#ui-size', '1.5'); const z = await p.evaluate(() => [uiZoom(), localStorage.getItem(UIKEY)].join(','));
     await p.selectOption('#ui-size', '1.15');
     return [a, lt, z].join('|') === 'false,false,true,select|[60,-40]|1.5,1.5' ? [] : ['overlap,onWire,picked,tool | label offset | size: ' + [a, lt, z].join(' | ')];
   });
@@ -244,7 +244,7 @@ let passed = 0, failed = 0;
       addWire(S, [[L1.x, 800], [L2.x, 800]]); Object.assign(addPart(S, 'sel', 500, 800, { tag: 'SS1' }), { pos: 'HAND/OFF/AUTO', closedIn: [0] }); addPart(S, 'pl', 1100, 800); refresh(true);
       const txt = [...svg.querySelectorAll('g.ink text')].map(e => e.textContent);
       const dup = ISSUES.some(i => /tagged PB1/.test(i.title)), con = S.parts.find(q => q.t === 'tc_no');
-      return [dup, symOf(con), txt.includes('ON-DELAY 5 s'), txt.includes('IN PB1'), txt.includes('LIGHTED (' + pl.tag + ')'), txt.includes('CLOSED: HAND'), !!svg.querySelector('g.ink line[stroke-dasharray="12 10"]') && !!svg.querySelector('g.ink polyline[stroke-dasharray="12 10"]'), termsOf('pl').map(t => t[0]).join('/')]; });
+      return [dup, symOf(con), txt.includes('ON-DELAY 5 s'), txt.includes('IN PB1'), txt.includes('LIGHTED (' + pl.tag + ')'), txt.includes('CLOSED: HAND'), svg.querySelectorAll('g.ink polyline[stroke-dasharray="12 10"]').length >= 2, termsOf('pl').map(t => t[0]).join('/')]; });
     return r.join('|') === 'false|NO ND Switch|true|true|true|true|true|-40/40' ? [] : ['dup error | contact symbol | timer note | light note | button note | selector note | block link and light link | pilot light: ' + r.join(' | ')];
   });
 
@@ -267,7 +267,7 @@ let passed = 0, failed = 0;
     const g = await p.locator('#pal-grip').boundingBox(), w0 = (await p.locator('#palette').boundingBox()).width;
     await p.mouse.move(g.x + 3, g.y + 200); await p.mouse.down(); await p.mouse.move(g.x + 120, g.y + 200, { steps: 4 }); await p.mouse.up();
     const w1 = (await p.locator('#palette').boundingBox()).width;
-    await p.click('#pal-hide'); const hid = await p.evaluate(() => [getComputedStyle($('palette')).display, !$('pal-show').hidden, JSON.parse(localStorage.getItem('oo-print-builder:palette')).hidden, $('desk').getBoundingClientRect().width > 600].join(','));
+    await p.click('#pal-hide'); const hid = await p.evaluate(() => [getComputedStyle($('palette')).display, !$('pal-show').hidden, JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => /:palette$/.test(k)))).hidden, $('desk').getBoundingClientRect().width > 600].join(','));
     await p.click('#pal-show'); const back = await p.evaluate(() => getComputedStyle($('palette')).display);
     const sb = await p.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
     await p.evaluate(() => setPalette(224, false));
@@ -289,6 +289,135 @@ let passed = 0, failed = 0;
     const r = await p.evaluate(() => [...document.querySelectorAll('#print-host .pr-page')].map(e => e.classList.contains('land') ? 'L' : 'P').join(''));
     const rails = await p.evaluate(() => S.parts.filter(q => q.t === 'rail').every(r => r.y1 <= VB[1]));
     return r === 'PL' && rails ? [] : ['pages: ' + r + ', rails on the paper: ' + rails];
+  });
+
+  /* ---------- from Circuit Builder, second round ---------- */
+  // where a point on the sheet is on the screen
+  const scr = (p, x, y) => p.evaluate(([x, y]) => { const m = svg.getScreenCTM(); return [m.a * x + m.e, m.d * y + m.f]; }, [x, y]);
+
+  await check('Print Preview: every sheet, Drawn By typed there kept for a new print, Esc closes; Ctrl+P opens it', async p => {
+    await p.evaluate(() => { loadDoc(template('starter')); refresh(true); });
+    await p.click('#addsheet-btn'); await p.click('#orient-btn');
+    const x0 = await p.evaluate(() => (doc.cur = 0, S = doc.sheets[0], refresh(true), XREFS.length));
+    await p.click('#print-btn');
+    const r = await p.evaluate(() => [!$('pv').hidden, document.querySelectorAll('#pv-pages .pr-page').length, $('pv-n').textContent, XREFS.length]);
+    await p.fill('#pv-drawn', 'Dallas Boswell'); await p.waitForTimeout(350);
+    const dr = await p.evaluate(() => [doc.tb.fields.find(f => f.label === 'Drawn By').value, [...document.querySelectorAll('#pv-pages .pr-page')].every(e => e.textContent.includes('Dallas Boswell'))]);
+    await p.keyboard.press('Escape');
+    const shut = await p.evaluate(() => $('pv').hidden);
+    await p.click('#new-btn'); await p.click('[data-new="blank"]');
+    const nb = await p.evaluate(() => doc.tb.fields.find(f => f.label === 'Drawn By').value);
+    await p.keyboard.press('Control+p');
+    const kp = await p.evaluate(() => !$('pv').hidden); await p.keyboard.press('Escape');
+    const out = [];
+    if (r.join('|') !== `true|2|2 letter sheets, 1 landscape|${x0}`) out.push('preview open | pages | count | cross-refs kept: ' + r.join(' | '));
+    if (dr.join('|') !== 'Dallas Boswell|true') out.push('Drawn By: ' + dr.join(' | '));
+    if (!shut) out.push('Esc did not close it'); if (nb !== 'Dallas Boswell') out.push('a new print’s Drawn By: ' + nb); if (!kp) out.push('Ctrl+P did not open it');
+    return out;
+  });
+
+  await check('Power wire numbers explained in the notes where there is power wiring; the Title Block can turn it off', async p => {
+    const r = await p.evaluate(() => { const has = () => [...document.querySelectorAll('#pagehost .pr-page')].some(e => /Power wires: L1, L2, L3/.test(e.textContent));
+      loadDoc(template('starter')); refresh(true); const a = has(); loadDoc(template('blank')); refresh(true); const b = has();
+      loadDoc(template('starter')); refresh(true); $('tb-btn').click(); const c = $('tb-powernote').checked; $('tb-powernote').click(); const d = has(); $('tb-dlg').close(); return [a, b, c, d, doc.tb.powerNote]; });
+    return r.join('|') === 'true|false|true|false|false' ? [] : ['starter | blank | ticked | after unticking | stored: ' + r.join(' | ')];
+  });
+
+  await check('Ctrl+click adds a part to what is picked, or takes it out', async p => {
+    await p.evaluate(() => { loadDoc(template('starter')); refresh(true); fitZoom(); });
+    const [a, b] = await p.evaluate(() => S.parts.filter(q => q.t === 'pl').map(q => [q.x, q.y]));
+    const pa = await scr(p, a[0], a[1]), pb = await scr(p, b[0], b[1]);
+    await p.mouse.click(...pa); await p.keyboard.down('Control'); await p.mouse.click(...pb); const two = await p.evaluate(() => sel.size);
+    await p.mouse.click(...pa); await p.keyboard.up('Control'); const one = await p.evaluate(() => [...sel].map(id => partOf(S, id).tag).join());
+    return two === 2 && /PL2/.test(one) && one.split(',').length === 1 ? [] : ['picked after ctrl+click: ' + two + ', after ctrl+click again: ' + one];
+  });
+
+  await check('Several parts of one kind picked: one Part tab changes them all; unlike parts get the plain one', async p => {
+    const r = await p.evaluate(() => { loadDoc(template('blank'));
+      const cs = [addPart(S, 'con_no', 400, 400, { tag: 'CR1' }), addPart(S, 'con_nc', 700, 400, { tag: 'CR2' }), addPart(S, 'con_no', 1000, 400, { tag: 'CR1' })]; addPart(S, 'coil', 1300, 600, { tag: 'CR1' }); addPart(S, 'coil', 1300, 800, { tag: 'CR2' });
+      sel = new Set(cs.map(c => c.id)); refresh(); const h = $('props').querySelector('h4').textContent;
+      $('props').querySelector('[data-mno="0"]').click(); const nc = S.parts.filter(q => q.t === 'con_nc').length;
+      const of = $('m-of'); of.value = 'CR2'; of.dispatchEvent(new Event('change')); const tags = cs.map(c => partOf(S, c.id).tag).join();
+      undo(); undo(); refresh(true); const back = cs.map(c => partOf(S, c.id).t + ':' + partOf(S, c.id).tag).join();
+      sel = new Set([cs[0].id, S.parts.find(q => q.t === 'coil').id]); refresh(); const mixed = $('props').querySelector('h4').textContent;
+      return [h, nc, tags, back, mixed]; });
+    return r.join('|') === '3 Contacts|3|CR2,CR2,CR2|con_no:CR1,con_nc:CR2,con_no:CR1|2 things picked' ? [] : ['heading | NC | tags | undone | mixed: ' + r.join(' | ')];
+  });
+
+  await check('A coil renamed takes its contacts with it (unless another coil still has that name); a button its lights', async p => {
+    const r = await p.evaluate(() => { loadDoc(template('blank'));
+      const k = addPart(S, 'coil', 1300, 400, { tag: 'CR1' }), c1 = addPart(S, 'con_no', 400, 600, { tag: 'CR1' }), c2 = addPart(S, 'con_nc', 400, 800, { tag: 'CR1' });
+      const b = addPart(S, 'pb_no', 400, 1000, { tag: 'PB1' }), l = Object.assign(addPart(S, 'pl', 1300, 1000), { inPB: 'PB1' });
+      const ren = (p, t) => { sel = new Set([p.id]); refresh(); const i = $('p-tag'); i.focus(); i.value = t; i.dispatchEvent(new Event('input')); i.dispatchEvent(new Event('change')); };
+      ren(k, 'CR7'); const a = [c1.tag, c2.tag, $('hint').textContent];
+      undo(); refresh(true); const u = partOf(S, c1.id).tag;
+      addPart(S, 'coil', 1300, 1200, { tag: 'CR1' }); const k2 = S.parts.find(q => q.id === k.id); ren(k2, 'CR8'); const stay = partOf(S, c1.id).tag;
+      ren(partOf(S, b.id), 'PB4'); const lt = partOf(S, l.id).inPB;
+      return [...a, u, stay, lt]; });
+    return r.join('|') === 'CR7|CR7|Its 2 contacts now belong to CR7.|CR1|CR1|PB4' ? [] : ['contacts | message | undone | with another CR1 | light: ' + r.join(' | ')];
+  });
+
+  await check('Tooltips float under the button after a moment; the ribbon folds and remembers; full screen hides the title bar', async p => {
+    await p.hover('#undo-btn'); await p.waitForTimeout(500);
+    const tip = await p.evaluate(() => [!$('ftip').hidden, $('ftip').textContent, !document.querySelector('#undo-btn').hasAttribute('title')]);
+    await p.click('#fold-btn'); const f1 = await p.evaluate(() => getComputedStyle($('ribbon')).display);
+    await p.reload(); await p.waitForTimeout(300); const f2 = await p.evaluate(() => [getComputedStyle($('ribbon')).display, document.querySelector('.ribwrap').classList.contains('folded')]);
+    await p.click('#rt-home'); const peek = await p.evaluate(() => getComputedStyle($('ribbon')).display);
+    await p.mouse.click(900, 600); const back = await p.evaluate(() => getComputedStyle($('ribbon')).display);
+    await p.click('#fold-btn'); await p.click('#fs-btn'); const fs = await p.evaluate(() => [getComputedStyle(document.querySelector('.top')).display, document.querySelector('.ribwrap').classList.contains('folded')]);
+    await p.click('#fs-btn'); const nfs = await p.evaluate(() => [getComputedStyle(document.querySelector('.top')).display, document.querySelector('.ribwrap').classList.contains('folded')]);
+    const r = [...tip, f1, ...f2, peek, back, ...fs, ...nfs].join('|');
+    return r === 'true|Undo (Ctrl+Z)|true|none|none|true|flex|none|none|true|flex|false' ? [] : ['tip shown | text | title gone | folded | after reload | peek | click away | full screen | after: ' + r];
+  });
+
+  await check('A print file dropped on the window opens; anything else is turned away', async p => {
+    const r = await p.evaluate(async () => { loadDoc(template('starter')); const json = JSON.stringify(doc); loadDoc(template('blank')); refresh(true);
+      const drop = f => { const dt = new DataTransfer(); dt.items.add(f); window.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true })); };
+      drop(new File(['hello'], 'notes.txt')); await new Promise(r => setTimeout(r, 100)); const a = S.parts.length;
+      drop(new File([json], 'Motor.o3print.json', { type: 'application/json' })); await new Promise(r => setTimeout(r, 300));
+      return [a, S.parts.length > 10, $('hint').textContent]; });
+    return r[0] === 2 && r[1] && /Opened Motor/.test(r[2]) ? [] : ['parts after a .txt | opened | hint: ' + r.join(' | ')];
+  });
+
+  await check('A cross-reference clicked goes to that rung (and flashes it); PWR goes to the starter; zoom goes down to 5%', async p => {
+    await p.evaluate(() => { loadDoc(template('starter')); refresh(true); fitZoom(); });
+    const x = await p.evaluate(() => XREFS.find(r => r.n === 3)), pt = await scr(p, (x.x0 + x.x1) / 2, (x.y0 + x.y1) / 2);
+    await p.mouse.click(...pt); const a = await p.evaluate(() => [FLASH && FLASH.y === A.rows[0].find(r => r.n === 3).y, $('hint').textContent, !!document.querySelector('#ed-over .flash')]);
+    const pw = await p.evaluate(() => XREFS.find(r => r.n === 'PWR')), pp = await scr(p, (pw.x0 + pw.x1) / 2, (pw.y0 + pw.y1) / 2);
+    await p.mouse.click(...pp); const b = await p.evaluate(() => [...sel].map(id => partOf(S, id).t).join());
+    const z = await p.evaluate(() => { for (let i = 0; i < 40; i++) zoomBy(.8); return [zoom, $('z-lvl').textContent]; });
+    const r = [...a, b, ...z].join('|');
+    return /^true\|Rung 3.*\|true\|mst3\|0\.05\|5%$/.test(r) ? [] : ['flashed | hint | drawn | PWR picks | zoom: ' + r];
+  });
+
+  await check('Dashed links: dragged into a new shape, an end moved to another side; double-click puts it back', async p => {
+    await p.evaluate(() => { loadDoc(template('blank')); const L1 = S.parts.find(q => q.label === 'L1'), L2 = S.parts.find(q => q.label === 'L2');
+      addWire(S, [[L1.x, 400], [L2.x, 400]]); addPart(S, 'pb_no', 500, 400, { tag: 'PB1' }); addWire(S, [[L1.x, 800], [L2.x, 800]]); Object.assign(addPart(S, 'pl', 1100, 800), { inPB: 'PB1' }); refresh(true); fitZoom(); });
+    const L = await p.evaluate(() => LINKS[0].pts), mid = L.length > 2 ? [(L[1][0] + L[2][0]) / 2, (L[1][1] + L[2][1]) / 2] : [(L[0][0] + L[1][0]) / 2, (L[0][1] + L[1][1]) / 2];
+    const s0 = await scr(p, ...mid); await p.mouse.click(...s0);
+    const head = await p.evaluate(() => [selL, $('props').querySelector('h4') && $('props').querySelector('h4').textContent]);
+    await p.waitForTimeout(500); await p.mouse.move(...s0); await p.mouse.down(); const s1 = await scr(p, mid[0], mid[1] + 100); await p.mouse.move(s1[0], s1[1], { steps: 5 }); await p.mouse.up();
+    const after = await p.evaluate(() => [JSON.stringify(partOf(S, selL).lk || null), UNDO.length]);
+    const L2 = await p.evaluate(() => LINKS[0].pts); const m2 = L2.length > 2 ? [(L2[1][0] + L2[2][0]) / 2, (L2[1][1] + L2[2][1]) / 2] : [(L2[0][0] + L2[1][0]) / 2, (L2[0][1] + L2[1][1]) / 2];
+    await p.mouse.dblclick(...await scr(p, ...m2));
+    const reset = await p.evaluate(() => partOf(S, S.parts.find(q => q.t === 'pl').id).lk === undefined);
+    const out = [];
+    if (!head[0] || !/Dashed Link/.test(head[1] || '')) out.push('picked | heading: ' + head.join(' | '));
+    if (!/"dy":100|"dy":-?\d+/.test(after[0])) out.push('shape after the drag: ' + after[0]);
+    if (!reset) out.push('double-click did not put it back');
+    return out;
+  });
+
+  await check('Clear takes everything off the sheet but its rails; Ctrl+Z brings it back. Names in Title Case', async p => {
+    await p.evaluate(() => { loadDoc(template('starter')); refresh(true); });
+    const n = await p.evaluate(() => S.parts.length); await p.click('#clear-btn');
+    const c = await p.evaluate(() => [S.parts.every(q => q.t === 'rail'), S.wires.length]); await p.keyboard.press('Control+z');
+    const u = await p.evaluate(() => S.parts.length);
+    const names = await p.evaluate(() => ['ol', 'src_l1', 'src_l2', 'cnt_out', 'cnt_in'].map(t => LIB[t] && LIB[t].name).join(';'));
+    const out = [];
+    if (!c[0] || c[1] || u !== n) out.push('cleared | wires left | parts after undo: ' + [...c, u + '/' + n].join(' | '));
+    if (names !== 'Overload Heater (1 Line);Source L1 (Control);Return L2 (Control);Continues To (Out);Continued From (In)') out.push('names: ' + names);
+    return out;
   });
 
   await b.close();

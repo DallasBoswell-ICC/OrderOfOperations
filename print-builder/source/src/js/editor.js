@@ -7,6 +7,8 @@ let sel = new Set(), selW = null;          // what is picked: parts, rails, node
 let checkOn = false, hover = null, drag = null, wd = null, cursor = null;
 let svg = null, VB = [0, 0], wireDown = null, hoverT = false;
 let ROTH = null;                           // the turning handle on screen ({ id, x, y })
+let selL = null, lastLinkDown = null;                           // a dashed link picked: the id of the part its shape is kept on
+let FLASH = null;                          // a rung just gone to, lit up for a moment ({ k, y })
 
 // a point on the sheet from the pointer
 function sheetPt(e) { const m = svg.getScreenCTM().inverse(), p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; const q = p.matrixTransform(m); return [q.x, q.y]; }
@@ -26,7 +28,12 @@ function textBox(t) { const lines = String(t.s || '').split('\n'), z = t.size ||
 const inBox = ([x, y], b) => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1;
 // what is under point q: { kind: 'node' | 'end' (a rail's end) | 'part' | 'text' | 'wire' | 'rail', ... }
 function pick(q) {
+  // (a picked dashed link: its end dots, to drag round the part)
+  const L0 = selL && LINKS.find(L => L.own.id === selL);
+  if (L0) for (const [end, P] of [['a', L0.pts[0]], ['b', L0.pts[L0.pts.length - 1]]]) if (near(q, P, Math.max(10, 7 * pxU()))) return { kind: 'linkend', id: L0.own.id, end };
   for (const n of S.nodes) if (near(q, [n.x, n.y], 14)) return { kind: 'node', id: n.id };
+  for (const X of XREFS) if (inBox(q, X)) return { kind: 'xref', n: X.n, tag: X.tag };
+  for (const R of RUNGNUMS) if (inBox(q, R)) return { kind: 'rungnum', n: R.n };
   for (const L of PLABS) if (q[0] >= L.x0 - 3 && q[0] <= L.x1 + 3 && q[1] >= L.y0 - 3 && q[1] <= L.y1 + 3) return { kind: 'plabel', id: L.id, which: L.which };
   for (const L of LABS) if (q[0] >= L.x0 - 4 && q[0] <= L.x1 + 4 && q[1] >= L.y0 - 4 && q[1] <= L.y1 + 4) return { kind: 'label', id: L.id, x: L.x, y: L.y };
   for (const r of S.parts) if (r.t === 'rail') for (const k of ['y0', 'y1']) if (near(q, [r.x, r[k]], 16)) return { kind: 'end', id: r.id, k };
@@ -34,6 +41,8 @@ function pick(q) {
   for (const p of S.parts) if (p.t !== 'rail') { const b = partBox(p); if (inBox(q, b)) { const a = (b.x1 - b.x0) * (b.y1 - b.y0); if (!best || a < best.a) best = { kind: 'part', id: p.id, a }; } }
   if (best) return best;
   for (const t of S.texts) if (inBox(q, textBox(t))) return { kind: 'text', id: t.id };
+  // (a dashed link: any run of it)
+  for (const L of LINKS) for (let k = 0; k < L.pts.length - 1; k++) if (segDist(q, L.pts[k], L.pts[k + 1]) <= Math.max(7, 5 * pxU())) return { kind: 'link', id: L.own.id, k };
   let bw = null;
   for (const w of S.wires) { const P = wirePts(S, w); for (let k = 0; k < P.length - 1; k++) { const d = segDist(q, P[k], P[k + 1]); if (d <= 10 && (!bw || d < bw.d)) bw = { kind: 'wire', id: w.id, k, d }; } }
   if (bw) return bw;
@@ -67,6 +76,13 @@ function drawEd() {
     const n = nodeOf(S, id); if (n) { g += `<circle cx="${n.x}" cy="${n.y}" r="14" fill="none" stroke="#2f8cff" stroke-width="5"/>`; continue; }
     const t = S.texts.find(t => t.id === id); if (t) { const b = textBox(t); g += `<rect x="${b.x0}" y="${b.y0}" width="${b.x1 - b.x0}" height="${b.y1 - b.y0}" rx="6" fill="none" stroke="#2f8cff" stroke-width="4" stroke-dasharray="12 7"/>`; }
   }
+  // a picked dashed link: lit, with a dot at each end (drag a dot round its part; drag a run to move it; double-click
+  // puts it back as it was drawn)
+  const Lp = selL && LINKS.find(L => L.own.id === selL);
+  if (Lp) { g += `<polyline points="${Lp.pts.map(q => q.join(',')).join(' ')}" fill="none" stroke="#2f8cff" stroke-width="12" stroke-opacity=".3" stroke-linejoin="round"/>`;
+    for (const P of [Lp.pts[0], Lp.pts[Lp.pts.length - 1]]) g += `<circle cx="${P[0]}" cy="${P[1]}" r="8" fill="#fff" stroke="#2f8cff" stroke-width="3.5"/>`; }
+  // a rung just gone to (a cross-reference or rung number clicked): lit up for a moment
+  if (FLASH && FLASH.k === doc.cur) g += `<rect class="flash" x="10" y="${FLASH.y - 36}" width="${VB[0] - 20}" height="72" rx="10" fill="rgba(255,192,0,.28)" stroke="#ffc000" stroke-width="4"/>`;
   if (selW) { const w = S.wires.find(w => w.id === selW); if (w) g += `<polyline points="${wirePts(S, w).map(q => q.join(',')).join(' ')}" fill="none" stroke="#2f8cff" stroke-width="16" stroke-opacity=".35" stroke-linecap="round" stroke-linejoin="round"/>`; }
   // loose ends: terminals with nothing on them, wires ending in the air (small rings)
   const wired = new Set(); for (const w of S.wires) for (const e of [w.a, w.b]) wired.add(pos(S, e).join(','));
@@ -154,14 +170,22 @@ function onDown(e) {
     if (p) { drag = { turn: p.id, c: [p.x, p.y], a0: Math.atan2(q[1] - p.y, q[0] - p.x), n: 0, orig: clone(S), pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); return; } }
   // Select: from a terminal, a drag draws a wire
   const ta = termAt(q);
-  if (ta) { drag = { from: [ta.x, ta.y], q0: q }; svg.setPointerCapture(e.pointerId); return; }
-  const h = pick(q);
-  if (!h) { if (!e.shiftKey) { sel = new Set(); selW = null; } drag = { box: [q, q], add: e.shiftKey }; svg.setPointerCapture(e.pointerId); refresh(); return; }
+  if (ta) { drag = { from: [ta.x, ta.y], q0: q, add: e.shiftKey || e.ctrlKey || e.metaKey }; svg.setPointerCapture(e.pointerId); return; }
+  const h = pick(q), add = e.shiftKey || e.ctrlKey || e.metaKey;   // (Shift, Ctrl or Cmd: add to what is picked, as in Circuit Builder)
+  if (h && (h.kind === 'xref' || h.kind === 'rungnum')) { goToRef(h); return; }
+  // (a double-click on a dashed link puts it back as it was drawn: caught here, as the link is redrawn under the first click)
+  const dbl = h && (h.kind === 'link' || h.kind === 'linkend') && lastLinkDown && lastLinkDown.id === h.id && performance.now() - lastLinkDown.t < 450 && Math.hypot(e.clientX - lastLinkDown.x, e.clientY - lastLinkDown.y) < 6;
+  lastLinkDown = h && (h.kind === 'link' || h.kind === 'linkend') && !dbl ? { id: h.id, t: performance.now(), x: e.clientX, y: e.clientY } : null;
+  if (dbl) { const own = partOf(S, h.id); selL = h.id; if (own && own.lk) { snapshot(); delete own.lk; say('Dashed link put back as it was drawn.'); } refresh(); return; }
+  if (h && (h.kind === 'link' || h.kind === 'linkend')) { const own = partOf(S, h.id); sel = new Set(); selW = null; selL = h.id;
+    drag = { link: h.id, k: h.k, end: h.end, q0: q, at: clone(own.lk || {}), pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
+  selL = null;
+  if (!h) { if (!add) { sel = new Set(); selW = null; } drag = { box: [q, q], add }; svg.setPointerCapture(e.pointerId); refresh(); return; }
   if (h.kind === 'plabel') { const p = partOf(S, h.id); sel = new Set([h.id]); selW = null; drag = { plab: h, at: clone(labOff(p, h.which)), q0: q, pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
   if (h.kind === 'label') { sel = new Set(); selW = h.id; drag = { lab: h.id, at: [h.x, h.y], q0: q, orig: clone(S), pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
   if (h.kind === 'wire') { sel = new Set(); selW = h.id; drag = { wire: h.id, k: h.k, q0: q, orig: clone(S), pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
   if (h.kind === 'end') { sel = new Set([h.id]); selW = null; drag = { rail: h.id, k: h.k, pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); refresh(); return; }
-  if (e.shiftKey) { sel.has(h.id) ? sel.delete(h.id) : sel.add(h.id); selW = null; refresh(); return; }
+  if (add) { sel.has(h.id) ? sel.delete(h.id) : sel.add(h.id); selW = null; refresh(); return; }
   if (!sel.has(h.id)) { sel = new Set([h.id]); selW = null; }
   const p = partOf(S, h.id); if (p && p.t === 'coil') lastCoil = p.tag;
   drag = { ids: new Set(sel), q0: q, orig: clone(S), pre: JSON.stringify(doc), moved: false };
@@ -170,7 +194,7 @@ function onDown(e) {
 function onMove(e) {
   const q = sheetPt(e); cursor = q;
   if (pan) return doPan(e);
-  if (!drag) { if (tool !== 'select') { drawEd(); tipFor(q, e); } else { const t = termAt(q); svg.classList.toggle('on-term', !!t); svg.classList.toggle('on-rot', !!ROTH && Math.hypot(q[0] - ROTH.x, q[1] - ROTH.y) <= 26); if (t || hoverT) drawEd(); hoverT = !!t; tipFor(q, e); } return; }
+  if (!drag) { if (tool !== 'select') { drawEd(); tipFor(q, e); } else { const t = termAt(q); svg.classList.toggle('on-term', !!t); svg.classList.toggle('on-rot', !!ROTH && Math.hypot(q[0] - ROTH.x, q[1] - ROTH.y) <= 26); { const h = t ? null : pick(q); svg.classList.toggle('on-ref', !!h && (h.kind === 'xref' || h.kind === 'rungnum')); svg.classList.toggle('on-link', !!h && (h.kind === 'link' || h.kind === 'linkend')); } if (t || hoverT) drawEd(); hoverT = !!t; tipFor(q, e); } return; }
   if (drag.turn) { let d = Math.atan2(q[1] - drag.c[1], q[0] - drag.c[0]) - drag.a0; d = Math.atan2(Math.sin(d), Math.cos(d));
     if (!drag.moved && Math.abs(d) < .25) return; drag.moved = true;
     const n = Math.round(d / (Math.PI / 2)); if (n === drag.n) return; drag.n = n;
@@ -179,6 +203,7 @@ function onMove(e) {
   if (drag.from) { drawEd(); return; }
   if (drag.plab) { const p = partOf(S, drag.plab.id); if (!p) return; const dx = Math.round((q[0] - drag.q0[0]) / 5) * 5, dy = Math.round((q[1] - drag.q0[1]) / 5) * 5;
     if (!drag.moved && !dx && !dy) return; drag.moved = true; setLabOff(p, drag.plab.which, [drag.at[0] + dx, drag.at[1] + dy]); frame(); return; }
+  if (drag.link) { if (dragLink(q)) frame(); return; }
   if (drag.lab) { const w = S.wires.find(w => w.id === drag.lab); if (!w) return; const dx = Math.round((q[0] - drag.q0[0]) / 5) * 5, dy = Math.round((q[1] - drag.q0[1]) / 5) * 5;
     if (!drag.moved && !dx && !dy) return; drag.moved = true; w.lab = [drag.at[0] + dx, drag.at[1] + dy]; frame(); return; }
   const dx = snap(q[0] - (drag.q0 ? drag.q0[0] : q[0])), dy = snap(q[1] - (drag.q0 ? drag.q0[1] : q[1]));
@@ -199,9 +224,9 @@ function onUp(e) {
   if (d.turn) { if (!d.moved) { snapshot(); rotateParts(S, new Set([d.turn])); } else if (d.n) { UNDO.push(d.pre); REDO.length = 0; } refresh(); return; }
   if (d.from) { const q = sheetPt(e), t = snapTarget(q), b = [t.x, t.y];
     if (Math.hypot(q[0] - d.q0[0], q[1] - d.q0[1]) < G * .75 || (b[0] === d.from[0] && b[1] === d.from[1])) {   // (a click on a terminal: pick its part)
-      const h = pick(d.q0); if (h && h.kind === 'part') { sel = new Set([h.id]); selW = null; } refresh(); return; }
+      const h = pick(d.q0); if (h && h.kind === 'part') { if (d.add) { sel.has(h.id) ? sel.delete(h.id) : sel.add(h.id); } else sel = new Set([h.id]); selW = null; } refresh(); return; }
     snapshot(); addWire(S, [d.from, ...lRoute(d.from, b)]); refresh(); return; }
-  if (d.plab) { if (d.moved) { UNDO.push(d.pre); REDO.length = 0; } refresh(); return; }
+  if (d.plab || d.link) { if (d.moved) { UNDO.push(d.pre); REDO.length = 0; } refresh(); return; }
   if (d.lab) { if (d.moved) { UNDO.push(d.pre); REDO.length = 0; } refresh(); return; }
   if (d.box) { const [a, b] = d.box, bx = { x0: Math.min(a[0], b[0]), x1: Math.max(a[0], b[0]), y0: Math.min(a[1], b[1]), y1: Math.max(a[1], b[1]) };
     if (bx.x1 - bx.x0 > 8 || bx.y1 - bx.y0 > 8) { if (!d.add) sel = new Set();
@@ -261,7 +286,11 @@ function tipFor(q, e) {
   if (tool === 'wire') { const t = snapTarget(q); s = wd ? (t.kind === 'grid' ? 'Click to bend · double-click to end here' : 'Click to join here') : (t.kind === 'grid' ? 'Click to start a wire' : `Click to start from this ${({ term: 'terminal', node: 'joint', rail: 'rail', wire: 'wire' })[t.kind]}`); }
   if (tool === 'rung') { const r = rungAt(q); s = r ? (r.ok ? 'Click to add a rung here' : 'There is a rung here already') : 'Rungs go between the L1 and L2 rails'; }
   if (tool === 'select' && termAt(q)) s = 'Drag from here to draw a wire';
-  else if (tool === 'select') { const h = pick(q); if (h && h.kind === 'plabel') s = 'Drag to move this ' + (h.which === 'desc' ? 'label' : h.which === 'tag' ? 'name' : 'fuse number'); else if (h && h.kind === 'label') s = 'Drag to move this wire number'; }
+  else if (tool === 'select') { const h = pick(q); if (h && h.kind === 'xref') s = h.n === 'PWR' ? `Go to ${esc(h.tag)}’s power contacts` : `Go to rung <b>${h.n}</b>`;
+    else if (h && h.kind === 'rungnum') s = `Rung <b>${h.n}</b>`;
+    else if (h && h.kind === 'link') s = 'Drag to move this dashed link · double-click puts it back';
+    else if (h && h.kind === 'linkend') s = 'Drag round the symbol to fasten this end to another side';
+    else if (h && h.kind === 'plabel') s = 'Drag to move this ' + (h.which === 'desc' ? 'label' : h.which === 'tag' ? 'name' : 'fuse number'); else if (h && h.kind === 'label') s = 'Drag to move this wire number'; }
   if (!s) { tip.hidden = true; return; }
   const dr = desk.getBoundingClientRect(); tip.innerHTML = s; tip.hidden = false;
   tip.style.left = (e.clientX - dr.left + 18) + 'px'; tip.style.top = (e.clientY - dr.top - 34) + 'px';
@@ -269,3 +298,41 @@ function tipFor(q, e) {
 // redrawn at most once a frame while dragging
 let framed = false;
 function frame() { if (framed) return; framed = true; requestAnimationFrame(() => { framed = false; A = analyse(); drawInk(); drawEd(); }); }
+
+/* ---------- cross-references and rung numbers, clicked: go to the rung (on whatever sheet), lit up for a moment ---------- */
+function goToRef(h) {
+  if (h.n === 'PWR') { const m = allParts().find(x => LIB[x.p.t].kind === 'starter' && x.p.tag === h.tag); if (!m) return;
+    doc.cur = m.k; sel = new Set([m.p.id]); selW = null; selL = null; keepTab = true; refresh(); keepTab = false; showPoint(m.p.x, m.p.y); return; }
+  let at = null; (A.rows || []).forEach((rs, k) => { for (const r of rs) if (r.n === h.n && !at) at = { k, y: r.y }; });
+  if (!at) return;
+  if (at.k !== doc.cur) { doc.cur = at.k; sel = new Set(); selW = null; selL = null; refresh(true); }
+  const r1 = S.parts.find(p => p.t === 'rail' && p.label === 'L1'), r2 = S.parts.find(p => p.t === 'rail' && p.label === 'L2');
+  showPoint(r1 && r2 ? (r1.x + r2.x) / 2 : VB[0] / 2, at.y);
+  FLASH = at; drawEd(); say(`Rung ${h.n}${doc.sheets.length > 1 ? ' (Sheet ' + (at.k + 1) + ')' : ''}`);
+  clearTimeout(goToRef.t); goToRef.t = setTimeout(() => { FLASH = null; drawEd(); }, 1400);
+}
+
+/* ---------- a dashed link dragged: a run moved, or an end taken round its part ---------- */
+// (its shape kept on the light, or the lower block, as lk: { ea, eb (each { s: side, o: slid along it }), dx, dy })
+function dragLink(q) {
+  const d = drag, own = partOf(S, d.link), L = own && LINKS.find(x => x.own.id === d.link); if (!L) return false;
+  const dx = Math.round((q[0] - d.q0[0]) / 10) * 10, dy = Math.round((q[1] - d.q0[1]) / 10) * 10;
+  if (!d.moved && !dx && !dy) return false;
+  const lk = clone(d.at), [ea, eb] = linkEnds({ ...L, own: { ...own, lk: d.at } });
+  if (d.end) {   // (an end: fastened to the side of its part nearest the pointer)
+    const p = d.end === 'a' ? L.a : L.b, b = linkBox(p);
+    const side = [['top', Math.abs(q[1] - b.y0)], ['bottom', Math.abs(q[1] - b.y1)], ['left', Math.abs(q[0] - b.x0)], ['right', Math.abs(q[0] - b.x1)]].sort((u, v) => u[1] - v[1])[0][0];
+    lk[d.end === 'a' ? 'ea' : 'eb'] = { s: side }; delete lk.dx; delete lk.dy;
+  } else {
+    const P = d.pts || (d.pts = L.pts), a = P[d.k], c = P[d.k + 1], level = a[1] === c[1], n = P.length - 1;
+    if (n === 1 && !level) { const half = e => { const b = linkBox(e === ea ? L.a : L.b); return (b.x1 - b.x0) / 2 - 6; };   // (straight up and down: both ends slid across)
+      lk.ea = { s: ea.s, o: Math.max(-half(ea), Math.min(half(ea), (ea.o || 0) + dx)) }; lk.eb = { s: eb.s, o: Math.max(-half(eb), Math.min(half(eb), (eb.o || 0) + dx)) }; }
+    else if (level) lk.dy = (d.at.dy || 0) + dy;                               // (a level run: up or down)
+    else if (d.k > 0 && d.k < n - 1) lk.dx = (d.at.dx || 0) + dx;              // (an upright between two sides: across)
+    else {                                                                    // (an upright on an end: that end slid along its part)
+      const which = d.k === 0 ? 'ea' : 'eb', e = d.k === 0 ? ea : eb, p = d.k === 0 ? L.a : L.b, b = linkBox(p), half = (b.x1 - b.x0) / 2 - 6;
+      lk[which] = { s: e.s, o: Math.max(-half, Math.min(half, (e.o || 0) + dx)) };
+    }
+  }
+  d.moved = true; own.lk = lk; return true;
+}

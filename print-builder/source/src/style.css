@@ -185,3 +185,41 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .pal-top button { border: 1px solid var(--line2); background: #26292d; color: #d6dbe0; border-radius: 6px; font-size: 12px; padding: 1px 8px; cursor: pointer; } .pal-top button:hover { background: #30343a; }
 .mid > .pal { grid-column: 1; } .mid > .pal-grip { grid-column: 2; } .mid > .desk { grid-column: 3; min-width: 0; }
 #sv.tool-select.on-rot { cursor: grab; } #sv.tool-select.on-rot.on-term { cursor: grab; }
+
+/* ---------- Print Preview (as in Circuit Builder) ---------- */
+.pv { position: fixed; inset: 0; z-index: 50; background: #2a2c30; display: flex; flex-direction: column; }
+.pv-bar { display: flex; align-items: center; gap: 14px; padding: 9px 16px; background: var(--bar); border-bottom: 1px solid var(--line); zoom: var(--uiz, 1.15); }
+.pv-bar b { font-size: 1rem; } .pv-n { color: var(--muted); font-size: .85rem; }
+.pv-by { display: flex; align-items: center; gap: 7px; font-size: .85rem; color: var(--muted); } .pv-by .in { width: 170px; }
+.pv-z { display: flex; align-items: center; gap: 2px; border: 1px solid var(--line2); border-radius: 8px; padding: 2px; }
+.pv-z button { background: transparent; border: 0; border-radius: 6px; min-width: 30px; height: 26px; padding: 0 8px; cursor: pointer; font-weight: 600; color: inherit; }
+.pv-z button:hover { background: #3a3e44; } .pv-z span { font-size: .78rem; color: var(--muted); min-width: 3.4em; text-align: center; }
+.pv-sp { flex: 1; }
+.pv-scroll { flex: 1; overflow: auto; cursor: grab; } .pv-scroll.pan { cursor: grabbing; }
+.pv-sizer { position: relative; width: var(--pvw, 0); height: var(--pvh, 0); margin: 20px auto; }
+.pv-pages { position: absolute; left: 0; top: 0; transform-origin: 0 0; display: flex; flex-direction: column; align-items: center; gap: 24px; width: max-content; }
+.pv[hidden], .drop[hidden], .ftip[hidden] { display: none !important; }
+@media print { .pv, .ftip, .drop { display: none !important; } }
+
+/* ---------- floating tooltips (as in Circuit Builder) ---------- */
+.ftip { position: fixed; z-index: 60; max-width: 340px; background: #0e0f10; color: #f1f3f5; padding: 6px 10px; border-radius: 7px; border: 1px solid #3a3e44; box-shadow: 0 6px 18px rgba(0,0,0,.5); line-height: 1.35; pointer-events: none; animation: ftip .12s ease-out; }
+@keyframes ftip { from { opacity: 0; transform: translateY(-3px); } } .ftip.up { animation-name: ftipu; } @keyframes ftipu { from { opacity: 0; transform: translateY(3px); } }
+
+/* ---------- the ribbon folded, and full screen ---------- */
+.rtabs { align-items: flex-end; } .rt-end { margin-left: auto; display: flex; gap: 2px; padding-bottom: 3px; }
+.rt-ic { width: 28px; height: 24px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer; display: grid; place-items: center; padding: 0; }
+.rt-ic svg { width: 16px; height: 16px; } .rt-ic:hover { background: #2c3035; color: #fff; }
+#fold-btn svg { transition: transform .15s; } #fold-btn[aria-pressed="true"] svg { transform: rotate(180deg); }
+.ribwrap { position: relative; z-index: 20; }
+.ribwrap.folded:not(.peek) .ribbon { display: none !important; }
+.ribwrap.folded.peek .ribbon:not([hidden]) { position: absolute; left: 0; right: 0; top: 100%; box-shadow: 0 10px 22px rgba(0,0,0,.5); border-bottom: 1px solid var(--line); background: var(--rib); }
+.app.fs { grid-template-rows: auto 1fr auto; } .app.fs .top { display: none; }
+
+/* ---------- a print dragged over the window ---------- */
+.drop { position: fixed; inset: 0; z-index: 70; background: rgba(20,22,25,.72); display: grid; place-items: center; pointer-events: none; }
+.drop div { border: 3px dashed var(--gold); border-radius: 16px; padding: 34px 48px; font-size: 22px; font-weight: 700; color: #fff; background: rgba(0,0,0,.35); }
+
+/* ---------- a cross-reference clicked: its rung flashes; links and cross-references show they can be clicked ---------- */
+.flash { fill: rgba(255,196,0,.28); stroke: #e0a800; stroke-width: 3; animation: flash 1.4s ease-out forwards; pointer-events: none; }
+@keyframes flash { 0%, 30% { opacity: 1; } 100% { opacity: 0; } }
+#sv.tool-select.on-ref { cursor: pointer; } #sv.tool-select.on-link { cursor: move; }

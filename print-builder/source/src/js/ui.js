@@ -28,7 +28,9 @@ function buildPage(key) {
   svg = $('sv'); VB = fitDraw(host.firstElementChild);
   svg.addEventListener('pointerdown', onDown); svg.addEventListener('pointermove', onMove); svg.addEventListener('pointerup', onUp);
   svg.addEventListener('pointerleave', () => { cursor = null; $('tip').hidden = true; if (!drag) drawEd(); });
-  svg.addEventListener('dblclick', e => { const h = pick(sheetPt(e)); if (tool === 'select' && h && h.kind === 'text') focusProp('note-text'); else if (tool === 'select' && h && h.kind === 'part') focusProp('p-tag'); });
+  svg.addEventListener('dblclick', e => { const h = pick(sheetPt(e));
+    if (tool === 'select' && h && (h.kind === 'link' || h.kind === 'linkend')) { const o = partOf(S, h.id); if (o && o.lk) { snapshot(); delete o.lk; selL = h.id; refresh(); say('Dashed link put back as it was drawn.'); } return; }
+    if (tool === 'select' && h && h.kind === 'text') focusProp('note-text'); else if (tool === 'select' && h && h.kind === 'part') focusProp('p-tag'); });
   svg.setAttribute('class', 'tool-' + tool);
   applyZoom();
 }
@@ -57,7 +59,7 @@ function startPlacing(t) { placing = { t, rot: 0 }; sel = new Set(); selW = null
 /* ---------- the palette and the ribbon's menus ---------- */
 const thumb = t => { if (isArrowIn(t)) return `<svg viewBox="-80 -30 100 60"><path d="M-22 -13L-22 13L0 0Z" fill="#000"/><line x1="0" y1="0" x2="18" y2="0" stroke="#000" stroke-width="4"/><text x="-30" y="9" font-size="26" font-weight="700" text-anchor="end" font-family="Arial">${t === 'src_l2' ? 'L2' : 'L1'}</text></svg>`;
   const s = PSYM[LIB[t].sym], e = extentOf(t), pad = 8; return `<svg viewBox="${e.x0 - pad} ${s.y0 - pad} ${e.x1 - e.x0 + 2 * pad} ${s.y1 - s.y0 + 2 * pad}"><g fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${s.b}</g></svg>`; };
-const short = n => n.replace(' Maintained Pushbutton', ' Maint. PB').replace(', Low Temp', ' (Low)').replace(' (control)', '').replace(' (out)', '').replace(' (in)', '').replace('Pushbutton', 'PB').replace('Emergency Stop', 'E-Stop').replace('Temperature', 'Temp.').replace('Proximity', 'Prox.').replace('Selector Switch', 'Selector').replace(', Held Closed', ' (HC)').replace(', Held Open', ' (HO)').replace('Toggle Switch (SPST)', 'Toggle').replace('Overload Heater (1 line)', 'OL Heater').replace('Phase (L1, L2, L3)', 'Phase').replace('3-Phase', '3Ø');
+const short = n => n.replace(' Maintained Pushbutton', ' Maint. PB').replace(', Low Temp', ' (Low)').replace(' (Control)', '').replace(' (Out)', '').replace(' (In)', '').replace('Pushbutton', 'PB').replace('Emergency Stop', 'E-Stop').replace('Temperature', 'Temp.').replace('Proximity', 'Prox.').replace('Selector Switch', 'Selector').replace(', Held Closed', ' (HC)').replace(', Held Open', ' (HO)').replace('Toggle Switch (SPST)', 'Toggle').replace('Overload Heater (1 Line)', 'OL Heater').replace('Phase (L1, L2, L3)', 'Phase').replace('3-Phase', '3Ø');
 function buildPalette() {
   let h = '';
   for (const c of CATS) { h += `<div class="ph">${c}</div><div class="pg">`;
@@ -186,8 +188,11 @@ function renderProps0() {
       <div class="acts">${canTurn(p) ? '<button class="btn" id="p-rot">Rotate (R)</button>' : ''}${p.lt || p.ld || p.lf ? '<button class="btn" id="p-lab">Put Labels Back</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
     const of = $('p-of'); if (of) of.addEventListener('change', () => { let v = of.value; if (v === '__other') { v = (prompt(k === 'olc' ? 'The overload this contact belongs to (e.g. OL2):' : 'The coil that works this contact (e.g. CR3):', p.tag || '') || '').trim().toUpperCase(); if (!v) { renderProps(); return; } }
       snapshot(); p.tag = v; refresh(); });
-    const tg = $('p-tag'); if (tg) tg.addEventListener('input', () => edit(() => { p.tag = tg.value.trim().toUpperCase(); if (k === 'coil') lastCoil = p.tag; }));
-    if (tg) tg.addEventListener('change', () => renderProps());
+    const tg = $('p-tag'); let was = p.tag;
+    if (tg) tg.addEventListener('focus', () => { was = p.tag; });
+    if (tg) tg.addEventListener('input', () => edit(() => { p.tag = tg.value.trim().toUpperCase(); if (k === 'coil') lastCoil = p.tag; }));
+    // (renamed: its contacts go with it, as in Circuit Builder; part of the same undo step as the typing)
+    if (tg) tg.addEventListener('change', () => { const n = followRename(p, was, p.tag); was = p.tag; if (n) { A = analyse(); ISSUES = checkPrint(A); drawInk(); drawEd(); renderChecks(); autosave(); } renderProps(); if (n) say(n); });
     const pl = $('p-lab'); if (pl) pl.addEventListener('click', () => { snapshot(); delete p.lt; delete p.ld; delete p.lf; refresh(); });
     const fu = $('p-fu'); if (fu) { fu.addEventListener('input', () => edit(() => { p.fu = fu.value.trim().toUpperCase(); })); fu.addEventListener('change', () => renderProps()); }
     const ds = $('p-desc'); if (ds) ds.addEventListener('input', () => edit(() => { p.desc = ds.value.toUpperCase(); }));
@@ -197,7 +202,7 @@ function renderProps0() {
     const ps = $('p-pos'); if (ps) ps.addEventListener('change', () => { snapshot(); const n = ps.value.split(/[\/,]+/).map(x => x.trim().toUpperCase()).filter(Boolean).slice(0, 4); p.pos = (n.length >= 2 ? n : ['OFF', 'ON']).join('/'); p.closedIn = (p.closedIn || []).filter(i => i < n.length); refresh(); });
     for (const b of P.querySelectorAll('[data-cl]')) b.addEventListener('click', () => { snapshot(); const i = +b.dataset.cl, s = new Set(p.closedIn || []); s.has(i) ? s.delete(i) : s.add(i); p.closedIn = [...s].sort(); refresh(); });
     const ib = $('p-inpb'); if (ib) ib.addEventListener('change', () => { snapshot(); if (ib.value) p.inPB = ib.value; else delete p.inPB; refresh(); });
-    const pr = $('p-pre'); if (pr) pr.addEventListener('change', () => { snapshot(); p.pre = pr.value; p.tag = ''; p.tag = nextTag(p.pre); lastCoil = p.tag; refresh(); });
+    const pr = $('p-pre'); if (pr) pr.addEventListener('change', () => { snapshot(); const old = p.tag; p.pre = pr.value; p.tag = ''; p.tag = nextTag(p.pre); lastCoil = p.tag; const n = followRename(p, old, p.tag); refresh(); if (n) say(n); });
     for (const b of P.querySelectorAll('[data-flip]')) b.addEventListener('click', () => { if (b.dataset.flip === p.t) return; snapshot(); p.t = b.dataset.flip; refresh(); });
     for (const b of P.querySelectorAll('[data-line]')) b.addEventListener('click', () => { snapshot(); p.tag = b.dataset.line; refresh(); });
     const ro = $('p-rot'); if (ro) ro.addEventListener('click', () => { snapshot(); rotateParts(S, new Set([p.id])); refresh(); });
@@ -220,6 +225,14 @@ function renderProps0() {
     for (const b of P.querySelectorAll('[data-wshow]')) b.addEventListener('click', () => { snapshot(); const hide = b.dataset.wshow === '0'; for (const o of runWires(w)) { if (hide) o.hideNum = true; else delete o.hideNum; } refresh(); });
     const wa = $('w-auto'); if (wa) wa.addEventListener('click', () => { snapshot(); for (const o of runWires(w)) delete o.lab; refresh(); });
     $('w-num').addEventListener('input', e => edit(() => { const v = e.target.value.trim().toUpperCase(); for (const o of A.WIRED.get(r) || []) delete o.w.num; if (v) w.num = v; }));
+  } else if (ids.length > 1 && multiParts(ids)) {
+    renderMulti(P, multiParts(ids));
+  } else if (selL && !ids.length && !w) {
+    const o = partOf(S, selL), L = o && LINKS.find(x => x.own.id === selL);
+    P.innerHTML = `<h4>Dashed Link${L ? ': ' + esc(L.kind === 'light' ? (L.a.tag || 'PB') + ' to ' + (L.b.tag || 'PL') : (L.a.tag || '') + ' blocks') : ''}</h4>
+      <p class="help">${L && L.kind === 'light' ? 'Joins a lighted pushbutton to its light.' : 'Joins the contact blocks of one device.'} Drag a run to move it; drag an end’s dot round the symbol to fasten it to another side; double-click it to put it back.</p>
+      <div class="acts">${o && o.lk ? '<button class="btn" id="lk-back">Put Link Back</button>' : ''}</div>`;
+    const lb = $('lk-back'); if (lb) lb.addEventListener('click', () => { snapshot(); delete o.lk; refresh(); });
   } else if (ids.length > 1) {
     P.innerHTML = `<h4>${ids.length} things picked</h4><p class="help">Drag any of them to move them together. <kbd>R</kbd> turns the symbols; <kbd>Delete</kbd> deletes them all.</p><div class="acts"><button class="btn del" id="p-del">Delete</button></div>`;
   } else {
@@ -279,9 +292,9 @@ function renderTB() {
     <select data-k="span">${[1, 2, 3, 4, 5, 6, 8, 12].map(n => `<option value="${n}"${(x.span || 2) === n ? ' selected' : ''}>${n}/12</option>`).join('')}</select>
     <label><input type="checkbox" data-k="big"${x.big ? ' checked' : ''}>big</label>
     <button class="ib" data-mv="-1" title="Earlier"${i ? '' : ' disabled'}>↑</button><button class="ib" data-mv="1" title="Later"${i < f.length - 1 ? '' : ' disabled'}>↓</button><button class="ib" data-rm="1" title="Take this box away">✕</button></div>`).join('');
-  $('tb-shownotes').checked = !!doc.tb.showNotes; $('tb-notes').value = doc.tb.notes || '';
+  $('tb-shownotes').checked = !!doc.tb.showNotes; $('tb-notes').value = doc.tb.notes || ''; $('tb-powernote').checked = doc.tb.powerNote !== false;
   for (const r of document.querySelectorAll('.tbrow[data-i]')) { const i = +r.dataset.i;
-    for (const el of r.querySelectorAll('[data-k]')) el.addEventListener(el.type === 'checkbox' || el.tagName === 'SELECT' ? 'change' : 'input', () => { const x = f[i]; const k = el.dataset.k; x[k] = k === 'span' ? +el.value : k === 'big' ? el.checked : el.value; refresh(true); });
+    for (const el of r.querySelectorAll('[data-k]')) el.addEventListener(el.type === 'checkbox' || el.tagName === 'SELECT' ? 'change' : 'input', () => { const x = f[i]; const k = el.dataset.k; x[k] = k === 'span' ? +el.value : k === 'big' ? el.checked : el.value; if (k === 'value' && isDrawnBy(x)) rememberDrawnBy(x.value); refresh(true); });
     for (const b of r.querySelectorAll('[data-mv]')) b.addEventListener('click', () => { const j = i + +b.dataset.mv; [f[i], f[j]] = [f[j], f[i]]; renderTB(); refresh(true); });
     r.querySelector('[data-rm]').addEventListener('click', () => { f.splice(i, 1); renderTB(); refresh(true); }); }
 }
@@ -289,6 +302,7 @@ $('tb-btn').addEventListener('click', () => { snapshot(); renderTB(); $('tb-dlg'
 $('tb-add').addEventListener('click', () => { doc.tb.fields.push({ id: uid('f'), label: 'New Box', value: '', span: 3 }); renderTB(); refresh(true); const r = document.querySelectorAll('.tbrow[data-i]'); r[r.length - 1].querySelector('input').select(); });
 $('tb-shownotes').addEventListener('change', e => { doc.tb.showNotes = e.target.checked; refresh(true); });
 $('tb-notes').addEventListener('input', e => { doc.tb.notes = e.target.value; refresh(true); });
+$('tb-powernote').addEventListener('change', e => { if (e.target.checked) delete doc.tb.powerNote; else doc.tb.powerNote = false; refresh(true); });
 $('tb-reset').addEventListener('click', () => { doc.tb = defaultTB(); renderTB(); refresh(true); });
 $('tb-done').addEventListener('click', () => $('tb-dlg').close());
 
@@ -300,13 +314,13 @@ const padX = () => zoomer.clientWidth * .6, padY = () => zoomer.clientHeight * .
 function applyZoom() { const [w, h] = pageSize(), px = padX(), py = padY();
   host.style.transform = `scale(${zoom})`; host.style.left = px + 'px'; host.style.top = py + 'px';
   sizer.style.width = (w * zoom + 2 * px) + 'px'; sizer.style.height = (h * zoom + 2 * py) + 'px'; $('z-lvl').textContent = Math.round(zoom * 100) + '%'; }
-function fitZoom() { const [w, h] = pageSize(); zoom = Math.max(.2, Math.min(3, Math.min((zoomer.clientWidth - 48) / w, (zoomer.clientHeight - 48) / h))); applyZoom();
+function fitZoom() { const [w, h] = pageSize(); zoom = Math.max(.05, Math.min(3, Math.min((zoomer.clientWidth - 48) / w, (zoomer.clientHeight - 48) / h))); applyZoom();
   zoomer.scrollLeft = padX() + w * zoom / 2 - zoomer.clientWidth / 2; zoomer.scrollTop = padY() + h * zoom / 2 - zoomer.clientHeight / 2; }
 // zoomed by f about a point on the screen (the pointer; else the middle): that point stays where it is
 function zoomBy(f, cx, cy) {
   const r = zoomer.getBoundingClientRect(); cx = cx ?? r.left + r.width / 2; cy = cy ?? r.top + r.height / 2;
   const qx = (zoomer.scrollLeft + cx - r.left - padX()) / zoom, qy = (zoomer.scrollTop + cy - r.top - padY()) / zoom;
-  zoom = Math.max(.2, Math.min(4, zoom * f)); applyZoom();
+  zoom = Math.max(.05, Math.min(4, zoom * f)); applyZoom();
   zoomer.scrollLeft = qx * zoom + padX() - (cx - r.left); zoomer.scrollTop = qy * zoom + padY() - (cy - r.top);
 }
 $('z-in').addEventListener('click', () => zoomBy(1.25)); $('z-out').addEventListener('click', () => zoomBy(.8)); $('z-fit').addEventListener('click', fitZoom);
@@ -378,7 +392,7 @@ $('save-more').addEventListener('click', e => { e.stopPropagation(); const m = $
 $('open-btn').addEventListener('click', pickAndOpen);
 $('file-in').addEventListener('change', async e => { const f = e.target.files[0]; e.target.value = ''; if (f) openFile(f, null); });
 $('new-btn').addEventListener('click', e => { e.stopPropagation(); const m = $('new-menu'), o = m.hidden; closeMenus(); m.hidden = !o; });
-for (const b of document.querySelectorAll('[data-new]')) b.addEventListener('click', () => { closeMenus(); snapshot(); const keep = UNDO.slice(); loadDoc(template(b.dataset.new)); UNDO.push(...keep); forgetFile(); refresh(true); fitZoom(); });
+for (const b of document.querySelectorAll('[data-new]')) b.addEventListener('click', () => { closeMenus(); snapshot(); const keep = UNDO.slice(); loadDoc(withDrawnBy(template(b.dataset.new))); UNDO.push(...keep); forgetFile(); refresh(true); fitZoom(); });
 
 /* ---------- printing: every sheet, each on its own page the right way round ---------- */
 function printAll() {
@@ -386,12 +400,12 @@ function printAll() {
   ph.innerHTML = doc.sheets.map((s, k) => pageHTML(s, k, A)).join('');
   ph.style.cssText = 'display:block;position:fixed;left:-30000px;top:0';
   for (const p of ph.querySelectorAll('.pr-page')) fitDraw(p);
-  ph.style.cssText = '';
+  ph.style.cssText = ''; drawInk();
   $('print-page').textContent = '@page port { size: 8.5in 11in; margin: 0; } @page land { size: 11in 8.5in; margin: 0; } @page { margin: 0; }';
   setTimeout(() => window.print(), 30);
 }
 window.addEventListener('afterprint', () => { $('print-host').innerHTML = ''; });
-$('print-btn').addEventListener('click', printAll);
+$('print-btn').addEventListener('click', openPreview);
 
 /* ---------- the ribbon's other buttons, and the keyboard ---------- */
 for (const b of document.querySelectorAll('[data-tool]')) b.addEventListener('click', () => setTool(b.dataset.tool));
@@ -410,7 +424,7 @@ document.addEventListener('keydown', e => {
     if (k === 'z' && !e.shiftKey) { e.preventDefault(); $('undo-btn').click(); return; }
     if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); $('redo-btn').click(); return; }
     if (k === 's') { e.preventDefault(); (async () => say(await saveToFile(e.shiftKey)))(); return; }
-    if (k === 'p') { e.preventDefault(); printAll(); return; }
+    if (k === 'p') { e.preventDefault(); openPreview(); return; }
     if (k === 'c') { e.preventDefault(); copySel(); return; }
     if (k === 'x') { e.preventDefault(); cutSel(); return; }
     if (k === 'v') { e.preventDefault(); pasteClip(cursor); return; }
@@ -423,7 +437,7 @@ document.addEventListener('keydown', e => {
   }
   if (typing) return;
   if (e.key === ' ') { spaceDown = true; e.preventDefault(); return; }
-  if (e.key === 'Escape') { if (wd) finishWire(); else if (tool !== 'select') setTool('select'); else { sel = new Set(); selW = null; refresh(); } return; }
+  if (e.key === 'Escape') { if (wd) finishWire(); else if (tool !== 'select') setTool('select'); else { sel = new Set(); selW = null; selL = null; refresh(); } return; }
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); removeSelection(); return; }
   const k = e.key.toLowerCase();
   if (k === 'r') { if (tool === 'place' && placing) { if (canTurn({ t: placing.t })) placing.rot = ((placing.rot || 0) + 90) % 360; drawEd(); } else if (sel.size) { snapshot(); rotateParts(S, sel); refresh(); } return; }
@@ -438,9 +452,78 @@ function start() {
   try { const sv = JSON.parse(localStorage.getItem(SHOWKEY) || 'null'); if (sv) SHOW = { ...SHOW, ...sv }; } catch (_) {}
   $('show-wn').checked = SHOW.wn; $('show-rn').checked = SHOW.rn; $('show-xr').checked = SHOW.xr;
   let d = null; try { d = JSON.parse(localStorage.getItem(AUTOSAVE) || 'null'); } catch (_) {}
-  try { if (d) loadDoc(d); else loadDoc(template('starter')); } catch (_) { loadDoc(template('blank')); }
+  try { if (d) loadDoc(d); else loadDoc(withDrawnBy(template('starter'))); } catch (_) { loadDoc(withDrawnBy(template('blank'))); }
   try { const z = parseFloat(localStorage.getItem(UIKEY)); if (z) setUiSize(z); } catch (_) {}
   $('ui-size').addEventListener('change', e => setUiSize(parseFloat(e.target.value)));
   buildPalette(); palGrip(); refresh(true); setTool('select'); requestAnimationFrame(fitZoom);
 }
-start();
+// (start() is called at the very end, in shell.js, once every script has run)
+
+/* ---------- several parts of one kind picked: one Part tab for them all (as in Circuit Builder) ---------- */
+// what parts are alike for this: contacts; relay coils; timers; pushbuttons; otherwise the same symbol, NO or NC
+const multiKey = p => { const k = LIB[p.t].kind; if (k === 'contact') return 'contact'; if (k === 'coil') return /^TR/.test(p.tag || '') ? 'timer' : 'coil'; if (isPB(p)) return 'pb'; return p.t.replace(/_(no|nc|hc|ho)$/, ''); };
+const MULTI_NAME = { contact: 'Contacts', coil: 'Relay Coils', timer: 'Timers', pb: 'Pushbuttons', pl: 'Pilot Lights', sel: 'Selector Switches' };
+// the picked parts, if every one is a symbol (not a rail) and all of one kind; else null
+function multiParts(ids) {
+  const ps = ids.map(id => partOf(S, id)); if (ps.some(p => !p || p.t === 'rail' || isArrowIn(p.t)) || ps.length < 2) return null;
+  return ps.every(p => multiKey(p) === multiKey(ps[0])) ? ps : null;
+}
+const plural = n => /(s|x|ch|sh)$/i.test(n) ? n + 'es' : n + 's';
+function renderMulti(P, ps) {
+  const p0 = ps[0], key = multiKey(p0), d0 = LIB[p0.t], k = d0.kind, same = f => ps.every(p => f(p) === f(p0));
+  const name = MULTI_NAME[key] || plural(d0.name.replace(/^N[OC] /, '').replace(/,.*$/, '').replace(/ \(.*\)$/, ''));
+  const isNO = p => /_no$|_hc$/.test(p.t);
+  const coils = [...new Set(allParts().filter(x => LIB[x.p.t].kind === 'coil').map(x => x.p.tag).filter(Boolean))];
+  const ols = [...new Set(allParts().filter(x => LIB[x.p.t].kind === 'ol').map(x => x.p.tag).filter(Boolean))];
+  const worked = k === 'contact' || k === 'starter' || k === 'olc', list = k === 'olc' ? ols : coils;
+  P.innerHTML = `<h4>${ps.length} ${esc(name)}</h4>
+    ${ps.every(p => LIB[p.t].flip) && k !== 'cont' ? `<div class="f">Contact<div class="seg"><button data-mno="1" aria-pressed="${ps.every(isNO)}">NO</button><button data-mno="0" aria-pressed="${ps.every(p => !isNO(p))}">NC</button></div></div>` : ''}
+    ${worked ? `<div class="f">Worked by<select id="m-of">${same(p => p.tag) ? '' : '<option value="" selected>(several)</option>'}${[...new Set([...list, ...(same(p => p.tag) && p0.tag ? [p0.tag] : [])])].map(x => `<option value="${esc(x)}"${same(p => p.tag) && x === p0.tag ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select></div>` : ''}
+    ${ps.every(p => /^(con|tc)_n[oc]$/.test(p.t)) ? `<div class="f">Contact Type<div class="seg"><button data-mct="tc" aria-pressed="${ps.every(p => p.t.startsWith('tc'))}">Timed</button><button data-mct="con" aria-pressed="${ps.every(p => p.t.startsWith('con'))}">Instant</button></div></div>` : ''}
+    ${key === 'timer' ? `<div class="f">Delay<div class="seg"><button data-mtof="0" aria-pressed="${ps.every(p => !p.tof)}">On-Delay</button><button data-mtof="1" aria-pressed="${ps.every(p => !!p.tof)}">Off-Delay</button></div></div><div class="f">Seconds<input class="in" id="m-delay" type="number" min="0" step="0.5" value="${same(p => p.delay ?? '') ? esc(p0.delay ?? '') : ''}" placeholder="${same(p => p.delay ?? '') ? '' : '(several)'}" style="min-width:80px;width:90px"></div>` : ''}
+    ${p0.t === 'pl' ? `<div class="f">Built Into<select id="m-inpb">${same(p => p.inPB || '') ? '' : '<option value="__keep" selected>(several)</option>'}<option value=""${same(p => p.inPB || '') && !p0.inPB ? ' selected' : ''}>None (lights of their own)</option>${[...new Set(allParts().filter(q => isPB(q.p) && q.p.tag).map(q => q.p.tag))].map(t => `<option value="${esc(t)}"${same(p => p.inPB || '') && p0.inPB === t ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></div>` : ''}
+    ${p0.t === 'sel' ? `<div class="f">Positions<input class="in" id="m-pos" value="${same(p => selNames(p).join('/')) ? esc(selNames(p0).join('/')) : ''}" placeholder="${same(p => selNames(p).join('/')) ? '' : '(several)'}" title="2 to 4 positions, with slashes: HAND/OFF/AUTO"></div>` : ''}
+    <p class="help">A setting changed here changes all ${ps.length}. (Each one’s own ${k === 'contact' || k === 'starter' || k === 'olc' ? 'label is' : 'number and label are'} set one at a time.)</p>
+    <div class="acts">${ps.every(canTurn) ? '<button class="btn" id="m-rot">Rotate (R)</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
+  const all = fn => { snapshot(); for (const p of ps) fn(p); refresh(); };
+  for (const b of P.querySelectorAll('[data-mno]')) b.addEventListener('click', () => all(p => { if (isNO(p) !== (b.dataset.mno === '1')) p.t = LIB[p.t].flip; }));
+  const of = $('m-of'); if (of) of.addEventListener('change', () => { if (of.value) all(p => { p.tag = of.value; }); });
+  for (const b of P.querySelectorAll('[data-mct]')) b.addEventListener('click', () => all(p => { p.t = b.dataset.mct + '_' + p.t.split('_')[1]; delete p.inst; }));
+  for (const b of P.querySelectorAll('[data-mtof]')) b.addEventListener('click', () => all(p => { if (b.dataset.mtof === '1') p.tof = true; else delete p.tof; }));
+  const dl = $('m-delay'); if (dl) dl.addEventListener('input', () => edit(() => { const v = parseFloat(dl.value); for (const p of ps) { if (isFinite(v) && v >= 0) p.delay = v; else delete p.delay; } }));
+  const ib = $('m-inpb'); if (ib) ib.addEventListener('change', () => { if (ib.value !== '__keep') all(p => { if (ib.value) p.inPB = ib.value; else delete p.inPB; }); });
+  const ps_ = $('m-pos'); if (ps_) ps_.addEventListener('change', () => { const n = ps_.value.split(/[\/,]+/).map(x => x.trim().toUpperCase()).filter(Boolean).slice(0, 4); if (n.length < 2) return; all(p => { p.pos = n.join('/'); p.closedIn = (p.closedIn || []).filter(i => i < n.length); }); });
+  const ro = $('m-rot'); if (ro) ro.addEventListener('click', () => { snapshot(); rotateParts(S, new Set(ps.map(p => p.id))); refresh(); });
+}
+
+/* ---------- a coil (or overload, or pushbutton) renamed: what belongs to it goes with it, unless another of that
+   name still has them (as in Circuit Builder). Returns what to tell, or '' ---------- */
+function followRename(p, old, now) {
+  if (!old || !now || old === now) return '';
+  const k = LIB[p.t].kind, pb = isPB(p);
+  if (k !== 'coil' && k !== 'ol' && !pb) return '';
+  const kindOf = q => (LIB[q.t] || {}).kind;
+  const others = allParts().some(x => x.p !== p && (pb ? isPB(x.p) : kindOf(x.p) === k) && x.p.tag === old);
+  if (others) return '';
+  let n = 0;
+  for (const s of doc.sheets) for (const q of s.parts) {
+    if (k === 'coil' && (kindOf(q) === 'contact' || kindOf(q) === 'starter') && q.tag === old) { q.tag = now; n++; }
+    if (k === 'ol' && kindOf(q) === 'olc' && q.tag === old) { q.tag = now; n++; }
+    if (pb && q.t === 'pl' && q.inPB === old) { q.inPB = now; n++; }
+  }
+  if (!n) return '';
+  return pb ? `Its light${n > 1 ? 's' : ''} now ${n > 1 ? 'belong' : 'belongs'} to ${now}.` : `Its ${n} contact${n > 1 ? 's' : ''} now belong${n > 1 ? '' : 's'} to ${now}.`;
+}
+
+/* ---------- Drawn By: whatever was last typed there is kept, and a new print starts with it ---------- */
+const DRAWNKEY = 'oo-print-builder:drawn-by';
+const isDrawnBy = f => /drawn\s*by/i.test(f.label || '');
+function rememberDrawnBy(v) { try { if (v && v.trim() && v.trim() !== 'Student Name') localStorage.setItem(DRAWNKEY, v.trim()); } catch (_) {} }
+function withDrawnBy(d) { let v = null; try { v = localStorage.getItem(DRAWNKEY); } catch (_) {} if (v && d.tb) for (const f of d.tb.fields) if (isDrawnBy(f)) f.value = v; return d; }
+
+/* ---------- Clear: everything on this sheet taken away but its rails (Ctrl+Z brings it back) ---------- */
+$('clear-btn').addEventListener('click', () => {
+  if (!S.parts.some(p => p.t !== 'rail') && !S.wires.length && !S.texts.length) { say('This sheet is already clear.'); return; }
+  snapshot(); S.parts = S.parts.filter(p => p.t === 'rail'); S.wires = []; S.nodes = []; S.texts = [];
+  sel = new Set(); selW = null; selL = null; refresh(); say(`Sheet ${doc.cur + 1} cleared. Ctrl+Z brings it all back.`);
+});

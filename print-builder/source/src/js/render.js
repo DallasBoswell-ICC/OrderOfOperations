@@ -5,6 +5,7 @@
 const PW = 4;                                  // the wires' weight (the symbols' lines are drawn to it)
 let SHOW = { wn: true, rn: true, xr: true };   // wire numbers, rung numbers, cross-references
 let LABS = [], PLABS = [];                     // (PLABS: the parts' tags and labels on the sheet on screen, for dragging)
+let XREFS = [], RUNGNUMS = [], LINKS = [];     // (on the sheet on screen: each cross-reference and rung number, for clicking; each dashed link, for dragging)
 // the box a line of text takes up (Arial bold, roughly)
 // how far a part's name, label or one of its fuse numbers has been dragged (each on its own), and setting it
 const labOff = (p, which) => (which === 'tag' ? p.lt : which === 'desc' ? p.ld : (p.lf || {})[which]) || [0, 0];
@@ -49,7 +50,7 @@ const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').re
 
 // the sheet's drawing (no editor marks): an SVG group's insides
 function drawSheet(s, k, A) {
-  let g = ''; PLABS = [];
+  let g = ''; PLABS = []; XREFS = []; RUNGNUMS = []; LINKS = [];
   const line = (x1, y1, x2, y2, w = PW) => { g += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke-width="${w}"/>`; };
   const text = (x, y, t, size = 26, anchor = 'middle', weight = 700, extra = '') => { if (t !== '' && t != null) g += `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}" font-weight="${weight}"${extra}>${esc(t)}</text>`; };
   const arrow = (x, y, ux, uy) => { const bx = x - ux * 22, by = y - uy * 22, px = -uy * 13, py = ux * 13;
@@ -72,21 +73,12 @@ function drawSheet(s, k, A) {
     const [x, y] = c.split(',').map(Number); g += `<circle cx="${x}" cy="${y}" r="7" fill="#000" stroke="none"/>`; }
   // (the contact blocks of one pushbutton or selector switch, one above another: a dashed line links each to the next down)
   const linked = new Set(blockGroups(s).flat().map(p => p.id));
-  // (a light built into a pushbutton: a dashed link from the nearest block of that button to the light; straight when they
-  // line up, otherwise across in the gap between their rungs, so it never runs along a rung)
-  for (const l of s.parts) if (l.t === 'pl' && l.inPB && !l.rot) {
-    const bs = s.parts.filter(q => isPB(q) && q.tag === l.inPB && !q.rot); if (!bs.length) continue;
-    const b = bs.sort((u, v) => Math.hypot(u.x - l.x, u.y - l.y) - Math.hypot(v.x - l.x, v.y - l.y))[0];
-    linked.add(l.id); linked.add(b.id);
-    const [hi, lo] = b.y <= l.y ? [b, l] : [l, b], top = q => q.y + PSYM[symOf(q)].y0, bot = q => q.y + PSYM[symOf(q)].y1;
-    let P;
-    if (hi.y === lo.y) { const [a, c] = hi.x < lo.x ? [hi, lo] : [lo, hi]; const y = Math.min(top(a), top(c)) - 50; P = [[a.x, top(a)], [a.x, y], [c.x, y], [c.x, top(c)]]; }   // (side by side on one rung: over the top)
-    else if (hi.x === lo.x) P = [[hi.x, bot(hi)], [lo.x, top(lo)]];
-    else { const my = snap((bot(hi) + top(lo)) / 2); P = [[hi.x, bot(hi)], [hi.x, my], [lo.x, my], [lo.x, top(lo)]]; }
-    g += `<polyline points="${P.map(q => q.join(',')).join(' ')}" fill="none" stroke-width="3" stroke-dasharray="12 10" stroke-linecap="butt" stroke-linejoin="miter"/>`;
-  }
-  for (const bs of blockGroups(s)) for (let i = 1; i < bs.length; i++) if (bs[i].x === bs[i - 1].x && !(bs[i].rot || bs[i - 1].rot))
-    g += `<line x1="${bs[i].x}" y1="${bs[i - 1].y - 20}" x2="${bs[i].x}" y2="${bs[i].y - 40}" stroke-width="3" stroke-dasharray="12 10" stroke-linecap="butt"/>`;
+  // (a light built into a pushbutton: a dashed link from the nearest block of that button to the light. The contact
+  // blocks of one pushbutton or selector, one above another: a dashed link from each to the next down. Each is routed
+  // by linkRoute; dragged into another shape, it keeps that shape (see LINK_ in editor.js))
+  for (const L of linksOf(s)) { linked.add(L.a.id); linked.add(L.b.id);
+    const P = linkRoute(L); LINKS.push({ ...L, pts: P });
+    g += `<polyline points="${P.map(q => q.join(',')).join(' ')}" fill="none" stroke-width="3" stroke-dasharray="12 10" stroke-linecap="butt" stroke-linejoin="miter"/>`; }
   // devices
   for (const p of s.parts) {
     if (p.t === 'rail') continue;
@@ -123,7 +115,7 @@ function drawSheet(s, k, A) {
     for (const w of s.wires) { const P = wirePts(s, w); for (let i = 0; i < P.length - 1; i++) { const [a, b] = [P[i], P[i + 1]];
       if (a[1] === y && b[1] === y) xs.push(Math.min(a[0], b[0])); else if (a[0] === b[0] && Math.min(a[1], b[1]) <= y && Math.max(a[1], b[1]) >= y) xs.push(a[0]); } }
     if (rL1 && y >= rL1.y0 && y <= rL1.y1) xs.push(rL1.x);
-    if (xs.length) text(Math.min(...xs) - 50, y + 9, n, 24, 'end');
+    if (xs.length) { const x = Math.min(...xs) - 50; text(x, y + 9, n, 24, 'end'); RUNGNUMS.push({ n, y, x0: x - String(n).length * 15 - 4, x1: x + 4, y0: y - 14, y1: y + 14 }); }
   }
   if (SHOW.xr) for (const p of s.parts) { const r = A.xref.get(p.id); if (!r || !r.length) continue;
     // (right of everything on its row: L2, the symbols, and any wire along the row or crossing it)
@@ -132,7 +124,9 @@ function drawSheet(s, k, A) {
       if (a[1] === p.y && b[1] === p.y) xs.push(Math.max(a[0], b[0])); else if (a[0] === b[0] && Math.min(a[1], b[1]) <= p.y && Math.max(a[1], b[1]) >= p.y) xs.push(a[0]); } }
     if (rL2 && p.y >= rL2.y0 && p.y <= rL2.y1) xs.push(rL2.x);
     const x = Math.max(...xs) + 26;
-    g += `<text x="${x}" y="${p.y + 9}" font-size="22" font-weight="700">${r.map(o => o.nc ? `<tspan text-decoration="underline">${o.n}</tspan>` : o.n).join(', ')}</text>`; }
+    g += `<text x="${x}" y="${p.y + 9}" font-size="22" font-weight="700">${r.map(o => o.nc ? `<tspan text-decoration="underline">${o.n}</tspan>` : o.n).join(', ')}</text>`;
+    // (each number's box, for clicking: it goes to that rung; PWR goes to the coil's power contacts)
+    let cx = x; for (const o of r) { const w = String(o.n).length * 13.4; XREFS.push({ n: o.n, tag: p.tag, x0: cx - 3, x1: cx + w + 3, y0: p.y - 12, y1: p.y + 14 }); cx += w + 12; } }
   // notes
   for (const t of s.texts) { const lines = String(t.s || '').split('\n');
     g += `<text x="${t.x}" y="${t.y}" font-size="${t.size || 24}" font-weight="${t.bold ? 700 : 500}">${lines.map((l, i) => `<tspan x="${t.x}" dy="${i ? (t.size || 24) * 1.25 : 0}">${esc(l)}</tspan>`).join('')}</text>`; }
@@ -148,7 +142,8 @@ function tbHTML(k, n) {
   for (const f of tb.fields) { const sp = Math.max(1, Math.min(12, f.span || 2)); if (col + sp > 12) { fill(12 - col); col = 0; }
     cells += `<div class="tbf${f.big ? ' big' : ''}" style="grid-column: span ${sp}"><div class="k">${esc(f.label)}</div><div class="v">${esc(val(f.value))}</div></div>`; col = (col + sp) % 12; }
   if (col) fill(12 - col);
-  const notes = tb.showNotes && tb.notes.trim() ? `<div class="notes"><span class="k">Notes</span>${tb.notes.split('\n').filter(l => l.trim()).map((l, i) => `<span>${i + 1}. ${esc(l)}</span>`).join('')}</div>` : '';
+  const lines = (tb.showNotes ? tb.notes.split('\n').filter(l => l.trim()) : []).concat(tb.powerNote !== false && hasPower() ? [POWER_NOTE] : []);
+  const notes = lines.length ? `<div class="notes"><span class="k">Notes</span>${lines.map((l, i) => `<span>${i + 1}. ${esc(l)}</span>`).join('')}</div>` : '';
   return `<div class="pr-tb">${cells}${notes}</div>`;
 }
 // a whole page; the drawing's viewBox is set once it is laid out (see fitDraw)
@@ -207,3 +202,54 @@ function runsOf(s) {
   return new Map(s.wires.map(w => [w.id, g.get(find(w.id))]));
 }
 const runWires = w => runsOf(S).get(w.id) || [w];
+
+/* ---------- the power circuit's wire numbers, explained on the print (as Circuit Builder prints it) ---------- */
+const POWER_NOTE = 'Power wires: L1, L2, L3 coming in, a letter added past each device (L1A, L1B…); past a starter’s contacts, motor 1’s leads are T1–T3, motor 2’s T4–T6, lettered again past each overload (T1A).';
+// (a print with a power circuit: three-phase lines in, or a starter, motor or three-pole part anywhere)
+const hasPower = () => doc.sheets.some(s => s.parts.some(p => p.t === 'sup' || p.t === 'motor' || /3$/.test(p.t) || LIB[p.t] && LIB[p.t].kind === 'starter'));
+
+/* ---------- dashed links: a lighted pushbutton to its light; a pushbutton's or selector's blocks, each to the next ---------- */
+// every link on a sheet: { kind: 'light' | 'block', a (the button, or the upper block), b (the light, or the lower block),
+// own (the part its shape is kept on: the light, or the lower block) }
+function linksOf(s) {
+  const out = [];
+  for (const l of s.parts) if (l.t === 'pl' && l.inPB && !l.rot) {
+    const bs = s.parts.filter(q => isPB(q) && q.tag === l.inPB && !q.rot); if (!bs.length) continue;
+    const b = bs.sort((u, v) => Math.hypot(u.x - l.x, u.y - l.y) - Math.hypot(v.x - l.x, v.y - l.y))[0];
+    out.push({ kind: 'light', a: b, b: l, own: l });
+  }
+  for (const bs of blockGroups(s)) for (let i = 1; i < bs.length; i++) if (!(bs[i].rot || bs[i - 1].rot)) out.push({ kind: 'block', a: bs[i - 1], b: bs[i], own: bs[i] });
+  return out;
+}
+// a part's box for a link's ends (its symbol's extent)
+const linkBox = p => { const s = PSYM[symOf(p)], e = extentOf(p.t); return { x0: p.x + e.x0, x1: p.x + e.x1, y0: p.y + s.y0, y1: p.y + s.y1 }; };
+// where an end sits: on the top or bottom of the part (slid along by o), or its left or right side (a little above the
+// rung); 'stem' is just above a pushbutton's wire, where a block's dashed link has always started
+function linkEnd(p, e) { const b = linkBox(p), o = e.o || 0;
+  if (e.s === 'top') return [p.x + o, b.y0]; if (e.s === 'bottom') return [p.x + o, b.y1]; if (e.s === 'stem') return [p.x + o, p.y - 20];
+  return [e.s === 'left' ? b.x0 : b.x1, p.y - 30]; }
+const vertEnd = s => s === 'top' || s === 'bottom' || s === 'stem';
+// the ends a link starts with (before any are dragged): the upper part's bottom to the lower part's top; two side by side
+// on one rung: over the top of both; a pushbutton's blocks lined up: from just above the upper one's wire
+function linkEnds(L) {
+  const k = L.own.lk || {}, [hi, lo] = L.a.y <= L.b.y ? [L.a, L.b] : [L.b, L.a];
+  let da, db;
+  if (L.a.y === L.b.y) da = db = { s: 'top' };
+  else if (L.kind === 'block' && L.a.x === L.b.x) { da = { s: 'stem' }; db = { s: 'top' }; }
+  else { da = { s: L.a === hi ? 'bottom' : 'top' }; db = { s: L.b === lo ? 'top' : 'bottom' }; }
+  return [{ ...da, ...(k.ea || {}) }, { ...db, ...(k.eb || {}) }];
+}
+// the link's line: straight when its ends line up and face each other; otherwise out of each end and across (an upright
+// pair of ends: across at a level between them, or over/under both; a side pair: down/up at an upright between them)
+function linkRoute(L) {
+  const k = L.own.lk || {}, [ea, eb] = linkEnds(L), A_ = linkEnd(L.a, ea), B = linkEnd(L.b, eb), va = vertEnd(ea.s), vb = vertEnd(eb.s);
+  if (va && vb) {
+    const down = s => s !== 'top', [up, lo] = A_[1] <= B[1] ? [[A_, ea], [B, eb]] : [[B, eb], [A_, ea]];
+    if (A_[0] === B[0] && !k.dy && down(up[1].s) && !down(lo[1].s)) return [A_, B];
+    let my = !down(ea.s) && !down(eb.s) ? Math.min(A_[1], B[1]) - 50 : down(ea.s) && down(eb.s) ? Math.max(A_[1], B[1]) + 50 : snap((A_[1] + B[1]) / 2);
+    my += k.dy || 0; return [A_, [A_[0], my], [B[0], my], B];
+  }
+  if (!va && !vb) { let mx = ea.s === eb.s ? (ea.s === 'left' ? Math.min(A_[0], B[0]) - 40 : Math.max(A_[0], B[0]) + 40) : snap((A_[0] + B[0]) / 2);
+    mx += k.dx || 0; return [A_, [mx, A_[1]], [mx, B[1]], B]; }
+  return va ? [A_, [A_[0], B[1]], B] : [A_, [B[0], A_[1]], B];
+}

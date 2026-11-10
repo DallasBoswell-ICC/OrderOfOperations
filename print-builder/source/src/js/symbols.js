@@ -57,13 +57,13 @@ const LIB = {
   fus3:    { cat: 'Protection', name: '3-Phase Fuses', sym: '3PH Fuses', pre: 'FU', kind: 'power', poles: [[0, 1], [2, 3], [4, 5]] },
   fuse:    { cat: 'Protection', name: 'Fuse', sym: 'Fuse', pre: 'FU', kind: 'fuse', poles: [[0, 1]] },
   ol3:     { cat: 'Protection', name: 'Overload', sym: '3PH Thermal Overload', pre: 'OL', kind: 'ol', poles: [[0, 1], [2, 3], [4, 5]] },
-  ol:      { cat: 'Protection', name: 'Overload Heater (1 line)', sym: 'Thermal Overload', pre: 'OL', kind: 'ol', poles: [[0, 1]] },
+  ol:      { cat: 'Protection', name: 'Overload Heater (1 Line)', sym: 'Thermal Overload', pre: 'OL', kind: 'ol', poles: [[0, 1]] },
   sup:     { cat: 'Power', name: 'Phase (L1, L2, L3)', kind: 'supply' },
-  src_l1:  { cat: 'Power', name: 'Source L1 (control)', kind: 'source' },
-  src_l2:  { cat: 'Power', name: 'Return L2 (control)', kind: 'source' },
+  src_l1:  { cat: 'Power', name: 'Source L1 (Control)', kind: 'source' },
+  src_l2:  { cat: 'Power', name: 'Return L2 (Control)', kind: 'source' },
   xfmr:    { cat: 'Power', name: 'Transformer', sym: 'Control Transformer', pre: 'CPT', kind: 'xfmr' },
-  cnt_out: { cat: 'Continuation', name: 'Continues To (out)', sym: 'Continuation Out', kind: 'cont', flip: 'cnt_in' },
-  cnt_in:  { cat: 'Continuation', name: 'Continued From (in)', sym: 'Continuation In', kind: 'cont', flip: 'cnt_out' },
+  cnt_out: { cat: 'Continuation', name: 'Continues To (Out)', sym: 'Continuation Out', kind: 'cont', flip: 'cnt_in' },
+  cnt_in:  { cat: 'Continuation', name: 'Continued From (In)', sym: 'Continuation In', kind: 'cont', flip: 'cnt_out' },
 };
 const CATS = ['Buttons', 'Switches', 'Outputs', 'Contacts', 'Protection', 'Power', 'Continuation'];
 const CAT_COL = { 'Buttons': '#00B050', 'Switches': '#0070C0', 'Outputs': '#FFC000', 'Contacts': '#c9c9c9', 'Protection': '#e5484d', 'Power': '#FF9C37', 'Continuation': '#a26bf5' };
