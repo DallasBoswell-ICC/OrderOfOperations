@@ -251,7 +251,8 @@ let passed = 0, failed = 0;
   await check('Every Circuit Builder part is in the palette: timers, timed contacts, maintained buttons, low-temp switches, control source and return', async p => {
     const r = await p.evaluate(() => { loadDoc(template('blank')); S.parts = S.parts.filter(q => q.t !== 'rail');
       const want = ['pb_no', 'pb_nc', 'pbm_no', 'pbm_nc', 'estop', 'sel', 'ls_no', 'ls_nc', 'ls_hc', 'ls_ho', 'ts_no', 'ts_nc', 'ts_nol', 'ts_ncl', 'ps_no', 'ps_nc', 'coil', 'tmr_on', 'tmr_off', 'pl', 'sol', 'htr', 'motor',
-        'con_no', 'con_nc', 'tc_no', 'tc_nc', 'mst3', 'olc', 'dsc3', 'fus3', 'fuse', 'ol3', 'sup', 'src_l1', 'src_l2', 'xfmr', 'cnt_out', 'cnt_in'];
+        'con_no', 'con_nc', 'tc_no', 'tc_nc', 'mst3', 'olc', 'dsc3', 'fus3', 'fuse', 'ol3', 'sup', 'src_l1', 'src_l2', 'xfmr', 'cnt_out', 'cnt_in',
+        'cb', 'cb2', 'cb3', 'spdt', 'dpst', 'dpdt', 'xover'];
       const missing = want.filter(t => !document.querySelector(`.pt[data-t="${t}"]`));
       // an off-delay timer and its timed contacts; a control source and return feeding a rung
       const tm = addPart(S, 'tmr_off', 1000, 400), c = addPart(S, 'tc_nc', 600, 600), s1 = addPart(S, 'src_l1', 300, 800), s2 = addPart(S, 'src_l2', 300, 900);
@@ -440,6 +441,31 @@ let passed = 0, failed = 0;
     await p.mouse.up();
     const got = await p.evaluate(() => [...sel].map(id => partOf(S, id)).filter(Boolean).map(q => q.tag || q.t).sort().join());
     return mid && /PL1/.test(got) && /PL2/.test(got) && r.gray !== 'sv' ? [] : ['started on: ' + r.gray + ' | box: ' + mid + ' | picked: ' + got];
+  });
+
+  await check('Dallas’s breakers and multi-pole switches: in the palette, tagged CB and SW, numbered through, checked for shorts; the Disconnect drawn with his 3PST Switch', async p => {
+    const r = await p.evaluate(() => { loadDoc(template('blank')); refresh(true);
+      const pal = ['cb', 'cb2', 'cb3', 'spdt', 'dpst', 'dpdt', 'xover'].filter(t => !document.querySelector(`.pt[data-t="${t}"]`)).join(',') || 'none';
+      const grp = ['cb', 'cb2', 'cb3'].every(t => LIB[t].cat === 'Protection') && ['spdt', 'dpst', 'dpdt', 'xover'].every(t => LIB[t].cat === 'Switches');
+      const ds = PSYM['3PH Disconnect'].t.map(t => t[1]).join(), cb3t = PSYM['3PST Circuit Breaker'].t.map(t => t[1]).join(), dpdt = PSYM['DPDT Switch'].t.length;
+      // power: L1-L3 in, through a 3-pole breaker
+      S.parts = S.parts.filter(q => q.t !== 'rail');
+      const ys = [200, 320, 440]; for (const [i, y] of ys.entries()) { addPart(S, 'sup', 300, y, { tag: 'L' + (i + 1) }); addWire(S, [[300, y], [460, y]]); }
+      const cb = addPart(S, 'cb3', 500, 320); for (const y of ys) addWire(S, [[540, y], [700, y]]);
+      // control: an SPDT feeding two lights, one each way
+      const r1 = addPart(S, 'src_l1', 300, 800), r2 = addPart(S, 'src_l2', 300, 1100);
+      addWire(S, [[300, 800], [560, 800]]); const sw = addPart(S, 'spdt', 600, 800);
+      addWire(S, [[640, 760], [800, 760]]); addPart(S, 'pl', 840, 760); addWire(S, [[880, 760], [1100, 760], [1100, 1100], [300, 1100]]);
+      addWire(S, [[640, 840], [800, 840], [800, 960]]); addPart(S, 'pl', 840, 960, { rot: 0 }); addWire(S, [[880, 960], [1100, 960]]);
+      refresh(true); const A2 = analyse(), L = (q, i) => A2.label.get(A2.rootT(q, S, i));
+      const pw = [0, 1, 2, 3, 4, 5].map(i => L(cb, i)).join(), ctl = [0, 1, 2].map(i => L(sw, i)).join();
+      const short0 = ISSUES.filter(i => /No load/.test(i.title)).length;
+      // a throw wired straight to 2: a short through the switch
+      addWire(S, [[640, 840], [640, 1100]]); refresh(true); const short1 = ISSUES.filter(i => /No load/.test(i.title)).length;
+      return [pal, grp, cb.tag, sw.tag, ds, cb3t, dpdt, pw, ctl, short0, short1]; });
+    const want = 'none|true|CB1|SW1|-120,-120,0,0,120,120|-120,-120,0,0,120,120|6|L1,L1A,L2,L2A,L3,L3A';
+    const got = r.join('|');
+    return got.startsWith(want) && /^1,\d+,\d+$/.test(String(r[8])) && new Set(String(r[8]).split(',')).size === 3 && r[9] === 0 && r[10] === 1 ? [] : ['palette missing | groups | tags | disconnect poles | breaker poles | DPDT ends | power numbers | control numbers | shorts before | after: ' + got];
   });
 
   await b.close();

@@ -44,7 +44,7 @@ function checkPrint(A = analyse()) {
   const supR = new Map(); for (const x of parts) if (x.p.t === 'sup') { const r = A.rootT(x.p, x.s, 0), o = supR.get(r); if (o && o.p.tag !== x.p.tag) { shorts++; add('e', `${o.p.tag} and ${x.p.tag} are joined: a short`, 'Two lines in are wired together.', [pk(o), pk(x)]); } else supR.set(r, x); }
   if (A.n1 != null && A.n2 != null && A.n1 !== A.n2) {
     const PASS = new Set(['sw', 'contact', 'olc', 'fuse']), adj = new Map(), add2 = (a, b, x) => { if (!adj.has(a)) adj.set(a, []); adj.get(a).push([b, x]); };
-    for (const x of parts) if (PASS.has(kindOf(x.p)) && termsN(x.p) === 2) { const a = A.rootT(x.p, x.s, 0), b = A.rootT(x.p, x.s, 1); add2(a, b, x); add2(b, a, x); }
+    for (const x of parts) if (PASS.has(kindOf(x.p))) for (const [i, j] of passesOf(x.p.t)) { const a = A.rootT(x.p, x.s, i), b = A.rootT(x.p, x.s, j); add2(a, b, x); add2(b, a, x); }
     const prev = new Map([[A.n1, null]]), q = [A.n1];
     while (q.length) { const r = q.shift(); if (r === A.n2) break; for (const [m, x] of adj.get(r) || []) if (!prev.has(m)) { prev.set(m, [r, x]); q.push(m); } }
     if (prev.has(A.n2)) { shorts++; const path = []; for (let r = A.n2; prev.get(r); r = prev.get(r)[0]) path.push(prev.get(r)[1]);
