@@ -1442,7 +1442,7 @@ function drawEd() {
     else g += `<g transform="translate(${p.x} ${p.y})${p.rot ? ` rotate(${p.rot})` : ''}">${PSYM[sym].b}</g>`;
     g += '</g>';
   }
-  if (drag && drag.box) { const [a, b] = drag.box; g += `<rect x="${Math.min(a[0], b[0])}" y="${Math.min(a[1], b[1])}" width="${Math.abs(a[0] - b[0])}" height="${Math.abs(a[1] - b[1])}" fill="rgba(47,140,255,.08)" stroke="#2f8cff" stroke-width="3" stroke-dasharray="10 6"/>`; }
+  if (drag && drag.box) { const [a, b] = drag.box; g += `<rect x="${Math.min(a[0], b[0])}" y="${Math.min(a[1], b[1])}" width="${Math.abs(a[0] - b[0])}" height="${Math.abs(a[1] - b[1])}" fill="rgba(47,140,255,.08)" stroke="#2f8cff" stroke-width="2" stroke-dasharray="7 5" vector-effect="non-scaling-stroke" class="selbox"/>`; }
   over.innerHTML = g;
   // (symbols in the marks drawn in their own blue)
   for (const e of over.querySelectorAll('g[opacity] [stroke="#000"]')) e.setAttribute('stroke', '#1f6fd8');
