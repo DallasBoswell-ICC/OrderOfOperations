@@ -8,11 +8,11 @@ const AUTOSAVE = 'oo-print-builder:autosave', SHOWKEY = 'oo-print-builder:show';
 let zoom = 1, spaceDown = false, pan = null, pageFor = null;
 const say = s => { $('hint').textContent = s || hintFor(); };
 const hintFor = () => ({
-  select: 'Click to pick · drag to move · drag empty paper to pick several · R turns · Delete deletes',
+  select: 'Click to pick · drag to move · drag empty paper to pick several · R turns · F flips · Delete deletes',
   wire: 'Click to start · click to bend · click a terminal, rail or wire to finish · Esc stops',
   rung: 'Click between the rails to add a rung, then drop symbols onto it',
   note: 'Click where the note goes',
-  place: 'Click on a rung to put it in the wire · Shift+click to put down more · R turns it · Esc stops',
+  place: 'Click on a rung to put it in the wire · Shift+click to put down more · R turns it · F flips it · Esc stops',
 })[tool] || '';
 
 /* ---------- drawing it all ---------- */
@@ -222,7 +222,7 @@ function renderProps0() {
       ${rn ? `<div class="f">Rung<span class="ro">${rn} (automatic)</span></div>` : ''}
       ${termNums.length ? `<div class="f">Wires<span class="ro">${termNums.join(' → ')} (automatic)</span></div>` : ''}
       ${xr && xr.length ? `<div class="f">Contacts on<span class="ro">${xr.map(o => o.n + (o.nc ? ' (NC)' : '')).join(', ')}</span></div>` : ''}
-      <div class="acts">${canTurn(p) ? '<button class="btn" id="p-rot">Rotate (R)</button>' : ''}${canFlip(p) ? '<button class="btn" id="p-flip" title="Flip it left to right: its common to the other side (F)">Flip ⇆ (F)</button>' : ''}${p.lt || p.ld || p.lf ? '<button class="btn" id="p-lab">Put Labels Back</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
+      <div class="acts">${canTurn(p) ? '<button class="btn" id="p-rot">Rotate (R)</button>' : ''}${canFlip(p) ? `<button class="btn" id="p-flip" aria-pressed="${!!p.fx}" title="Flip it left to right, about its middle (F); again to put it back">Flip ⇆ (F)</button>` : ''}${p.lt || p.ld || p.lf ? '<button class="btn" id="p-lab">Put Labels Back</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
     const of = $('p-of'); if (of) of.addEventListener('change', () => { let v = of.value; if (v === '__other') { v = (prompt(k === 'olc' ? 'The overload this contact belongs to (e.g. OL2):' : 'The coil that works this contact (e.g. CR3):', p.tag || '') || '').trim().toUpperCase(); if (!v) { renderProps(); return; } }
       snapshot(); p.tag = v; refresh(); });
     const tg = $('p-tag'); let was = p.tag;
@@ -374,7 +374,8 @@ let saveT = null;
 function autosave() { showFileLabel(); clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(AUTOSAVE, JSON.stringify(doc)); localStorage.setItem(SHOWKEY, JSON.stringify(SHOW)); } catch (_) {} }, 400); }
 function loadDoc(d) {
   if (!d || d.kind !== 'o3-print' || !Array.isArray(d.sheets) || !d.sheets.length) throw new Error('not a Print Builder file');
-  for (const s of d.sheets) { s.parts ||= []; s.wires ||= []; s.nodes ||= []; s.texts ||= []; for (const p of s.parts) if (p.t !== 'rail' && !LIB[p.t]) throw new Error('unknown symbol ' + p.t); }
+  for (const s of d.sheets) { s.parts ||= []; s.wires ||= []; s.nodes ||= []; s.texts ||= []; for (const p of s.parts) { if (/^(spdt|dpdt)_m$/.test(p.t)) { p.t = p.t.slice(0, -2); p.fx = true; }   // (flipped switches saved in the demo as parts of their own)
+    if (p.t !== 'rail' && !LIB[p.t]) throw new Error('unknown symbol ' + p.t); } }
   d.tb ||= defaultTB(); d.cur = Math.min(d.cur || 0, d.sheets.length - 1);
   doc = d; S = doc.sheets[doc.cur]; sel = new Set(); selW = null; UNDO.length = 0; REDO.length = 0;
   // (a fused disconnect from before its fuses were numbered: the next three numbers)
@@ -480,7 +481,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { if (wd) finishWire(); else if (tool !== 'select') setTool('select'); else { sel = new Set(); selW = null; selL = null; refresh(); } return; }
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); removeSelection(); return; }
   const k = e.key.toLowerCase();
-  if (k === 'f' && !e.ctrlKey && !e.metaKey && sel.size && [...sel].some(id => canFlip(partOf(S, id)))) { snapshot(); flipParts(S, sel); refresh(); return; }
+  if (k === 'f' && !e.ctrlKey && !e.metaKey) { if (tool === 'place' && placing) { placing.fx = !placing.fx; drawEd(); } else if (sel.size && [...sel].some(id => canFlip(partOf(S, id)))) { snapshot(); flipParts(S, sel); refresh(); } return; }
   if (k === 'r') { if (tool === 'place' && placing) { if (canTurn({ t: placing.t })) placing.rot = ((placing.rot || 0) + 90) % 360; drawEd(); } else if (sel.size) { snapshot(); rotateParts(S, sel); refresh(); } return; }
   if (k === 'v') setTool('select'); if (k === 'w') setTool('wire'); if (k === 'l') setTool('rung'); if (k === 'n') setTool('note');
   const mv = { arrowleft: [-G, 0], arrowright: [G, 0], arrowup: [0, -G], arrowdown: [0, G] }[k];
@@ -502,7 +503,7 @@ function start() {
 
 /* ---------- several parts of one kind picked: one Part tab for them all (as in Circuit Builder) ---------- */
 // what parts are alike for this: contacts; relay coils; timers; pushbuttons; otherwise the same symbol, NO or NC
-const multiKey = p => { const k = LIB[p.t].kind; if (k === 'contact') return 'contact'; if (k === 'coil') return /^TR/.test(p.tag || '') ? 'timer' : 'coil'; if (isPB(p)) return 'pb'; return p.t.replace(/_(no|nc|hc|ho|m)$/, ''); };
+const multiKey = p => { const k = LIB[p.t].kind; if (k === 'contact') return 'contact'; if (k === 'coil') return /^TR/.test(p.tag || '') ? 'timer' : 'coil'; if (isPB(p)) return 'pb'; return p.t.replace(/_(no|nc|hc|ho)$/, ''); };
 const MULTI_NAME = { contact: 'Contacts', coil: 'Relay Coils', timer: 'Timers', pb: 'Pushbuttons', pl: 'Pilot Lights', sel: 'Selector Switches' };
 // the picked parts, if every one is a symbol (not a rail) and all of one kind; else null
 function multiParts(ids) {

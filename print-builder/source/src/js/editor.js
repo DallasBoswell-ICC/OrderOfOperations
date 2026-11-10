@@ -120,7 +120,7 @@ function drawEd() {
     for (const w of sp.wires) g += `<polyline points="${wirePts(S, w).map(q => q.join(',')).join(' ')}" fill="none" stroke="#2f8cff" stroke-width="12" stroke-opacity=".3"/>`;
     g += `<g opacity=".55" fill="none" stroke="#1f6fd8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">`;
     if (isArrowIn(p.t)) g += `<path d="M${p.x - 22} ${p.y - 13}L${p.x - 22} ${p.y + 13}L${p.x} ${p.y}Z" fill="#1f6fd8"/>`;
-    else g += `<g transform="translate(${p.x} ${p.y})${p.rot ? ` rotate(${p.rot})` : ''}">${PSYM[sym].b}</g>`;
+    else g += `<g transform="${xform(p)}">${PSYM[sym].b}</g>`;
     g += '</g>';
   }
   if (drag && drag.box) { const [a, b] = drag.box; g += `<rect x="${Math.min(a[0], b[0])}" y="${Math.min(a[1], b[1])}" width="${Math.abs(a[0] - b[0])}" height="${Math.abs(a[1] - b[1])}" fill="rgba(47,140,255,.08)" stroke="#2f8cff" stroke-width="2" stroke-dasharray="7 5" vector-effect="non-scaling-stroke" class="selbox"/>`; }
@@ -145,7 +145,7 @@ function rungAt(q) {
   return { x1: r1.x, x2: r2.x, y, ok };
 }
 // the symbol being put down, where it would go
-const ghostPart = q => ({ id: '__ghost', t: placing.t, x: snap(q[0]), y: snap(q[1]), rot: placing.rot || 0 });
+const ghostPart = q => ({ id: '__ghost', t: placing.t, x: snap(q[0]), y: snap(q[1]), rot: placing.rot || 0, ...(placing.fx ? { fx: true } : {}) });
 // the wires it would cut into, and what it would tell
 function splicePreview(p) {
   const wires = [];
@@ -256,7 +256,7 @@ function moveSegment(s, id, k, dx, dy) {
 // a symbol put down at q (Shift: keep putting them down)
 function putDown(q, keep) {
   snapshot();
-  const g = ghostPart(q), p = addPart(S, placing.t, g.x, g.y, { rot: placing.rot });
+  const g = ghostPart(q), p = addPart(S, placing.t, g.x, g.y, { rot: placing.rot, fx: placing.fx });
   sel = new Set([p.id]); selW = null;
   if (!keep) { placing = null; setTool('select'); }
   keepTab = true; refresh(); keepTab = false;   // (a part just put down: the tools stay in view; click it for its Part tab)

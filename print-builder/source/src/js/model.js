@@ -51,7 +51,13 @@ const drawH = land => Math.round(((land ? 8.5 : 11) - .8 - .24 - 1.25) * U_IN);
 const partOf = (s, id) => s.parts.find(p => p.id === id);
 const nodeOf = (s, id) => s.nodes.find(n => n.id === id);
 function turn([a, b], r) { return r === 90 ? [-b, a] : r === 180 ? [-a, -b] : r === 270 ? [b, -a] : [a, b]; }
-function termPos(p, i) { const [a, b] = turn(termsOf(p.t)[i], p.rot || 0); return [p.x + a, p.y + b]; }
+// a point of a part's drawing, as placed: flipped left to right if the part is (Flip), then turned (Rotate)
+const place = (p, [a, b]) => turn(p.fx ? [-a, b] : [a, b], p.rot || 0);
+// its drawing's transform on the sheet (SVG applies the last first: flip, then turn, then move)
+const xform = p => `translate(${p.x} ${p.y})${p.rot ? ` rotate(${p.rot})` : ''}${p.fx ? ' scale(-1 1)' : ''}`;
+// how far it reaches left and right of its middle, flipped if it is
+const extOf = p => { const e = extentOf(p.t); return p.fx ? { ...e, x0: -e.x1, x1: -e.x0 } : e; };
+function termPos(p, i) { const [a, b] = place(p, termsOf(p.t)[i]); return [p.x + a, p.y + b]; }
 const termsN = p => p.t === 'rail' ? 0 : termsOf(p.t).length;
 function pos(s, e) {
   if (e.p) { const p = partOf(s, e.p); return p ? termPos(p, e.i) : [0, 0]; }
@@ -66,7 +72,7 @@ const onSeg = (x, y, [x1, y1], [x2, y2]) => (x1 === x2 ? x === x1 && y >= Math.m
 // a part's box (for picking it): its symbol, and the room its tag takes above
 function partBox(p) {
   if (p.t === 'rail') return { x0: p.x - 14, x1: p.x + 14, y0: p.y0 - 70, y1: p.y1 };
-  const e = extentOf(p.t), c = [[e.x0, e.y0 - 30], [e.x1, e.y1 + 10]].map(q => turn(q, p.rot || 0));
+  const e = extOf(p), c = [[e.x0, e.y0 - 30], [e.x1, e.y1 + 10]].map(q => turn(q, p.rot || 0));
   return { x0: p.x + Math.min(c[0][0], c[1][0]), x1: p.x + Math.max(c[0][0], c[1][0]), y0: p.y + Math.min(c[0][1], c[1][1]), y1: p.y + Math.max(c[0][1], c[1][1]) };
 }
 
@@ -287,7 +293,7 @@ function redo() { if (!REDO.length) return false; UNDO.push(JSON.stringify(doc))
 // a part put down at x, y: given its next tag, cut into the wire it lands across
 function addPart(s, t, x, y, o = {}) {
   if (LIB[t].as) { o = { ...LIB[t].preset, ...o }; t = LIB[t].as; }   // (an on- or off-delay timer: a coil set up as one)
-  const p = { id: uid('p'), t, x, y, rot: o.rot || 0, desc: o.desc || '' };
+  const p = { id: uid('p'), t, x, y, rot: o.rot || 0, desc: o.desc || '' }; if (o.fx) p.fx = true;
   if (o.tof) p.tof = true;
   if (t === 'coil') p.pre = o.pre || 'CR';
   if (t === 'fdsc3') p.fu = o.fu || nextTag('FU');   // (its three fuses: FU1, FU2, FU3, counted with the rest)
@@ -306,20 +312,21 @@ function addWire(s, pts) {
 
 /* ---------- turning ---------- */
 // parts turned a quarter (clockwise) about their middles; their wires bend to follow, as when moved
-// the parts that turn (Rotate, R, the turning handle): two-terminal symbols and continuation arrows
-const canTurn = p => !!p && p.t !== 'rail' && !isArrowIn(p.t) && (termsOf(p.t).length === 2 || LIB[p.t].kind === 'cont');
-// parts flipped left to right (an SPDT or DPDT: its common to the other side); their wires bend to follow
-const canFlip = p => !!p && !!LIB[p.t] && !!LIB[p.t].mirror;
+// the parts that turn (Rotate, R, the turning handle) and flip (Flip, F): every part but the rails
+const canTurn = p => !!p && !!LIB[p.t] && p.t !== 'rail';   // (every part: Dallas, 10 Nov 2026)
+// parts flipped left to right, about their middles (an SPDT: its common to the other side); each end stays the same end,
+// so their wires keep their meaning and bend to follow, as when turned
+const canFlip = p => !!p && !!LIB[p.t] && p.t !== 'rail';
 function flipParts(s, ids) {
   const touched = s.wires.filter(w => [w.a, w.b].some(e => e.p && ids.has(e.p)));
   const before = new Map(touched.map(w => [w.id, { a: pos(s, w.a), b: pos(s, w.b), pts: w.pts.map(q => [...q]) }]));
-  let n = 0; for (const p of s.parts) if (ids.has(p.id) && canFlip(p)) { p.t = LIB[p.t].mirror; n++; }
+  let n = 0; for (const p of s.parts) if (ids.has(p.id) && canFlip(p)) { if (p.fx) delete p.fx; else p.fx = true; n++; }
   for (const w of touched) { const o = before.get(w.id); reroute(s, w, o.a, o.b, o.pts, 0, !!(w.a.p && ids.has(w.a.p))); simplify(s, w); }
   return n;
 }
 function rotateParts(s, ids, by = 90) {
   const touched = s.wires.filter(w => [w.a, w.b].some(e => e.p && ids.has(e.p)));
   const before = new Map(touched.map(w => [w.id, { a: pos(s, w.a), b: pos(s, w.b), pts: w.pts.map(q => [...q]) }]));
-  for (const p of s.parts) if (ids.has(p.id) && p.t !== 'rail' && !isArrowIn(p.t)) p.rot = (((p.rot || 0) + by) % 360 + 360) % 360;
+  for (const p of s.parts) if (ids.has(p.id) && canTurn(p)) p.rot = (((p.rot || 0) + by) % 360 + 360) % 360;
   for (const w of touched) { const o = before.get(w.id); reroute(s, w, o.a, o.b, o.pts, 0, !!(w.a.p && ids.has(w.a.p))); simplify(s, w); }
 }

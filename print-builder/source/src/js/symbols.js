@@ -14,7 +14,7 @@
    poles   pairs of its terminals that carry a line through it, line side first (power and fuses)
    passes  pairs of its terminals a switch can join (a switch with more than two ends: SPDT, DPST, DPDT, crossover)
    flip    the same device the other way (NO <-> NC)
-   mirror  the same device drawn flipped left to right (Flip: an SPDT's common on its right); hide: not in the palette
+   hide    not in the palette or menus
    ===================================================================== */
 const LIB = {
   // (in Circuit Builder's order: its menus, and what is in each)
@@ -41,12 +41,9 @@ const LIB = {
   prs_no:  { cat: 'Switches', name: 'NO Proximity Switch', sym: 'NO Proximity Switch', pre: 'PRS', kind: 'sw', flip: 'prs_nc' },
   prs_nc:  { cat: 'Switches', name: 'NC Proximity Switch', sym: 'NC Proximity Switch', pre: 'PRS', kind: 'sw', flip: 'prs_no' },
   spst:    { cat: 'Switches', name: 'Toggle Switch (SPST)', sym: 'SPST Switch', pre: 'SW', kind: 'sw' },
-  spdt:    { cat: 'Switches', name: 'SPDT Switch', sym: 'SPDT Switch', pre: 'SW', kind: 'sw', passes: [[0, 1], [0, 2]], mirror: 'spdt_m' },
+  spdt:    { cat: 'Switches', name: 'SPDT Switch', sym: 'SPDT Switch', pre: 'SW', kind: 'sw', passes: [[0, 1], [0, 2]] },
   dpst:    { cat: 'Switches', name: 'DPST Switch', sym: 'DPST Switch', pre: 'SW', kind: 'sw', passes: [[0, 1], [2, 3]] },
-  dpdt:    { cat: 'Switches', name: 'DPDT Switch', sym: 'DPDT Switch', pre: 'SW', kind: 'sw', passes: [[0, 1], [0, 2], [3, 4], [3, 5]], mirror: 'dpdt_m' },
-  // (the same switches flipped left to right: their common on the right; reached with Flip, not shown in the palette)
-  spdt_m:  { cat: 'Switches', name: 'SPDT Switch', sym: 'SPDT Switch, Flipped', pre: 'SW', kind: 'sw', passes: [[0, 1], [0, 2]], mirror: 'spdt', hide: true },
-  dpdt_m:  { cat: 'Switches', name: 'DPDT Switch', sym: 'DPDT Switch, Flipped', pre: 'SW', kind: 'sw', passes: [[0, 1], [0, 2], [3, 4], [3, 5]], mirror: 'dpdt', hide: true },
+  dpdt:    { cat: 'Switches', name: 'DPDT Switch', sym: 'DPDT Switch', pre: 'SW', kind: 'sw', passes: [[0, 1], [0, 2], [3, 4], [3, 5]] },
   xover:   { cat: 'Switches', name: 'DPDT Crossover Switch', sym: 'DPDT Crossover Switch', pre: 'SW', kind: 'sw', passes: [[0, 1], [2, 3], [0, 3], [2, 1]] },
   coil:    { cat: 'Outputs', name: 'Relay Coil', sym: 'Relay', pre: 'CR', kind: 'coil' },
   tmr_on:  { cat: 'Outputs', name: 'On-Delay Timer', sym: 'Relay', kind: 'coil', as: 'coil', preset: { pre: 'TR' } },
@@ -101,8 +98,6 @@ PSYM["3PH Disconnect"] = {"b": "<path d=\"M0 105V-133\" fill=\"none\" stroke-das
 PSYM["SPDT Switch"] = {"b": "<path d=\"M-30 0L36 -30\" fill=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>", "t": [[-40, 0], [40, -40], [40, 40]], "y0": -50, "y1": 50};
 PSYM["DPDT Switch"] = {"b": "<path d=\"M0 46V-74\" fill=\"none\" stroke-dasharray=\"12 12\"/><path d=\"M-30 -60L36 -90\" fill=\"none\"/><circle cx=\"-30\" cy=\"-60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"-60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-100\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-100\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-20\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-20\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><path d=\"M-30 60L36 30\" fill=\"none\"/><circle cx=\"-30\" cy=\"60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"20\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"20\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"100\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"100\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>", "t": [[-40, -60], [40, -100], [40, -20], [-40, 60], [40, 20], [40, 100]], "y0": -110, "y1": 110};
 PSYM["DPDT Crossover Switch"] = {"b": "<path d=\"M-30 -40H30M-30 40H30\" fill=\"none\" stroke-dasharray=\"12 12\"/><path d=\"M-30 -40L30 40M-30 40L30 -40\" fill=\"none\"/><circle cx=\"-30\" cy=\"-40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"-40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"-30\" cy=\"40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>", "t": [[-40, -40], [40, -40], [-40, 40], [40, 40]], "y0": -50, "y1": 50};
-// SPDT and DPDT flipped left to right: the drawing mirrored, each end the same end (so its wires keep their meaning)
-for (const n of ['SPDT Switch', 'DPDT Switch']) { const s = PSYM[n]; PSYM[n + ', Flipped'] = { b: `<g transform="scale(-1 1)">${s.b}</g>`, t: s.t.map(([x, y]) => [-x, y]), y0: s.y0, y1: s.y1 }; }
 // relay coils as wide as a contact (80, terminal to terminal), so they don't look small beside them
 PSYM.Relay = { b: '<circle cx="0" cy="0" r="40" fill="#000" stroke="none"/><circle cx="0" cy="0" r="36" fill="#fff" stroke="none"/>', t: [[-40, 0], [40, 0]], y0: -40, y1: 40 };
 // continuation arrows (off-page connectors): a wire that carries on elsewhere (another sheet, or further down this

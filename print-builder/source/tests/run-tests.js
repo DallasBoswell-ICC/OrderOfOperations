@@ -490,19 +490,38 @@ let passed = 0, failed = 0;
     const want = { Buttons: 'Pushbuttons;Maintained Pushbuttons;Emergency Stop', Outputs: 'Relay Coil;Timers;Pilot Light;Solenoid;Heating Element;Motor', Contacts: 'Relay Contacts;Timed Contacts;Starter;OL Contact',
       Protection: 'Disconnects;Fuses;Circuit Breakers;Overloads', Power: 'Phase (L1, L2, L3);Control Source and Return;Transformer' };
     const out = []; for (const [c, w] of Object.entries(want)) if (kinds[c] !== w) out.push(c + ': ' + kinds[c]);
-    const hidden = await p.evaluate(() => !document.querySelector('.pt[data-t="spdt_m"], button[data-t="spdt_m"], .pt[data-t="dpdt_m"]'));
-    if (!hidden) out.push('the flipped switches show in the palette or menus');
-    // an SPDT with a wire on each end, flipped: its common moves to the right, its wires stay on the same ends; undo puts it back
+        // an SPDT with a wire on each end, flipped: its common moves to the right, its wires stay on the same ends; undo puts it back
     const r = await p.evaluate(() => { const a = addPart(S, 'spdt', 800, 600); addWire(S, [[600, 600], [760, 600]]); addWire(S, [[840, 560], [1000, 560]]); addWire(S, [[840, 640], [1000, 640]]);
       refresh(true); const ends = () => S.wires.map(w => [w.a, w.b].filter(e => e.p === a.id).map(e => e.i).join()).filter(Boolean).sort().join('/');
       const e0 = ends(); sel = new Set([a.id]); refresh(); const btn = !!$('p-flip'); return { id: a.id, e0, btn, loose: ISSUES.filter(i => /not wired|without reaching/.test(i.title)).length }; });
     await p.keyboard.press('f');
-    const f = await p.evaluate(id => { const q = partOf(S, id); return [q.t, termPos(q, 0).join(), S.wires.map(w => [w.a, w.b].filter(e => e.p === id).map(e => e.i).join()).filter(Boolean).sort().join('/'), ISSUES.filter(i => /not wired|without reaching/.test(i.title)).length]; }, r.id);
-    await p.click('#p-flip'); const back = await p.evaluate(id => partOf(S, id).t, r.id);
-    await p.keyboard.press('Control+z'); const undone = await p.evaluate(id => partOf(S, id).t, r.id);
+    const f = await p.evaluate(id => { const q = partOf(S, id); return [q.t + ':' + !!q.fx, termPos(q, 0).join(), S.wires.map(w => [w.a, w.b].filter(e => e.p === id).map(e => e.i).join()).filter(Boolean).sort().join('/'), ISSUES.filter(i => /not wired|without reaching/.test(i.title)).length]; }, r.id);
+    await p.click('#p-flip'); const back = await p.evaluate(id => !!partOf(S, id).fx, r.id);
+    await p.keyboard.press('Control+z'); const undone = await p.evaluate(id => !!partOf(S, id).fx, r.id);
     const got = [r.btn, f[0], f[1], f[2] === r.e0, f[3] === r.loose, back, undone].join('|');
-    if (got !== 'true|spdt_m|840,600|true|true|spdt|spdt_m') out.push('Flip button | after F | common at | same ends | loose ends | Flip again | undo: ' + got);
+    if (got !== 'true|spdt:true|840,600|true|true|false|true') out.push('Flip button | after F | common at | same ends | loose ends | Flip again | undo: ' + got);
     return out;
+  });
+
+  await check('Every part turns and flips (Dallas, 10 Nov 2026): 3-phase parts, the transformer, lines in; wires follow; numbering holds; old flipped switches open', async p => {
+    const r = await p.evaluate(() => { loadDoc(template('starter')); refresh(true);
+      const before = S.wires.map(w => A.label.get(A.wireRoot(S, w))).sort().join();
+      const turnable = Object.keys(LIB).filter(t => !LIB[t].hide).every(t => canTurn({ t }) && canFlip({ t }));
+      const ds = S.parts.find(q => q.t === 'dsc3'), x = S.parts.find(q => q.t === 'xfmr'), l1 = S.parts.find(q => q.t === 'sup');
+      // flipping the transformer and the disconnect keeps every wire on its end and every number as it was
+      flipParts(S, new Set([ds.id, x.id])); refresh(true);
+      const flipped = S.wires.map(w => A.label.get(A.wireRoot(S, w))).sort().join();
+      const loose = ISSUES.filter(i => /not wired|without reaching/.test(i.title)).length;
+      flipParts(S, new Set([ds.id, x.id])); refresh(true);
+      // a line in turned a half: its arrow points the other way along its wire
+      rotateParts(S, new Set([l1.id]), 180); refresh(true); const lt = l1.rot;
+      // a 3-phase part turned a quarter: its poles stand side by side
+      const f3 = addPart(S, 'fus3', 1400, 1600); rotateParts(S, new Set([f3.id])); const tp = [0, 2, 4].map(i => termPos(f3, i)[1]).join();
+      // a print saved in the demo with a flipped SPDT as a part of its own
+      const d = JSON.parse(JSON.stringify(doc)); d.sheets[0].parts.push({ id: 'old1', t: 'spdt_m', x: 1400, y: 2000, rot: 0, tag: 'SW9' }); loadDoc(d); const o = S.parts.find(q => q.id === 'old1');
+      return [turnable, before === flipped, loose, lt, tp, o.t + ':' + !!o.fx]; });
+    const got = r.join('|');
+    return got === 'true|true|0|180|1560,1560,1560|spdt:true' ? [] : ['all turn and flip | numbers kept | loose ends | line in turned | 3-phase poles | old flipped switch: ' + got];
   });
 
   await b.close();

@@ -88,30 +88,37 @@ function drawSheet(s, k, A) {
     const halo = linked.has(p.id) ? ' stroke="#fff" stroke-width="8" stroke-linejoin="round" paint-order="stroke"' : '';
     const tagT = (x, y, t, size, anchor = 'middle', which = 'tag') => { if (!t) return; const o = labOff(p, which); x += o[0]; y += o[1]; text(x, y, t, size, anchor, 700, halo); PLABS.push({ id: p.id, which, ...lblBox(x, y, t, size, anchor) }); };
     const descT = (x, y, t, size, anchor = 'middle') => { if (!t) return; x += ld[0]; y += ld[1]; text(x, y, t, size, anchor, 500, halo); PLABS.push({ id: p.id, which: 'desc', ...lblBox(x, y, t, size, anchor) }); };
-    if (isArrowIn(p.t)) { arrow(p.x, p.y, 1, 0); tagT(p.x - 30, p.y + 10, p.tag, 28, 'end'); continue; }
+    if (isArrowIn(p.t)) {   // (a line in: its arrow points along the wire, its name behind it; turned and flipped with it)
+      const u = place(p, [1, 0]), n = place(p, [-34, 0]); arrow(p.x, p.y, u[0], u[1]);
+      tagT(p.x + n[0], p.y + n[1] + (u[1] ? (u[1] > 0 ? -6 : 30) : 10), p.tag, 28, u[0] > 0 ? 'end' : u[0] < 0 ? 'start' : 'middle'); continue; }
     const sym = PSYM[symOf(p)], r = p.rot || 0, kind = LIB[p.t].kind;
-    g += `<g class="sym" transform="translate(${p.x} ${p.y})${r ? ` rotate(${r})` : ''}">${sym.b}</g>`;
+    g += `<g class="sym" transform="${xform(p)}">${sym.b}</g>`;
     if (kind === 'cont') {   // (its letter inside the arrow; under it, where it goes or comes from)
-      const c = turn([-6, 0], r); text(p.x + c[0], p.y + c[1] + 9, p.tag, (p.tag || '').length > 2 ? 18 : 24);
+      const c = place(p, [-6, 0]); text(p.x + c[0], p.y + c[1] + 9, p.tag, (p.tag || '').length > 2 ? 18 : 24);
       // (lying down: its note under it; standing up: beside it)
       if (r % 180) descT(p.x + 34, p.y + c[1] + 7, p.desc || contNote(p, k), 18, 'start'); else descT(p.x, p.y + 46, p.desc || contNote(p, k), 18); continue; }
     const up = r % 180 !== 0, inside = (kind === 'coil' && (p.tag || '').length <= 4) || kind === 'motor';
-    if (up) { const off = Math.max(Math.abs(sym.y0), Math.abs(sym.y1)) + 10; tagT(p.x + off, p.y + 9, p.tag, 26, 'start'); if (noteOf(p)) descT(p.x + off, p.y + 34, noteOf(p), 20, 'start'); }
+    // (a fuse block or fused disconnect stood on end: each fuse its number beside it, across from the fuse; the disconnect's name over all)
+    if (up && (p.t === 'fus3' || p.t === 'fdsc3')) { const tg = tagsOf(p), fu = p.t === 'fus3' ? tg : tg.slice(1), fx = p.t === 'fus3' ? 0 : 40;
+      fu.forEach((t, i) => { const c = place(p, [fx, -120 + 120 * i]); tagT(p.x + c[0] + 18, p.y + c[1] + 9, t, 26, 'start', 'fu' + i); });
+      if (p.t === 'fdsc3') { const c = place(p, [-40, 0]), top = Math.min(...[0, 1, 2, 3, 4, 5].map(i => termPos(p, i)[1])); tagT(p.x + c[0], top - 16, p.tag, 26); }
+    } else if (up) { const off = Math.max(Math.abs(sym.y0), Math.abs(sym.y1)) + 10; tagT(p.x + off, p.y + 9, p.tag, 26, 'start'); if (noteOf(p)) descT(p.x + off, p.y + 34, noteOf(p), 20, 'start'); }
     else {
       const y0 = r === 180 ? -sym.y1 : sym.y0, y1 = r === 180 ? -sym.y0 : sym.y1;
-      if (p.t === 'fdsc3' && !r) tagsOf(p).slice(1).forEach((tg, i) => tagT(p.x + 40, termPos(p, 2 * i)[1] - 24, tg, 26, 'middle', 'fu' + i));   // (a fused disconnect's fuses, each its number)
+      if (p.t === 'fdsc3' && !r) tagsOf(p).slice(1).forEach((tg, i) => tagT(p.x + (p.fx ? -40 : 40), termPos(p, 2 * i)[1] - 24, tg, 26, 'middle', 'fu' + i));   // (a fused disconnect's fuses, each its number)
       if (p.t === 'fus3' && !r) tagsOf(p).forEach((tg, i) => tagT(p.x, termPos(p, 2 * i)[1] - 24, tg, 26, 'middle', 'fu' + i));   // (each fuse its own number)
-      else if (inside) text(p.x, p.y + (kind === 'motor' ? 11 : 10), p.tag, kind === 'motor' ? 30 : (p.tag || '').length > 3 ? 22 : 27); else tagT(p.x + (p.t === 'fdsc3' && !r ? -40 : 0), p.y + y0 - 8, p.tag, 26);   // (a fused disconnect's name over its switch, clear of its fuse numbers)
+      else if (inside) text(p.x, p.y + (kind === 'motor' ? 11 : 10), p.tag, kind === 'motor' ? 30 : (p.tag || '').length > 3 ? 22 : 27); else tagT(p.x + (p.t === 'fdsc3' && !r ? (p.fx ? 40 : -40) : 0), p.y + y0 - 8, p.tag, 26);   // (a fused disconnect's name over its switch, clear of its fuse numbers)
       if (noteOf(p)) descT(p.x, p.y + y1 + 22, noteOf(p), 20);
     }
     if (p.t === 'xfmr') { const t = [0, 1, 2, 3].map(i => termPos(p, i)), nm = ['H1', 'H2', 'X1', 'X2'];
-      t.forEach((q, i) => text(q[0] + (i % 2 ? 12 : -12), q[1] + (i < 2 ? -8 : 22), nm[i], 18, i % 2 ? 'start' : 'end', 600)); }
+      // (each name beside its own end, whichever way the transformer is turned or flipped)
+      t.forEach((q, i) => { const d = [q[0] - p.x, q[1] - p.y], hz = Math.abs(d[0]) >= Math.abs(d[1]); text(q[0] + (hz ? Math.sign(d[0]) * 12 : 0) + (hz ? 0 : (d[0] < 0 ? -12 : 12)), q[1] + (d[1] < 0 ? -8 : 22), nm[i], 18, d[0] > 0 ? 'start' : 'end', 600); }); }
   }
   // rung numbers, left of L1; cross-references, right of L2
   const rL1 = rails.find(r => r.label === 'L1'), rL2 = rails.find(r => r.label === 'L2');
   if (SHOW.rn) for (const { y, n } of A.rows[k] || []) {
     // (left of everything on its row: L1, the symbols, and any wire that runs along the row or comes down across it)
-    const xs = s.parts.filter(p => p.t !== 'rail' && p.y === y).map(p => p.x + extentOf(p.t).x0);
+    const xs = s.parts.filter(p => p.t !== 'rail' && p.y === y).map(p => p.x + extOf(p).x0);
     for (const w of s.wires) { const P = wirePts(s, w); for (let i = 0; i < P.length - 1; i++) { const [a, b] = [P[i], P[i + 1]];
       if (a[1] === y && b[1] === y) xs.push(Math.min(a[0], b[0])); else if (a[0] === b[0] && Math.min(a[1], b[1]) <= y && Math.max(a[1], b[1]) >= y) xs.push(a[0]); } }
     if (rL1 && y >= rL1.y0 && y <= rL1.y1) xs.push(rL1.x);
@@ -119,7 +126,7 @@ function drawSheet(s, k, A) {
   }
   if (SHOW.xr) for (const p of s.parts) { const r = A.xref.get(p.id); if (!r || !r.length) continue;
     // (right of everything on its row: L2, the symbols, and any wire along the row or crossing it)
-    const xs = s.parts.filter(q => q.t !== 'rail' && q.y === p.y).map(q => q.x + extentOf(q.t).x1);
+    const xs = s.parts.filter(q => q.t !== 'rail' && q.y === p.y).map(q => q.x + extOf(q).x1);
     for (const w of s.wires) { const P = wirePts(s, w); for (let i = 0; i < P.length - 1; i++) { const [a, b] = [P[i], P[i + 1]];
       if (a[1] === p.y && b[1] === p.y) xs.push(Math.max(a[0], b[0])); else if (a[0] === b[0] && Math.min(a[1], b[1]) <= p.y && Math.max(a[1], b[1]) >= p.y) xs.push(a[0]); } }
     if (rL2 && p.y >= rL2.y0 && p.y <= rL2.y1) xs.push(rL2.x);
@@ -222,7 +229,7 @@ function linksOf(s) {
   return out;
 }
 // a part's box for a link's ends (its symbol's extent)
-const linkBox = p => { const s = PSYM[symOf(p)], e = extentOf(p.t); return { x0: p.x + e.x0, x1: p.x + e.x1, y0: p.y + s.y0, y1: p.y + s.y1 }; };
+const linkBox = p => { const s = PSYM[symOf(p)], e = extOf(p); return { x0: p.x + e.x0, x1: p.x + e.x1, y0: p.y + s.y0, y1: p.y + s.y1 }; };
 // where an end sits: on the top or bottom of the part (slid along by o), or its left or right side (a little above the
 // rung); 'stem' is just above a pushbutton's wire, where a block's dashed link has always started
 function linkEnd(p, e) { const b = linkBox(p), o = e.o || 0;
