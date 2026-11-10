@@ -25,4 +25,6 @@ line when the demo is promoted. To promote: build without `--demo`, run the chec
 print-builder/index.html (and dist/icons, dist/print-builder.webmanifest beside it), save a backup of the old page
 first if asked, then update the commit named above.
 
+Before every push to main, save the live page and its source in `backups/YYYY-MM-DD/print-builder/` (Print_Builder.html plus Print_Builder_source.zip) and check the source rebuilds it exactly.
+
 Checks: `node tests/run-tests.js` tests dist/Print_Builder.html; `node tests/run-tests.js --demo` tests the demo build.
