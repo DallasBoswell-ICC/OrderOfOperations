@@ -284,7 +284,7 @@ let passed = 0, failed = 0;
   });
 
   await check('Printing: every sheet a letter page, the right way round', async p => {
-    await p.click('#addsheet-btn'); await p.click('#orient-btn');
+    await p.click('#addsheet-btn'); await p.click('#orient-btn'); await p.click('#orient-menu [data-land="1"]');
     await p.evaluate(() => { window.print = () => {}; printAll(); });
     const r = await p.evaluate(() => [...document.querySelectorAll('#print-host .pr-page')].map(e => e.classList.contains('land') ? 'L' : 'P').join(''));
     const rails = await p.evaluate(() => S.parts.filter(q => q.t === 'rail').every(r => r.y1 <= VB[1]));
@@ -297,7 +297,7 @@ let passed = 0, failed = 0;
 
   await check('Print Preview: every sheet, Drawn By typed there kept for a new print, Esc closes; Ctrl+P opens it', async p => {
     await p.evaluate(() => { loadDoc(template('starter')); refresh(true); });
-    await p.click('#addsheet-btn'); await p.click('#orient-btn');
+    await p.click('#addsheet-btn'); await p.click('#orient-btn'); await p.click('#orient-menu [data-land="1"]');
     const x0 = await p.evaluate(() => (doc.cur = 0, S = doc.sheets[0], refresh(true), XREFS.length));
     await p.click('#print-btn');
     const r = await p.evaluate(() => [!$('pv').hidden, document.querySelectorAll('#pv-pages .pr-page').length, $('pv-n').textContent, XREFS.length]);
@@ -418,6 +418,28 @@ let passed = 0, failed = 0;
     if (!c[0] || c[1] || u !== n) out.push('cleared | wires left | parts after undo: ' + [...c, u + '/' + n].join(' | '));
     if (names !== 'Overload Heater (1 Line);Source L1 (Control);Return L2 (Control);Continues To (Out);Continued From (In)') out.push('names: ' + names);
     return out;
+  });
+
+  await check('Orientation: a menu with Portrait and Landscape, the current one ticked', async p => {
+    await p.evaluate(() => { loadDoc(template('starter')); refresh(true); });
+    await p.click('#orient-btn'); const a = await p.evaluate(() => [!$('orient-menu').hidden, $('orient-btn').textContent.trim(), [...document.querySelectorAll('#orient-menu [data-land]')].map(b => b.getAttribute('aria-checked')).join()]);
+    await p.click('#orient-menu [data-land="1"]'); const b = await p.evaluate(() => [S.land, $('orient-menu').hidden]);
+    await p.click('#orient-btn'); const c = await p.evaluate(() => [...document.querySelectorAll('#orient-menu [data-land]')].map(b => b.getAttribute('aria-checked')).join());
+    await p.click('#orient-menu [data-land="1"]'); const u = await p.evaluate(() => [S.land, UNDO.length]);
+    await p.keyboard.press('Control+z'); const z = await p.evaluate(() => S.land);
+    const r = [...a, ...b, c, u[0], z].join('|');
+    return r === 'true|Orientation ▾|true,false|true|true|false,true|true|false' ? [] : ['open | label | ticks | landscape | closed | ticks after | same pick | undone: ' + r];
+  });
+
+  await check('A drag on the grey round the paper draws a selection box (it can start off the paper)', async p => {
+    await p.evaluate(() => { loadDoc(template('starter')); refresh(true); fitZoom(); });
+    const r = await p.evaluate(() => { const b = svg.getBoundingClientRect(), pl = S.parts.filter(q => q.t === 'pl'), m = svg.getScreenCTM();
+      return { x0: b.left - 30, y: m.d * (pl[0].y - 60) + m.f, x1: m.a * (pl[0].x + 60) + m.e, y1: m.d * (pl[1].y + 60) + m.f, gray: document.elementFromPoint(b.left - 30, m.d * (pl[0].y - 60) + m.f).id }; });
+    await p.mouse.move(r.x0, r.y); await p.mouse.down(); await p.mouse.move(r.x1, r.y1, { steps: 6 });
+    const mid = await p.evaluate(() => !!(drag && drag.box));
+    await p.mouse.up();
+    const got = await p.evaluate(() => [...sel].map(id => partOf(S, id)).filter(Boolean).map(q => q.tag || q.t).sort().join());
+    return mid && /PL1/.test(got) && /PL2/.test(got) && r.gray !== 'sv' ? [] : ['started on: ' + r.gray + ' | box: ' + mid + ' | picked: ' + got];
   });
 
   await b.close();

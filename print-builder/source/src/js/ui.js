@@ -27,6 +27,13 @@ function buildPage(key) {
   host.innerHTML = pageHTML(S, doc.cur, A, true); pageFor = key;
   svg = $('sv'); VB = fitDraw(host.firstElementChild);
   svg.addEventListener('pointerdown', onDown); svg.addEventListener('pointermove', onMove); svg.addEventListener('pointerup', onUp);
+  // (the grey round the paper: a drag there starts a selection box as on the paper, as in Circuit Builder; middle or Space+drag pans)
+  if (!zoomer.dataset.off) { zoomer.dataset.off = '1'; zoomer.addEventListener('pointerdown', e => {
+    // (a press on the paper itself is the paper's own, even when what was under it was redrawn as it went)
+    if (e.composedPath().includes(svg) || e.target.closest('button, input')) return;
+    if (e.button === 1 || (e.button === 0 && spaceDown)) return onDown(e);
+    if (e.button === 0 && tool === 'select') onDown(e);
+  }); }
   svg.addEventListener('pointerleave', () => { cursor = null; $('tip').hidden = true; if (!drag) drawEd(); });
   svg.addEventListener('dblclick', e => { const h = pick(sheetPt(e));
     if (tool === 'select' && h && (h.kind === 'link' || h.kind === 'linkend')) { const o = partOf(S, h.id); if (o && o.lk) { snapshot(); delete o.lk; selL = h.id; refresh(); say('Dashed link put back as it was drawn.'); } return; }
@@ -39,7 +46,9 @@ function updateButtons() {
   $('undo-btn').disabled = !UNDO.length; $('redo-btn').disabled = !REDO.length;
   const any = [...sel].some(id => { const p = partOf(S, id); return p ? p.t !== 'rail' : true; });
   $('copy-btn').disabled = $('cut-btn').disabled = !any; $('del-btn').disabled = !sel.size && !selW; $('paste-btn').disabled = !hasClip();
-  $('orient-lbl').textContent = S.land ? 'Landscape' : 'Portrait';
+  // (the Orientation menu ticks the way this sheet is round now; the button's icon shows it too)
+  for (const b of document.querySelectorAll('#orient-menu [data-land]')) b.setAttribute('aria-checked', String(!!S.land === (b.dataset.land === '1')));
+  const oi = $('orient-ic'); if (S.land) { oi.setAttribute('x', 3); oi.setAttribute('y', 6); oi.setAttribute('width', 18); oi.setAttribute('height', 12); } else { oi.setAttribute('x', 6); oi.setAttribute('y', 3); oi.setAttribute('width', 12); oi.setAttribute('height', 18); }
   $('pageinfo').textContent = `Letter · ${S.land ? 'Landscape' : 'Portrait'}`;
   const n = ISSUES.filter(i => i.sev !== 'ok').length;
   for (const b of [$('check-badge'), $('tab-badge')]) { b.hidden = !n; b.textContent = n; b.className = 'badge' + (ISSUES.some(i => i.sev === 'e') ? '' : ' w'); }
@@ -274,15 +283,17 @@ function renderTabs() {
   });
 }
 $('addsheet-btn').addEventListener('click', () => { snapshot(); doc.sheets.push(newSheet(true, S.land)); doc.cur = doc.sheets.length - 1; sel = new Set(); selW = null; refresh(); fitZoom(); });
-$('orient-btn').addEventListener('click', () => {
-  snapshot(); S.land = !S.land;
+for (const b of document.querySelectorAll('#orient-menu [data-land]')) b.addEventListener('click', () => { closeMenus(); setOrient(b.dataset.land === '1'); });
+function setOrient(land) {
+  if (!!S.land === land) return;
+  snapshot(); S.land = land;
   // (an empty sheet: its rails laid out afresh for the new way round; otherwise kept on the paper)
   const rails = S.parts.filter(p => p.t === 'rail');
   if (rails.length === S.parts.length && !S.wires.length && !S.texts.length) { const f = newSheet(true, S.land); S.parts = f.parts; }
   refresh(true);
   for (const r of S.parts) if (r.t === 'rail') { r.y1 = Math.min(r.y1, snap(VB[1] - 60)); r.y0 = Math.min(r.y0, r.y1 - 200); r.x = Math.min(r.x, snap(VB[0] - 60)); }
   refresh(); fitZoom();
-});
+}
 
 /* ---------- the title block ---------- */
 function renderTB() {

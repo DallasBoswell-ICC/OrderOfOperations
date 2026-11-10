@@ -223,3 +223,10 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .flash { fill: rgba(255,196,0,.28); stroke: #e0a800; stroke-width: 3; animation: flash 1.4s ease-out forwards; pointer-events: none; }
 @keyframes flash { 0%, 30% { opacity: 1; } 100% { opacity: 0; } }
 #sv.tool-select.on-ref { cursor: pointer; } #sv.tool-select.on-link { cursor: move; }
+
+/* ---------- Orientation menu: the way the sheet is round now ticked ---------- */
+.orient-menu { min-width: 170px; } .orient-menu svg { width: 20px; height: 20px; flex: none; }
+.orient-menu .ck { width: 14px; color: var(--gold); font-weight: 700; visibility: hidden; } .orient-menu [aria-checked="true"] .ck { visibility: visible; }
+.orient-menu [aria-checked="true"] { color: #fff; font-weight: 600; }
+/* a selection box started on the grey can run off the paper */
+#sv { overflow: visible; }
