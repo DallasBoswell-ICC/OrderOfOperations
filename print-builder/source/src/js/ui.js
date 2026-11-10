@@ -72,7 +72,7 @@ const short = n => n.replace(' Maintained Pushbutton', ' Maint. PB').replace(', 
 function buildPalette() {
   let h = '';
   for (const c of CATS) { h += `<div class="ph">${c}</div><div class="pg">`;
-    for (const [t, d] of Object.entries(LIB)) if (d.cat === c) h += `<div class="pt" data-t="${t}" title="${esc(d.name)}">${thumb(t)}<span>${esc(short(d.name))}</span></div>`;
+    for (const [t, d] of Object.entries(LIB)) if (d.cat === c && !d.hide) h += `<div class="pt" data-t="${t}" title="${esc(d.name)}">${thumb(t)}<span>${esc(short(d.name))}</span></div>`;
     h += '</div>'; }
   $('palette').innerHTML = '<div class="pal-top"><span>Parts</span><button id="pal-hide" title="Hide the parts list (the » on the left brings it back)">« Hide</button></div>' + h;
   $('pal-hide').addEventListener('click', () => setPalette(null, true));
@@ -89,8 +89,8 @@ function buildPalette() {
   for (const c of CATS) { m += `<div class="menuwrap"><button class="rb" data-menu="${c}"><span class="sw" style="border-color:${CAT_COL[c]}"></span><span>${c} ▾</span></button><div class="dmenu" hidden>`;
     const item = (t, d) => `<button data-t="${t}">${thumb(t).replace('<svg', '<svg style="width:46px;height:26px;background:#f4f5f6;border-radius:4px;padding:2px"')}${esc(d.name)}</button>`;
     const subs = new Map(), done = new Set();
-    for (const [t, d] of Object.entries(LIB)) if (d.cat === c && subOf(t)) { const g = subOf(t); if (!subs.has(g)) subs.set(g, []); subs.get(g).push(t); }
-    for (const [t, d] of Object.entries(LIB)) if (d.cat === c) {
+    for (const [t, d] of Object.entries(LIB)) if (d.cat === c && !d.hide && subOf(t)) { const g = subOf(t); if (!subs.has(g)) subs.set(g, []); subs.get(g).push(t); }
+    for (const [t, d] of Object.entries(LIB)) if (d.cat === c && !d.hide) {
       const g = subOf(t);
       if (!g) { m += item(t, d); continue; }
       if (done.has(g)) continue; done.add(g);
@@ -222,7 +222,7 @@ function renderProps0() {
       ${rn ? `<div class="f">Rung<span class="ro">${rn} (automatic)</span></div>` : ''}
       ${termNums.length ? `<div class="f">Wires<span class="ro">${termNums.join(' → ')} (automatic)</span></div>` : ''}
       ${xr && xr.length ? `<div class="f">Contacts on<span class="ro">${xr.map(o => o.n + (o.nc ? ' (NC)' : '')).join(', ')}</span></div>` : ''}
-      <div class="acts">${canTurn(p) ? '<button class="btn" id="p-rot">Rotate (R)</button>' : ''}${p.lt || p.ld || p.lf ? '<button class="btn" id="p-lab">Put Labels Back</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
+      <div class="acts">${canTurn(p) ? '<button class="btn" id="p-rot">Rotate (R)</button>' : ''}${canFlip(p) ? '<button class="btn" id="p-flip" title="Flip it left to right: its common to the other side (F)">Flip ⇆ (F)</button>' : ''}${p.lt || p.ld || p.lf ? '<button class="btn" id="p-lab">Put Labels Back</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
     const of = $('p-of'); if (of) of.addEventListener('change', () => { let v = of.value; if (v === '__other') { v = (prompt(k === 'olc' ? 'The overload this contact belongs to (e.g. OL2):' : 'The coil that works this contact (e.g. CR3):', p.tag || '') || '').trim().toUpperCase(); if (!v) { renderProps(); return; } }
       snapshot(); p.tag = v; refresh(); });
     const tg = $('p-tag'); let was = p.tag;
@@ -243,6 +243,7 @@ function renderProps0() {
     for (const b of P.querySelectorAll('[data-flip]')) b.addEventListener('click', () => { if (b.dataset.flip === p.t) return; snapshot(); p.t = b.dataset.flip; refresh(); });
     for (const b of P.querySelectorAll('[data-line]')) b.addEventListener('click', () => { snapshot(); p.tag = b.dataset.line; refresh(); });
     const ro = $('p-rot'); if (ro) ro.addEventListener('click', () => { snapshot(); rotateParts(S, new Set([p.id])); refresh(); });
+    const fl = $('p-flip'); if (fl) fl.addEventListener('click', () => { snapshot(); flipParts(S, new Set([p.id])); refresh(); });
   } else if (t) {
     P.innerHTML = `<h4>Note</h4><textarea id="note-text" rows="4">${esc(t.s)}</textarea>
       <div class="f" style="margin-top:8px">Size<div class="seg">${[[20, 'Small'], [24, 'Medium'], [32, 'Large']].map(([z, n]) => `<button data-size="${z}" aria-pressed="${(t.size || 24) === z}">${n}</button>`).join('')}</div></div>
@@ -479,6 +480,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { if (wd) finishWire(); else if (tool !== 'select') setTool('select'); else { sel = new Set(); selW = null; selL = null; refresh(); } return; }
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); removeSelection(); return; }
   const k = e.key.toLowerCase();
+  if (k === 'f' && !e.ctrlKey && !e.metaKey && sel.size && [...sel].some(id => canFlip(partOf(S, id)))) { snapshot(); flipParts(S, sel); refresh(); return; }
   if (k === 'r') { if (tool === 'place' && placing) { if (canTurn({ t: placing.t })) placing.rot = ((placing.rot || 0) + 90) % 360; drawEd(); } else if (sel.size) { snapshot(); rotateParts(S, sel); refresh(); } return; }
   if (k === 'v') setTool('select'); if (k === 'w') setTool('wire'); if (k === 'l') setTool('rung'); if (k === 'n') setTool('note');
   const mv = { arrowleft: [-G, 0], arrowright: [G, 0], arrowup: [0, -G], arrowdown: [0, G] }[k];
@@ -500,7 +502,7 @@ function start() {
 
 /* ---------- several parts of one kind picked: one Part tab for them all (as in Circuit Builder) ---------- */
 // what parts are alike for this: contacts; relay coils; timers; pushbuttons; otherwise the same symbol, NO or NC
-const multiKey = p => { const k = LIB[p.t].kind; if (k === 'contact') return 'contact'; if (k === 'coil') return /^TR/.test(p.tag || '') ? 'timer' : 'coil'; if (isPB(p)) return 'pb'; return p.t.replace(/_(no|nc|hc|ho)$/, ''); };
+const multiKey = p => { const k = LIB[p.t].kind; if (k === 'contact') return 'contact'; if (k === 'coil') return /^TR/.test(p.tag || '') ? 'timer' : 'coil'; if (isPB(p)) return 'pb'; return p.t.replace(/_(no|nc|hc|ho|m)$/, ''); };
 const MULTI_NAME = { contact: 'Contacts', coil: 'Relay Coils', timer: 'Timers', pb: 'Pushbuttons', pl: 'Pilot Lights', sel: 'Selector Switches' };
 // the picked parts, if every one is a symbol (not a rail) and all of one kind; else null
 function multiParts(ids) {
@@ -523,7 +525,7 @@ function renderMulti(P, ps) {
     ${p0.t === 'pl' ? `<div class="f">Built Into<select id="m-inpb">${same(p => p.inPB || '') ? '' : '<option value="__keep" selected>(several)</option>'}<option value=""${same(p => p.inPB || '') && !p0.inPB ? ' selected' : ''}>None (lights of their own)</option>${[...new Set(allParts().filter(q => isPB(q.p) && q.p.tag).map(q => q.p.tag))].map(t => `<option value="${esc(t)}"${same(p => p.inPB || '') && p0.inPB === t ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></div>` : ''}
     ${p0.t === 'sel' ? `<div class="f">Positions<input class="in" id="m-pos" value="${same(p => selNames(p).join('/')) ? esc(selNames(p0).join('/')) : ''}" placeholder="${same(p => selNames(p).join('/')) ? '' : '(several)'}" title="2 to 4 positions, with slashes: HAND/OFF/AUTO"></div>` : ''}
     <p class="help">A setting changed here changes all ${ps.length}. (Each one’s own ${k === 'contact' || k === 'starter' || k === 'olc' ? 'label is' : 'number and label are'} set one at a time.)</p>
-    <div class="acts">${ps.every(canTurn) ? '<button class="btn" id="m-rot">Rotate (R)</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
+    <div class="acts">${ps.every(canTurn) ? '<button class="btn" id="m-rot">Rotate (R)</button>' : ''}${ps.every(canFlip) ? '<button class="btn" id="m-flip">Flip ⇆ (F)</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
   const all = fn => { snapshot(); for (const p of ps) fn(p); refresh(); };
   for (const b of P.querySelectorAll('[data-mno]')) b.addEventListener('click', () => all(p => { if (isNO(p) !== (b.dataset.mno === '1')) p.t = LIB[p.t].flip; }));
   const of = $('m-of'); if (of) of.addEventListener('change', () => { if (of.value) all(p => { p.tag = of.value; }); });
@@ -533,6 +535,7 @@ function renderMulti(P, ps) {
   const ib = $('m-inpb'); if (ib) ib.addEventListener('change', () => { if (ib.value !== '__keep') all(p => { if (ib.value) p.inPB = ib.value; else delete p.inPB; }); });
   const ps_ = $('m-pos'); if (ps_) ps_.addEventListener('change', () => { const n = ps_.value.split(/[\/,]+/).map(x => x.trim().toUpperCase()).filter(Boolean).slice(0, 4); if (n.length < 2) return; all(p => { p.pos = n.join('/'); p.closedIn = (p.closedIn || []).filter(i => i < n.length); }); });
   const ro = $('m-rot'); if (ro) ro.addEventListener('click', () => { snapshot(); rotateParts(S, new Set(ps.map(p => p.id))); refresh(); });
+  const mf = $('m-flip'); if (mf) mf.addEventListener('click', () => { snapshot(); flipParts(S, new Set(ps.map(p => p.id))); refresh(); });
 }
 
 /* ---------- a coil (or overload, or pushbutton) renamed: what belongs to it goes with it, unless another of that

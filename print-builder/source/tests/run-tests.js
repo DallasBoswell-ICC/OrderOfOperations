@@ -484,6 +484,27 @@ let passed = 0, failed = 0;
     return r === 'Selector Switch;Limit Switches;Temperature Switches;Pressure Switches;Float Switches;Flow Switches;Proximity Switches;Toggle & Multi-Pole Switches|true|1|true|5|4|ls_hc|0' ? [] : ['kinds | menu fits | fly-outs open | fly-out fits | its parts | one open at a time | placed | menus left open: ' + r];
   });
 
+  await check('Every long part menu is split by kind; SPDT and DPDT switches flip left to right (F, or Flip on the Part tab), their wires following', async p => {
+    await p.evaluate(() => { loadDoc(template('blank')); refresh(true); });
+    const kinds = await p.evaluate(() => Object.fromEntries(CATS.map(c => [c, [...document.querySelector(`[data-menu="${c}"]`).nextElementSibling.querySelectorAll(':scope > button, :scope > .subwrap > .sub-row')].map(b => b.dataset.t ? LIB[b.dataset.t].name : [...b.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim()).join(';')])));
+    const want = { Buttons: 'Pushbuttons;Maintained Pushbuttons;Emergency Stop', Outputs: 'Relay Coil;Timers;Pilot Light;Solenoid;Heating Element;Motor', Contacts: 'Relay Contacts;Timed Contacts;Starter;OL Contact',
+      Protection: 'Disconnects;Fuses;Circuit Breakers;Overloads', Power: 'Phase (L1, L2, L3);Control Source and Return;Transformer' };
+    const out = []; for (const [c, w] of Object.entries(want)) if (kinds[c] !== w) out.push(c + ': ' + kinds[c]);
+    const hidden = await p.evaluate(() => !document.querySelector('.pt[data-t="spdt_m"], button[data-t="spdt_m"], .pt[data-t="dpdt_m"]'));
+    if (!hidden) out.push('the flipped switches show in the palette or menus');
+    // an SPDT with a wire on each end, flipped: its common moves to the right, its wires stay on the same ends; undo puts it back
+    const r = await p.evaluate(() => { const a = addPart(S, 'spdt', 800, 600); addWire(S, [[600, 600], [760, 600]]); addWire(S, [[840, 560], [1000, 560]]); addWire(S, [[840, 640], [1000, 640]]);
+      refresh(true); const ends = () => S.wires.map(w => [w.a, w.b].filter(e => e.p === a.id).map(e => e.i).join()).filter(Boolean).sort().join('/');
+      const e0 = ends(); sel = new Set([a.id]); refresh(); const btn = !!$('p-flip'); return { id: a.id, e0, btn, loose: ISSUES.filter(i => /not wired|without reaching/.test(i.title)).length }; });
+    await p.keyboard.press('f');
+    const f = await p.evaluate(id => { const q = partOf(S, id); return [q.t, termPos(q, 0).join(), S.wires.map(w => [w.a, w.b].filter(e => e.p === id).map(e => e.i).join()).filter(Boolean).sort().join('/'), ISSUES.filter(i => /not wired|without reaching/.test(i.title)).length]; }, r.id);
+    await p.click('#p-flip'); const back = await p.evaluate(id => partOf(S, id).t, r.id);
+    await p.keyboard.press('Control+z'); const undone = await p.evaluate(id => partOf(S, id).t, r.id);
+    const got = [r.btn, f[0], f[1], f[2] === r.e0, f[3] === r.loose, back, undone].join('|');
+    if (got !== 'true|spdt_m|840,600|true|true|spdt|spdt_m') out.push('Flip button | after F | common at | same ends | loose ends | Flip again | undo: ' + got);
+    return out;
+  });
+
   await b.close();
   console.log(`\n${passed} of ${passed + failed} checks passed.`);
   process.exit(failed ? 1 : 0);

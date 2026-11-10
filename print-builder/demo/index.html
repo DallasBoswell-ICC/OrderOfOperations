@@ -390,6 +390,7 @@ const PSYM = {"3PH Disconnect":{"b":"<g transform=\"translate(0 -120)\"><circle 
    poles   pairs of its terminals that carry a line through it, line side first (power and fuses)
    passes  pairs of its terminals a switch can join (a switch with more than two ends: SPDT, DPST, DPDT, crossover)
    flip    the same device the other way (NO <-> NC)
+   mirror  the same device drawn flipped left to right (Flip: an SPDT's common on its right); hide: not in the palette
    ===================================================================== */
 const LIB = {
   // (in Circuit Builder's order: its menus, and what is in each)
@@ -416,9 +417,12 @@ const LIB = {
   prs_no:  { cat: 'Switches', name: 'NO Proximity Switch', sym: 'NO Proximity Switch', pre: 'PRS', kind: 'sw', flip: 'prs_nc' },
   prs_nc:  { cat: 'Switches', name: 'NC Proximity Switch', sym: 'NC Proximity Switch', pre: 'PRS', kind: 'sw', flip: 'prs_no' },
   spst:    { cat: 'Switches', name: 'Toggle Switch (SPST)', sym: 'SPST Switch', pre: 'SW', kind: 'sw' },
-  spdt:    { cat: 'Switches', name: 'SPDT Switch', sym: 'SPDT Switch', pre: 'SW', kind: 'sw', passes: [[0, 1], [0, 2]] },
+  spdt:    { cat: 'Switches', name: 'SPDT Switch', sym: 'SPDT Switch', pre: 'SW', kind: 'sw', passes: [[0, 1], [0, 2]], mirror: 'spdt_m' },
   dpst:    { cat: 'Switches', name: 'DPST Switch', sym: 'DPST Switch', pre: 'SW', kind: 'sw', passes: [[0, 1], [2, 3]] },
-  dpdt:    { cat: 'Switches', name: 'DPDT Switch', sym: 'DPDT Switch', pre: 'SW', kind: 'sw', passes: [[0, 1], [0, 2], [3, 4], [3, 5]] },
+  dpdt:    { cat: 'Switches', name: 'DPDT Switch', sym: 'DPDT Switch', pre: 'SW', kind: 'sw', passes: [[0, 1], [0, 2], [3, 4], [3, 5]], mirror: 'dpdt_m' },
+  // (the same switches flipped left to right: their common on the right; reached with Flip, not shown in the palette)
+  spdt_m:  { cat: 'Switches', name: 'SPDT Switch', sym: 'SPDT Switch, Flipped', pre: 'SW', kind: 'sw', passes: [[0, 1], [0, 2]], mirror: 'spdt', hide: true },
+  dpdt_m:  { cat: 'Switches', name: 'DPDT Switch', sym: 'DPDT Switch, Flipped', pre: 'SW', kind: 'sw', passes: [[0, 1], [0, 2], [3, 4], [3, 5]], mirror: 'dpdt', hide: true },
   xover:   { cat: 'Switches', name: 'DPDT Crossover Switch', sym: 'DPDT Crossover Switch', pre: 'SW', kind: 'sw', passes: [[0, 1], [2, 3], [0, 3], [2, 1]] },
   coil:    { cat: 'Outputs', name: 'Relay Coil', sym: 'Relay', pre: 'CR', kind: 'coil' },
   tmr_on:  { cat: 'Outputs', name: 'On-Delay Timer', sym: 'Relay', kind: 'coil', as: 'coil', preset: { pre: 'TR' } },
@@ -449,8 +453,10 @@ const LIB = {
   cnt_out: { cat: 'Continuation', name: 'Continues To (Out)', sym: 'Continuation Out', kind: 'cont', flip: 'cnt_in' },
   cnt_in:  { cat: 'Continuation', name: 'Continued From (In)', sym: 'Continuation In', kind: 'cont', flip: 'cnt_out' },
 };
-// the kinds a long menu is split into (fly-out sub-menus in the ribbon's Switches menu); a part not listed sits on its own
-const SUBS = [['Limit Switches', /^ls_/], ['Temperature Switches', /^ts_/], ['Pressure Switches', /^ps_/], ['Float Switches', /^fs_/], ['Flow Switches', /^fls_/],
+// the kinds the ribbon's part menus are split into (fly-out sub-menus beside each kind); a part not listed sits on its own
+const SUBS = [['Pushbuttons', /^pb_/], ['Maintained Pushbuttons', /^pbm_/], ['Timers', /^tmr_/], ['Relay Contacts', /^con_/], ['Timed Contacts', /^tc_/],
+  ['Disconnects', /^f?dsc3$/], ['Fuses', /^(fus3|fuse)$/], ['Circuit Breakers', /^cb\d?$/], ['Overloads', /^ol3?$/], ['Control Source and Return', /^src_/],
+  ['Limit Switches', /^ls_/], ['Temperature Switches', /^ts_/], ['Pressure Switches', /^ps_/], ['Float Switches', /^fs_/], ['Flow Switches', /^fls_/],
   ['Proximity Switches', /^prs_/], ['Toggle & Multi-Pole Switches', /^(spst|spdt|dpst|dpdt|xover)$/]];
 const subOf = t => { const s = SUBS.find(([, re]) => re.test(t)); return s ? s[0] : null; };
 const CATS = ['Buttons', 'Switches', 'Outputs', 'Contacts', 'Protection', 'Power', 'Continuation'];
@@ -471,6 +477,8 @@ PSYM["3PH Disconnect"] = {"b": "<path d=\"M0 105V-133\" fill=\"none\" stroke-das
 PSYM["SPDT Switch"] = {"b": "<path d=\"M-30 0L36 -30\" fill=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>", "t": [[-40, 0], [40, -40], [40, 40]], "y0": -50, "y1": 50};
 PSYM["DPDT Switch"] = {"b": "<path d=\"M0 46V-74\" fill=\"none\" stroke-dasharray=\"12 12\"/><path d=\"M-30 -60L36 -90\" fill=\"none\"/><circle cx=\"-30\" cy=\"-60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"-60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-100\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-100\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-20\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-20\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><path d=\"M-30 60L36 30\" fill=\"none\"/><circle cx=\"-30\" cy=\"60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"20\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"20\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"100\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"100\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>", "t": [[-40, -60], [40, -100], [40, -20], [-40, 60], [40, 20], [40, 100]], "y0": -110, "y1": 110};
 PSYM["DPDT Crossover Switch"] = {"b": "<path d=\"M-30 -40H30M-30 40H30\" fill=\"none\" stroke-dasharray=\"12 12\"/><path d=\"M-30 -40L30 40M-30 40L30 -40\" fill=\"none\"/><circle cx=\"-30\" cy=\"-40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"-40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"-30\" cy=\"40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>", "t": [[-40, -40], [40, -40], [-40, 40], [40, 40]], "y0": -50, "y1": 50};
+// SPDT and DPDT flipped left to right: the drawing mirrored, each end the same end (so its wires keep their meaning)
+for (const n of ['SPDT Switch', 'DPDT Switch']) { const s = PSYM[n]; PSYM[n + ', Flipped'] = { b: `<g transform="scale(-1 1)">${s.b}</g>`, t: s.t.map(([x, y]) => [-x, y]), y0: s.y0, y1: s.y1 }; }
 // relay coils as wide as a contact (80, terminal to terminal), so they don't look small beside them
 PSYM.Relay = { b: '<circle cx="0" cy="0" r="40" fill="#000" stroke="none"/><circle cx="0" cy="0" r="36" fill="#fff" stroke="none"/>', t: [[-40, 0], [40, 0]], y0: -40, y1: 40 };
 // continuation arrows (off-page connectors): a wire that carries on elsewhere (another sheet, or further down this
@@ -823,6 +831,15 @@ function addWire(s, pts) {
 // parts turned a quarter (clockwise) about their middles; their wires bend to follow, as when moved
 // the parts that turn (Rotate, R, the turning handle): two-terminal symbols and continuation arrows
 const canTurn = p => !!p && p.t !== 'rail' && !isArrowIn(p.t) && (termsOf(p.t).length === 2 || LIB[p.t].kind === 'cont');
+// parts flipped left to right (an SPDT or DPDT: its common to the other side); their wires bend to follow
+const canFlip = p => !!p && !!LIB[p.t] && !!LIB[p.t].mirror;
+function flipParts(s, ids) {
+  const touched = s.wires.filter(w => [w.a, w.b].some(e => e.p && ids.has(e.p)));
+  const before = new Map(touched.map(w => [w.id, { a: pos(s, w.a), b: pos(s, w.b), pts: w.pts.map(q => [...q]) }]));
+  let n = 0; for (const p of s.parts) if (ids.has(p.id) && canFlip(p)) { p.t = LIB[p.t].mirror; n++; }
+  for (const w of touched) { const o = before.get(w.id); reroute(s, w, o.a, o.b, o.pts, 0, !!(w.a.p && ids.has(w.a.p))); simplify(s, w); }
+  return n;
+}
 function rotateParts(s, ids, by = 90) {
   const touched = s.wires.filter(w => [w.a, w.b].some(e => e.p && ids.has(e.p)));
   const before = new Map(touched.map(w => [w.id, { a: pos(s, w.a), b: pos(s, w.b), pts: w.pts.map(q => [...q]) }]));
@@ -1819,7 +1836,7 @@ const short = n => n.replace(' Maintained Pushbutton', ' Maint. PB').replace(', 
 function buildPalette() {
   let h = '';
   for (const c of CATS) { h += `<div class="ph">${c}</div><div class="pg">`;
-    for (const [t, d] of Object.entries(LIB)) if (d.cat === c) h += `<div class="pt" data-t="${t}" title="${esc(d.name)}">${thumb(t)}<span>${esc(short(d.name))}</span></div>`;
+    for (const [t, d] of Object.entries(LIB)) if (d.cat === c && !d.hide) h += `<div class="pt" data-t="${t}" title="${esc(d.name)}">${thumb(t)}<span>${esc(short(d.name))}</span></div>`;
     h += '</div>'; }
   $('palette').innerHTML = '<div class="pal-top"><span>Parts</span><button id="pal-hide" title="Hide the parts list (the » on the left brings it back)">« Hide</button></div>' + h;
   $('pal-hide').addEventListener('click', () => setPalette(null, true));
@@ -1836,8 +1853,8 @@ function buildPalette() {
   for (const c of CATS) { m += `<div class="menuwrap"><button class="rb" data-menu="${c}"><span class="sw" style="border-color:${CAT_COL[c]}"></span><span>${c} ▾</span></button><div class="dmenu" hidden>`;
     const item = (t, d) => `<button data-t="${t}">${thumb(t).replace('<svg', '<svg style="width:46px;height:26px;background:#f4f5f6;border-radius:4px;padding:2px"')}${esc(d.name)}</button>`;
     const subs = new Map(), done = new Set();
-    for (const [t, d] of Object.entries(LIB)) if (d.cat === c && subOf(t)) { const g = subOf(t); if (!subs.has(g)) subs.set(g, []); subs.get(g).push(t); }
-    for (const [t, d] of Object.entries(LIB)) if (d.cat === c) {
+    for (const [t, d] of Object.entries(LIB)) if (d.cat === c && !d.hide && subOf(t)) { const g = subOf(t); if (!subs.has(g)) subs.set(g, []); subs.get(g).push(t); }
+    for (const [t, d] of Object.entries(LIB)) if (d.cat === c && !d.hide) {
       const g = subOf(t);
       if (!g) { m += item(t, d); continue; }
       if (done.has(g)) continue; done.add(g);
@@ -1969,7 +1986,7 @@ function renderProps0() {
       ${rn ? `<div class="f">Rung<span class="ro">${rn} (automatic)</span></div>` : ''}
       ${termNums.length ? `<div class="f">Wires<span class="ro">${termNums.join(' → ')} (automatic)</span></div>` : ''}
       ${xr && xr.length ? `<div class="f">Contacts on<span class="ro">${xr.map(o => o.n + (o.nc ? ' (NC)' : '')).join(', ')}</span></div>` : ''}
-      <div class="acts">${canTurn(p) ? '<button class="btn" id="p-rot">Rotate (R)</button>' : ''}${p.lt || p.ld || p.lf ? '<button class="btn" id="p-lab">Put Labels Back</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
+      <div class="acts">${canTurn(p) ? '<button class="btn" id="p-rot">Rotate (R)</button>' : ''}${canFlip(p) ? '<button class="btn" id="p-flip" title="Flip it left to right: its common to the other side (F)">Flip ⇆ (F)</button>' : ''}${p.lt || p.ld || p.lf ? '<button class="btn" id="p-lab">Put Labels Back</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
     const of = $('p-of'); if (of) of.addEventListener('change', () => { let v = of.value; if (v === '__other') { v = (prompt(k === 'olc' ? 'The overload this contact belongs to (e.g. OL2):' : 'The coil that works this contact (e.g. CR3):', p.tag || '') || '').trim().toUpperCase(); if (!v) { renderProps(); return; } }
       snapshot(); p.tag = v; refresh(); });
     const tg = $('p-tag'); let was = p.tag;
@@ -1990,6 +2007,7 @@ function renderProps0() {
     for (const b of P.querySelectorAll('[data-flip]')) b.addEventListener('click', () => { if (b.dataset.flip === p.t) return; snapshot(); p.t = b.dataset.flip; refresh(); });
     for (const b of P.querySelectorAll('[data-line]')) b.addEventListener('click', () => { snapshot(); p.tag = b.dataset.line; refresh(); });
     const ro = $('p-rot'); if (ro) ro.addEventListener('click', () => { snapshot(); rotateParts(S, new Set([p.id])); refresh(); });
+    const fl = $('p-flip'); if (fl) fl.addEventListener('click', () => { snapshot(); flipParts(S, new Set([p.id])); refresh(); });
   } else if (t) {
     P.innerHTML = `<h4>Note</h4><textarea id="note-text" rows="4">${esc(t.s)}</textarea>
       <div class="f" style="margin-top:8px">Size<div class="seg">${[[20, 'Small'], [24, 'Medium'], [32, 'Large']].map(([z, n]) => `<button data-size="${z}" aria-pressed="${(t.size || 24) === z}">${n}</button>`).join('')}</div></div>
@@ -2226,6 +2244,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { if (wd) finishWire(); else if (tool !== 'select') setTool('select'); else { sel = new Set(); selW = null; selL = null; refresh(); } return; }
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); removeSelection(); return; }
   const k = e.key.toLowerCase();
+  if (k === 'f' && !e.ctrlKey && !e.metaKey && sel.size && [...sel].some(id => canFlip(partOf(S, id)))) { snapshot(); flipParts(S, sel); refresh(); return; }
   if (k === 'r') { if (tool === 'place' && placing) { if (canTurn({ t: placing.t })) placing.rot = ((placing.rot || 0) + 90) % 360; drawEd(); } else if (sel.size) { snapshot(); rotateParts(S, sel); refresh(); } return; }
   if (k === 'v') setTool('select'); if (k === 'w') setTool('wire'); if (k === 'l') setTool('rung'); if (k === 'n') setTool('note');
   const mv = { arrowleft: [-G, 0], arrowright: [G, 0], arrowup: [0, -G], arrowdown: [0, G] }[k];
@@ -2247,7 +2266,7 @@ function start() {
 
 /* ---------- several parts of one kind picked: one Part tab for them all (as in Circuit Builder) ---------- */
 // what parts are alike for this: contacts; relay coils; timers; pushbuttons; otherwise the same symbol, NO or NC
-const multiKey = p => { const k = LIB[p.t].kind; if (k === 'contact') return 'contact'; if (k === 'coil') return /^TR/.test(p.tag || '') ? 'timer' : 'coil'; if (isPB(p)) return 'pb'; return p.t.replace(/_(no|nc|hc|ho)$/, ''); };
+const multiKey = p => { const k = LIB[p.t].kind; if (k === 'contact') return 'contact'; if (k === 'coil') return /^TR/.test(p.tag || '') ? 'timer' : 'coil'; if (isPB(p)) return 'pb'; return p.t.replace(/_(no|nc|hc|ho|m)$/, ''); };
 const MULTI_NAME = { contact: 'Contacts', coil: 'Relay Coils', timer: 'Timers', pb: 'Pushbuttons', pl: 'Pilot Lights', sel: 'Selector Switches' };
 // the picked parts, if every one is a symbol (not a rail) and all of one kind; else null
 function multiParts(ids) {
@@ -2270,7 +2289,7 @@ function renderMulti(P, ps) {
     ${p0.t === 'pl' ? `<div class="f">Built Into<select id="m-inpb">${same(p => p.inPB || '') ? '' : '<option value="__keep" selected>(several)</option>'}<option value=""${same(p => p.inPB || '') && !p0.inPB ? ' selected' : ''}>None (lights of their own)</option>${[...new Set(allParts().filter(q => isPB(q.p) && q.p.tag).map(q => q.p.tag))].map(t => `<option value="${esc(t)}"${same(p => p.inPB || '') && p0.inPB === t ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></div>` : ''}
     ${p0.t === 'sel' ? `<div class="f">Positions<input class="in" id="m-pos" value="${same(p => selNames(p).join('/')) ? esc(selNames(p0).join('/')) : ''}" placeholder="${same(p => selNames(p).join('/')) ? '' : '(several)'}" title="2 to 4 positions, with slashes: HAND/OFF/AUTO"></div>` : ''}
     <p class="help">A setting changed here changes all ${ps.length}. (Each one’s own ${k === 'contact' || k === 'starter' || k === 'olc' ? 'label is' : 'number and label are'} set one at a time.)</p>
-    <div class="acts">${ps.every(canTurn) ? '<button class="btn" id="m-rot">Rotate (R)</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
+    <div class="acts">${ps.every(canTurn) ? '<button class="btn" id="m-rot">Rotate (R)</button>' : ''}${ps.every(canFlip) ? '<button class="btn" id="m-flip">Flip ⇆ (F)</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
   const all = fn => { snapshot(); for (const p of ps) fn(p); refresh(); };
   for (const b of P.querySelectorAll('[data-mno]')) b.addEventListener('click', () => all(p => { if (isNO(p) !== (b.dataset.mno === '1')) p.t = LIB[p.t].flip; }));
   const of = $('m-of'); if (of) of.addEventListener('change', () => { if (of.value) all(p => { p.tag = of.value; }); });
@@ -2280,6 +2299,7 @@ function renderMulti(P, ps) {
   const ib = $('m-inpb'); if (ib) ib.addEventListener('change', () => { if (ib.value !== '__keep') all(p => { if (ib.value) p.inPB = ib.value; else delete p.inPB; }); });
   const ps_ = $('m-pos'); if (ps_) ps_.addEventListener('change', () => { const n = ps_.value.split(/[\/,]+/).map(x => x.trim().toUpperCase()).filter(Boolean).slice(0, 4); if (n.length < 2) return; all(p => { p.pos = n.join('/'); p.closedIn = (p.closedIn || []).filter(i => i < n.length); }); });
   const ro = $('m-rot'); if (ro) ro.addEventListener('click', () => { snapshot(); rotateParts(S, new Set(ps.map(p => p.id))); refresh(); });
+  const mf = $('m-flip'); if (mf) mf.addEventListener('click', () => { snapshot(); flipParts(S, new Set(ps.map(p => p.id))); refresh(); });
 }
 
 /* ---------- a coil (or overload, or pushbutton) renamed: what belongs to it goes with it, unless another of that

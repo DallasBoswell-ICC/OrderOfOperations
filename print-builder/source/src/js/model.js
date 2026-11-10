@@ -308,6 +308,15 @@ function addWire(s, pts) {
 // parts turned a quarter (clockwise) about their middles; their wires bend to follow, as when moved
 // the parts that turn (Rotate, R, the turning handle): two-terminal symbols and continuation arrows
 const canTurn = p => !!p && p.t !== 'rail' && !isArrowIn(p.t) && (termsOf(p.t).length === 2 || LIB[p.t].kind === 'cont');
+// parts flipped left to right (an SPDT or DPDT: its common to the other side); their wires bend to follow
+const canFlip = p => !!p && !!LIB[p.t] && !!LIB[p.t].mirror;
+function flipParts(s, ids) {
+  const touched = s.wires.filter(w => [w.a, w.b].some(e => e.p && ids.has(e.p)));
+  const before = new Map(touched.map(w => [w.id, { a: pos(s, w.a), b: pos(s, w.b), pts: w.pts.map(q => [...q]) }]));
+  let n = 0; for (const p of s.parts) if (ids.has(p.id) && canFlip(p)) { p.t = LIB[p.t].mirror; n++; }
+  for (const w of touched) { const o = before.get(w.id); reroute(s, w, o.a, o.b, o.pts, 0, !!(w.a.p && ids.has(w.a.p))); simplify(s, w); }
+  return n;
+}
 function rotateParts(s, ids, by = 90) {
   const touched = s.wires.filter(w => [w.a, w.b].some(e => e.p && ids.has(e.p)));
   const before = new Map(touched.map(w => [w.id, { a: pos(s, w.a), b: pos(s, w.b), pts: w.pts.map(q => [...q]) }]));
