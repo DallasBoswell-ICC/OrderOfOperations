@@ -2721,6 +2721,31 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Holding Space and dragging moves the view (as in Print Builder), without picking or moving anything; not while typing', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'three');
+    for (let i = 0; i < 3; i++) await page.click('#zoom-in');
+    await page.evaluate(() => document.activeElement && document.activeElement.blur && document.activeElement.blur());
+    const p0 = await page.evaluate(() => { const b = svg.getBoundingClientRect(), m = svg.getScreenCTM(), c = [b.left + b.width / 2, b.top + b.height / 2];
+      // (pressed on a part, if one is in view: it must not move)
+      const q = parts.find(q => { const x = m.a * q.x + m.e, y = m.d * q.y + m.f; return x > b.left + 60 && x < b.right - 200 && y > b.top + 60 && y < b.bottom - 120; });
+      return { at: q ? [m.a * q.x + m.e, m.d * q.y + m.f] : c, pos: JSON.stringify(parts.map(z => [z.x, z.y])), cam: [cam.x, cam.y], scroll: scrollY }; });
+    await page.keyboard.down('Space');
+    const cur = await page.evaluate(() => svg.style.cursor);
+    await page.mouse.move(...p0.at); await page.mouse.down(); await page.mouse.move(p0.at[0] + 150, p0.at[1] + 80, { steps: 6 }); await page.mouse.up();
+    await page.keyboard.up('Space');
+    const a = await page.evaluate(() => ({ cam: [cam.x, cam.y], pos: JSON.stringify(parts.map(z => [z.x, z.y])), sel: sel ? sel.parts.size : 0, cur: svg.style.cursor, scroll: scrollY }));
+    if (cur !== 'grab') out.push('hand cursor while Space is held: ' + cur);
+    if (!(a.cam[0] < p0.cam[0] - 20 && a.cam[1] < p0.cam[1] - 10)) out.push('view did not move: ' + JSON.stringify([p0.cam, a.cam]));
+    if (a.pos !== p0.pos || a.sel) out.push('a part was moved or picked');
+    if (a.cur === 'grab' || a.scroll !== p0.scroll) out.push('after letting go: cursor ' + a.cur + ', page scrolled ' + (a.scroll - p0.scroll));
+    // typing a space in a box is still a space
+    await page.evaluate(() => { const i = document.createElement('input'); i.id = 'sp-t'; document.body.appendChild(i); i.focus(); });
+    await page.keyboard.type('a b'); const typed = await page.evaluate(() => { const v = document.getElementById('sp-t').value; document.getElementById('sp-t').remove(); return v; });
+    if (typed !== 'a b') out.push('a space typed in a box became: ' + JSON.stringify(typed));
+    return out;
+  });
+
   await browser.close();
   const failed = results.filter(r => !r.ok);
   console.log(`\n${results.length - failed.length} of ${results.length} checks passed.`);

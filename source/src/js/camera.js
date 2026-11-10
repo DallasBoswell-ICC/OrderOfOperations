@@ -1,7 +1,7 @@
 /* ---------------- looking around: zoom and pan ----------------
    Ctrl + scroll wheel zooms in and out where the pointer is; the scroll wheel moves up and down; Shift + scroll wheel
-   moves left and right; dragging with the middle mouse button (the wheel) also moves the view. Works while building
-   and while running. */
+   moves left and right; dragging with the middle mouse button (the wheel), or holding Space and dragging (as in Print
+   Builder), also moves the view. Works while building and while running. */
 /* The panel fills the width of the page, like a diagram viewer, and the circuit sits on it like a sheet. A circuit
    opens fitted: the whole sheet in view, as large as the panel allows (at 100% the sheet's width, L1 bar to L2 bar,
    fills the panel). It stays fitted as the window changes size until you zoom or move the view yourself. */
@@ -55,9 +55,25 @@ function panDrag(e) {
   const sx = e.clientX, sy = e.clientY, c0 = { ...cam }, s = viewW() / svg.getBoundingClientRect().width;
   svg.style.cursor = 'grabbing';
   const mv = ev => { cam.fit = false; cam.x = c0.x - (ev.clientX - sx) * s; cam.y = c0.y - (ev.clientY - sy) * s; applyCam(); };
-  const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); svg.style.cursor = tool === 'select' ? '' : 'crosshair'; };
+  try { svg.setPointerCapture(e.pointerId); } catch (_) {}
+  const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); svg.style.cursor = spacePan ? 'grab' : tool === 'select' ? '' : 'crosshair'; };
   document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
 }
+/* Space held: the hand. A drag with the left button then moves the view instead of picking or pressing anything.
+   (Not while typing in a box, or with a part picked out by Tab: there Space presses the part, as before.) */
+let spacePan = false, spaceCursor = '';
+const spaceFree = () => { const a = document.activeElement; return !a || a === document.body || a === svg || !(a.closest('input, textarea, select, button, [contenteditable], dialog, [tabindex]') || svg.contains(a)); };
+document.addEventListener('keydown', e => {
+  if (e.code !== 'Space' || e.ctrlKey || e.metaKey || e.altKey || !spaceFree()) return;
+  e.preventDefault();   // (no scrolling the page)
+  if (spacePan) return;
+  spacePan = true; spaceCursor = svg.style.cursor; svg.style.cursor = 'grab';
+});
+const spaceUp = () => { if (!spacePan) return; spacePan = false; svg.style.cursor = spaceCursor; };
+document.addEventListener('keyup', e => { if (e.code === 'Space') spaceUp(); });
+window.addEventListener('blur', spaceUp);
+// (caught before anything else on the panel sees the press: a part, a wire, a button in Run mode)
+svg.addEventListener('pointerdown', e => { if (spacePan && e.button === 0) { e.stopImmediatePropagation(); panDrag(e); } }, true);
 document.getElementById('zoom-in').addEventListener('click', () => zoomCentre(1.25));
 document.getElementById('zoom-out').addEventListener('click', () => zoomCentre(0.8));
 // Fit: the whole circuit, as large as the panel allows (full width, or smaller if the circuit is taller than the window)
