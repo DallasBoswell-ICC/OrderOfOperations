@@ -52,7 +52,14 @@
         <button class="rb sm danger" id="del-btn" title="Delete what is picked (Delete key)"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6.5 7l1 13h9l1-13" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Delete</span></button>
       </div><div class="stk">
         <button class="rb sm danger" id="clear-btn" title="Clear this sheet: everything on it but the rails taken away (Ctrl+Z brings it back)"><svg viewBox="0 0 24 24"><path d="M15 4l5 5-9 9H6l-2-2 11-12zM9 9l6 6M4 20h16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Clear</span></button>
-        <button class="rb sm" id="org-btn" title="Organize: pick a rung (or anything on it), then press to spread its parts evenly between L1 and L2"><svg viewBox="0 0 24 24"><path d="M2 12h20M5 9v6M12 9v6M19 9v6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg><span>Organize</span></button>
+      </div><div class="stk">
+        <div class="menuwrap split org-split"><button class="rb sm" id="org-btn"><svg viewBox="0 0 24 24"><path d="M2 12h20M5 9v6M12 9v6M19 9v6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg><span>Organize</span></button><button class="rb sm org-more" data-menu="org" title="How Organize sets the parts out">▾</button><div class="dmenu orient-menu org-menu" id="org-menu" hidden>
+          <button data-org="even" role="menuitemradio"><span class="ck">✓</span><span><b>Spread Evenly</b><small>Each rung's parts spaced evenly on their own</small></span></button>
+          <button data-org="loads" role="menuitemradio"><span class="ck">✓</span><span><b>Loads to the Right</b><small>Coils, lights, solenoids in one column by L2</small></span></button>
+          <button data-org="columns" role="menuitemradio"><span class="ck">✓</span><span><b>Columns</b><small>Every part on columns shared by the picked rungs</small></span></button>
+          <button data-org="packed" role="menuitemradio"><span class="ck">✓</span><span><b>Packed Left</b><small>Parts close together from L1, loads by L2</small></span></button>
+        </div></div>
+        <button class="rb sm" id="lineup-btn" title="Line Up: pick parts on different rungs; the others move into a column under the first one picked"><svg viewBox="0 0 24 24"><path d="M12 2v20M7 5h10v4H7zM7 15h10v4H7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Line Up</span></button>
       </div>
     </div><div class="gl">Edit</div></div>
     <div class="grp"><div class="row" id="tools">

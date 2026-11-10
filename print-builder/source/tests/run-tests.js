@@ -620,7 +620,32 @@ let passed = 0, failed = 0;
           const sx0 = Math.min(a[0], b[0]), sx1 = Math.max(a[0], b[0]), sy0 = Math.min(a[1], b[1]), sy1 = Math.max(a[1], b[1]);
           if (sx1 > x0 && sx0 < x1 && sy1 > y0 && sy0 < y1) hits.push(q.tag || q.t); } } }
       return { hits: [...new Set(hits)], same: S.wires.map(w => A.label.get(A.wireRoot(S, w))).sort().join() === L0, errs: ISSUES.filter(i => i.sev === 'e').length === e0, hint: $('hint').textContent }; });
-    return !r.hits.length && r.same && r.errs && /their parts/.test(r.hint) ? [] : ['result: ' + JSON.stringify(r)];
+    return !r.hits.length && r.same && r.errs && /Rungs 1, 2 organized/.test(r.hint) ? [] : ['result: ' + JSON.stringify(r)];
+  });
+
+  await check('Organize styles (Loads to the Right, Columns, Packed Left, Spread Evenly) line parts up across the picked rungs; Line Up puts picked parts in one column', async p => {
+    const r = await p.evaluate(() => {
+      const build = () => { loadDoc(template('blank')); const L1 = S.parts.find(q => q.label === 'L1'), L2 = S.parts.find(q => q.label === 'L2');
+        const R = [[400, ['pb_nc', 'pb_no', 'ls_no', 'coil', 'olc']], [600, ['con_no', 'pl']], [800, ['ts_no', 'con_nc', 'sol']], [1000, ['ps_no', 'con_no', 'tc_no', 'coil']]];
+        const raw = [[300, 520, 900, 1300, 1600], [460, 1200], [380, 760, 1350], [600, 820, 1000, 1640]];
+        R.forEach(([y, ts], k) => { let px = L1.x; ts.forEach((t, i) => { addPart(S, t, raw[k][i], y); addWire(S, [[px, y], [raw[k][i] - 40, y]]); px = raw[k][i] + 40; }); addWire(S, [[px, y], [L2.x, y]]); });
+        refresh(true); return S.wires.map(w => A.label.get(A.wireRoot(S, w))).sort().join(); };
+      const out = {};
+      for (const st of ['loads', 'columns', 'packed', 'even']) { const L0 = build(); sel = new Set(S.parts.filter(q => q.t !== 'rail').map(q => q.id)); refresh();
+        document.querySelector(`#org-menu [data-org="${st}"]`).click(); refresh(true);
+        const loads = new Set(S.parts.filter(q => LIB[q.t] && ['coil', 'load'].includes(LIB[q.t].kind)).map(q => q.x)).size;
+        const firsts = new Set([400, 600, 800, 1000].map(y => S.parts.filter(q => q.y === y).sort((a, b) => a.x - b.x)[0].x)).size;
+        out[st] = [loads, firsts, S.wires.map(w => A.label.get(A.wireRoot(S, w))).sort().join() === L0, ISSUES.filter(i => i.sev === 'e').length, document.querySelector('#org-menu [aria-checked="true"]').dataset.org].join(':'); }
+      // Line Up: PL1 and SOL1 under CR2 (the first picked); a part that would pass another on its rung stays put
+      build(); const cr2 = S.parts.find(q => q.y === 1000 && q.t === 'coil'), pl = S.parts.find(q => q.t === 'pl'), so = S.parts.find(q => q.t === 'sol'), pb1 = S.parts.find(q => q.t === 'pb_nc');
+      sel = new Set([cr2.id, pl.id, so.id]); refresh(); const dis = $('lineup-btn').disabled; $('lineup-btn').click();
+      out.line = [dis, pl.x === cr2.x, so.x === cr2.x, ISSUES.filter(i => i.sev === 'e').length].join(':');
+      sel = new Set([cr2.id, pb1.id]); refresh(); const x0 = pb1.x; $('lineup-btn').click(); out.stuck = [pb1.x === x0, /stayed put|would pass/.test($('hint').textContent)].join(':');
+      return out; });
+    const want = { loads: '1:', columns: '1:1:true:0:columns', packed: '1:1:true:0:packed', even: '', line: 'false:true:true:0', stuck: 'true:true' };
+    const out = []; for (const [k, v] of Object.entries(want)) if (!String(r[k]).startsWith(v)) out.push(k + ': ' + r[k] + ' (want ' + v + '…)');
+    if (!/:true:0:loads$/.test(r.loads) || !/:true:0:even$/.test(r.even)) out.push('numbers or errors: ' + r.loads + ' / ' + r.even);
+    return out;
   });
 
   await b.close();

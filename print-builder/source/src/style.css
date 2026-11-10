@@ -245,3 +245,7 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .cp-row .in { width: 96px; } .cp-row span { padding-bottom: 8px; } .cp-err { color: #ff7b7b; margin: 0 0 8px; font-size: .85rem; }
 .cp-dlg .acts { display: flex; justify-content: flex-end; gap: 8px; }
 .cp-dlg { width: fit-content; max-width: 94vw; } .cp-row select.in { width: 80px; }
+
+/* ---------- Organize's style menu ---------- */
+.org-split { display: flex; align-items: center; } .org-split .org-more { padding: 0 6px; min-width: 0; }
+.org-menu { min-width: 300px; } .org-menu button > span:last-child { display: grid; gap: 1px; } .org-menu small { color: #8a9099; font-size: .76rem; font-weight: 400; }

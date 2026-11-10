@@ -45,7 +45,7 @@ function drawInk() { svg.querySelector('g.ink').innerHTML = drawSheet(S, doc.cur
 function updateButtons() {
   $('undo-btn').disabled = !UNDO.length; $('redo-btn').disabled = !REDO.length;
   const any = [...sel].some(id => { const p = partOf(S, id); return p ? p.t !== 'rail' : true; });
-  $('copy-btn').disabled = $('cut-btn').disabled = !any; $('org-btn').disabled = !rungsPicked().length; $('del-btn').disabled = !sel.size && !selW; $('paste-btn').disabled = !hasClip();
+  $('copy-btn').disabled = $('cut-btn').disabled = !any; $('org-btn').disabled = !rungsPicked().length; $('lineup-btn').disabled = [...sel].filter(id => { const q = partOf(S, id); return q && q.t !== 'rail'; }).length < 2; $('del-btn').disabled = !sel.size && !selW; $('paste-btn').disabled = !hasClip();
   // (the Orientation menu ticks the way this sheet is round now; the button's icon shows it too)
   for (const b of document.querySelectorAll('#orient-menu [data-land]')) b.setAttribute('aria-checked', String(!!S.land === (b.dataset.land === '1')));
   const oi = $('orient-ic'); if (S.land) { oi.setAttribute('x', 3); oi.setAttribute('y', 6); oi.setAttribute('width', 18); oi.setAttribute('height', 12); } else { oi.setAttribute('x', 6); oi.setAttribute('y', 3); oi.setAttribute('width', 12); oi.setAttribute('height', 18); }
@@ -613,7 +613,7 @@ function rungsPicked() {
     if (best != null) ys.add(best); } }
   return [...ys];
 }
-function organizeRung(s, Y, seedX) {
+function analyseRun(s, Y, seedX) {
   const termsAt = p => termsOf(p.t).map((_, i) => termPos(p, i));
   const level = p => p.t !== 'rail' && !((p.rot || 0) % 180) && p.y === Y;
   // the rung's own line: its level wire runs at Y and the parts in line on it, joined end to end
@@ -679,36 +679,86 @@ function organizeRung(s, Y, seedX) {
   const inBlock = x => merged.some(b => !b.dead && x >= b.x0 && x <= b.x1), inFixed = x => fixed.some(([a, b]) => x >= a && x <= b);
   for (const p of lineParts) { const e = extent(p); if (!inBlock(p.x) && !inFixed(p.x) && !termsAt(p).some(q => q[1] !== Y)) units.push({ x0: e[0], x1: e[1], ids: new Set([p.id]) }); }
   const pass = lineNodes.filter(n => !atEnd(n.x) && !inBlock(n.x) && !starts.some(st => st.id === n.id));   // (plain joints in the run: put between their neighbours after)
-  if (!units.length) return { moved: 0, why: 'nothing on it to spread' };
-  // the stretches between the rung's ends and any fixed points (merged where they overlap); in each, its units spaced
-  // evenly. A joint that would slide past where its branch goes stays put instead, and it is planned again.
+  // (a load: a coil, light, solenoid or heating element on its own: the part that styles B, C and D line up by L2)
+  for (const u of units) { if (u.ids.size !== 1) continue; const p = partOf(s, [...u.ids][0]); if (p && ['coil', 'load'].includes(LIB[p.t].kind)) u.load = true; }
+  return { s, Y, L, R, units, fixed, pass, level, termsAt, inRun, why: units.length ? null : 'nothing on it to spread' };
+}
+// how the rest go: A even; B even, loads by L2; C on columns shared by every picked rung, loads by L2; D close from L1
+const ORG_STYLES = { even: 'Spread Evenly', loads: 'Loads to the Right', columns: 'Columns', packed: 'Packed Left' };
+const ORGKEY = 'oo-print-builder:organize-style';
+let orgStyle = (() => { try { const v = localStorage.getItem(ORGKEY); return ORG_STYLES[v] ? v : 'even'; } catch (_) { return 'even'; } })();
+// the stretches of a run between its ends and its fixed points (merged where they overlap)
+function segsOf(c) {
+  const fx = c.fixed.map(f => [Math.max(c.L, f[0]), Math.min(c.R, f[1])]).sort((u, v) => u[0] - v[0]), fm = [];
+  for (const f of fx) { const l = fm[fm.length - 1]; if (l && f[0] <= l[1]) l[1] = Math.max(l[1], f[1]); else fm.push([...f]); }
+  const segs = []; let a0 = c.L; for (const [f0, f1] of fm) { segs.push([a0, f0]); a0 = f1; } segs.push([a0, c.R]); return segs;
+}
+const wOf = u => u.x1 - u.x0;
+// units in [a, b] spaced evenly: their new left edges, or null if too full
+function spreadEven(us, a, b) { const g = (b - a - us.reduce((t, u) => t + wOf(u), 0)) / (us.length + 1); if (g < G) return null;
+  const out = []; let cur = a + g, prev = a; for (const u of us) { let nl = snap(cur); if (nl < prev + G) nl = prev + G; out.push(nl); prev = nl + wOf(u); cur += wOf(u) + g; } return prev <= b ? out : null; }
+// close together from a: a set gap between each
+function spreadPacked(us, a, b) { const out = []; let prev = a; for (const u of us) { const nl = snap(prev + 5 * G); out.push(nl); prev = nl + wOf(u); } return prev + G <= b ? out : null; }
+// on the shared columns: each in the next column that has room, centred in it
+function spreadColumns(us, a, b, sh) { if (!sh.pitch) return null; const out = []; let prev = a, k = 0;
+  for (const u of us) { let nl; do { nl = snap(sh.c0 + (k + .5) * sh.pitch - wOf(u) / 2); k++; } while ((nl < prev + G || nl < a + G) && k < 200); if (nl + wOf(u) > b - G) return null; out.push(nl); prev = nl + wOf(u); } return out; }
+const spreadBy = (st, us, a, b, sh) => st === 'packed' ? spreadPacked(us, a, b) : st === 'columns' ? spreadColumns(us, a, b, sh) : spreadEven(us, a, b);
+// the last stretch's load and what comes after it (an overload contact, say)
+function loadIn(us) { const k = us.map(u => !!u.load).lastIndexOf(true); return k < 0 ? null : { k, ld: us[k], before: us.slice(0, k), after: us.slice(k + 1) }; }
+// what every picked rung shares: the loads' column (its middle), and the columns' start and spacing
+function sharedFor(cs) {
+  let col = Infinity, any = false;
+  for (const c of cs) { const segs = segsOf(c), last = segs[segs.length - 1], us = c.units.filter(u => u.x0 >= last[0] && u.x1 <= last[1]).sort((u, v) => u.x0 - v.x0), li = loadIn(us);
+    if (!li) continue; any = true; const tw = li.after.reduce((t, u) => t + wOf(u), 0); col = Math.min(col, c.R - 6 * G - wOf(li.ld) / 2 - tw - li.after.length * 5 * G); }
+  const L = Math.max(...cs.map(c => c.L)), right = any ? col - 2 * G - 40 : Math.min(...cs.map(c => c.R)) - G;
+  const n = Math.max(1, ...cs.map(c => c.units.filter(u => !u.load || !any).length));
+  return { col: any ? snap(col) : null, c0: L, pitch: Math.max(4 * G, snap((right - L) / n)) };
+}
+// a run's plan in a style: each unit's move. A joint that would slide past where its branch goes stays put, and the
+// run is planned again round it; a stretch too full for the style is spread evenly instead, or left if even that won't go
+function planRun(c, st, sh) {
   let plan = [], crowded = 0;
   for (let tries = 0; tries < 12; tries++) {
-    const fx = fixed.map(f => [Math.max(L, f[0]), Math.min(R, f[1])]).sort((u, v) => u[0] - v[0]), fm = [];
-    for (const f of fx) { const l = fm[fm.length - 1]; if (l && f[0] <= l[1]) l[1] = Math.max(l[1], f[1]); else fm.push([...f]); }
-    const segs = []; let a0 = L; for (const [f0, f1] of fm) { segs.push([a0, f0]); a0 = f1; } segs.push([a0, R]);
-    plan = []; crowded = 0;
-    for (const [a, b] of segs) {
-      const us = units.filter(u => u.x0 >= a && u.x1 <= b).sort((u, v) => u.x0 - v.x0); if (!us.length) continue;
-      const wsum = us.reduce((t, u) => t + (u.x1 - u.x0), 0), gap = (b - a - wsum) / (us.length + 1);
-      if (gap < G) { crowded++; continue; }   // (too full to spread: left as it is; the rest still spread)
-      let cur = a + gap, prev = a;
-      for (const u of us) { let nl = snap(cur); if (nl < prev + G) nl = prev + G; plan.push({ u, dx: nl - u.x0 }); prev = nl + (u.x1 - u.x0); cur += (u.x1 - u.x0) + gap; }
-    }
+    const segs = segsOf(c); plan = []; crowded = 0;
+    segs.forEach(([a, b], si) => {
+      const us = c.units.filter(u => u.x0 >= a && u.x1 <= b).sort((u, v) => u.x0 - v.x0); if (!us.length) return;
+      let nl = null;
+      const li = st !== 'even' && si === segs.length - 1 && sh.col != null ? loadIn(us) : null;
+      if (li) {   // (the load in its column; before it in the style, after it spread evenly)
+        const lnl = snap(sh.col - wOf(li.ld) / 2), bs = li.before.length ? spreadBy(st === 'loads' ? 'even' : st, li.before, a, lnl, sh) : [], as = li.after.length ? spreadEven(li.after, lnl + wOf(li.ld), b) : [];
+        if (lnl >= a + G && lnl + wOf(li.ld) <= b - G && bs && as) nl = [...bs, lnl, ...as];
+      } else if (st === 'packed' || st === 'columns') nl = spreadBy(st, us, a, b, sh);
+      if (!nl) nl = spreadEven(us, a, b);
+      if (!nl) { crowded++; return; }
+      us.forEach((u, k) => plan.push({ u, dx: nl[k] - u.x0 }));
+    });
     const over = plan.find(({ u, dx }) => u.room && (u.x0 + dx < u.room[0] || u.x0 + dx > u.room[1]));
     if (!over) break;
-    // (it stays where it is, and the rest plan again round it)
-    units.splice(units.indexOf(over.u), 1); fixed.push([over.u.x0, over.u.x1]);
+    c.units.splice(c.units.indexOf(over.u), 1); c.fixed.push([over.u.x0, over.u.x1]);   // (it stays where it is)
   }
+  return { plan, crowded };
+}
+function applyRun(c, plan) {
+  const { s, Y, L, R, level, termsAt, inRun } = c;
   // the rung's own level wires: straight from end to end (their bends and dragged numbers would not fit the new spacing)
   for (const w of s.wires) { const P = wirePts(s, w); if (P.every(q => q[1] === Y) && P.every(q => inRun(q[0]))) { w.pts = []; delete w.lab; } }
   let moved = 0;
-  for (const { u, dx } of plan) if (dx) { moveItems(s, u.ids, dx, 0); moved++; }
+  // (moved right to left when going right, left to right when going left, so nothing passes anything on the way)
+  for (const { u, dx } of plan.filter(x => x.dx > 0).sort((a, b) => b.u.x0 - a.u.x0).concat(plan.filter(x => x.dx < 0).sort((a, b) => a.u.x0 - b.u.x0))) { moveItems(s, u.ids, dx, 0); moved++; }
   // plain joints: halfway between what now sits either side of them
-  for (const n of pass) { const xs = s.parts.filter(p => level(p)).flatMap(p => termsAt(p).filter(q => q[1] === Y).map(q => q[0])).concat(s.nodes.filter(m => m !== n && m.y === Y).map(m => m.x));
+  for (const n of c.pass) { const xs = s.parts.filter(p => level(p)).flatMap(p => termsAt(p).filter(q => q[1] === Y).map(q => q[0])).concat(s.nodes.filter(m => m !== n && m.y === Y).map(m => m.x));
     const lo = Math.max(L, ...xs.filter(x => x < n.x)), hi = Math.min(R, ...xs.filter(x => x > n.x)); const nx = snap((lo + hi) / 2); if (nx !== n.x && nx > lo && nx < hi) moveItems(s, new Set([n.id]), nx - n.x, 0); }
   tidy(s);
-  return { moved, units: plan.length, crowded, why: !plan.length && crowded ? 'not enough room on it' : null };
+  return moved;
+}
+// organize the picked rungs in a style: every run looked at first, so the loads' column and the columns are shared
+function organizeRuns(s, seeds, st) {
+  const cs = [], keys = new Set();
+  for (const [y, x] of seeds) { const c = analyseRun(s, y, x); if (!c.L && c.L !== 0) { cs.push(c); continue; } const k = y + ':' + c.L + ':' + c.R; if (keys.has(k)) continue; keys.add(k); cs.push(c); }
+  const ok = cs.filter(c => !c.why), sh = ok.length ? sharedFor(ok) : {};
+  const res = cs.filter(c => c.why).map(c => ({ moved: 0, why: c.why }));
+  for (const c of ok) { const { plan, crowded } = planRun(c, st, sh); res.push({ moved: applyRun(c, plan), crowded, why: !plan.length && crowded ? 'not enough room on it' : null }); }
+  return res;
 }
 $('org-btn').addEventListener('click', () => {
   const ys = rungsPicked(); if (!ys.length) { say('Pick a rung first: click its wire, or any part on it.'); return; }
@@ -719,13 +769,34 @@ $('org-btn').addEventListener('click', () => {
     for (const id of sel) { const p = partOf(S, id); if (p && p.t !== 'rail' && p.y === y && !((p.rot || 0) % 180)) xs.push(p.x); }
     if (selW) { const w = S.wires.find(x => x.id === selW); if (w) { const P = wirePts(S, w); for (let i = 0; i < P.length - 1; i++) if (P[i][1] === y && P[i + 1][1] === y) xs.push((P[i][0] + P[i + 1][0]) / 2); } }
     if (!xs.length) xs.push(null); for (const x of xs) seeds.push([y, x]); }
-  let res = [];
-  for (let pass = 0; pass < (seeds.length > 1 ? 2 : 1); pass++) {
-    const r = []; const done = new Set();
-    for (const [y, x] of seeds) { const k = y + ':' + x; if (done.has(k)) continue; done.add(k); r.push(organizeRung(S, y, x)); }
-    if (!pass) res = r;
-  }
-  if (JSON.stringify(doc) === before) { UNDO.pop(); const why = res.find(r => r.why); say(why ? `Nothing to organize: ${why.why}.` : 'That rung is already spread out evenly.'); refresh(); return; }
+  const res = organizeRuns(S, seeds, orgStyle);
+  if (seeds.length > 1) organizeRuns(S, seeds, orgStyle);
+  if (JSON.stringify(doc) === before) { UNDO.pop(); const why = res.find(r => r.why); say(why ? `Nothing to organize: ${why.why}.` : `Already organized (${ORG_STYLES[orgStyle]}).`); refresh(); return; }
   const rn = ys.map(y => (A.rows[doc.cur] || []).find(r => r.y === y)).filter(Boolean).map(r => r.n);
-  refresh(); const full = res.some(r => r.crowded); say(`${rn.length > 1 ? 'Rungs ' + rn.join(', ') : rn.length ? 'Rung ' + rn[0] : 'The rung'} organized: ${rn.length > 1 ? 'their' : 'its'} parts spread out evenly${full ? ' (a stretch too full to spread was left as it is)' : ''}.`);
+  refresh(); const full = res.some(r => r.crowded); say(`${rn.length > 1 ? 'Rungs ' + rn.join(', ') : rn.length ? 'Rung ' + rn[0] : 'The rung'} organized (${ORG_STYLES[orgStyle]})${full ? '; a stretch too full to spread was left as it is' : ''}.`);
 });
+
+// the style menu: ticks the style in use; picking one uses it now on what is picked (if anything) and from then on
+function markOrg() { for (const b of document.querySelectorAll('#org-menu [data-org]')) b.setAttribute('aria-checked', String(b.dataset.org === orgStyle)); $('org-btn').dataset.tip = `Organize (${ORG_STYLES[orgStyle]}): pick a rung (or anything on it; several rungs: something on each), then press`; }
+for (const b of document.querySelectorAll('#org-menu [data-org]')) b.addEventListener('click', () => { closeMenus(); orgStyle = b.dataset.org; try { localStorage.setItem(ORGKEY, orgStyle); } catch (_) {} markOrg(); if (rungsPicked().length) $('org-btn').click(); else say(`Organize will use ${ORG_STYLES[orgStyle]}. Pick a rung, then press Organize.`); });
+markOrg();
+
+/* ---------- Line Up: parts on different rungs put in one column, under the first one picked; nothing else moves
+   (Dallas, 10 Nov 2026). A part that would have to pass something on its rung to get there stays put. ---------- */
+function lineUp() {
+  const ps = [...sel].map(id => partOf(S, id)).filter(p => p && p.t !== 'rail' && !isArrowIn(p.t) && !((p.rot || 0) % 180));
+  if (ps.length < 2) { say('Pick two or more parts on different rungs first (the first one picked stays put; the others line up under it).'); return; }
+  const X = ps[0].x; let moved = 0; const stuck = []; snapshot();
+  for (const p of ps.slice(1)) {
+    if (p.x === X) continue;
+    const lo = Math.min(p.x, X), hi = Math.max(p.x, X), e = extOf(p);
+    // (anything else on its rung's line between where it is and where it would go: a part, a joint; it would short past it)
+    const inWay = S.parts.some(q => q !== p && q.t !== 'rail' && q.y === p.y && q.x + extOf(q).x1 > lo + e.x0 && q.x + extOf(q).x0 < hi + e.x1)
+      || S.nodes.some(n => n.y === p.y && n.x > lo + e.x0 && n.x < hi + e.x1 && wiresAt(S, { n: n.id }).length > 2);
+    if (inWay) { stuck.push(p.tag || LIB[p.t].name); continue; }
+    moveItems(S, new Set([p.id]), X - p.x, 0); moved++;
+  }
+  if (!moved) { UNDO.pop(); say(stuck.length ? `Nothing lined up: ${stuck.join(', ')} would pass another part or a joint to get there.` : 'They are already lined up.'); return; }
+  tidy(S); refresh(); say(`${moved + 1} parts lined up under ${ps[0].tag || LIB[ps[0].t].name}${stuck.length ? `; ${stuck.join(', ')} stayed put (something in the way)` : ''}.`);
+}
+$('lineup-btn').addEventListener('click', lineUp);
