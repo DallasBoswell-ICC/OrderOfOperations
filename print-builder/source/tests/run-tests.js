@@ -648,6 +648,34 @@ let passed = 0, failed = 0;
     return out;
   });
 
+
+  await check('The credit and license: footer line, About box (opens from the i button, Escape closes it), notice at the top of the code', async page => {
+    const out = [];
+    const src = require('fs').readFileSync(decodeURI(PAGE.slice(7)), 'utf8').slice(0, 1200);
+    if (!/^<!doctype html>\n<!--[\s\S]*© 2026 Dallas Boswell[\s\S]*CC BY-NC-SA 4\.0[\s\S]*creativecommons\.org\/licenses\/by-nc-sa\/4\.0\//.test(src)) out.push('no license notice at the top of the page');
+    const f = await page.evaluate(() => { const c = document.getElementById('credit'), r = c.getBoundingClientRect(), a = c.querySelector('a');
+      const st = document.getElementById('stage'), sr = st && st.getBoundingClientRect();
+      return { text: c.textContent.replace(/\s+/g, ' ').trim(), href: a && a.href, vis: r.width > 0 && r.height > 0 && r.bottom <= innerHeight && r.right <= innerWidth + 0.5,
+        scroll: document.documentElement.scrollHeight - document.documentElement.clientHeight,
+        under: !sr || (r.top >= sr.bottom - 0.5 && r.right <= sr.right + 0.5) };
+    });
+    if (f.text !== '© 2026 Dallas Boswell · Free for Educational Use · cc BY-NC-SA 4.0') out.push('footer reads: ' + f.text);
+    if (f.href !== 'https://creativecommons.org/licenses/by-nc-sa/4.0/') out.push('footer link: ' + f.href);
+    if (!f.vis) out.push('footer not fully on screen');
+    if (!f.under) out.push('footer not under the panel, inside its right edge');
+    if (f.scroll > 0) out.push('page scrolls by ' + f.scroll);
+    await page.click('#about-btn'); await page.waitForTimeout(150);
+    const d = await page.evaluate(() => { const g = document.getElementById('about-dlg'), t = g.textContent.replace(/\s+/g, ' ');
+      return { open: g.open, t, links: [...g.querySelectorAll('a')].map(a => a.href + ' ' + a.target) }; });
+    if (!d.open) out.push('About box did not open');
+    for (const s of ['Made by Dallas Boswell', 'Industrial Electrical Technology', 'Illinois Central College', '© 2026 Dallas Boswell. Some rights reserved.', 'Attribution-NonCommercial-ShareAlike 4.0 International License', 'Attribution:', 'NonCommercial:', 'ShareAlike:', 'without warranty'])
+      if (!d.t.includes(s)) out.push('About box lacks: ' + s);
+    if (d.links.join('|') !== 'https://creativecommons.org/licenses/by-nc-sa/4.0/ _blank|https://github.com/DallasBoswell-ICC/OrderOfOperations _blank') out.push('About links: ' + d.links.join('|'));
+    await page.keyboard.press('Escape'); await page.waitForTimeout(150);
+    if (await page.evaluate(() => document.getElementById('about-dlg').open)) out.push('Escape did not close the About box');
+    return out;
+  });
+
   await b.close();
   console.log(`\n${passed} of ${passed + failed} checks passed.`);
   process.exit(failed ? 1 : 0);

@@ -800,3 +800,6 @@ function lineUp() {
   tidy(S); refresh(); say(`${moved + 1} parts lined up under ${ps[0].tag || LIB[ps[0].t].name}${stuck.length ? `; ${stuck.join(', ')} stayed put (something in the way)` : ''}.`);
 }
 $('lineup-btn').addEventListener('click', lineUp);
+
+// About: who made it and the license it is shared under
+$('about-btn').addEventListener('click', () => $('about-dlg').showModal());

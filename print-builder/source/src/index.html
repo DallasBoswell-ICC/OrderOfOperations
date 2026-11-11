@@ -1,4 +1,14 @@
 <!doctype html>
+<!--
+  Order of Operations: Print Builder
+  © 2026 Dallas Boswell. Some rights reserved.
+  Made by Dallas Boswell, Industrial Electrical Technology, Illinois Central College.
+  Licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (CC BY-NC-SA 4.0):
+  https://creativecommons.org/licenses/by-nc-sa/4.0/
+  You may copy, redistribute and adapt it, provided that you credit Dallas Boswell as the original author, link to the
+  license and indicate any changes; do not use it for commercial purposes; and share any adaptation under the same license.
+  Source: https://github.com/DallasBoswell-ICC/OrderOfOperations
+-->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -33,6 +43,7 @@
         <select id="ui-size"><option value="1">Small</option><option value="1.15" selected>Medium</option><option value="1.3">Large</option><option value="1.5">Extra Large</option></select></label>
       <button class="btn icon" id="undo-btn" title="Undo (Ctrl+Z)">↶</button>
       <button class="btn icon" id="redo-btn" title="Redo (Ctrl+Y)">↷</button>
+      <button class="btn icon infobtn" id="about-btn" title="About Print Builder: who made it, and the license it is shared under" aria-label="About this program">i</button>
     </div>
   </header>
   <div class="ribwrap">
@@ -114,8 +125,24 @@
       <div class="zoombar"><button id="z-out" title="Zoom out">−</button><span id="z-lvl">100%</span><button id="z-in" title="Zoom in">+</button><button id="z-fit" title="Fit the sheet">Fit</button></div>
     </section>
   </main>
-  <footer class="bot"><div id="tabs" class="tabs"></div><span id="pageinfo"></span><span class="hint" id="hint"></span></footer>
+  <footer class="bot"><div id="tabs" class="tabs"></div><span id="pageinfo"></span><span class="hint" id="hint"></span><span class="credit credit-bar" id="credit">© 2026 Dallas Boswell · Free for Educational Use · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener license" title="Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License"><svg class="cc-mark" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="5"/><text x="32" y="42" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="29" fill="currentColor">cc</text></svg> BY-NC-SA 4.0</a></span></footer>
 </div>
+<!-- About: who made it and the license it is shared under (the "i" button at the top right) -->
+<dialog id="about-dlg" class="dlg about-dlg" aria-labelledby="about-title">
+  <form method="dialog" class="ab">
+    <div class="ab-hd"><span class="ab-logo" aria-hidden="true">O³</span><div><h2 id="about-title">Order of Operations: Print Builder</h2>
+      <p class="ab-by">Made by Dallas Boswell<br>Industrial Electrical Technology<br>Illinois Central College</p></div></div>
+    <div class="ab-lic"><svg class="cc-mark big" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="5"/><text x="32" y="42" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="29" fill="currentColor">cc</text></svg><div><b>© 2026 Dallas Boswell. Some rights reserved.</b><br>This software is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (CC BY-NC-SA 4.0).</div></div>
+    <p class="ab-p">Under the terms of this license, you may copy, redistribute and adapt this software, provided that:</p>
+    <ul class="ab-ul">
+      <li><b>Attribution:</b> appropriate credit is given to Dallas Boswell as the original author, a link to the license is provided, and any changes are indicated.</li>
+      <li><b>NonCommercial:</b> the software is not used for commercial purposes.</li>
+      <li><b>ShareAlike:</b> any adaptation is distributed under the same license as the original.</li>
+    </ul>
+    <p class="ab-fine">This software is provided “as is,” without warranty of any kind. The full legal terms are set out in the license.</p>
+    <div class="ab-end"><a class="ab-btn" href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener license">Read the License</a><a class="ab-btn" href="https://github.com/DallasBoswell-ICC/OrderOfOperations" target="_blank" rel="noopener">Source on GitHub</a><button value="close" class="ab-btn primary" autofocus>Close</button></div>
+  </form>
+</dialog>
 <dialog id="cp-dlg" class="dlg cp-dlg"><form id="cp-form">
   <h3>Custom Paper Size</h3>
   <p class="help">For this sheet, as it stands portrait (Orientation turns it). 4 to 48 inches each way.</p>

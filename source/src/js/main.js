@@ -69,7 +69,9 @@ function fit(widen) {
   const k = `${window.innerWidth}x${window.innerHeight}:${editing}:${Math.round(top)}:${viewMode}`;
   let h = parseFloat(st.style.height);
   if (widen || k !== fitKey || !h) {
-    const below = 16;
+    // room below the panel: the page's bottom margin, and the credit line under the panel (with the gap above it)
+    const cr = document.getElementById('credit');
+    const below = 16 + (cr && cr.offsetParent ? cr.offsetHeight + 4 : 0);
     h = Math.floor(Math.max(320, document.documentElement.clientHeight - top - below));
     if (st.style.height !== h + 'px') st.style.height = h + 'px';
     fitKey = k;
@@ -103,3 +105,6 @@ if (LOCKED) {
 }
 showOverview();
 requestAnimationFrame(frame);
+
+// About: who made it and the license it is shared under
+document.getElementById('about-btn').addEventListener('click', () => document.getElementById('about-dlg').showModal());
