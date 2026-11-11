@@ -2802,6 +2802,26 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+
+  await check('A part tab with more on it than fits (a motor in a narrow window): nothing overlaps; it scrolls sideways with the wheel, its cut-off end faded', async page => {
+    const out = [];
+    await page.setViewportSize({ width: 1470, height: 1000 }); await page.waitForTimeout(150);
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    await page.evaluate(() => { const cyl = pvNew('position'); cyl.name = 'Position'; PV.push(cyl); const m = newPart('mtr', 600, 300); parts.push(m); m.pv = cyl.id; drvDefaults(m, cyl); normalize(); fit(true); draw(); });
+    const id = await page.evaluate(() => parts.find(q => q.t === 'mtr').id), bx = await page.locator(`#svg [data-part="${id}"]`).boundingBox();
+    await page.mouse.click(bx.x + bx.width / 2, bx.y + bx.height / 2); await page.waitForTimeout(200);
+    const groups = () => page.evaluate(() => [...document.querySelectorAll('#editpanel .tgroup')].filter(g => g.offsetParent).map(g => { const r = g.getBoundingClientRect(); return [g.querySelector('.label') ? g.querySelector('.label').textContent : '?', r.left, r.right]; }).sort((a, b) => a[1] - b[1]));
+    const g = await groups();
+    for (let i = 1; i < g.length; i++) if (g[i][1] < g[i - 1][2] - 0.5) out.push(g[i][0] + ' overlaps ' + g[i - 1][0]);
+    if (!g.some(x => x[0] === 'Part') || !g.some(x => x[0] === 'Picture')) out.push('groups: ' + g.map(x => x[0]).join(', '));
+    const more0 = await page.evaluate(() => document.getElementById('editpanel').dataset.more || '');
+    if (more0 !== 'r') out.push('cut-off end not marked: ' + more0);
+    await page.mouse.move(700, 120); await page.mouse.wheel(0, 2000); await page.waitForTimeout(200);
+    const r = await page.evaluate(() => { const e = document.getElementById('editpanel'), d = document.getElementById('p-del').getBoundingClientRect(); return [e.scrollLeft, e.dataset.more || '', d.right <= e.getBoundingClientRect().right + 0.5, scrollY]; });
+    if (!(r[0] > 0) || r[1] !== 'l' || !r[2] || r[3] !== 0) out.push('after the wheel: ' + JSON.stringify(r));
+    return out;
+  });
+
   await browser.close();
   const failed = results.filter(r => !r.ok);
   console.log(`\n${results.length - failed.length} of ${results.length} checks passed.`);

@@ -194,6 +194,10 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
 .rpanel .tgroup, .rpanel .row { flex-flow: row wrap; align-content: space-between; align-items: center; gap: 0 8px; padding-top: 6px; }
 .rpanel .tgroup > .label, .rpanel .row > .label { order: 2; flex-basis: 100%; }
 .rpanel .props { display: flex; flex-wrap: nowrap; align-items: stretch; height: 100%; gap: 0; }
+/* a part's settings never squeeze up: with too little room the tab scrolls sideways instead (squeezed, the groups
+   inside spilled out over the Part group after them). A long description wraps onto a second line to save room */
+.rpanel .props { flex: none; }
+.rpanel .tgroup > .selname { max-width: 17em; white-space: normal; line-height: 1.25; }
 .rpanel .props[hidden] { display: none; }
 .rpanel .swatches { display: grid; grid-template-columns: repeat(5, 20px); gap: 4px; max-width: none; }
 .rpanel .sw { width: 20px; height: 20px; }
@@ -446,6 +450,9 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
 .credit-strip a { line-height: 18px; padding: 0 6px; }
 .credit-strip .cc-mark { width: 15px; height: 15px; vertical-align: -3px; }
 .ab-name { font-size: .95rem; font-weight: 700; color: var(--ink); }
+.rpanel[data-more="r"] { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent); }
+.rpanel[data-more="l"] { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 48px), transparent); }
+.rpanel[data-more="lr"] { -webkit-mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); }
 
 .demo-badge { font-style: normal; font-size: .7rem; font-weight: 800; letter-spacing: .08em; color: #1c1d1f; background: #9be03a; border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }
 </style>
@@ -5792,6 +5799,21 @@ document.querySelectorAll('[aria-controls]').forEach(b => { const id = b.getAttr
 document.addEventListener('pointerdown', e => { if (![...document.querySelectorAll('.tp-menu, [aria-controls]')].some(m => m.contains(e.target))) tpMenu(false); }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') tpMenu(false); });
 window.addEventListener('resize', () => tpMenu(false));
+
+// a ribbon row with more on it than fits (a part's settings in a narrow window): the scroll wheel moves it sideways,
+// and its cut-off end fades out, so it is plain there is more to see
+for (const rp of document.querySelectorAll('.rpanel')) {
+  const edges = () => { const over = rp.scrollWidth > rp.clientWidth + 1, l = over && rp.scrollLeft > 1, r = over && rp.scrollLeft < rp.scrollWidth - rp.clientWidth - 1;
+    const m = (l ? 'l' : '') + (r ? 'r' : ''); if ((rp.dataset.more || '') !== m) { if (m) rp.dataset.more = m; else delete rp.dataset.more; } };
+  rp.addEventListener('scroll', edges, { passive: true });
+  rp.addEventListener('wheel', e => {
+    if (rp.scrollWidth <= rp.clientWidth + 1 || Math.abs(e.deltaX) >= Math.abs(e.deltaY) || e.ctrlKey) return;
+    rp.scrollLeft += e.deltaY; e.preventDefault();
+  }, { passive: false });
+  if (window.ResizeObserver) { const ro = new ResizeObserver(edges); ro.observe(rp); for (const c of rp.children) ro.observe(c); }
+  new MutationObserver(edges).observe(rp, { subtree: true, attributes: true, attributeFilter: ['hidden'] });
+  edges();
+}
 
 /* ---- js/clipboard.js ---- */
 /* ---------------- copy, cut and paste ----------------

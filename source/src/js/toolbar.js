@@ -159,3 +159,18 @@ document.querySelectorAll('[aria-controls]').forEach(b => { const id = b.getAttr
 document.addEventListener('pointerdown', e => { if (![...document.querySelectorAll('.tp-menu, [aria-controls]')].some(m => m.contains(e.target))) tpMenu(false); }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') tpMenu(false); });
 window.addEventListener('resize', () => tpMenu(false));
+
+// a ribbon row with more on it than fits (a part's settings in a narrow window): the scroll wheel moves it sideways,
+// and its cut-off end fades out, so it is plain there is more to see
+for (const rp of document.querySelectorAll('.rpanel')) {
+  const edges = () => { const over = rp.scrollWidth > rp.clientWidth + 1, l = over && rp.scrollLeft > 1, r = over && rp.scrollLeft < rp.scrollWidth - rp.clientWidth - 1;
+    const m = (l ? 'l' : '') + (r ? 'r' : ''); if ((rp.dataset.more || '') !== m) { if (m) rp.dataset.more = m; else delete rp.dataset.more; } };
+  rp.addEventListener('scroll', edges, { passive: true });
+  rp.addEventListener('wheel', e => {
+    if (rp.scrollWidth <= rp.clientWidth + 1 || Math.abs(e.deltaX) >= Math.abs(e.deltaY) || e.ctrlKey) return;
+    rp.scrollLeft += e.deltaY; e.preventDefault();
+  }, { passive: false });
+  if (window.ResizeObserver) { const ro = new ResizeObserver(edges); ro.observe(rp); for (const c of rp.children) ro.observe(c); }
+  new MutationObserver(edges).observe(rp, { subtree: true, attributes: true, attributeFilter: ['hidden'] });
+  edges();
+}
