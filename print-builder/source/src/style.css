@@ -271,3 +271,4 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .about-dlg { padding: 0; } .about-dlg h2 { font-weight: 700; }
 .credit-bar { flex: none; padding-left: 12px; border-left: 1px solid var(--line2); color: var(--faint); font-size: 12px; }
 .infobtn { width: 34px; padding: 6px 0; text-align: center; }
+.ab-name { font-size: .95rem; font-weight: 700; color: var(--ink); }
