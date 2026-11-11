@@ -1,4 +1,14 @@
 <!doctype html>
+<!--
+  Order of Operations: Circuit Builder
+  © 2026 Dallas Boswell. Some rights reserved.
+  Made by Dallas Boswell, Industrial Electrical Technology, Illinois Central College.
+  Licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (CC BY-NC-SA 4.0):
+  https://creativecommons.org/licenses/by-nc-sa/4.0/
+  You may copy, redistribute and adapt it, provided that you credit Dallas Boswell as the original author, link to the
+  license and indicate any changes; do not use it for commercial purposes; and share any adaptation under the same license.
+  Source: https://github.com/DallasBoswell-ICC/OrderOfOperations
+-->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -413,6 +423,29 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
 .picdock { fill: rgba(255,192,0,.05); stroke: #8a96a3; stroke-width: 1.6; stroke-dasharray: 6 5; pointer-events: none; }
 .picdocktext { fill: #8a96a3; font-size: 12px; pointer-events: none; }
 .piclink { fill: none; stroke: #ffc000; stroke-width: 2; stroke-dasharray: 6 5; opacity: .9; pointer-events: none; }
+
+/* About box and credit line (the license) */
+.cc-mark { width: 14px; height: 14px; vertical-align: -2.5px; } .cc-mark.big { width: 30px; height: 30px; flex: none; margin-top: 2px; }
+.about-dlg { width: min(580px, calc(100vw - 32px)); }
+.ab { display: grid; gap: 12px; padding: 20px 22px 18px; font-size: .9rem; line-height: 1.5; color: #d6dbe0; }
+.ab-hd { display: flex; gap: 14px; align-items: flex-start; }
+.ab-hd h2 { margin: 0; font-size: 1.15rem; color: var(--ink); line-height: 1.3; }
+.ab-logo { flex: none; width: 46px; height: 46px; border-radius: 10px; background: #ffc000; color: #111; display: grid; place-items: center; font-weight: 800; font-size: 19px; }
+.ab-by { margin: 4px 0 0; font-size: .82rem; color: var(--muted); line-height: 1.45; }
+.ab-lic { display: flex; gap: 12px; align-items: flex-start; background: #1f2124; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; color: var(--ink); }
+.ab-p { margin: 0; } .ab-ul { margin: -6px 0 0; padding-left: 18px; color: var(--muted); } .ab-ul li { margin: 4px 0; } .ab-ul b { color: #d6dbe0; }
+.ab-fine { margin: 0; font-size: .78rem; color: var(--faint); }
+.ab-end { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+.ab-btn { font: inherit; font-size: .86rem; color: var(--ink); background: #2e3135; border: 1px solid #45484d; border-radius: 8px; padding: 7px 13px; text-decoration: none; cursor: pointer; }
+.ab-btn:hover { background: #383c41; } .ab-btn.primary { background: #ffc000; border-color: #ffc000; color: #111; font-weight: 600; }
+.ab-btn:focus-visible, .credit a:focus-visible, .infobtn:focus-visible { outline: 2px solid #ffc000; outline-offset: 2px; }
+.credit a { color: inherit; text-decoration: none; border: 1px solid currentColor; border-radius: 5px; padding: 0 5px 1px; margin-left: 2px; white-space: nowrap; }
+.credit a:hover { color: var(--ink); }
+.infobtn { font: 700 15px/1 Georgia, "Times New Roman", serif; }
+.credit-strip { display: flex; justify-content: flex-end; align-items: center; gap: 4px; font-size: 13.5px; line-height: 22px; color: var(--faint); padding: 0 4px; margin-top: -4px; white-space: nowrap; overflow: hidden; }
+.credit-strip a { line-height: 18px; padding: 0 6px; }
+.credit-strip .cc-mark { width: 15px; height: 15px; vertical-align: -3px; }
+.ab-name { font-size: .95rem; font-weight: 700; color: var(--ink); }
 </style>
 </head>
 <body>
@@ -454,6 +487,7 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
       <button type="button" role="tab" id="tab-edit" aria-selected="true">Build</button>
       <button type="button" role="tab" id="tab-run" aria-selected="false">Run</button>
     </div>
+    <button type="button" class="qbtn infobtn" id="about-btn" aria-label="About this program" data-tip="About Circuit Builder: who made it, and the license it is shared under">i</button>
   </header>
 
   <!-- the ribbon: Home (everything for building, always there), a gold tab for the selected part's settings, and
@@ -652,9 +686,27 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
       </div>
     </div>
   </div>
+  <footer class="credit credit-strip" id="credit">© 2026 Dallas Boswell · Free for Educational Use · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener license" title="Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License"><svg class="cc-mark" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="5"/><text x="32" y="42" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="29" fill="currentColor">cc</text></svg> BY-NC-SA 4.0</a></footer>
   </div>
 
 </div>
+
+<!-- About: who made it and the license it is shared under (the "i" button at the top right) -->
+<dialog id="about-dlg" class="about-dlg" aria-labelledby="about-title">
+  <form method="dialog" class="ab">
+    <div class="ab-hd"><span class="ab-logo" aria-hidden="true">O³</span><div><h2 id="about-title">Order of Operations: Circuit Builder</h2>
+      <p class="ab-by"><b class="ab-name">Made by Dallas Boswell</b><br>Illinois Central College<br>Industrial Electrical Technology</p></div></div>
+    <div class="ab-lic"><svg class="cc-mark big" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="5"/><text x="32" y="42" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="29" fill="currentColor">cc</text></svg><div><b>© 2026 Dallas Boswell. Some rights reserved.</b><br>This software is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (CC BY-NC-SA 4.0).</div></div>
+    <p class="ab-p">Under the terms of this license, you may copy, redistribute and adapt this software, provided that:</p>
+    <ul class="ab-ul">
+      <li><b>Attribution:</b> appropriate credit is given to Dallas Boswell as the original author, a link to the license is provided, and any changes are indicated.</li>
+      <li><b>NonCommercial:</b> the software is not used for commercial purposes.</li>
+      <li><b>ShareAlike:</b> any adaptation is distributed under the same license as the original.</li>
+    </ul>
+    <p class="ab-fine">This software is provided “as is,” without warranty of any kind. The full legal terms are set out in the license.</p>
+    <div class="ab-end"><a class="ab-btn" href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener license">Read the License</a><a class="ab-btn" href="https://github.com/DallasBoswell-ICC/OrderOfOperations" target="_blank" rel="noopener">Source on GitHub</a><button value="close" class="ab-btn primary" autofocus>Close</button></div>
+  </form>
+</dialog>
 
 <!-- the operator station (Run mode): every pushbutton and selector switch on the circuit, floating over the panel -->
 <div class="station" id="station" role="region" aria-label="Operator station" hidden>
@@ -6574,7 +6626,9 @@ function fit(widen) {
   const k = `${window.innerWidth}x${window.innerHeight}:${editing}:${Math.round(top)}:${viewMode}`;
   let h = parseFloat(st.style.height);
   if (widen || k !== fitKey || !h) {
-    const below = 16;
+    // room below the panel: the page's bottom margin, and the credit line under the panel (with the gap above it)
+    const cr = document.getElementById('credit');
+    const below = 16 + (cr && cr.offsetParent ? cr.offsetHeight + 4 : 0);
     h = Math.floor(Math.max(320, document.documentElement.clientHeight - top - below));
     if (st.style.height !== h + 'px') st.style.height = h + 'px';
     fitKey = k;
@@ -6608,6 +6662,9 @@ if (LOCKED) {
 }
 showOverview();
 requestAnimationFrame(frame);
+
+// About: who made it and the license it is shared under
+document.getElementById('about-btn').addEventListener('click', () => document.getElementById('about-dlg').showModal());
 </script>
 </body>
 </html>

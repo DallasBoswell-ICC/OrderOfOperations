@@ -20,7 +20,7 @@ says so ("push it to main").
 The demo is marked DEMO in its title bar and window title, has its own green-banded icon (src/icons-demo), installs
 as an app of its own, and keeps its own autosave and settings (its storage keys start `oo-print-builder-demo:`).
 
-The source here is always the demo's. The full page was last built from commit 5048a27 (11 Nov 2026); update this
+The source here is always the demo's. The full page was last built from commit cfb345e (11 Nov 2026); update this
 line when the demo is promoted. To promote: build without `--demo`, run the checks, copy dist/Print_Builder.html to
 print-builder/index.html (and dist/icons, dist/print-builder.webmanifest beside it), save a backup of the old page
 first if asked, then update the commit named above.
