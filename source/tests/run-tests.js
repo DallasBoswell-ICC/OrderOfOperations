@@ -2774,6 +2774,34 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+
+  await check('A switch placed after a coil (on its way back to L2): no crash; the coil drops out and picks up with it; its return current runs on to L2; Reset still works', async page => {
+    const out = [];
+    for (const [name, mk, key, nc, w] of [['NC limit switch', `P('lsw', 640, 200, { L: '1', nc: true })`, '1', true, 60], ['NO limit switch', `P('lsw', 640, 200, { L: '1' })`, '1', false, 60],
+        ['NC pushbutton', `P('btn', 640, 200, { L: 'B', nc: true })`, 'B', true, 40], ['NO pushbutton', `P('btn', 640, 200, { L: 'B' })`, 'B', false, 40],
+        ['NC temperature switch', `P('tsw', 640, 200, { L: '1', nc: true })`, 'T1', true, 60], ['NC pressure switch', `P('psw', 640, 200, { L: '1', nc: true })`, 'P1', true, 60]]) {
+      if (await page.evaluate(() => !editing)) await page.click('#tab-edit');
+      await loadCircuit(page, `parts = [P('btn', 140, 200, { L: 'A', maint: true }), C('X', 400, 200), ${mk}];
+        wires = [Wr(0,200,100,200), Wr(180,200,340,200), Wr(460,200,${640 - w},200), Wr(${640 + w},200,880,200)]`);
+      await page.click('#tab-run'); await page.waitForTimeout(250);
+      const r = await page.evaluate(new Function(STEP + `
+        const X = parts.find(q => q.t === 'coil'), L2 = [...NET.feedV].filter(([, v]) => v === 0).map(([id]) => id);
+        const s = () => (coilOn[X.id] ? 1 : 0) + (L2.some(id => REC.get(id) && REC.get(id).ret) ? 'r' : '-');
+        const seq = [];
+        press('A', true); step(4); seq.push(s());
+        press('${key}', true); step(4); seq.push(s());
+        press('${key}', false); step(4); seq.push(s());
+        press('A', false); step(4); seq.push(s());
+        return seq.join(' ');`));
+      await page.click('#reset-btn'); await page.waitForTimeout(150);
+      const again = await page.evaluate(new Function(STEP + `press('A', true); step(4); return coilOn[parts.find(q => q.t === 'coil').id] ? 1 : 0;`));
+      const want = nc ? '1r 0- 1r 0-' : '0- 1r 0- 0-';
+      if (r !== want) out.push(name + ': ' + r + ' (want ' + want + ')');
+      if (again !== (nc ? 1 : 0)) out.push(name + ': after Reset the coil is ' + (again ? 'in' : 'out'));
+    }
+    return out;
+  });
+
   await browser.close();
   const failed = results.filter(r => !r.ok);
   console.log(`\n${results.length - failed.length} of ${results.length} checks passed.`);

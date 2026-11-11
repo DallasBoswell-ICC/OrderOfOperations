@@ -178,7 +178,7 @@ function findNoway() {
   for (const coilsIn of [false, true]) for (const path of PATHS) {
     let label = '';
     for (const d of path) {
-      if (d.e.kind === 'part') { if (isOp(d.e.part)) label = opKey(d.e.part); else if (isCon(d.e.part)) add(d, label); else if (LOADT(d.e.part.t) && coilsIn) label = 'ret'; continue; }
+      if (d.e.kind === 'part') { if (isOp(d.e.part)) label = opLabel(d.e.part, label); else if (isCon(d.e.part)) add(d, label); else if (LOADT(d.e.part.t) && coilsIn) label = 'ret'; continue; }
       add(d, label);
     }
   }
@@ -214,6 +214,9 @@ function findNoway() {
     }
   }
 }
+// the colour a lane carries past a pushbutton or a limit, temperature or pressure switch: the switch's own, except past a
+// coil (a switch on the coil's way back to L2), where it is still the return current
+const opLabel = (p, label) => label === 'ret' ? 'ret' : opKey(p);
 const onward = (d, k) => !(NOWAY.get(d) && NOWAY.get(d).has(k));
 // which colours each lane may carry right now: along every path, from L1 up to the first button not passing current,
 // each lane carries the colour of the last button before it ('' for plain egg, 'ret' after a coil)
@@ -226,7 +229,7 @@ function findReach() {
     let label = '', s = 0;   // (s: how long the current takes to get there, in seconds)
     for (const d of path) {
       s += d.e.kind === 'seg' ? d.delay : d.e.len / V;
-      if (d.e.kind === 'part' && !isCon(d.e.part)) { if (isOp(d.e.part)) label = opKey(d.e.part); else if (LOADT(d.e.part.t)) label = 'ret'; continue; }
+      if (d.e.kind === 'part' && !isCon(d.e.part)) { if (isOp(d.e.part)) label = opLabel(d.e.part, label); else if (LOADT(d.e.part.t)) label = 'ret'; continue; }
       if (!onward(d, label)) break;   // (the colour cannot go this way: this path carries none of it on from here)
       const m = REACH.get(d) || {}; m[label] = Math.max(m[label] || 0, s); REACH.set(d, m);
     }
@@ -239,7 +242,7 @@ function allowNow() {
     let label = '';
     for (const d of path) {
       if (d.e.kind === 'part') {
-        if (isSw(d.e.part)) { if (!closed(d.e.part)) break; if (isOp(d.e.part)) label = opKey(d.e.part); else { if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label); } }   // a contact passes on the colour it is given
+        if (isSw(d.e.part)) { if (!closed(d.e.part)) break; if (isOp(d.e.part)) label = opLabel(d.e.part, label); else { if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label); } }   // a contact passes on the colour it is given
         else if (COND[d.e.part.id]) label = 'ret';   // past a coil with current through it: the return side, back to L2
         // (a coil that cannot pick up, because something past it is open, carries no current: the wire past it is as
         // live as the wire before it, so the colour waiting at the coil carries on up to whatever is open)
@@ -270,7 +273,9 @@ const active = d => d.e.kind === 'seg' ? ALLOW.has(d) : isSw(d.e.part) ? closed(
 function through(d, r) {
   if (!r) return null;
   if (d.e.kind === 'seg') return along(r, d.e.len);
-  if (isOp(d.e.part)) return { set: new Set([opKey(d.e.part)]), from: colourOf(r), rd: 0 };
+  // a switch past a coil (on its way back to L2) carries the return current through as it is, as a contact does: only
+  // current still on its way from L1 takes on a button's colour
+  if (isOp(d.e.part)) return r.ret ? along(r, d.e.len) : { set: new Set([opKey(d.e.part)]), from: colourOf(r), rd: 0 };
   if (isCon(d.e.part)) return along(r, d.e.len);   // a relay contact passes the current on as it is
   // through a coil that is in: the return side, fading to egg. Through a coil that cannot pick up: the colour
   // waiting at it, on up to whatever is open past it

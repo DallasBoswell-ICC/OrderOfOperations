@@ -1,6 +1,11 @@
 /* ---------------- run mode ---------------- */
 let prevT = performance.now();
+// (whatever goes wrong in one frame, the next is always asked for: one fault must never stop the clock for good, which
+// would leave the panel frozen even after Reset)
 function frame(now) {
+  try { frameBody(now); } catch (e) { console.error(e); } finally { requestAnimationFrame(frame); }
+}
+function frameBody(now) {
   const real = Math.min(.5, Math.max(0, (now - prevT) / 1000)), dt = Math.min(.1, real); prevT = now;
   if (!editing) {
     // at high speed a busy circuit (a buzzer, say) can have more to do in one frame than the computer can manage: it
@@ -18,7 +23,6 @@ function frame(now) {
     if (needPaint || eventsRun !== ran || busyQueue() || simT <= busyUntil + 0.6 || was <= busyUntil + 0.6) { paint(); needPaint = false; }
     else if (anyTiming()) paintTimers();   // (a timer counting down: only its readout changes)
   }
-  requestAnimationFrame(frame);
 }
 function paint() {
   for (const V of VIEWS) paintView(V);
