@@ -32,6 +32,7 @@ MODULES = [
     "editor.js",     # the tools, picking and the editor's marks
     "clipboard.js",  # copy, cut and paste
     "ui.js",         # the window round it: ribbon, palette, properties, sheets, title block, zoom, files, printing
+    "keys.js",       # the keyboard shortcuts: which key does what (changeable, kept in this browser), and the F1 box
     "shell.js",      # Print Preview, tooltips, folding the ribbon, full screen, dropping a file in; then starts it all
 ]
 

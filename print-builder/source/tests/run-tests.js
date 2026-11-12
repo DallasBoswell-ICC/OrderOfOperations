@@ -719,6 +719,51 @@ let passed = 0, failed = 0;
     return out;
   });
 
+  await check('Changing keys (F1 › Change Keys): a key moves to another, a key in use swaps, sheet keys and F1 are kept; tips, hints and the map follow; kept after a reload; Default Settings puts them back', async p => {
+    const out = [], tool_ = () => p.evaluate(() => tool), st = () => p.evaluate(() => localStorage.getItem(KB.store));
+    await p.mouse.move(800, 500);
+    await p.keyboard.press('F1'); await p.click('#kb-change');
+    // Select to S (free)
+    await p.click('.kchip[data-kid="select"]'); await p.keyboard.press('s');
+    if (!/Select is now S/.test(await p.textContent('#kb-msg'))) out.push('S for Select: ' + await p.textContent('#kb-msg'));
+    // Rotate to W (Wire's): they swap
+    await p.click('.kchip[data-kid="rotate"]'); await p.keyboard.press('w');
+    if (!/Wire moved to R/.test(await p.textContent('#kb-msg'))) out.push('W for Rotate did not swap: ' + await p.textContent('#kb-msg'));
+    // a sheet key, F1 and Ctrl are refused; Esc stops waiting and leaves the box open
+    await p.click('.kchip[data-kid="again"]'); await p.keyboard.press('3'); if (!/kept for going to sheet 3/.test(await p.textContent('#kb-msg'))) out.push('3 not refused');
+    await p.keyboard.press('F1'); if (!/kept for this list/.test(await p.textContent('#kb-msg'))) out.push('F1 not refused');
+    await p.keyboard.press('Control+k'); if (!/Ctrl and Alt shortcuts stay/.test(await p.textContent('#kb-msg'))) out.push('Ctrl+K not refused');
+    await p.keyboard.press('Escape');
+    if (!(await p.evaluate(() => $('keys-dlg').open)) || await p.evaluate(() => !!KB_WAIT)) out.push('Esc while waiting closed the box or kept waiting');
+    // Shift with a letter works: Line Up to Shift+D
+    await p.click('.kchip[data-kid="lineup"]'); await p.keyboard.press('Shift+D');
+    if (await p.evaluate(() => KB_NOW.lineup[0]) !== 'shift+d') out.push('Shift+D for Line Up: ' + await p.evaluate(() => KB_NOW.lineup[0]));
+    const map = await p.evaluate(() => [...document.querySelectorAll('#kb-map .kk')].map(k => k.textContent));
+    if (!map.some(t => /^SSelect/.test(t)) || !map.some(t => /^WRotate/.test(t)) || !map.some(t => /^RWire/.test(t)) || !map.some(t => /^DShift: Line Up/.test(t))) out.push('map: ' + map.filter(t => /^[SWRD]/.test(t)).join(' | '));
+    if (!(await p.evaluate(() => document.querySelectorAll('#kb-map .kk.chg').length >= 4))) out.push('changed keys not marked on the map');
+    await p.click('#keys-close');
+    // the keys now do the new jobs
+    await p.keyboard.press('r'); if (await tool_() !== 'wire') out.push('R did not pick Wire');
+    await p.keyboard.press('s'); if (await tool_() !== 'select') out.push('S did not pick Select');
+    await p.keyboard.press('w'); await p.keyboard.press('e'); if (await tool_() !== 'select') out.push('E still does something: ' + await tool_());
+    await p.evaluate(() => { const q = S.parts.find(q => q.t === 'coil'); sel = new Set([q.id]); selW = null; refresh(); window.__r = q.rot || 0; });
+    await p.keyboard.press('w'); if (await p.evaluate(() => (S.parts.find(q => q.t === 'coil').rot || 0) === window.__r)) out.push('W did not rotate');
+    // tips and hints name the new keys
+    const tip = await p.evaluate(() => document.querySelector('[data-tool="select"]').title);
+    if (!tip.startsWith('Select (S)')) out.push('tip: ' + tip.slice(0, 20));
+    await p.evaluate(() => { sel = new Set(); refresh(); setTool('select'); });
+    if (!/W turns/.test(await p.evaluate(() => $('hint').textContent))) out.push('hint: ' + await p.evaluate(() => $('hint').textContent));
+    // kept after a reload
+    if (!(await st())) out.push('not kept in the browser');
+    await p.reload(); await p.waitForTimeout(300);
+    if (await p.evaluate(() => [KB_NOW.select[0], KB_NOW.rotate[0], KB_NOW.wire[0]].join()) !== 's,w,r') out.push('after reload: ' + await p.evaluate(() => JSON.stringify(KB_NOW)));
+    // Default Settings
+    await p.keyboard.press('F1'); await p.click('#kb-reset');
+    if (await st() !== null || await p.evaluate(() => KB_NOW.select[0]) !== 'e' || !(await p.evaluate(() => $('kb-reset').disabled))) out.push('Default Settings did not put them back');
+    if (!(await p.evaluate(() => document.querySelector('[data-tool="select"]').title.startsWith('Select (E)')))) out.push('tip after Default Settings');
+    return out;
+  });
+
   await b.close();
   console.log(`\n${passed} of ${passed + failed} checks passed.`);
   process.exit(failed ? 1 : 0);

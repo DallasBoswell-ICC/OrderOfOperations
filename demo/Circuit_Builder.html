@@ -468,6 +468,21 @@ dialog.keys-dlg { width: min(1000px, 96vw); max-height: 94vh; overflow: auto; }
 .kgrp h4 { margin: 0 0 6px; font-size: 13px; color: var(--kc); border-bottom: 2px solid var(--kc); padding-bottom: 3px; }
 .kl { display: grid; grid-template-columns: auto 1fr; gap: 10px; margin-bottom: 4px; font-size: 12px; color: var(--muted); line-height: 1.3; }
 .kl kbd { font: 600 11.5px var(--ui); color: var(--ink); }
+/* Change Keys (F1): the switch, the key buttons, what changed */
+.kmode { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; }
+.kseg { display: inline-flex; background: #202327; border: 1px solid #3a3f45; border-radius: 8px; padding: 2px; }
+.dlg .kseg button { font-size: 12.5px; color: #9aa3ad; background: none; border: 0; border-radius: 6px; padding: 5px 12px; }
+.dlg .kseg button[aria-pressed="true"] { background: #3a3f45; color: #fff; font-weight: 600; }
+.knote { font-size: 12px; color: #8a929b; }
+.kchips { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px; } .kor { font-size: 11px; color: #8a929b; }
+.dlg button.kchip { font: 600 11.5px var(--ui); color: #e8ecef; background: #2a2d31; border: 1px solid #4a5058; border-bottom-width: 2px; border-radius: 5px; padding: 2px 7px; min-width: 26px; line-height: 1.3; }
+.dlg button.kchip:hover { background: #34383d; } .dlg button.kchip.chg, .kl kbd.chg { color: #ffc000; } .dlg button.kchip.chg { border-color: #ffc000; }
+.dlg button.kchip.wait { color: #46c46a; border-color: #46c46a; background: #1f3326; }
+.kwas { font-size: 10.5px; color: #ffc000; margin-left: 6px; white-space: nowrap; }
+.keys-dlg .kl { align-items: center; }
+.kk.chg { outline: 2px dashed #ffc000; outline-offset: -4px; }
+.kmsg { margin: 0; font-size: .82rem; color: #ffcf4a; background: #3a3016; border: 1px solid #6b5a1e; border-radius: 8px; padding: 6px 10px; }
+.kfoot .kfill { flex: 1; } .dlg button:disabled { opacity: .4; cursor: default; }
 
 .demo-badge { font-style: normal; font-size: .7rem; font-weight: 800; letter-spacing: .08em; color: #1c1d1f; background: #9be03a; border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }
 </style>
@@ -509,8 +524,8 @@ dialog.keys-dlg { width: min(1000px, 96vw); max-height: 94vh; overflow: auto; }
       <button type="button" class="qbtn" id="redo" aria-label="Redo" data-tip="Redo (Ctrl+Y)" disabled><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
     </div>
     <div class="seg modeseg" role="tablist" aria-label="Mode">
-      <button type="button" role="tab" id="tab-edit" aria-selected="true" data-tip="Build: put parts and wires on the panel (G switches Build and Run)">Build</button>
-      <button type="button" role="tab" id="tab-run" aria-selected="false" data-tip="Run: power the circuit and press its buttons (G switches Build and Run)">Run</button>
+      <button type="button" role="tab" id="tab-edit" aria-selected="true" data-kb data-tip="Build: put parts and wires on the panel ({mode} switches Build and Run)">Build</button>
+      <button type="button" role="tab" id="tab-run" aria-selected="false" data-kb data-tip="Run: power the circuit and press its buttons ({mode} switches Build and Run)">Run</button>
     </div>
     <button type="button" class="qbtn infobtn" id="about-btn" aria-label="About this program" data-tip="About Circuit Builder: who made it, and the license it is shared under">i</button>
   </header>
@@ -537,14 +552,14 @@ dialog.keys-dlg { width: min(1000px, 96vw); max-height: 94vh; overflow: auto; }
           <button type="button" class="tool small" id="cut" disabled data-tip="Cut the selected parts and wires (Ctrl+X)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/><path d="M8 16L18 4M16 16L6 4"/></svg><span>Cut</span></button>
         </div>
         <div class="stack">
-          <button type="button" class="tool small danger" id="del" data-tip="Delete the selected part or wire (X or Delete key)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg><span>Delete</span></button>
+          <button type="button" class="tool small danger" id="del" data-kb data-tip="Delete the selected part or wire ({del} or Delete key)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg><span>Delete</span></button>
           <button type="button" class="tool small" id="clear" data-tip="Start with an empty panel"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg><span>Clear</span></button>
         </div>
       </div><div class="gname">Edit</div></div>
       <div class="rgrp"><div class="gbody">
-        <button type="button" class="tool big" data-tool="select" aria-pressed="true" data-tip="Select: click a part or wire to change it. Drag a part to move it (its wires follow), a wire's middle to slide it, or a wire end to pull it off and move it. Drag across empty space to select several things. Drag from a free part end or a bar to draw a wire. (E)">
+        <button type="button" class="tool big" data-tool="select" aria-pressed="true" data-kb data-tip="Select: click a part or wire to change it. Drag a part to move it (its wires follow), a wire's middle to slide it, or a wire end to pull it off and move it. Drag across empty space to select several things. Drag from a free part end or a bar to draw a wire. ({select})">
         <svg viewBox="0 0 30 26"><path d="M9 3l13 10-6 1 3 7-3 1-3-7-4 4z" fill="#cfcfcf"/></svg><span>Select</span></button>
-        <button type="button" class="tool big" data-tool="wire" aria-pressed="false" data-tip="Wire: press anywhere and drag. The wire bends once, at a right angle. (W)">
+        <button type="button" class="tool big" data-tool="wire" aria-pressed="false" data-kb data-tip="Wire: press anywhere and drag. The wire bends once, at a right angle. ({wire})">
         <svg viewBox="0 0 30 26"><path d="M3 20h12V6h12" stroke="#cfcfcf" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Wire</span></button>
         <button type="button" class="tool big" data-part="jmp" data-tip="Continuation: carries the current on to every other continuation with the same number, as if a wire ran between them. Place two with the same number (the second one placed takes the first one's number), and wire to any side."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#b8c2cf" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="#c9d2dd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Continuation</span></button>
       </div><div class="gname">Tools</div></div>
@@ -598,7 +613,7 @@ dialog.keys-dlg { width: min(1000px, 96vw); max-height: 94vh; overflow: auto; }
         <div class="tgroup"><span class="label" id="ph-colour-label">Colour</span><div class="swatches phsw" id="ph-colour" role="radiogroup" aria-label="Phase colour" data-tip="The colour of this phase: every box and wire of it, everywhere in the circuit"></div><input type="color" id="ph-custom" aria-label="Another colour" data-tip="Pick any other colour for this phase"></div>
       </div>
       <div class="props" id="props-box" hidden>
-        <div class="tgroup"><button type="button" class="tool small" id="box-rot" data-tip="Turn it a quarter turn clockwise, so its connection points face other ways (or press R)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 10a5.5 5.5 0 1 1-1.8-4.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M14.2 2.6v3.8h-3.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Rotate</span></button></div>
+        <div class="tgroup"><button type="button" class="tool small" id="box-rot" data-kb data-tip="Turn it a quarter turn clockwise, so its connection points face other ways (or press {rotate})"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 10a5.5 5.5 0 1 1-1.8-4.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M14.2 2.6v3.8h-3.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Rotate</span></button></div>
       </div>
       <div class="props" id="props-pwr" hidden>
         <div class="tgroup"><span class="label" id="pw-label">Number</span><select id="pw-num" aria-label="Number"></select></div>
@@ -619,7 +634,7 @@ dialog.keys-dlg { width: min(1000px, 96vw); max-height: 94vh; overflow: auto; }
       </div>
       <div class="props" id="props-jmp" hidden>
         <div class="tgroup"><span class="label">Number</span><select id="j-num" aria-label="Continuation number" data-tip="Every continuation with the same number is joined to this one: current goes in at one and on out of the others"></select></div>
-        <div class="tgroup"><button type="button" class="tool small" id="j-rot" data-tip="Turn it a quarter turn clockwise, so its connection points face other ways (or press R)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 10a5.5 5.5 0 1 1-1.8-4.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M14.2 2.6v3.8h-3.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Rotate</span></button></div>
+        <div class="tgroup"><button type="button" class="tool small" id="j-rot" data-kb data-tip="Turn it a quarter turn clockwise, so its connection points face other ways (or press {rotate})"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 10a5.5 5.5 0 1 1-1.8-4.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M14.2 2.6v3.8h-3.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Rotate</span></button></div>
       </div>
       <div class="props" id="props-sol" hidden>
         <div class="tgroup"><span class="label">Number</span><select id="v-num" aria-label="Solenoid number"></select></div>
@@ -699,7 +714,7 @@ dialog.keys-dlg { width: min(1000px, 96vw); max-height: 94vh; overflow: auto; }
         <button type="button" id="zoom-out" aria-label="Zoom out" data-tip="Zoom out (Ctrl + scroll wheel)">−</button>
         <span id="zoom-pct">100%</span>
         <button type="button" id="zoom-in" aria-label="Zoom in" data-tip="Zoom in (Ctrl + scroll wheel). Then scroll to move up and down, Shift + scroll to move left and right, or drag with the scroll wheel held down, or hold Space and drag.">+</button>
-        <button type="button" id="zoom-fit" data-tip="Show the whole circuit (Z)">Fit</button>
+        <button type="button" id="zoom-fit" data-kb data-tip="Show the whole circuit ({fit})">Fit</button>
       </div>
     </div>
     <!-- split view's second pane: its own view of the same circuit -->
@@ -708,7 +723,7 @@ dialog.keys-dlg { width: min(1000px, 96vw); max-height: 94vh; overflow: auto; }
         <button type="button" id="zoom-out2" aria-label="Zoom out" data-tip="Zoom out (Ctrl + scroll wheel)">−</button>
         <span id="zoom-pct2">100%</span>
         <button type="button" id="zoom-in2" aria-label="Zoom in" data-tip="Zoom in (Ctrl + scroll wheel). Scroll to move up and down.">+</button>
-        <button type="button" id="zoom-fit2" data-tip="Show the whole circuit (Z)">Fit</button>
+        <button type="button" id="zoom-fit2" data-kb data-tip="Show the whole circuit ({fit})">Fit</button>
       </div>
     </div>
   </div>
@@ -718,7 +733,7 @@ dialog.keys-dlg { width: min(1000px, 96vw); max-height: 94vh; overflow: auto; }
 </div>
 
 <!-- About: who made it and the license it is shared under (the "i" button at the top right) -->
-<dialog id="keys-dlg" class="keys-dlg" aria-labelledby="keys-title"><div class="dlg"><h2 id="keys-title">Keyboard Shortcuts</h2><p class="hint">Left hand on the keys, right hand on the mouse. Press F1 any time to see this.</p><div class="kb" aria-hidden="true"><div class="kr"><span class="kk on" style="flex:1;--kc:#ffc000"><b>Esc</b><i>Back / Cancel</i></span><span class="kgap"></span><span class="kk on" style="flex:1;--kc:#46c46a"><b>F1</b><i>Shortcuts</i></span><span class="kk on" style="flex:1;--kc:#2f8cff"><b>F2</b><i>Letter</i></span><span class="kk" style="flex:1"><b>F3</b><i></i></span><span class="kk" style="flex:1"><b>F4</b><i></i></span></div><div class="kr"><span class="kk" style="flex:1"><b>`</b><i></i></span><span class="kk" style="flex:1"><b>1</b><i></i></span><span class="kk" style="flex:1"><b>2</b><i></i></span><span class="kk" style="flex:1"><b>3</b><i></i></span><span class="kk" style="flex:1"><b>4</b><i></i></span><span class="kk" style="flex:1"><b>5</b><i></i></span></div><div class="kr"><span class="kk" style="flex:1.5"><b>Tab</b><i></i></span><span class="kk on" style="flex:1;--kc:#2f8cff"><b>Q</b><i>Place Again</i></span><span class="kk on" style="flex:1;--kc:#ffc000"><b>W</b><i>Wire</i></span><span class="kk on" style="flex:1;--kc:#ffc000"><b>E</b><i>Select</i></span><span class="kk on" style="flex:1;--kc:#2f8cff"><b>R</b><i>Rotate</i></span><span class="kk" style="flex:1"><b>T</b><i></i></span></div><div class="kr"><span class="kk" style="flex:1.8"><b>Caps</b><i></i></span><span class="kk" style="flex:1"><b>A</b><i></i></span><span class="kk on" style="flex:1;--kc:#b58cff"><b>S</b><i></i><em>Ctrl: Save</em></span><span class="kk" style="flex:1"><b>D</b><i></i></span><span class="kk" style="flex:1"><b>F</b><i></i></span><span class="kk on" style="flex:1;--kc:#ffc000"><b>G</b><i>Build / Run</i></span></div><div class="kr"><span class="kk on" style="flex:2.3;--kc:#2f8cff"><b>Shift</b><i></i><em>With arrows: nudge ×5</em></span><span class="kk on" style="flex:1;--kc:#46c46a"><b>Z</b><i>Fit</i><em>Ctrl: Undo</em><em>Ctrl+Shift: Redo</em></span><span class="kk on" style="flex:1;--kc:#2f8cff"><b>X</b><i>Delete</i><em>Ctrl: Cut</em></span><span class="kk on" style="flex:1;--kc:#b58cff"><b>C</b><i></i><em>Ctrl: Copy</em></span><span class="kk on" style="flex:1;--kc:#b58cff"><b>V</b><i></i><em>Ctrl: Paste</em></span><span class="kk" style="flex:1"><b>B</b><i></i></span></div><div class="kr"><span class="kk on" style="flex:1.5;--kc:#46c46a"><b>Ctrl</b><i></i><em>With wheel: zoom</em></span><span class="kk" style="flex:1"><b>Alt</b><i></i></span><span class="kk on" style="flex:3.2;--kc:#46c46a"><b>Space</b><i>Hold + drag: Pan</i></span><span class="kgap"></span><span class="kk on" style="flex:2.2;--kc:#2f8cff"><b>← ↑ ↓ →</b><i>Nudge</i><em>Shift: five steps</em></span></div></div><div class="kcols"><div class="kgrp"><h4 style="--kc:#ffc000">Tools</h4><div class="kl"><kbd>E</kbd><span>Select</span></div><div class="kl"><kbd>W</kbd><span>Wire</span></div><div class="kl"><kbd>G</kbd><span>Switch Build and Run</span></div><div class="kl"><kbd>Esc</kbd><span>Back to Select, and let go of what is picked</span></div></div><div class="kgrp"><h4 style="--kc:#2f8cff">Parts</h4><div class="kl"><kbd>R</kbd><span>Turn a box or fuse a quarter turn</span></div><div class="kl"><kbd>X or Delete</kbd><span>Delete</span></div><div class="kl"><kbd>Q</kbd><span>Place another of the last part</span></div><div class="kl"><kbd>F2</kbd><span>Jump to its letter</span></div><div class="kl"><kbd>Arrows</kbd><span>Nudge a grid step</span></div><div class="kl"><kbd>Shift+Arrows</kbd><span>Nudge five steps</span></div><div class="kl"><kbd>Shift+click</kbd><span>Add to the selection, or take out</span></div></div><div class="kgrp"><h4 style="--kc:#46c46a">View</h4><div class="kl"><kbd>Space + drag</kbd><span>Pan</span></div><div class="kl"><kbd>Ctrl + wheel</kbd><span>Zoom at the pointer</span></div><div class="kl"><kbd>Z</kbd><span>Fit the whole circuit</span></div><div class="kl"><kbd>F1</kbd><span>This list</span></div></div><div class="kgrp"><h4 style="--kc:#ffc000">Run</h4><div class="kl"><kbd>Tab</kbd><span>Pick a button or switch on the panel</span></div><div class="kl"><kbd>Space or Enter</kbd><span>Press the picked button</span></div><div class="kl"><kbd>← →</kbd><span>Turn the picked selector switch</span></div></div><div class="kgrp"><h4 style="--kc:#b58cff">Edit and File</h4><div class="kl"><kbd>Ctrl+Z</kbd><span>Undo</span></div><div class="kl"><kbd>Ctrl+Shift+Z or Ctrl+Y</kbd><span>Redo</span></div><div class="kl"><kbd>Ctrl+C</kbd><span>Copy</span></div><div class="kl"><kbd>Ctrl+X</kbd><span>Cut</span></div><div class="kl"><kbd>Ctrl+V</kbd><span>Paste below the circuit</span></div><div class="kl"><kbd>Ctrl+S</kbd><span>Save</span></div><div class="kl"><kbd>Ctrl+P</kbd><span>Print Diagram</span></div></div></div><div class="dlg-end"><button type="button" class="primary" id="keys-close">Close</button></div></div></dialog>
+<dialog id="keys-dlg" class="keys-dlg" aria-labelledby="keys-title"><div class="dlg"><h2 id="keys-title">Keyboard Shortcuts</h2><p class="hint">Left hand on the keys, right hand on the mouse. Press F1 any time to see this.</p><div class="kmode"><span class="kseg" role="group" aria-label="View or change the keys"><button type="button" id="kb-view" aria-pressed="true">View</button><button type="button" id="kb-change" aria-pressed="false">Change Keys</button></span><span class="knote" id="kb-note"></span></div><div class="kb" id="kb-map" aria-hidden="true"></div><div class="kcols" id="kb-lists"></div><p class="kmsg" id="kb-msg" role="status" hidden></p><div class="dlg-end kfoot"><button type="button" id="kb-reset" data-tip="Put every key back to the one it started with">Default Settings</button><span class="kfill"></span><button type="button" class="primary" id="keys-close">Close</button></div></div></dialog>
 <dialog id="about-dlg" class="about-dlg" aria-labelledby="about-title">
   <form method="dialog" class="ab">
     <div class="ab-hd"><svg class="ab-logo" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="96" fill="#1F2328"/><ellipse cx="208.5" cy="256.0" rx="130.0" ry="150.0" fill="none" stroke="#FFC000" stroke-width="67.5"/><path fill="#FFC000" d="M415.542236328125 217.8310546875C448.958984375 217.8310546875 472.304931640625 200.893798828125 472.304931640625 176.8154296875C472.304931640625 160.15283203125 461.318603515625 148.342529296875 439.345947265625 145.87060546875V144.955078125C455.55078125 143.1240234375 467.361083984375 132.68701171875 467.361083984375 117.4892578125C467.361083984375 94.509521484375 446.120849609375 77.75537109375 415.908447265625 77.75537109375C384.963623046875 77.75537109375 362.807861328125 95.425048828125 362.807861328125 120.4189453125H398.330322265625C398.330322265625 112.087646484375 405.654541015625 106.31982421875 415.908447265625 106.31982421875C425.1552734375 106.31982421875 431.655517578125 111.904541015625 431.655517578125 119.86962890625C431.655517578125 128.109375 423.965087890625 133.96875 412.978759765625 133.96875H399.062744140625V159.603515625H412.978759765625C424.97216796875 159.603515625 433.120361328125 165.371337890625 433.120361328125 173.70263671875C433.120361328125 182.12548828125 426.162353515625 187.98486328125 415.908447265625 187.98486328125C405.19677734375 187.98486328125 397.414794921875 182.400146484375 397.414794921875 174.43505859375H360.244384765625C360.244384765625 199.88671875 383.315673828125 217.8310546875 415.542236328125 217.8310546875Z"/><rect x="8" y="8" width="496" height="496" rx="90" fill="none" stroke="#4A4F57" stroke-width="16"/></svg><div><h2 id="about-title">Order of Operations: Circuit Builder</h2>
@@ -5711,7 +5726,6 @@ document.addEventListener('keydown', e => {
   else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || e.shiftKey && e.key.toLowerCase() === 'z')) { e.preventDefault(); redo(); }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
   else if (e.key === 'Escape') { setTool('select'); sel = null; draw(); }
-  else if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey && !e.altKey) { const G = selGroup(); if (G.length && G.every(turns)) { e.preventDefault(); each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); } }
 });
 
 /* ---------------- the ribbon ----------------
@@ -6719,15 +6733,54 @@ document.getElementById('about-btn').addEventListener('click', () => document.ge
 
 /* ---- js/keys.js ---- */
 /* ---------------- keyboard shortcuts ----------------
-   Laid out as in Print Builder, for the left hand on the keys and the right on the mouse (like WASD in a game):
-   E Select, W Wire, R turn, X delete, Q another of the last part placed, F2 its letter, Z fit, G Build/Run, the arrows
-   nudge what is picked, and F1 shows them all (as does the keyboard button by the i). Delete, Esc, R and Ctrl+Z/Y are
-   in toolbar.js; Ctrl+C/X/V in clipboard.js; Ctrl+S in storage.js; Ctrl+P in print.js; Space (pan) in camera.js. */
-let lastKind = null;   // (the last part put on the panel, for Q: set in placePart)
-const keysDlg = document.getElementById('keys-dlg');
-function openKeys() { if (!keysDlg.open) keysDlg.showModal(); }
-document.getElementById('keys-btn').addEventListener('click', openKeys);
-document.getElementById('keys-close').addEventListener('click', () => keysDlg.close());
+   Laid out as in Print Builder, for the left hand on the keys and the right on the mouse (like WASD in a game). Every
+   one is listed here; the ones with an id can be changed in the Keyboard Shortcuts box (F1 › Change Keys), kept in
+   this browser (apart from Print Builder's). Delete, Esc and Ctrl+Z/Y are in toolbar.js; Ctrl+C/X/V in clipboard.js;
+   Ctrl+S in storage.js; Ctrl+P in print.js; Space (pan) in camera.js; the key handler is at the end of this file. */
+const KB = {
+  store: 'oo-circuit-builder-demo:keys', tipAttr: 'data-tip',
+  groups: [{ id: 'tools', name: 'Tools', c: '#ffc000' }, { id: 'parts', name: 'Parts', c: '#2f8cff' }, { id: 'view', name: 'View', c: '#46c46a' }, { id: 'run', name: 'Run', c: '#ffc000' }, { id: 'file', name: 'Edit and File', c: '#b58cff' }],
+  items: [
+    { g: 'tools', id: 'select', keys: ['e'], label: 'Select', short: 'Select', run: () => setTool('select') },
+    { g: 'tools', id: 'wire', keys: ['w'], label: 'Wire', short: 'Wire', run: () => setTool('wire') },
+    { g: 'tools', id: 'mode', keys: ['g'], label: 'Switch Build and Run', short: 'Build / Run', inRun: true, run: () => { if (!LOCKED) setMode(editing); } },
+    { g: 'tools', show: 'Esc', label: 'Back to Select, and let go of what is picked' },
+    { g: 'parts', id: 'rotate', keys: ['r'], label: 'Turn a box or fuse a quarter turn', short: 'Rotate', run: () => { const P = selGroup(); if (P.length && P.every(turns)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); } },
+    { g: 'parts', id: 'del', keys: ['x'], also: 'Delete', label: 'Delete', short: 'Delete', run: () => del() },
+    { g: 'parts', id: 'again', keys: ['q'], label: 'Place another of the last part', short: 'Place Again', run: () => { if (lastKind) { closeMenus(); setTool('select'); placeFree(lastKind); } else say(`Put a part on the panel first. Then ${kn('again')} places another one like it.`); } },
+    { g: 'parts', id: 'rename', keys: ['f2'], label: 'Jump to its letter', short: 'Letter', run: () => renameKey() },
+    { g: 'parts', show: 'Arrows', label: 'Nudge a grid step' },
+    { g: 'parts', show: 'Shift+Arrows', label: 'Nudge five steps' },
+    { g: 'parts', show: 'Shift+click', label: 'Add to the selection, or take out' },
+    { g: 'view', show: 'Space + drag', label: 'Pan' },
+    { g: 'view', show: 'Ctrl + wheel', label: 'Zoom at the pointer' },
+    { g: 'view', id: 'fit', keys: ['z'], label: 'Fit the whole circuit', short: 'Fit', inRun: true, run: () => { fitView(); if (editing) fit(true); draw(); } },
+    { g: 'view', show: 'F1', label: 'This list' },
+    { g: 'run', show: 'Tab', label: 'Pick a button or switch on the panel' },
+    { g: 'run', show: 'Space or Enter', label: 'Press the picked button' },
+    { g: 'run', show: '← →', label: 'Turn the picked selector switch' },
+    { g: 'file', show: 'Ctrl+Z', label: 'Undo' }, { g: 'file', show: 'Ctrl+Shift+Z or Ctrl+Y', label: 'Redo' },
+    { g: 'file', show: 'Ctrl+C', label: 'Copy' }, { g: 'file', show: 'Ctrl+X', label: 'Cut' }, { g: 'file', show: 'Ctrl+V', label: 'Paste below the circuit' },
+    { g: 'file', show: 'Ctrl+S', label: 'Save' }, { g: 'file', show: 'Ctrl+P', label: 'Print Diagram' },
+  ],
+  reserved: { f1: 'this list' },
+  layout: [
+    [['esc', 1], ['gap'], ['f1', 1], ['f2', 1], ['f3', 1], ['f4', 1]],
+    [['`', 1], ['1', 1], ['2', 1], ['3', 1], ['4', 1], ['5', 1]],
+    [['tab', 1.5], ['q', 1], ['w', 1], ['e', 1], ['r', 1], ['t', 1]],
+    [['caps', 1.8], ['a', 1], ['s', 1], ['d', 1], ['f', 1], ['g', 1]],
+    [['shift', 2.3], ['z', 1], ['x', 1], ['c', 1], ['v', 1], ['b', 1]],
+    [['ctrl', 1.5], ['alt', 1], ['space', 3.2], ['gap'], ['arrows', 2.2]],
+  ],
+  mapFixed: {
+    esc: { label: 'Esc', main: 'Back / Cancel', c: '#ffc000' }, f1: { main: 'Shortcuts', c: '#46c46a' },
+    tab: { label: 'Tab' }, caps: { label: 'Caps' }, alt: { label: 'Alt' },
+    shift: { label: 'Shift', notes: ['With arrows: nudge ×5'], c: '#2f8cff' }, ctrl: { label: 'Ctrl', notes: ['With wheel: zoom'], c: '#46c46a' },
+    space: { label: 'Space', main: 'Hold + drag: Pan', c: '#46c46a' }, arrows: { label: '← ↑ ↓ →', main: 'Nudge', notes: ['Shift: five steps'], c: '#2f8cff' },
+    s: { notes: ['Ctrl: Save'], c: '#b58cff' }, z: { notes: ['Ctrl: Undo', 'Ctrl+Shift: Redo'], c: '#b58cff' }, x: { notes: ['Ctrl: Cut'], c: '#b58cff' }, c: { notes: ['Ctrl: Copy'], c: '#b58cff' }, v: { notes: ['Ctrl: Paste'], c: '#b58cff' },
+  },
+};
+let lastKind = null;   // (the last part put on the panel, for Place Again: set in placePart)
 
 /* Nudging: a run of arrow presses is one move (one Undo), worked out each time from where things were at the first
    press, so the wires bend once, as in a drag. A press that would put a part on another part, or a wire through one,
@@ -6761,34 +6814,153 @@ function nudge(sx, sy) {
 
 // F2: the picked part's tab on the ribbon, with its letter (or its first setting) ready to change
 function renameKey() {
-  if (!sel || sel.parts.size !== 1 || sel.wires.size || (sel.terms && sel.terms.size)) return say('Pick one part first. Then F2 jumps to its letter.');
+  if (!sel || sel.parts.size !== 1 || sel.wires.size || (sel.terms && sel.terms.size)) return say(`Pick one part first. Then ${kn('rename')} jumps to its letter.`);
   ribbonTab = 'part'; showRibbon();
   const box = [...document.querySelectorAll('#editpanel select, #editpanel input[type=text]')].find(b => b.offsetParent && !b.disabled);
   if (box) box.focus(); else say('This part has no letter to change.');
 }
 
+// the key handler: F1, the arrows, then whichever changeable shortcut the key is for
 document.addEventListener('keydown', e => {
   const a = document.activeElement, typing = a && (/SELECT|INPUT|TEXTAREA/.test(a.tagName) || a.isContentEditable);
   if (e.key === 'F1') { e.preventDefault(); if (!document.querySelector('dialog[open]')) openKeys(); return; }
   if (typing || e.ctrlKey || e.metaKey || e.altKey || document.querySelector('dialog[open]')) return;
-  const k = e.key.toLowerCase();
-  if (k === 'g' && !LOCKED) { e.preventDefault(); setMode(editing); return; }   // (Build ↔ Run)
-  if (k === 'z' && !e.shiftKey) { e.preventDefault(); fitView(); if (editing) fit(true); draw(); return; }
-  if (!editing) return;   // (the rest are for building; in Run, Tab to a button and Space or Enter presses it)
-  const mv = { arrowleft: [-1, 0], arrowright: [1, 0], arrowup: [0, -1], arrowdown: [0, 1] }[k];
+  const act = kbAction(e);
+  if (!editing) { if (act && KB_ACT[act].inRun) { e.preventDefault(); KB_ACT[act].run(e); } return; }   // (in Run, Tab to a button and Space or Enter presses it)
+  const mv = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
   if (mv) {
     if (!selCount()) return;
     e.preventDefault();
     if (!sel.parts.size) return say('The arrows move parts (and any wires picked with them). To move a wire on its own, drag its middle.');
     const n = e.shiftKey ? 5 * G : G; nudge(mv[0] * n, mv[1] * n); return;
   }
-  if (e.key === 'F2') { e.preventDefault(); renameKey(); return; }
-  if (e.shiftKey) return;
-  if (k === 'e') { setTool('select'); }
-  else if (k === 'w') { setTool('wire'); }
-  else if (k === 'x') { e.preventDefault(); del(); }
-  else if (k === 'q') { if (lastKind) { closeMenus(); setTool('select'); placeFree(lastKind); } else say('Put a part on the panel first. Then Q places another one like it.'); }
+  if (act) { e.preventDefault(); KB_ACT[act].run(e); }
 });
+
+/* ---------- the shortcut engine (the same in Print Builder and Circuit Builder; each program has its own KB above) ----------
+   Every shortcut is in KB.items. One with an id can be changed in the Keyboard Shortcuts box (Change Keys): the change
+   is kept in this browser on this computer (KB.store; each program keeps its own), and Default Settings puts the
+   standard keys back. The rest (Ctrl ones, Esc, Delete, Space, the arrows, F1...) are fixed. The key map, the lists,
+   the buttons' tips ({id} in a [data-kb] element's tip) and the hints all read the keys from here, so a change shows
+   everywhere. A key given to one action that another already has swaps them, so every action always has a key.
+   Keys are written 'e', 'shift+a', '7', 'f2'. Letters and numbers go by where the key is on the keyboard (its code),
+   as the map does. */
+const KB_DEF = {}, KB_ACT = {};
+for (const a of KB.items) if (a.id) { KB_DEF[a.id] = [...a.keys]; KB_ACT[a.id] = a; }
+let KB_NOW = {}, KB_MODE = 'view', KB_WAIT = null;
+const kbClone = o => JSON.parse(JSON.stringify(o));
+// a key an action can be given: a letter (Shift with it too), a number, or F2 to F12, if this program does not keep it
+const kbOk = k => /^((shift\+)?[a-z]|[0-9]|f([2-9]|1[0-2]))$/.test(k) && !(k in KB.reserved);
+const kbName = k => k.split('+').map(x => x.length === 1 ? x.toUpperCase() : x[0].toUpperCase() + x.slice(1)).join('+');
+const kn = id => KB_NOW[id].map(kbName).join(' or ');
+function kbFromEvent(e) {
+  if (e.ctrlKey || e.metaKey || e.altKey) return null;
+  if (/^F([1-9]|1[0-2])$/.test(e.key)) return e.shiftKey ? null : e.key.toLowerCase();   // (F1 too, to be told it is kept)
+  if (/^Key[A-Z]$/.test(e.code)) return (e.shiftKey ? 'shift+' : '') + e.code.slice(3).toLowerCase();
+  if (/^Digit[0-9]$/.test(e.code)) return e.shiftKey ? null : e.code.slice(5);
+  // (no key code, as from some on-screen keyboards and remote desktops: go by the character)
+  if (!e.code && /^[a-z]$/i.test(e.key)) return (e.shiftKey ? 'shift+' : '') + e.key.toLowerCase();
+  if (!e.code && /^[0-9]$/.test(e.key) && !e.shiftKey) return e.key;
+  return null;
+}
+// the action a key press is for, if any (Ctrl, Alt and keys no action has: none)
+const kbAction = e => { const k = kbFromEvent(e); return k ? Object.keys(KB_NOW).find(id => KB_NOW[id].includes(k)) || null : null; };
+function kbLoad() {
+  KB_NOW = kbClone(KB_DEF);
+  let s = null; try { s = JSON.parse(localStorage.getItem(KB.store) || 'null'); } catch (_) {}
+  if (!s) return;
+  const got = kbClone(KB_DEF);
+  for (const id in s) if (got[id] && Array.isArray(s[id]) && s[id].length === got[id].length && s[id].every(kbOk)) got[id] = s[id];
+  const all = Object.values(got).flat();
+  if (new Set(all).size === all.length) KB_NOW = got;   // (two actions on one key: the standard keys instead)
+}
+function kbSave() {
+  const ch = {}; for (const id in KB_NOW) if (KB_NOW[id].join() !== KB_DEF[id].join()) ch[id] = KB_NOW[id];
+  try { if (Object.keys(ch).length) localStorage.setItem(KB.store, JSON.stringify(ch)); else localStorage.removeItem(KB.store); } catch (_) {}
+}
+const kbChanged = () => Object.keys(KB_NOW).some(id => KB_NOW[id].join() !== KB_DEF[id].join());
+const kbEsc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+// the box: the map of the keyboard's left half, then every shortcut by group
+function kbDraw() {
+  const grp = Object.fromEntries(KB.groups.map(g => [g.id, g])), on = (k, ks) => Object.keys(ks).find(id => ks[id].includes(k));
+  const map = KB.layout.map(row => '<div class="kr">' + row.map(([k, flex]) => {
+    if (k === 'gap') return '<span class="kgap"></span>';
+    const f = KB.mapFixed[k] || {}, a = on(k, KB_NOW), s = on('shift+' + k, KB_NOW);
+    const main = a ? KB_ACT[a].short : f.main || '', notes = [...(s ? ['Shift: ' + KB_ACT[s].short] : []), ...(f.notes || [])];
+    const c = a ? grp[KB_ACT[a].g].c : s ? grp[KB_ACT[s].g].c : f.c;
+    const chg = a !== on(k, KB_DEF) || s !== on('shift+' + k, KB_DEF);
+    return `<span class="kk${c ? ' on' : ''}${chg ? ' chg' : ''}" style="flex:${flex}${c ? ';--kc:' + c : ''}"><b>${kbEsc(f.label || kbName(k))}</b><i>${kbEsc(main)}</i>${notes.map(n => `<em>${kbEsc(n)}</em>`).join('')}</span>`;
+  }).join('') + '</div>').join('');
+  document.getElementById('kb-map').innerHTML = map;
+  const change = KB_MODE === 'change';
+  document.getElementById('kb-lists').innerHTML = KB.groups.map(g => `<div class="kgrp"><h4 style="--kc:${g.c}">${g.name}</h4>` + KB.items.filter(a => a.g === g.id).map(a => {
+    let keys;
+    if (!a.id) keys = `<kbd>${kbEsc(a.show)}</kbd>`;
+    else {
+      const chips = KB_NOW[a.id].map((k, i) => { const wait = KB_WAIT && KB_WAIT.id === a.id && KB_WAIT.slot === i, mine = k !== KB_DEF[a.id][i];
+        return change ? `<button type="button" class="kchip${mine ? ' chg' : ''}${wait ? ' wait' : ''}" data-kid="${a.id}" data-slot="${i}" aria-label="Change the key for ${kbEsc(a.label)}">${wait ? 'Press a key…' : kbName(k)}</button>` : `<kbd${mine ? ' class="chg"' : ''}>${kbName(k)}</kbd>`; });
+      keys = `<span class="kchips">${chips.join(change ? '' : '<span class="kor">or</span>')}${a.also ? `<span class="kor">or</span><kbd>${a.also}</kbd>` : ''}</span>`;
+    }
+    const was = a.id && KB_NOW[a.id].join() !== KB_DEF[a.id].join() ? `<span class="kwas">was ${KB_DEF[a.id].map(kbName).join(' or ')}</span>` : '';
+    return `<div class="kl">${keys}<span>${kbEsc(a.label)}${was}</span></div>`;
+  }).join('') + '</div>').join('');
+  document.getElementById('kb-view').setAttribute('aria-pressed', String(!change));
+  document.getElementById('kb-change').setAttribute('aria-pressed', String(change));
+  document.getElementById('kb-note').textContent = change ? 'Click a key below, then press the key you want (Esc to stop). Kept in this browser on this computer.' : kbChanged() ? 'Keys you have changed are marked in gold.' : '';
+  document.getElementById('kb-reset').disabled = !kbChanged();
+}
+const kbMsg = t => { const m = document.getElementById('kb-msg'); m.textContent = t || ''; m.hidden = !t; };
+// everything that shows a key: the box, the buttons' tips, and the program's own hints
+function kbRefresh() {
+  for (const el of document.querySelectorAll('[data-kb]')) {
+    if (el.dataset.kbT === undefined) el.dataset.kbT = el.getAttribute(KB.tipAttr) || '';
+    el.setAttribute(KB.tipAttr, el.dataset.kbT.replace(/\{(\w+)\}/g, (m, id) => KB_NOW[id] ? kn(id) : m));
+  }
+  kbDraw(); if (KB.onChange) KB.onChange();
+}
+function kbAssign(id, slot, k) {
+  const old = KB_NOW[id][slot], lab = j => KB_ACT[j].label;
+  let msg;
+  if (k === old) msg = `${lab(id)} stays on ${kbName(k)}.`;
+  else {
+    const o = Object.keys(KB_NOW).find(j => KB_NOW[j].includes(k));
+    if (o === id) { KB_NOW[id][KB_NOW[id].indexOf(k)] = old; msg = `${lab(id)}: its two keys swapped.`; }
+    else if (o) { KB_NOW[o][KB_NOW[o].indexOf(k)] = old; msg = `${lab(id)} is now ${kbName(k)}. ${kbName(k)} was ${lab(o)}, so ${lab(o)} moved to ${kbName(old)}.`; }
+    else msg = `${lab(id)} is now ${kbName(k)} (it was ${kbName(old)}).`;
+    KB_NOW[id][slot] = k;
+  }
+  KB_WAIT = null; kbSave(); kbRefresh(); kbMsg(msg);
+}
+// waiting for a key: it is caught here, before the program's own shortcuts see it
+window.addEventListener('keydown', e => {
+  if (!KB_WAIT) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) return;
+  const lab = KB_ACT[KB_WAIT.id].label;
+  if (e.key === 'Escape') { KB_WAIT = null; kbMsg(''); kbDraw(); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return kbMsg('Ctrl and Alt shortcuts stay as they are. Press a letter (Shift with it works too), a number, or F2 to F12.');
+  const k = kbFromEvent(e);
+  if (k && KB.reserved[k]) return kbMsg(`${kbName(k)} is kept for ${KB.reserved[k]}. Press another key for ${lab}.`);
+  if (!k) return kbMsg(`That key is kept as it is. Press a letter (Shift with it works too), a number, or F2 to F12 for ${lab}.`);
+  kbAssign(KB_WAIT.id, KB_WAIT.slot, k);
+}, true);
+document.getElementById('kb-lists').addEventListener('click', e => {
+  const b = e.target.closest('.kchip'); if (!b) return;
+  KB_WAIT = { id: b.dataset.kid, slot: +b.dataset.slot }; kbMsg(''); kbDraw();
+  const w = document.querySelector('#kb-lists .kchip.wait'); if (w) w.focus();
+});
+document.getElementById('kb-view').addEventListener('click', () => { KB_MODE = 'view'; KB_WAIT = null; kbMsg(''); kbDraw(); });
+document.getElementById('kb-change').addEventListener('click', () => { KB_MODE = 'change'; kbMsg(''); kbDraw(); });
+document.getElementById('kb-reset').addEventListener('click', () => { KB_NOW = kbClone(KB_DEF); KB_WAIT = null; kbSave(); kbRefresh(); kbMsg('Every key is back to its default.'); });
+const keysDlg = document.getElementById('keys-dlg');
+keysDlg.addEventListener('cancel', e => { if (KB_WAIT) e.preventDefault(); });   // (Esc while waiting stops waiting, not the box)
+keysDlg.addEventListener('close', () => { KB_MODE = 'view'; KB_WAIT = null; kbMsg(''); kbDraw(); });
+function openKeys() { if (!keysDlg.open) { kbDraw(); keysDlg.showModal(); } }
+document.getElementById('keys-btn').addEventListener('click', openKeys);
+document.getElementById('keys-close').addEventListener('click', () => keysDlg.close());
+kbLoad();
+kbRefresh();
 </script>
 </body>
 </html>

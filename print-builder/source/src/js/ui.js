@@ -8,11 +8,11 @@ const AUTOSAVE = 'oo-print-builder:autosave', SHOWKEY = 'oo-print-builder:show';
 let zoom = 1, spaceDown = false, pan = null, pageFor = null;
 const say = s => { $('hint').textContent = s || hintFor(); };
 const hintFor = () => ({
-  select: 'Click to pick · drag to move · drag empty paper to pick several · R turns · F flips · X deletes · F1 shortcuts',
+  select: `Click to pick · drag to move · drag empty paper to pick several · ${kn('rotate')} turns · ${kn('flip')} flips · ${kn('del')} deletes · F1 shortcuts`,
   wire: 'Click to start · click to bend · click a terminal, rail or wire to finish · Esc stops',
   rung: 'Click between the rails to add a rung, then drop symbols onto it',
   note: 'Click where the note goes',
-  place: 'Click on a rung to put it in the wire · Shift+click to put down more · R turns it · F flips it · Esc stops',
+  place: `Click on a rung to put it in the wire · Shift+click to put down more · ${kn('rotate')} turns it · ${kn('flip')} flips it · Esc stops`,
 })[tool] || '';
 
 /* ---------- drawing it all ---------- */
@@ -231,7 +231,7 @@ function renderProps0() {
       ${rn ? `<div class="f">Rung<span class="ro">${rn} (automatic)</span></div>` : ''}
       ${termNums.length ? `<div class="f">Wires<span class="ro">${termNums.join(' → ')} (automatic)</span></div>` : ''}
       ${xr && xr.length ? `<div class="f">Contacts on<span class="ro">${xr.map(o => o.n + (o.nc ? ' (NC)' : '')).join(', ')}</span></div>` : ''}
-      <div class="acts">${canTurn(p) ? '<button class="btn" id="p-rot">Rotate (R)</button>' : ''}${canFlip(p) ? `<button class="btn" id="p-flip" aria-pressed="${!!p.fx}" title="Flip it left to right, about its middle (F); again to put it back">Flip ⇆ (F)</button>` : ''}${p.lt || p.ld || p.lf ? '<button class="btn" id="p-lab">Put Labels Back</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
+      <div class="acts">${canTurn(p) ? `<button class="btn" id="p-rot">Rotate (${kn('rotate')})</button>` : ''}${canFlip(p) ? `<button class="btn" id="p-flip" aria-pressed="${!!p.fx}" title="Flip it left to right, about its middle (${kn('flip')}); again to put it back">Flip ⇆ (F)</button>` : ''}${p.lt || p.ld || p.lf ? '<button class="btn" id="p-lab">Put Labels Back</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
     const of = $('p-of'); if (of) of.addEventListener('change', () => { let v = of.value; if (v === '__other') { v = (prompt(k === 'olc' ? 'The overload this contact belongs to (e.g. OL2):' : 'The coil that works this contact (e.g. CR3):', p.tag || '') || '').trim().toUpperCase(); if (!v) { renderProps(); return; } }
       snapshot(); p.tag = v; refresh(); });
     const tg = $('p-tag'); let was = p.tag;
@@ -516,24 +516,16 @@ document.addEventListener('keydown', e => {
   // so the wires bend once, beside the part, however many presses
   const mv = { arrowleft: [-1, 0], arrowright: [1, 0], arrowup: [0, -1], arrowdown: [0, 1] }[k];
   if (mv) { if (sel.size) { e.preventDefault(); nudge(mv[0] * G * (e.shiftKey ? 5 : 1), mv[1] * G * (e.shiftKey ? 5 : 1)); } return; }
-  if (e.shiftKey) {
-    if (k === 'a') { e.preventDefault(); lineUp(); return; }
-    if (k === 'c') { e.preventDefault(); $('check-btn').click(); return; }
-    return;
-  }
-  if (k === 'f') { if (tool === 'place' && placing) { placing.fx = !placing.fx; drawEd(); } else if (sel.size && [...sel].some(id => canFlip(partOf(S, id)))) { snapshot(); flipParts(S, sel); refresh(); } return; }
-  if (k === 'r') { if (tool === 'place' && placing) { if (canTurn({ t: placing.t })) placing.rot = ((placing.rot || 0) + 90) % 360; drawEd(); } else if (sel.size) { snapshot(); rotateParts(S, sel); refresh(); } return; }
-  if (k === 'e') return setTool('select');
-  if (k === 'w') return setTool('wire');
-  if (k === 'v' || k === 'l') return setTool('rung');
-  if (k === 't' || k === 'n') return setTool('note');
-  if (k === 'x') { e.preventDefault(); removeSelection(); return; }
-  if (k === 'q') { if (lastPlaced) { startPlacing(lastPlaced.t, lastPlaced.rot, lastPlaced.fx); say(`${LIB[lastPlaced.t].name}: click where it goes (Q again after, for another)`); } else say('Place a part first; then Q puts down another of it.'); return; }
-  if (k === 'a') { e.preventDefault(); if ($('org-btn').disabled) say('Pick a rung first: click its wire, or any part on it. Then A organizes it.'); else $('org-btn').click(); return; }
-  if (k === 'z') { fitZoom(); return; }
-  if (e.key === 'F2') { e.preventDefault(); renameKey(); return; }
+  // the shortcuts that can be changed (keys.js): whichever this key is for, now
+  const act = kbAction(e);
+  if (act) { e.preventDefault(); KB_ACT[act].run(e); return; }
+  if (e.shiftKey) return;
   if (/^[1-9]$/.test(k)) { const n = +k - 1; if (n < doc.sheets.length) { if (n !== doc.cur) { doc.cur = n; sel = new Set(); selW = null; selL = null; refresh(true); } say(`Sheet ${n + 1} of ${doc.sheets.length}`); } else say(`There is no sheet ${n + 1} (this print has ${doc.sheets.length}).`); return; }
 });
+// what the R, F and Q keys do (or whichever keys they are now)
+function rotateKey() { if (tool === 'place' && placing) { if (canTurn({ t: placing.t })) placing.rot = ((placing.rot || 0) + 90) % 360; drawEd(); } else if (sel.size) { snapshot(); rotateParts(S, sel); refresh(); } }
+function flipKey() { if (tool === 'place' && placing) { placing.fx = !placing.fx; drawEd(); } else if (sel.size && [...sel].some(id => canFlip(partOf(S, id)))) { snapshot(); flipParts(S, sel); refresh(); } }
+function placeAgain() { if (lastPlaced) { startPlacing(lastPlaced.t, lastPlaced.rot, lastPlaced.fx); say(`${LIB[lastPlaced.t].name}: click where it goes (${kn('again')} again after, for another)`); } else say(`Place a part first; then ${kn('again')} puts down another of it.`); }
 // arrows: nudge (see the key handler)
 let NUDGE = null;
 function nudge(dx, dy) {
@@ -547,13 +539,9 @@ function nudge(dx, dy) {
 function renameKey() {
   if (selW) { setRib('part'); focusProp('w-num'); return; }
   const ps = [...sel].map(id => partOf(S, id)).filter(Boolean);
-  if (ps.length !== 1 || ps[0].t === 'rail') { say('Pick one part first; F2 then jumps to its Number to rename it.'); return; }
+  if (ps.length !== 1 || ps[0].t === 'rail') { say(`Pick one part first; ${kn('rename')} then jumps to its Number to rename it.`); return; }
   setRib('part'); setTimeout(() => { const el = $('p-tag') || $('p-of'); if (el) { el.focus(); el.select && el.select(); } else say('This part has no number to rename.'); }, 0);
 }
-// F1: the Keyboard Shortcuts panel
-function openKeys() { if (!$('keys-dlg').open) $('keys-dlg').showModal(); }
-$('keys-btn').addEventListener('click', openKeys);
-$('keys-close').addEventListener('click', () => $('keys-dlg').close());
 document.addEventListener('keyup', e => { if (e.key === ' ') spaceDown = false; });
 
 /* ---------- starting up ---------- */
@@ -593,7 +581,7 @@ function renderMulti(P, ps) {
     ${p0.t === 'pl' ? `<div class="f">Built Into<select id="m-inpb">${same(p => p.inPB || '') ? '' : '<option value="__keep" selected>(several)</option>'}<option value=""${same(p => p.inPB || '') && !p0.inPB ? ' selected' : ''}>None (lights of their own)</option>${[...new Set(allParts().filter(q => isPB(q.p) && q.p.tag).map(q => q.p.tag))].map(t => `<option value="${esc(t)}"${same(p => p.inPB || '') && p0.inPB === t ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></div>` : ''}
     ${p0.t === 'sel' ? `<div class="f">Positions<input class="in" id="m-pos" value="${same(p => selNames(p).join('/')) ? esc(selNames(p0).join('/')) : ''}" placeholder="${same(p => selNames(p).join('/')) ? '' : '(several)'}" title="2 to 4 positions, with slashes: HAND/OFF/AUTO"></div>` : ''}
     <p class="help">A setting changed here changes all ${ps.length}. (Each one’s own ${k === 'contact' || k === 'starter' || k === 'olc' ? 'label is' : 'number and label are'} set one at a time.)</p>
-    <div class="acts">${ps.every(canTurn) ? '<button class="btn" id="m-rot">Rotate (R)</button>' : ''}${ps.every(canFlip) ? '<button class="btn" id="m-flip">Flip ⇆ (F)</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
+    <div class="acts">${ps.every(canTurn) ? `<button class="btn" id="m-rot">Rotate (${kn('rotate')})</button>` : ''}${ps.every(canFlip) ? `<button class="btn" id="m-flip">Flip ⇆ (${kn('flip')})</button>` : ''}<button class="btn del" id="p-del">Delete</button></div>`;
   const all = fn => { snapshot(); for (const p of ps) fn(p); refresh(); };
   for (const b of P.querySelectorAll('[data-mno]')) b.addEventListener('click', () => all(p => { if (isNO(p) !== (b.dataset.mno === '1')) p.t = LIB[p.t].flip; }));
   const of = $('m-of'); if (of) of.addEventListener('change', () => { if (of.value) all(p => { p.tag = of.value; }); });
