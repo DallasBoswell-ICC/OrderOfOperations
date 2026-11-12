@@ -133,7 +133,7 @@ function printSheet(drawnBy, fit = false) {
     const up = q.terms[0][0] === q.terms[1][0], s = put(name, q.x, q.y, up), sp = pts(s, q.x, q.y, up);
     q.terms.forEach(t => { const m = sp.reduce((a, b) => Math.hypot(b[0] - t[0], b[1] - t[1]) < Math.hypot(a[0] - t[0], a[1] - t[1]) ? b : a); line(t[0], t[1], m[0], m[1]); });
     if (up) { if (!noTag) text(q.x - s.y0 + 8, q.y + 9, tag(q), 26, 'start'); if (below) text(q.x - s.y0 + 8, q.y + 34, below, 21, 'start', 500); }
-    else { if (!noTag) text(q.x, q.y + s.y0 - 4, tag(q), 26); if (below) text(q.x, q.y + s.y1 + 20, below, 21, 'middle', 500, q.t === 'sel' ? ' style="stroke:#fff;stroke-width:7px;paint-order:stroke"' : ''); } };   // (a selector switch's note: on white, as the dashed link runs behind it)
+    else { if (!noTag) text(q.x, q.y + s.y0 - 4, tag(q), 26, 'middle', 700, q.linked ? ' style="stroke:#fff;stroke-width:7px;paint-order:stroke"' : ''); if (below) text(q.x, q.y + s.y1 + 20, below, 21, 'middle', 500, q.t === 'sel' ? ' style="stroke:#fff;stroke-width:7px;paint-order:stroke"' : ''); } };   // (a selector switch's note: on white, as the dashed link runs behind it)
   const three = (q, name) => { const s = put(name, q.x, q.y), sp = pts(s, q.x, q.y, false);
     q.terms.forEach((t, i) => line(t[0], t[1], sp[i][0], sp[i][1])); text(q.x, q.y + s.y0 - 4, tag(q), 26); };
   const timerOf = L => P.find(q => q.t === 'coil' && q.L === L && isTimer(q.p));
@@ -148,9 +148,10 @@ function printSheet(drawnBy, fit = false) {
       inArrow(0, y0 - 40, 0, 1); inArrow(RX, y0 - 40, 0, 1); text(0, y0 - 72, 'L1', 28); text(RX, y0 - 72, 'L2', 28); } }
   for (const w of Wr) line(w.x1, w.y1, w.x2, w.y2);
   // (a selector switch's blocks linked by a dashed line, each to the next one down where they line up: drawn first, under them)
-  const sels = {}; for (const q of P) if (q.t === 'sel') (sels[q.L] = sels[q.L] || []).push(q);
-  for (const L in sels) { const bs = sels[L].sort((a, b) => a.y - b.y);
-    for (let i = 1; i < bs.length; i++) if (bs[i].x === bs[i - 1].x) g += `<line x1="${bs[i].x}" y1="${bs[i - 1].y - 40}" x2="${bs[i].x}" y2="${bs[i].y - 40}" stroke-width="3" stroke-dasharray="12 10" stroke-linecap="butt"/>`; }
+  // (and a limit, temperature or pressure switch's contacts, given one number: Dallas, 12 Nov 2026)
+  const sels = {}; for (const q of P) if (q.t === 'sel' || isLim(q.p || q)) { const k = q.t === 'sel' ? 'S' + q.L : q.t + q.L; (sels[k] = sels[k] || []).push(q); }
+  for (const L in sels) { const bs = sels[L].sort((a, b) => a.y - b.y), sw = bs[0].t !== 'sel';   // (a switch's contacts: from under one's lever to the top of the next, its name on white)
+    for (let i = 1; i < bs.length; i++) if (bs[i].x === bs[i - 1].x) { if (sw) bs[i].linked = true; g += `<line x1="${bs[i].x}" y1="${bs[i - 1].y + (sw ? 26 : -40)}" x2="${bs[i].x}" y2="${bs[i].y - 40}" stroke-width="3" stroke-dasharray="12 10" stroke-linecap="butt"/>`; } }
   for (const [x, y] of dots.values()) g += `<circle cx="${x}" cy="${y}" r="8" fill="#000" stroke="none"/>`;
 
   for (const q of P) {

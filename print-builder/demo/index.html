@@ -22,7 +22,7 @@
 <meta name="theme-color" content="#9be03a">
 <style>:root {
   --page: #1b1d20; --bar: #202326; --rib: #232528; --line: #2e3237; --line2: #3a3f45; --card: #25282c;
-  --ink: #e8ecf0; --muted: #aab3bb; --faint: #8a939c; --gold: #ffc000; --sel: #2f8cff; --err: #e5484d; --warn: #ffb224; --ok: #46c46a;
+  --ink: #e8ecf0; --muted: #aab3bb; --faint: #8a939c; --acc: #4A9BFF; --acc-dim: #1c2b40;   /* (the accent, as the title's blue: Dallas, 12 Nov 2026, was gold) */ --sel: #2f8cff; --err: #e5484d; --warn: #ffb224; --ok: #46c46a;
   --ui: "Aptos", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 * { box-sizing: border-box; }
@@ -42,7 +42,7 @@ button { font: inherit; color: inherit; }
 h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 span { color: #4A9BFF; }   /* Print Builder's blue, as in its icon */
 .tb-btns { margin-left: auto; display: flex; gap: 6px; }
 .btn { border: 1px solid var(--line2); border-radius: 8px; padding: 6px 13px; font-size: .9rem; background: #26292d; cursor: pointer; color: #d6dbe0; }
-.btn:hover { background: #30343a; } .btn.icon { padding: 6px 10px; } .btn.primary { background: var(--gold); color: #111; border-color: var(--gold); font-weight: 700; }
+.btn:hover { background: #30343a; } .btn.icon { padding: 6px 10px; } .btn.primary { background: var(--acc); color: #fff; border-color: var(--acc); font-weight: 700; }
 .btn:disabled { opacity: .4; cursor: default; }
 .menuwrap { position: relative; }
 .dmenu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 40; display: grid; gap: 2px; padding: 6px; min-width: 220px; background: #26282b; border: 1px solid var(--line2); border-radius: 10px; box-shadow: 0 12px 28px rgba(0,0,0,.55); }
@@ -56,15 +56,15 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .grp .row { display: flex; gap: 2px; flex: 1; align-items: center; } .grp .row.col { flex-direction: column; align-items: flex-start; gap: 5px; padding-top: 4px; }
 .gl { font-size: 11px; color: var(--faint); text-align: center; padding: 3px 0 5px; white-space: nowrap; }
 .rb { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 8px; border-radius: 7px; font-size: 12.5px; color: #d6dbe0; min-width: 50px; background: transparent; border: 0; cursor: pointer; position: relative; }
-.rb:hover { background: #2e3236; } .rb[aria-pressed="true"] { background: #3a3524; outline: 1.5px solid var(--gold); }
+.rb:hover { background: #2e3236; } .rb[aria-pressed="true"] { background: var(--acc-dim); outline: 1.5px solid var(--acc); }
 .rb svg { width: 22px; height: 22px; }
-.rb .sw { width: 22px; height: 22px; border-radius: 6px; border: 2.5px solid; background: #2b2e32; }
+.rb .cat-ico { width: 30px; height: 26px; display: block; }
 .chkbtn[aria-pressed="true"] { outline-color: var(--err); background: #3a2426; }
 .badge { background: var(--err); color: #fff; font-size: 10.5px; font-weight: 800; border-radius: 9px; padding: 0 6px; margin-left: 4px; } .badge.w { background: var(--warn); color: #111; }
 .chk { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: #d6dbe0; cursor: pointer; }
 .chk input { display: none; } .tog { width: 28px; height: 16px; border-radius: 9px; background: #4a4f55; position: relative; flex: none; }
 .tog:after { content: ''; position: absolute; left: 2px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: #ddd; transition: left .12s; }
-.chk input:checked + .tog { background: var(--gold); } .chk input:checked + .tog:after { left: 14px; background: #111; }
+.chk input:checked + .tog { background: var(--acc); } .chk input:checked + .tog:after { left: 14px; background: #fff; }
 /* middle */
 .mid { display: grid; grid-template-columns: calc(var(--palw, 224px) * var(--uiz)) 7px 1fr; min-height: 0; }
 .mid.palhide { grid-template-columns: 0 calc(22px * var(--uiz)) 1fr; } .mid.palhide .pal { display: none; }
@@ -88,9 +88,9 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .card h4 { margin: 0 0 10px; font-size: 14px; }
 .f { display: grid; grid-template-columns: 88px 1fr; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 13px; color: var(--muted); }
 .in, #props select, #props textarea { width: 100%; background: #1b1d20; border: 1px solid var(--line2); border-radius: 6px; padding: 6px 8px; color: var(--ink); font: inherit; font-size: 13px; }
-.in:focus, #props select:focus, #props textarea:focus { outline: 2px solid var(--gold); outline-offset: 0; }
+.in:focus, #props select:focus, #props textarea:focus { outline: 2px solid var(--acc); outline-offset: 0; }
 .seg { display: flex; border: 1px solid var(--line2); border-radius: 6px; overflow: hidden; } .seg button { flex: 1; text-align: center; padding: 5px 0; font-size: 12.5px; background: transparent; border: 0; cursor: pointer; }
-.seg button[aria-pressed="true"] { background: var(--gold); color: #111; font-weight: 700; }
+.seg button[aria-pressed="true"] { background: var(--acc); color: #fff; font-weight: 700; }
 .ro { color: var(--muted); font-size: 13px; }
 .acts { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; } .acts .btn { font-size: .82rem; padding: 5px 10px; } .btn.del { color: #ff8a8d; }
 .help { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin: 0; } .help b { color: var(--ink); } .help kbd { font: inherit; font-size: 11px; background: #33373c; border-radius: 4px; padding: 0 4px; }
@@ -153,14 +153,14 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 /* over a terminal in Select: a drag draws a wire */
 #sv.tool-select.on-term { cursor: crosshair; }
 
-/* the ribbon's tabs: Home, the gold Part tab (what is picked; as in Circuit Builder), Check Print */
+/* the ribbon's tabs: Home, the blue Part tab (what is picked; as in Circuit Builder), Check Print */
 .ribwrap { background: var(--rib); border-bottom: 1px solid var(--line); min-width: 0; }
 .ribwrap .ribbon { border-bottom: 0; min-height: 92px; }
 .rtabs { display: flex; gap: 2px; padding: 5px 10px 0; background: #191b1e; }
 .rtab { background: transparent; border: 0; color: #aab1b9; font: inherit; font-size: 13px; font-weight: 600; padding: 6px 16px 7px; border-radius: 7px 7px 0 0; cursor: pointer; display: flex; align-items: center; }
 .rtab:hover { color: #fff; } .rtab[aria-pressed="true"] { background: var(--rib); color: #fff; }
-.rtab.gold { background: #3a3220; color: var(--gold); } .rtab.gold[aria-pressed="true"] { background: var(--gold); color: #141414; }
-.ribwrap:has(#rt-part[aria-pressed="true"]) .ribbon.part { box-shadow: inset 0 3px 0 var(--gold); }
+.rtab.gold { background: var(--acc-dim); color: var(--acc); } .rtab.gold[aria-pressed="true"] { background: var(--acc); color: #fff; }
+.ribwrap:has(#rt-part[aria-pressed="true"]) .ribbon.part { box-shadow: inset 0 3px 0 var(--acc); }
 /* a part's settings across the ribbon: each a label over its box */
 #props { display: flex; align-items: flex-start; gap: 18px; padding: 10px 8px 8px; flex-wrap: nowrap; }
 #props h4 { display: none; }
@@ -186,7 +186,7 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .split { display: flex; } .split #save-btn { border-radius: 8px 0 0 8px; } .split .more { border-radius: 0 8px 8px 0; border-left: 0; padding: 6px 8px; }
 #save-menu { left: auto; right: 0; } #save-menu .k { color: var(--faint); font-size: .8em; margin-left: 10px; }
 .file-label { font-size: .85rem; color: var(--muted); background: #26292d; border: 1px solid var(--line2); border-radius: 999px; padding: 3px 11px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.file-label.dirty { color: var(--gold); border-color: #5a4a14; }
+.file-label.dirty { color: var(--acc); border-color: #24456e; }
 #save-menu button { white-space: nowrap; }
 
 /* dark scrollbars and form controls, to match */
@@ -239,7 +239,7 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 
 /* ---------- a print dragged over the window ---------- */
 .drop { position: fixed; inset: 0; z-index: 70; background: rgba(20,22,25,.72); display: grid; place-items: center; pointer-events: none; }
-.drop div { border: 3px dashed var(--gold); border-radius: 16px; padding: 34px 48px; font-size: 22px; font-weight: 700; color: #fff; background: rgba(0,0,0,.35); }
+.drop div { border: 3px dashed var(--acc); border-radius: 16px; padding: 34px 48px; font-size: 22px; font-weight: 700; color: #fff; background: rgba(0,0,0,.35); }
 
 /* ---------- a cross-reference clicked: its rung flashes; links and cross-references show they can be clicked ---------- */
 .flash { fill: rgba(255,196,0,.28); stroke: #e0a800; stroke-width: 3; animation: flash 1.4s ease-out forwards; pointer-events: none; }
@@ -248,7 +248,7 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 
 /* ---------- Orientation menu: the way the sheet is round now ticked ---------- */
 .orient-menu { min-width: 170px; } .orient-menu svg { width: 20px; height: 20px; flex: none; }
-.orient-menu .ck { width: 14px; color: var(--gold); font-weight: 700; visibility: hidden; } .orient-menu [aria-checked="true"] .ck { visibility: visible; }
+.orient-menu .ck { width: 14px; color: var(--acc); font-weight: 700; visibility: hidden; } .orient-menu [aria-checked="true"] .ck { visibility: visible; }
 .orient-menu [aria-checked="true"] { color: #fff; font-weight: 600; }
 /* a selection box started on the grey can run off the paper */
 #sv { overflow: visible; }
@@ -285,8 +285,8 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .ab-fine { margin: 0; font-size: .78rem; color: var(--faint); }
 .ab-end { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 4px; }
 .ab-btn { font: inherit; font-size: .86rem; color: var(--ink); background: #2e3135; border: 1px solid var(--line2); border-radius: 8px; padding: 7px 13px; text-decoration: none; cursor: pointer; }
-.ab-btn:hover { background: #383c41; } .ab-btn.primary { background: #ffc000; border-color: #ffc000; color: #111; font-weight: 600; }
-.ab-btn:focus-visible, .credit a:focus-visible, .infobtn:focus-visible { outline: 2px solid #ffc000; outline-offset: 2px; }
+.ab-btn:hover { background: #383c41; } .ab-btn.primary { background: var(--acc); border-color: var(--acc); color: #fff; font-weight: 600; }
+.ab-btn:focus-visible, .credit a:focus-visible, .infobtn:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
 .credit a { color: inherit; text-decoration: none; border: 1px solid currentColor; border-radius: 5px; padding: 0 5px 1px; margin-left: 2px; white-space: nowrap; }
 .credit a:hover { color: var(--ink); }
 .infobtn { font: 700 15px/1 Georgia, "Times New Roman", serif; }
@@ -326,6 +326,27 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .kmsg { font-size: 12.5px; color: #ffcf4a; background: #3a3016; border: 1px solid #6b5a1e; border-radius: 8px; padding: 6px 10px; margin: 10px 0 0; }
 .kmode[hidden] { display: none; }   /* (keys fixed for now: KB.canChange) */
 #keys-close { margin-left: auto; }
+
+/* the Grid menu (bottom bar; opens upward) */
+.gridwrap { flex: none; } .gridbtn { font: inherit; font-size: 12.5px; color: #d6dbe0; background: #26292d; border: 1px solid var(--line2); border-radius: 6px; padding: 3px 9px; cursor: pointer; }
+.gridbtn:hover { background: #30343a; }
+.gridmenu { width: 280px; padding: 12px 14px; display: grid; gap: 8px; white-space: normal; }
+.gridmenu h5 { margin: 2px 0 0; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.gstr { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--faint); } .gstr input { flex: 1; accent-color: var(--acc); }
+.gnote { margin: 0; font-size: 11.5px; line-height: 1.35; color: var(--faint); }
+.gridmenu .seg button { justify-content: center; text-align: center; padding: 5px 0; border-radius: 0; font-size: 12.5px; }
+
+/* the parts list: a coloured header for each kind, opening and closing; a kind's groups inside it (Dallas, 12 Nov 2026) */
+.pcat { margin: 0 0 6px; border-radius: 8px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--c) 40%, #000); }
+.phd, .shd { width: 100%; display: flex; align-items: center; gap: 8px; border: 0; cursor: pointer; font: inherit; text-align: left; }
+.phd { padding: 6px 9px; background: color-mix(in srgb, var(--c) 20%, #202327); color: #fff; font-weight: 700; font-size: 12.5px; letter-spacing: .03em; }
+.phd:hover { background: color-mix(in srgb, var(--c) 30%, #202327); } .phd .cat-ico { width: 24px; height: 21px; flex: none; }
+.phd .pc, .shd .pc { margin-left: auto; font-weight: 500; font-size: 11px; color: #aab3bb; }
+.car { width: 10px; flex: none; color: #cfd5db; font-size: 10px; transition: transform .12s; } [aria-expanded="true"] > .car { transform: rotate(90deg); }
+.pbody { padding: 6px; background: #1b1d20; display: grid; gap: 6px; } .pbody[hidden] { display: none; }
+.psub { border-radius: 6px; background: #24272b; }
+.shd { padding: 6px 8px; background: transparent; color: #dfe4e8; font-size: 12px; border-radius: 6px; } .shd:hover { background: #2d3136; }
+.psub .pg { padding: 0 5px 6px; } .pg[hidden] { display: none; }
 
 .demo-badge { font-style: normal; font-size: .7rem; font-weight: 800; letter-spacing: .08em; color: #1c1d1f; background: #9be03a; border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }
 </style>
@@ -435,7 +456,12 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
       <div class="zoombar"><button id="z-out" title="Zoom out (Ctrl+−, or Ctrl + wheel)">−</button><span id="z-lvl">100%</span><button id="z-in" title="Zoom in (Ctrl+=, or Ctrl + wheel)">+</button><button id="z-fit" data-kb title="Fit the sheet ({fit} or Ctrl+0)">Fit</button></div>
     </section>
   </main>
-  <footer class="bot"><div id="tabs" class="tabs"></div><span id="pageinfo"></span><span class="hint" id="hint"></span><span class="credit credit-bar" id="credit">© 2026 Dallas Boswell · Free for Educational Use · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener license" title="Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License"><svg class="cc-mark" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="5"/><text x="32" y="42" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="29" fill="currentColor">cc</text></svg> BY-NC-SA 4.0</a></span></footer>
+  <footer class="bot"><div id="tabs" class="tabs"></div><span id="pageinfo"></span><div class="menuwrap gridwrap"><button class="gridbtn" id="grid-btn" title="The grid on the sheet: how it looks, and whether notes, names and wire numbers snap to it">Grid ▾</button><div class="dmenu gridmenu" id="grid-menu" hidden>
+    <h5>Style</h5><div class="seg" data-g="style"><button data-v="dots">Dots</button><button data-v="lines">Lines</button><button data-v="none">None</button></div>
+    <h5>Spacing</h5><div class="seg" data-g="space"><button data-v="fine">Fine</button><button data-v="std">Standard</button><button data-v="coarse">Coarse</button></div>
+    <h5>Strength</h5><div class="gstr"><span>Light</span><input type="range" id="grid-str" min="0" max="100" aria-label="How strong the grid is"><span>Dark</span></div>
+    <label class="chk"><input type="checkbox" id="grid-snap"><span class="tog"></span>Snap to the Grid</label>
+    <p class="gnote">Off: notes, names and wire numbers move freely. Parts and wires always stay on the grid, so they connect. Kept in this browser.</p></div></div><span class="hint" id="hint"></span><span class="credit credit-bar" id="credit">© 2026 Dallas Boswell · Free for Educational Use · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener license" title="Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License"><svg class="cc-mark" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="5"/><text x="32" y="42" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="29" fill="currentColor">cc</text></svg> BY-NC-SA 4.0</a></span></footer>
 </div>
 <!-- About: who made it and the license it is shared under (the "i" button at the top right) -->
 <!-- Keyboard Shortcuts (F1, or the keyboard button at the top right): every key, so nothing is hidden. Laid out for the left
@@ -616,10 +642,12 @@ const SUP_T = [[0, 0]];
 // a device's own terminals (its symbol's, or the line-in arrow's), before it is turned
 // the line-in arrows: a phase (L1, L2, L3 of the power), and the control circuit's source (L1) and return (L2)
 const isArrowIn = t => t === 'sup' || t === 'src_l1' || t === 'src_l2';
+// how a line in is drawn, pointing right with its wire end at 0,0: Circuit Builder's chevron box (the sheet's stroke colour)
+const CHEV_IN = '<rect x="-44" y="-20" width="40" height="40" rx="7" fill="#fff" stroke-width="3"/><path d="M-33 -11l9 11-9 11M-22 -11l9 11-9 11" fill="none" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><line x1="-4" y1="0" x2="0" y2="0" stroke-width="3"/>';
 const termsOf = t => isArrowIn(t) ? SUP_T : PSYM[LIB[t].sym].t;
 // how far its drawing reaches either side of its middle, and above and below (for picking it, and its labels)
 function extentOf(t) {
-  if (isArrowIn(t)) return { x0: -70, x1: 4, y0: -20, y1: 20 };
+  if (isArrowIn(t)) return { x0: -96, x1: 4, y0: -24, y1: 24 };
   const s = PSYM[LIB[t].sym], xs = s.t.map(p => p[0]);
   let x0 = Math.min(...xs), x1 = Math.max(...xs);
   if (t === 'motor') { x0 = -140; x1 = 66; }
@@ -1147,7 +1175,7 @@ function checkPrint(A = analyse()) {
   const { parts, kindOf, label, TERMS, WIRED } = A;
   const name = p => p.tag || LIB[p.t].name;
   const sheetName = k => doc.sheets.length > 1 ? ` (sheet ${k + 1})` : '';
-  // (a pushbutton's or selector's extra contact blocks share its number)
+  // (a button's or switch's other contacts share its name: blocksOf)
   // tags: the same one on two devices that must each have their own; none at all
   const byTag = new Map();
   for (const x of parts) if (UNIQUE.has(kindOf(x.p)) && x.p.tag && !(blocksOf(x.p).length > 1 && mainBlock(x.p) !== x.p)) for (const tg of tagsOf(x.p)) { const k = (kindOf(x.p) === 'motor' ? 'motor:' : '') + tg; if (!byTag.has(k)) byTag.set(k, []); byTag.get(k).push(x); }
@@ -1233,9 +1261,15 @@ function contNote(p, k) {
 // one pushbutton (or selector switch) drawn in several rungs: the parts with its number are its contact blocks; the top
 // one is the operator itself (a selector's turning arrow is drawn on it only)
 const isPB = p => p.t === 'pb_no' || p.t === 'pb_nc' || p.t === 'pbm_no' || p.t === 'pbm_nc';
-const blocksOf = p => allParts().map(q => q.p).filter(q => q.tag && q.tag === p.tag && (isPB(p) ? isPB(q) : q.t === p.t)).sort((a, b) => a.y - b.y || a.x - b.x);
+// any button or switch can have more contacts on other rungs (Dallas, 12 Nov 2026; before, pushbuttons and selectors
+// only): put down another of its kind with the same name, and a dashed link joins them. Its family: a pushbutton is one,
+// maintained or not; the rest go by their name's letters (LS, TS, PS, FS, FLS, PRS, SW, ES, SS), NO, NC or held alike
+const linkable = p => !!LIB[p.t] && LIB[p.t].kind === 'sw' && (LIB[p.t].cat === 'Buttons' || LIB[p.t].cat === 'Switches');
+const family = p => isPB(p) ? 'PB' : LIB[p.t].pre || p.t;
+const FAMILY_NAME = { PB: 'pushbutton', SS: 'selector switch', ES: 'E-stop', LS: 'limit switch', TS: 'temperature switch', PS: 'pressure switch', FS: 'float switch', FLS: 'flow switch', PRS: 'proximity switch', SW: 'switch' };
+const blocksOf = p => linkable(p) ? allParts().map(q => q.p).filter(q => q.tag && q.tag === p.tag && linkable(q) && family(q) === family(p)).sort((a, b) => a.y - b.y || a.x - b.x) : [p];
 const mainBlock = p => blocksOf(p)[0] || p;
-function blockGroups(s) { const g = new Map(); for (const p of s.parts) if ((isPB(p) || p.t === 'sel') && p.tag) { const k = (p.t === 'sel' ? 'S:' : 'P:') + p.tag; if (!g.has(k)) g.set(k, []); g.get(k).push(p); }
+function blockGroups(s) { const g = new Map(); for (const p of s.parts) if (linkable(p) && p.tag) { const k = family(p) + ':' + p.tag; if (!g.has(k)) g.set(k, []); g.get(k).push(p); }
   return [...g.values()].map(bs => bs.sort((a, b) => a.y - b.y)).filter(bs => bs.length > 1); }
 // the timer a contact belongs to (its coil, if that is a timer)
 const timerOf = p => { const c = allParts().find(q => q.p.t === 'coil' && q.p.tag === p.tag); return c && /^TR/.test(c.p.tag) ? c.p : null; };
@@ -1264,15 +1298,16 @@ function drawSheet(s, k, A) {
   let g = ''; PLABS = []; XREFS = []; RUNGNUMS = []; LINKS = [];
   const line = (x1, y1, x2, y2, w = PW) => { g += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke-width="${w}"/>`; };
   const text = (x, y, t, size = 26, anchor = 'middle', weight = 700, extra = '') => { if (t !== '' && t != null) g += `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}" font-weight="${weight}"${extra}>${esc(t)}</text>`; };
-  const arrow = (x, y, ux, uy) => { const bx = x - ux * 22, by = y - uy * 22, px = -uy * 13, py = ux * 13;
-    g += `<path d="M${bx + px} ${by + py}L${bx - px} ${by - py}L${x} ${y}Z" fill="#000" stroke="#000" stroke-width="2"/>`; };
+  // a line in (a phase, or a control source or return): Circuit Builder's chevron box, pointing along the wire (Dallas,
+  // 12 Nov 2026; it was an arrowhead)
+  const chev = (x, y, ux, uy) => { g += `<g transform="translate(${x} ${y}) rotate(${Math.atan2(uy, ux) * 180 / Math.PI})">${CHEV_IN}</g>`; };
   // rails
   const rails = s.parts.filter(p => p.t === 'rail');
   for (const r of rails) { line(r.x, r.y0, r.x, r.y1);
-    // (fed at its top by a wire, from the transformer: no arrow, its name beside it)
+    // (fed at its top by a wire, from the transformer: no chevrons, its name beside it)
     const fed = s.wires.some(w => [w.a, w.b].some(e => e.r === r.id && e.y <= r.y0));
     if (fed) text(r.x + (r.label === 'L1' ? -14 : 14), r.y0 + 40, r.label, 26, r.label === 'L1' ? 'end' : 'start');
-    else { arrow(r.x, r.y0, 0, 1); text(r.x, r.y0 - 34, r.label, 28); } }
+    else { chev(r.x, r.y0, 0, 1); text(r.x, r.y0 - 54, r.label, 28); } }   // (fed from above: the chevron box, as a line in)
   // wires, then their numbers (placed clear of the symbols, their tags and the other wires; see wireLabels)
   for (const w of s.wires) g += `<polyline points="${wirePts(s, w).map(q => q.join(',')).join(' ')}"/>`;
   LABS = SHOW.wn ? wireLabels(s, A) : [];
@@ -1299,8 +1334,8 @@ function drawSheet(s, k, A) {
     const halo = linked.has(p.id) ? ' stroke="#fff" stroke-width="8" stroke-linejoin="round" paint-order="stroke"' : '';
     const tagT = (x, y, t, size, anchor = 'middle', which = 'tag') => { if (!t) return; const o = labOff(p, which); x += o[0]; y += o[1]; text(x, y, t, size, anchor, 700, halo); PLABS.push({ id: p.id, which, ...lblBox(x, y, t, size, anchor) }); };
     const descT = (x, y, t, size, anchor = 'middle') => { if (!t) return; x += ld[0]; y += ld[1]; text(x, y, t, size, anchor, 500, halo); PLABS.push({ id: p.id, which: 'desc', ...lblBox(x, y, t, size, anchor) }); };
-    if (isArrowIn(p.t)) {   // (a line in: its arrow points along the wire, its name behind it; turned and flipped with it)
-      const u = place(p, [1, 0]), n = place(p, [-34, 0]); arrow(p.x, p.y, u[0], u[1]);
+    if (isArrowIn(p.t)) {   // (a line in: its chevrons point along the wire, its name behind it; turned and flipped with it)
+      const u = place(p, [1, 0]), n = place(p, [-56, 0]); chev(p.x, p.y, u[0], u[1]);
       tagT(p.x + n[0], p.y + n[1] + (u[1] ? (u[1] > 0 ? -6 : 30) : 10), p.tag, 28, u[0] > 0 ? 'end' : u[0] < 0 ? 'start' : 'middle'); continue; }
     const sym = PSYM[symOf(p)], r = p.rot || 0, kind = LIB[p.t].kind;
     g += `<g class="sym" transform="${xform(p)}">${sym.b}</g>`;
@@ -1446,15 +1481,15 @@ const linkBox = p => { const s = PSYM[symOf(p)], e = extOf(p); return { x0: p.x 
 // rung); 'stem' is just above a pushbutton's wire, where a block's dashed link has always started
 function linkEnd(p, e) { const b = linkBox(p), o = e.o || 0;
   if (e.s === 'top') return [p.x + o, b.y0]; if (e.s === 'bottom') return [p.x + o, b.y1]; if (e.s === 'stem') return [p.x + o, p.y - 20];
-  return [e.s === 'left' ? b.x0 : b.x1, p.y - 30]; }
+  return [e.s === 'left' ? b.x0 : b.x1, Math.max(b.y0 + 4, Math.min(b.y1 - 4, p.y - 30 + o))]; }   // (a side end: a little above the rung, or slid up or down its side)
 const vertEnd = s => s === 'top' || s === 'bottom' || s === 'stem';
 // the ends a link starts with (before any are dragged): the upper part's bottom to the lower part's top; two side by side
-// on one rung: over the top of both; a pushbutton's blocks lined up: from just above the upper one's wire
+// on one rung: over the top of both; a pushbutton's or selector's blocks lined up: from just above the upper one's wire
 function linkEnds(L) {
   const k = L.own.lk || {}, [hi, lo] = L.a.y <= L.b.y ? [L.a, L.b] : [L.b, L.a];
   let da, db;
   if (L.a.y === L.b.y) da = db = { s: 'top' };
-  else if (L.kind === 'block' && L.a.x === L.b.x) { da = { s: 'stem' }; db = { s: 'top' }; }
+  else if (L.kind === 'block' && L.a.x === L.b.x && (isPB(L.a) || L.a.t === 'sel')) { da = { s: 'stem' }; db = { s: 'top' }; }   // (other switches: bottom to top, below)
   else { da = { s: L.a === hi ? 'bottom' : 'top' }; db = { s: L.b === lo ? 'top' : 'bottom' }; }
   return [{ ...da, ...(k.ea || {}) }, { ...db, ...(k.eb || {}) }];
 }
@@ -1462,6 +1497,10 @@ function linkEnds(L) {
 // pair of ends: across at a level between them, or over/under both; a side pair: down/up at an upright between them)
 function linkRoute(L) {
   const k = L.own.lk || {}, [ea, eb] = linkEnds(L), A_ = linkEnd(L.a, ea), B = linkEnd(L.b, eb), va = vertEnd(ea.s), vb = vertEnd(eb.s);
+  if (va && vb && k.jx != null) {   // (stepped out beside them: out of each end, across to the upright, back in)
+    const out = e => e.s === 'top' ? -24 : 24, ya = A_[1] + out(ea), yb = B[1] + out(eb), x = snap((A_[0] + B[0]) / 2) + k.jx;
+    return [A_, [A_[0], ya], [x, ya], [x, yb], [B[0], yb], B];
+  }
   if (va && vb) {
     const down = s => s !== 'top', [up, lo] = A_[1] <= B[1] ? [[A_, ea], [B, eb]] : [[B, eb], [A_, ea]];
     if (A_[0] === B[0] && !k.dy && down(up[1].s) && !down(lo[1].s)) return [A_, B];
@@ -1548,6 +1587,8 @@ function pick(q) {
   // (a picked dashed link: its end dots, to drag round the part)
   const L0 = selL && LINKS.find(L => L.own.id === selL);
   if (L0) for (const [end, P] of [['a', L0.pts[0]], ['b', L0.pts[L0.pts.length - 1]]]) if (near(q, P, Math.max(10, 7 * pxU()))) return { kind: 'linkend', id: L0.own.id, end };
+  // (and its runs, even over a part's box, where a side end slid down its part puts one)
+  if (L0) { let bl = null; for (let k = 0; k < L0.pts.length - 1; k++) { const d = segDist(q, L0.pts[k], L0.pts[k + 1]); if (d <= Math.max(7, 5 * pxU()) && (!bl || d < bl.d)) bl = { kind: 'link', id: L0.own.id, k, d }; } if (bl) return bl; }
   for (const n of S.nodes) if (near(q, [n.x, n.y], 14)) return { kind: 'node', id: n.id };
   for (const X of XREFS) if (inBox(q, X)) return { kind: 'xref', n: X.n, tag: X.tag };
   for (const R of RUNGNUMS) if (inBox(q, R)) return { kind: 'rungnum', n: R.n };
@@ -1559,7 +1600,8 @@ function pick(q) {
   if (best) return best;
   for (const t of S.texts) if (inBox(q, textBox(t))) return { kind: 'text', id: t.id };
   // (a dashed link: any run of it)
-  for (const L of LINKS) for (let k = 0; k < L.pts.length - 1; k++) if (segDist(q, L.pts[k], L.pts[k + 1]) <= Math.max(7, 5 * pxU())) return { kind: 'link', id: L.own.id, k };
+  { let bl = null; for (const L of LINKS) for (let k = 0; k < L.pts.length - 1; k++) { const d = segDist(q, L.pts[k], L.pts[k + 1]); if (d <= Math.max(7, 5 * pxU()) && (!bl || d < bl.d)) bl = { kind: 'link', id: L.own.id, k, d }; }   // (the nearest run within reach)
+    if (bl) return bl; }
   let bw = null;
   for (const w of S.wires) { const P = wirePts(S, w); for (let k = 0; k < P.length - 1; k++) { const d = segDist(q, P[k], P[k + 1]); if (d <= 10 && (!bw || d < bw.d)) bw = { kind: 'wire', id: w.id, k, d }; } }
   if (bw) return bw;
@@ -1579,11 +1621,28 @@ function snapTarget(q, skip = null) {
   return b || { x: snap(q[0]), y: snap(q[1]), kind: 'grid', d: 0 };
 }
 
+/* ---------- the grid (Dallas, 12 Nov 2026): dots, lines or none; fine, standard or coarse; light to dark; and whether
+   notes, names and wire numbers snap to it (parts and wires always do, so their ends meet). Kept in this browser. ---------- */
+const GRIDKEY = 'oo-print-builder-demo:grid', GRID_STEP = { fine: 20, std: 40, coarse: 100 };
+let GRID = { style: 'dots', space: 'std', strength: 35, snap: true };
+try { const g = JSON.parse(localStorage.getItem(GRIDKEY) || 'null'); if (g) GRID = { ...GRID, ...g }; } catch (_) {}
+const gridCol = () => { const a = [0xee, 0xf1, 0xf5], b = [0x6e, 0x78, 0x84], k = Math.max(0, Math.min(100, +GRID.strength || 0)) / 100;
+  return '#' + a.map((v, i) => Math.round(v + (b[i] - v) * k).toString(16).padStart(2, '0')).join(''); };
+function gridUnder() {
+  const s = GRID_STEP[GRID.space] || 40, c = gridCol();
+  if (GRID.style === 'none') return '';
+  const pat = GRID.style === 'lines' ? `<pattern id="gp" x="0" y="0" width="${s}" height="${s}" patternUnits="userSpaceOnUse"><path d="M0 0H${s}M0 0V${s}" fill="none" stroke="${c}" stroke-width="1.6"/></pattern>`
+    : `<pattern id="gp" x="${-s / 2}" y="${-s / 2}" width="${s}" height="${s}" patternUnits="userSpaceOnUse"><circle cx="${s / 2}" cy="${s / 2}" r="${s < 40 ? 1.8 : 2.2}" fill="${c}"/></pattern>`;
+  return `<defs>${pat}</defs><rect x="0" y="0" width="${VB[0]}" height="${VB[1]}" fill="url(#gp)"/>`;
+}
+// where a note, a name or a wire number goes: on the grid (in steps of g), or, with Snap off, anywhere
+const gsnap = (v, g = G) => GRID.snap ? Math.round(v / g) * g : Math.round(v);
+
 /* ---------- the editor's marks ---------- */
 function drawEd() {
   if (!svg) return;
   const under = svg.querySelector('#ed-under'), over = svg.querySelector('#ed-over');
-  under.innerHTML = `<defs><pattern id="gp" x="-20" y="-20" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="2.2" fill="#d3d9e0"/></pattern></defs><rect x="0" y="0" width="${VB[0]}" height="${VB[1]}" fill="url(#gp)"/>`;
+  under.innerHTML = gridUnder();
   let g = '';
   // picked things
   for (const id of sel) {
@@ -1599,7 +1658,7 @@ function drawEd() {
   if (Lp) { g += `<polyline points="${Lp.pts.map(q => q.join(',')).join(' ')}" fill="none" stroke="#2f8cff" stroke-width="12" stroke-opacity=".3" stroke-linejoin="round"/>`;
     for (const P of [Lp.pts[0], Lp.pts[Lp.pts.length - 1]]) g += `<circle cx="${P[0]}" cy="${P[1]}" r="8" fill="#fff" stroke="#2f8cff" stroke-width="3.5"/>`; }
   // a rung just gone to (a cross-reference or rung number clicked): lit up for a moment
-  if (FLASH && FLASH.k === doc.cur) g += `<rect class="flash" x="10" y="${FLASH.y - 36}" width="${VB[0] - 20}" height="72" rx="10" fill="rgba(255,192,0,.28)" stroke="#ffc000" stroke-width="4"/>`;
+  if (FLASH && FLASH.k === doc.cur) g += `<rect class="flash" x="10" y="${FLASH.y - 36}" width="${VB[0] - 20}" height="72" rx="10" fill="rgba(74,155,255,.22)" stroke="#4A9BFF" stroke-width="4"/>`;
   if (selW) { const w = S.wires.find(w => w.id === selW); if (w) g += `<polyline points="${wirePts(S, w).map(q => q.join(',')).join(' ')}" fill="none" stroke="#2f8cff" stroke-width="16" stroke-opacity=".35" stroke-linecap="round" stroke-linejoin="round"/>`; }
   // loose ends: terminals with nothing on them, wires ending in the air (small rings)
   const wired = new Set(); for (const w of S.wires) for (const e of [w.a, w.b]) wired.add(pos(S, e).join(','));
@@ -1636,7 +1695,7 @@ function drawEd() {
     const p = ghostPart(cursor), sym = LIB[p.t].sym, sp = splicePreview(p);
     for (const w of sp.wires) g += `<polyline points="${wirePts(S, w).map(q => q.join(',')).join(' ')}" fill="none" stroke="#2f8cff" stroke-width="12" stroke-opacity=".3"/>`;
     g += `<g opacity=".55" fill="none" stroke="#1f6fd8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">`;
-    if (isArrowIn(p.t)) g += `<path d="M${p.x - 22} ${p.y - 13}L${p.x - 22} ${p.y + 13}L${p.x} ${p.y}Z" fill="#1f6fd8"/>`;
+    if (isArrowIn(p.t)) g += `<g transform="${xform(p)}" stroke="#1f6fd8">${CHEV_IN.replace(/fill="#fff"/, 'fill="none"')}</g>`;
     else g += `<g transform="${xform(p)}">${PSYM[sym].b}</g>`;
     g += '</g>';
   }
@@ -1684,14 +1743,15 @@ function onDown(e) {
   // Wire (as in Circuit Builder): press anywhere and drag; the way it is first dragged is the way it goes first
   if (tool === 'wire') { const t = snapTarget(q); wd = { a: [t.x, t.y], q0: q, h: null }; svg.setPointerCapture(e.pointerId); drawEd(); return; }
   if (tool === 'rung') { const r = rungAt(q); if (r && r.ok) { snapshot(); addWire(S, [[r.x1, r.y], [r.x2, r.y]]); refresh(); } else if (r) say('There is a rung there already.'); return; }
-  if (tool === 'note') { snapshot(); const t = { id: uid('t'), x: snap(q[0]), y: snap(q[1]), s: 'Note' }; S.texts.push(t); sel = new Set([t.id]); selW = null; setTool('select'); refresh(); focusProp('note-text'); return; }
+  if (tool === 'note') { snapshot(); const t = { id: uid('t'), x: gsnap(q[0]), y: gsnap(q[1]), s: 'Note' }; S.texts.push(t); sel = new Set([t.id]); selW = null; setTool('select'); refresh(); focusProp('note-text'); return; }
   // Select: the turning handle (drag it round the part a quarter turn at a time; a click turns it clockwise)
   if (ROTH && Math.hypot(q[0] - ROTH.x, q[1] - ROTH.y) <= 26) { const p = partOf(S, ROTH.id);
     if (p) { drag = { turn: p.id, c: [p.x, p.y], a0: Math.atan2(q[1] - p.y, q[0] - p.x), n: 0, orig: clone(S), pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); return; } }
-  // Select: from a terminal, a drag draws a wire
-  const ta = termAt(q);
-  if (ta) { drag = { from: [ta.x, ta.y], q0: q, add: e.shiftKey || e.ctrlKey || e.metaKey }; svg.setPointerCapture(e.pointerId); return; }
+  // Select: from a terminal, a drag draws a wire. (Not where a picked dashed link's end dot or run is: those come first,
+  // or, zoomed out, a press on an end dot would start a wire from the terminal beside it.)
   const h = pick(q), add = e.shiftKey || e.ctrlKey || e.metaKey;   // (Shift, Ctrl or Cmd: add to what is picked, as in Circuit Builder)
+  const ta = h && (h.kind === 'linkend' || (h.kind === 'link' && h.id === selL)) ? null : termAt(q);
+  if (ta) { drag = { from: [ta.x, ta.y], q0: q, add: e.shiftKey || e.ctrlKey || e.metaKey }; svg.setPointerCapture(e.pointerId); return; }
   if (h && (h.kind === 'xref' || h.kind === 'rungnum')) { goToRef(h); return; }
   // (a double-click on a dashed link puts it back as it was drawn: caught here, as the link is redrawn under the first click)
   const dbl = h && (h.kind === 'link' || h.kind === 'linkend') && lastLinkDown && lastLinkDown.id === h.id && performance.now() - lastLinkDown.t < 450 && Math.hypot(e.clientX - lastLinkDown.x, e.clientY - lastLinkDown.y) < 6;
@@ -1722,12 +1782,13 @@ function onMove(e) {
     const s = clone(drag.orig); doc.sheets[doc.cur] = S = s; if (n) rotateParts(S, new Set([drag.turn]), 90 * n); frame(); return; }
   if (drag.box) { drag.box[1] = q; drawEd(); return; }
   if (drag.from) { drawEd(); return; }
-  if (drag.plab) { const p = partOf(S, drag.plab.id); if (!p) return; const dx = Math.round((q[0] - drag.q0[0]) / 5) * 5, dy = Math.round((q[1] - drag.q0[1]) / 5) * 5;
+  if (drag.plab) { const p = partOf(S, drag.plab.id); if (!p) return; const dx = gsnap(q[0] - drag.q0[0], 5), dy = gsnap(q[1] - drag.q0[1], 5);
     if (!drag.moved && !dx && !dy) return; drag.moved = true; setLabOff(p, drag.plab.which, [drag.at[0] + dx, drag.at[1] + dy]); frame(); return; }
   if (drag.link) { if (dragLink(q)) frame(); return; }
-  if (drag.lab) { const w = S.wires.find(w => w.id === drag.lab); if (!w) return; const dx = Math.round((q[0] - drag.q0[0]) / 5) * 5, dy = Math.round((q[1] - drag.q0[1]) / 5) * 5;
+  if (drag.lab) { const w = S.wires.find(w => w.id === drag.lab); if (!w) return; const dx = gsnap(q[0] - drag.q0[0], 5), dy = gsnap(q[1] - drag.q0[1], 5);
     if (!drag.moved && !dx && !dy) return; drag.moved = true; w.lab = [drag.at[0] + dx, drag.at[1] + dy]; frame(); return; }
-  const dx = snap(q[0] - (drag.q0 ? drag.q0[0] : q[0])), dy = snap(q[1] - (drag.q0 ? drag.q0[1] : q[1]));
+  const free = !GRID.snap && drag.ids && [...drag.ids].every(id => S.texts.some(t => t.id === id)), sn = free ? Math.round : snap;   // (only notes picked, Snap off: they go anywhere)
+  const dx = sn(q[0] - (drag.q0 ? drag.q0[0] : q[0])), dy = sn(q[1] - (drag.q0 ? drag.q0[1] : q[1]));
   if (drag.rail) { const r = partOf(S, drag.rail), y = snap(q[1]); if (drag.k === 'y0') r.y0 = Math.min(y, r.y1 - 200); else r.y1 = Math.max(y, r.y0 + 200); drag.moved = true; frame(); return; }
   if (!drag.moved && !dx && !dy) return;
   drag.moved = true;
@@ -1827,11 +1888,19 @@ function dragLink(q) {
   if (d.end) {   // (an end: fastened to the side of its part nearest the pointer)
     const p = d.end === 'a' ? L.a : L.b, b = linkBox(p);
     const side = [['top', Math.abs(q[1] - b.y0)], ['bottom', Math.abs(q[1] - b.y1)], ['left', Math.abs(q[0] - b.x0)], ['right', Math.abs(q[0] - b.x1)]].sort((u, v) => u[1] - v[1])[0][0];
-    lk[d.end === 'a' ? 'ea' : 'eb'] = { s: side }; delete lk.dx; delete lk.dy;
+    lk[d.end === 'a' ? 'ea' : 'eb'] = { s: side }; delete lk.dx; delete lk.dy; delete lk.jx;
   } else {
     const P = d.pts || (d.pts = L.pts), a = P[d.k], c = P[d.k + 1], level = a[1] === c[1], n = P.length - 1;
-    if (n === 1 && !level) { const half = e => { const b = linkBox(e === ea ? L.a : L.b); return (b.x1 - b.x0) / 2 - 6; };   // (straight up and down: both ends slid across)
-      lk.ea = { s: ea.s, o: Math.max(-half(ea), Math.min(half(ea), (ea.o || 0) + dx)) }; lk.eb = { s: eb.s, o: Math.max(-half(eb), Math.min(half(eb), (eb.o || 0) + dx)) }; }
+    if (n === 1 && !level) { const half = e => { const b = linkBox(e === ea ? L.a : L.b); return (b.x1 - b.x0) / 2 - 6; };   // (straight up and down: both ends slid across;
+      const oa = (ea.o || 0) + dx, ob = (eb.o || 0) + dx;                                                            //  dragged past the parts, it steps out beside them)
+      if (Math.abs(oa) > half(ea) + 30 || Math.abs(ob) > half(eb) + 30) lk.jx = dx;
+      else { lk.ea = { s: ea.s, o: Math.max(-half(ea), Math.min(half(ea), oa)) }; lk.eb = { s: eb.s, o: Math.max(-half(eb), Math.min(half(eb), ob)) }; } }
+    else if (d.at.jx != null && n === 5) {   // (stepped out: the upright goes across; a run at an end slides that end; the runs out of the ends stay)
+      if (d.k >= 1 && d.k <= 3) lk.jx = d.at.jx + dx;   // (the upright, or a run across to it: the upright goes across)
+      else if (d.k === 0 || d.k === 4) { const which = d.k === 0 ? 'ea' : 'eb', e = d.k === 0 ? ea : eb, b = linkBox(d.k === 0 ? L.a : L.b), half = (b.x1 - b.x0) / 2 - 6; lk[which] = { s: e.s, o: Math.max(-half, Math.min(half, (e.o || 0) + dx)) }; } }
+    else if (level && (d.k === 0 || d.k === n - 1) && !vertEnd((d.k === 0 ? ea : eb).s)) {   // (a run out of a side end: that end slid up or down its side)
+      const which = d.k === 0 ? 'ea' : 'eb', e = d.k === 0 ? ea : eb, p = d.k === 0 ? L.a : L.b, b = linkBox(p);
+      lk[which] = { s: e.s, o: Math.max(b.y0 + 4 - (p.y - 30), Math.min(b.y1 - 4 - (p.y - 30), (e.o || 0) + dy)) }; }
     else if (level) lk.dy = (d.at.dy || 0) + dy;                               // (a level run: up or down)
     else if (d.k > 0 && d.k < n - 1) lk.dx = (d.at.dx || 0) + dx;              // (an upright between two sides: across)
     else {                                                                    // (an upright on an end: that end slid along its part)
@@ -1968,16 +2037,58 @@ function startPlacing(t, rot = 0, fx = false) { placing = { t, rot }; if (fx) pl
 let lastPlaced = null;
 
 /* ---------- the palette and the ribbon's menus ---------- */
-const thumb = t => { if (isArrowIn(t)) return `<svg viewBox="-80 -30 100 60"><path d="M-22 -13L-22 13L0 0Z" fill="#000"/><line x1="0" y1="0" x2="18" y2="0" stroke="#000" stroke-width="4"/><text x="-30" y="9" font-size="26" font-weight="700" text-anchor="end" font-family="Arial">${t === 'src_l2' ? 'L2' : 'L1'}</text></svg>`;
-  const s = PSYM[LIB[t].sym], e = extentOf(t), pad = 8; return `<svg viewBox="${e.x0 - pad} ${s.y0 - pad} ${e.x1 - e.x0 + 2 * pad} ${s.y1 - s.y0 + 2 * pad}"><g fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${s.b}</g></svg>`; };
+const thumb = t => { if (isArrowIn(t)) return `<svg viewBox="-96 -30 120 60"><g stroke="#000">${CHEV_IN}</g><line x1="0" y1="0" x2="18" y2="0" stroke="#000" stroke-width="4"/><text x="-52" y="9" font-size="26" font-weight="700" text-anchor="end" font-family="Arial">${t === 'src_l2' ? 'L2' : 'L1'}</text></svg>`;
+  const s = PSYM[LIB[t].sym], e = extentOf(t), pad = 8; return `<svg viewBox="${e.x0 - pad} ${s.y0 - pad} ${e.x1 - e.x0 + 2 * pad} ${s.y1 - s.y0 + 2 * pad}"><g fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${s.b}</g>${thumbMark(t, s)}</svg>`; };
+// (in the menus and the parts list only, not on the sheet: CR in a relay coil, TR in a timer, M in a motor, in its circle)
+function thumbMark(t, s) {
+  const m = t === 'coil' ? 'CR' : LIB[t].preset && LIB[t].preset.pre === 'TR' ? 'TR' : t === 'motor' ? 'M' : null; if (!m) return '';
+  const c = [...s.b.matchAll(/<circle\b[^>]*>/g)].map(x => { const a = n => +((x[0].match(new RegExp(`\\b${n}="([-\\d.]+)"`)) || [])[1] || 0); return { x: a('cx'), y: a('cy'), r: a('r') }; }).sort((u, v) => v.r - u.r)[0];
+  if (!c || !c.r) return '';
+  return `<text x="${c.x}" y="${c.y + c.r * .36}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="${c.r * (m.length > 1 ? .95 : 1.1)}" fill="#000">${m}</text>`;
+}
 const short = n => n.replace(' Maintained Pushbutton', ' Maint. PB').replace(', Low Temp', ' (Low)').replace(' (Control)', '').replace(' (Out)', '').replace(' (In)', '').replace('Pushbutton', 'PB').replace('Emergency Stop', 'E-Stop').replace('Temperature', 'Temp.').replace('Proximity', 'Prox.').replace('Selector Switch', 'Selector').replace(', Held Closed', ' (HC)').replace(', Held Open', ' (HO)').replace('Toggle Switch (SPST)', 'Toggle').replace('Overload Heater (1 Line)', 'OL Heater').replace('Phase (L1, L2, L3)', 'Phase').replace('3-Phase', '3Ø');
+// each kind's icon on its ribbon button and parts-list header: Circuit Builder's, in this program's colour for the kind
+const catIcon = c => { const k = CAT_COL[c], box = `<rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="${k}" stroke-width="1.6"/>`;
+  return '<svg class="cat-ico" viewBox="0 0 30 26" aria-hidden="true">' + ({
+    Buttons: box + `<rect x="8.5" y="6.5" width="13" height="13" rx="2.4" fill="${k}"/>`,
+    Switches: box + `<circle cx="15" cy="15" r="6.5" fill="#444"/><rect x="12.6" y="7.5" width="4.8" height="15" rx="2.4" fill="${k}" transform="rotate(45 15 15)"/>`,
+    Outputs: `<circle cx="15" cy="13" r="11.5" fill="#222" stroke="${k}" stroke-width="1.6"/><circle cx="15" cy="13" r="7.5" fill="#555"/>`,
+    Contacts: box + `<rect x="8" y="7" width="14" height="2.6" rx="1.3" fill="#a6a6a6"/><circle cx="10" cy="14" r="2.4" fill="#555"/><circle cx="20" cy="14" r="2.4" fill="#555"/>`,
+    Protection: box + '<g fill="#7a7a7a"><rect x="6" y="12" width="2.4" height="2"/><rect x="21.6" y="12" width="2.4" height="2"/><rect x="8.4" y="10.3" width="13.2" height="5.4" rx="1.4"/></g><g fill="#d0d0d0" stroke="#111" stroke-width=".4"><rect x="8.4" y="9.6" width="2.5" height="6.8"/><rect x="19.1" y="9.6" width="2.5" height="6.8"/></g>',
+    Power: box + `<path d="M16.8 5.2l-6.3 8.9h4.6l-1.7 6.7 6.4-9h-4.6z" fill="${k}"/>`,
+    Continuation: box + `<path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="${k}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+  }[c] || box) + '</svg>'; };
+// which of the parts list's headers are open (a kind, or a kind/group such as Switches/Limit Switches)
+const PALOPENKEY = 'oo-print-builder-demo:palopen';
+let PALOPEN = { Buttons: true };
+try { const o = JSON.parse(localStorage.getItem(PALOPENKEY) || 'null'); if (o) PALOPEN = o; } catch (_) {}
+function palOpen(k, open) {
+  if (open) PALOPEN[k] = true; else delete PALOPEN[k];
+  try { localStorage.setItem(PALOPENKEY, JSON.stringify(PALOPEN)); } catch (_) {}
+  const box = document.querySelector(`#palette [data-cat="${k}"], #palette [data-sub="${k}"]`); if (!box) return;
+  box.querySelector('.phd, .shd').setAttribute('aria-expanded', String(open)); box.querySelector('.pbody, .pg').hidden = !open;
+}
+// a part's tile brought into sight: its kind and its group opened
+function palShow(t) { const c = LIB[t].cat, g = subOf(t); palOpen(c, true); if (g) palOpen(c + '/' + g, true); }
 function buildPalette() {
   let h = '';
-  for (const c of CATS) { h += `<div class="ph">${c}</div><div class="pg">`;
-    for (const [t, d] of Object.entries(LIB)) if (d.cat === c && !d.hide) h += `<div class="pt" data-t="${t}" title="${esc(d.name)}">${thumb(t)}<span>${esc(short(d.name))}</span></div>`;
-    h += '</div>'; }
+  // each kind under a header in its colour that opens and closes; kinds with several parts (Limit Switches, Timers...)
+  // in a group of their own inside it that opens and closes too, as in the ribbon's menus (Dallas, 12 Nov 2026). What is
+  // open is kept in this browser.
+  const tile = t => `<div class="pt" data-t="${t}" title="${esc(LIB[t].name)}">${thumb(t)}<span>${esc(short(LIB[t].name))}</span></div>`;
+  for (const c of CATS) {
+    const ts = Object.keys(LIB).filter(t => LIB[t].cat === c && !LIB[t].hide), loose = ts.filter(t => !subOf(t)), subs = [...new Set(ts.filter(subOf).map(subOf))], on = !!PALOPEN[c];
+    h += `<div class="pcat" data-cat="${c}" style="--c:${CAT_COL[c]}"><button class="phd" aria-expanded="${on}"><span class="car">▸</span>${catIcon(c)}<span class="pn">${c}</span><span class="pc">${ts.length}</span></button><div class="pbody"${on ? '' : ' hidden'}>`;
+    if (loose.length) h += `<div class="pg">${loose.map(tile).join('')}</div>`;
+    for (const g of subs) { const gs = ts.filter(t => subOf(t) === g), so = !!PALOPEN[c + '/' + g];
+      h += `<div class="psub" data-sub="${c}/${g}"><button class="shd" aria-expanded="${so}"><span class="car">▸</span><span class="pn">${esc(g)}</span><span class="pc">${gs.length}</span></button><div class="pg"${so ? '' : ' hidden'}>${gs.map(tile).join('')}</div></div>`; }
+    h += '</div></div>'; }
   $('palette').innerHTML = '<div class="pal-top"><span>Parts</span><button id="pal-hide" title="Hide the parts list (the » on the left brings it back)">« Hide</button></div>' + h;
   $('pal-hide').addEventListener('click', () => setPalette(null, true));
+  for (const b of document.querySelectorAll('#palette .phd, #palette .shd')) b.addEventListener('click', () => {
+    const box = b.parentElement, k = box.dataset.cat || box.dataset.sub, open = b.getAttribute('aria-expanded') !== 'true';
+    palOpen(k, open);
+  });
   for (const el of document.querySelectorAll('.pt')) el.addEventListener('pointerdown', e => {
     e.preventDefault(); const t = el.dataset.t, x0 = e.clientX, y0 = e.clientY; startPlacing(t);
     // dragged out onto the sheet: put down where it is let go; just clicked: put in view, in a clear spot (as in Circuit Builder)
@@ -1988,7 +2099,7 @@ function buildPalette() {
     window.addEventListener('pointerup', up);
   });
   let m = '';
-  for (const c of CATS) { m += `<div class="menuwrap"><button class="rb" data-menu="${c}"><span class="sw" style="border-color:${CAT_COL[c]}"></span><span>${c} ▾</span></button><div class="dmenu" hidden>`;
+  for (const c of CATS) { m += `<div class="menuwrap"><button class="rb" data-menu="${c}">${catIcon(c)}<span>${c} ▾</span></button><div class="dmenu" hidden>`;
     const item = (t, d) => `<button data-t="${t}">${thumb(t).replace('<svg', '<svg style="width:46px;height:26px;background:#f4f5f6;border-radius:4px;padding:2px"')}${esc(d.name)}</button>`;
     const subs = new Map(), done = new Set();
     for (const [t, d] of Object.entries(LIB)) if (d.cat === c && !d.hide && subOf(t)) { const g = subOf(t); if (!subs.has(g)) subs.set(g, []); subs.get(g).push(t); }
@@ -2077,6 +2188,20 @@ document.addEventListener('pointerdown', e => { if (!menuOpen() || e.target.clos
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && menuOpen()) { closeMenus(); e.stopPropagation(); } }, true);
 window.addEventListener('blur', closeMenus);
 
+/* ---------- the Grid menu, in the bar at the bottom (it opens upward) ---------- */
+function showGrid() {
+  for (const sg of document.querySelectorAll('#grid-menu .seg')) for (const b of sg.children) b.setAttribute('aria-pressed', String(GRID[sg.dataset.g] === b.dataset.v));
+  $('grid-str').value = GRID.strength; $('grid-snap').checked = !!GRID.snap;
+  $('grid-btn').textContent = `Grid: ${GRID.style === 'none' ? 'None' : GRID.style === 'lines' ? 'Lines' : 'Dots'} ▾`;
+}
+function setGrid(k, v) { GRID[k] = v; try { localStorage.setItem(GRIDKEY, JSON.stringify(GRID)); } catch (_) {} showGrid(); drawEd(); }
+$('grid-btn').addEventListener('click', e => { e.stopPropagation(); const d = $('grid-menu'), open = d.hidden; closeMenus(); d.hidden = !open;
+  if (open) { const r = $('grid-btn').getBoundingClientRect(), z = uiZoom(); d.style.position = 'fixed'; d.style.left = r.left / z + 'px'; d.style.top = 'auto'; d.style.bottom = (innerHeight - r.top + 6) / z + 'px'; } });
+for (const sg of document.querySelectorAll('#grid-menu .seg')) sg.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setGrid(sg.dataset.g, b.dataset.v); });
+$('grid-str').addEventListener('input', e => setGrid('strength', +e.target.value));
+$('grid-snap').addEventListener('change', e => setGrid('snap', e.target.checked));
+showGrid();
+
 /* ---------- properties ---------- */
 function focusProp(id) { setTimeout(() => { const el = $(id); if (el) { el.focus(); el.select && el.select(); } }, 0); }
 let editing = false;   // (one undo step for a run of typing in one box)
@@ -2122,7 +2247,7 @@ function renderProps0() {
       ${/^(con|tc)_n[oc]$/.test(p.t) && (timerOf(p) || p.t.startsWith('tc')) ? `<div class="f">Contact Type<div class="seg"><button data-ctype="tc" aria-pressed="${p.t.startsWith('tc')}">Timed</button><button data-ctype="con" aria-pressed="${p.t.startsWith('con')}">Instant</button></div></div>` : ''}
       ${p.t === 'sel' ? `<div class="f">Positions<input class="in" id="p-pos" value="${esc(selNames(p).join('/'))}" title="2 to 4 positions, with slashes: HAND/OFF/AUTO"></div><div class="f">Closed In<div class="seg">${selNames(p).map((n, i) => `<button data-cl="${i}" aria-pressed="${(p.closedIn || []).includes(i)}">${esc(n)}</button>`).join('')}</div></div>` : ''}
       ${p.t === 'pl' ? `<div class="f">Built Into<select id="p-inpb"><option value="">None (a light of its own)</option>${[...new Set(allParts().filter(q => isPB(q.p) && q.p.tag).map(q => q.p.tag).concat(p.inPB ? [p.inPB] : []))].map(t => `<option value="${esc(t)}"${t === p.inPB ? ' selected' : ''}>${esc(t)} (lighted pushbutton)</option>`).join('')}</select></div>` : ''}
-      ${isPB(p) || p.t === 'sel' ? `<p class="help">${blocksOf(p).length > 1 ? (mainBlock(p) === p ? `The main one of ${blocksOf(p).length} blocks of ${esc(p.tag)}` : `An extra contact block of ${esc(p.tag)}`) + ': they work together.' : `To give it another contact block on another rung, put down another ${p.t === 'sel' ? 'selector' : 'pushbutton'} and give it the same number (${esc(p.tag)}).`}</p>` : ''}
+      ${linkable(p) ? `<p class="help">${blocksOf(p).length > 1 ? (mainBlock(p) === p ? `The main one of ${blocksOf(p).length} contacts of ${esc(p.tag)}` : `Another contact of ${esc(p.tag)}`) + ': they work together, joined by a dashed link (drag it to shape it).' : `To give it another contact on another rung, put down another ${FAMILY_NAME[family(p)] || 'one'} and give it the same name (${esc(p.tag)}).`}</p>` : ''}
       ${k === 'coil' ? `<div class="f">Kind<select id="p-pre">${COIL_PRE.map(([v, n]) => `<option value="${v}"${(p.pre || 'CR') === v ? ' selected' : ''}>${n} (${v})</option>`).join('')}</select></div>` : ''}
       ${k === 'cont' ? `<div class="f">Direction<div class="seg"><button data-flip="cnt_out" aria-pressed="${p.t === 'cnt_out'}">Continues To</button><button data-flip="cnt_in" aria-pressed="${p.t === 'cnt_in'}">Continued From</button></div></div><p class="help">Give the arrow where the wire leaves off and the arrow where it picks up the same letter: they are one wire, numbered alike, and each says where the other is.</p>` : ''}
       ${d.flip && k !== 'cont' ? `<div class="f">Contact<div class="seg"><button data-flip="${/_no$|_hc$/.test(p.t) ? p.t : d.flip}" aria-pressed="${/_no$|_hc$/.test(p.t)}">${/_h[co]$/.test(p.t) ? 'NO (HC)' : 'NO'}</button><button data-flip="${/_nc$|_ho$/.test(p.t) ? p.t : d.flip}" aria-pressed="${/_nc$|_ho$/.test(p.t)}">${/_h[co]$/.test(p.t) ? 'NC (HO)' : 'NC'}</button></div></div>` : ''}
@@ -2130,7 +2255,7 @@ function renderProps0() {
       ${rn ? `<div class="f">Rung<span class="ro">${rn} (automatic)</span></div>` : ''}
       ${termNums.length ? `<div class="f">Wires<span class="ro">${termNums.join(' → ')} (automatic)</span></div>` : ''}
       ${xr && xr.length ? `<div class="f">Contacts on<span class="ro">${xr.map(o => o.n + (o.nc ? ' (NC)' : '')).join(', ')}</span></div>` : ''}
-      <div class="acts">${canTurn(p) ? `<button class="btn" id="p-rot">Rotate (${kn('rotate')})</button>` : ''}${canFlip(p) ? `<button class="btn" id="p-flip" aria-pressed="${!!p.fx}" title="Flip it left to right, about its middle (${kn('flip')}); again to put it back">Flip ⇆ (F)</button>` : ''}${p.lt || p.ld || p.lf ? '<button class="btn" id="p-lab">Put Labels Back</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
+      <div class="acts">${canTurn(p) ? `<button class="btn" id="p-rot">Rotate (${kn('rotate')})</button>` : ''}${canFlip(p) ? `<button class="btn" id="p-flip" aria-pressed="${!!p.fx}" title="Flip it left to right, about its middle (${kn('flip')}); again to put it back">Flip ⇆ (${kn('flip')})</button>` : ''}${p.lt || p.ld || p.lf ? '<button class="btn" id="p-lab">Put Labels Back</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
     const of = $('p-of'); if (of) of.addEventListener('change', () => { let v = of.value; if (v === '__other') { v = (prompt(k === 'olc' ? 'The overload this contact belongs to (e.g. OL2):' : 'The coil that works this contact (e.g. CR3):', p.tag || '') || '').trim().toUpperCase(); if (!v) { renderProps(); return; } }
       snapshot(); p.tag = v; refresh(); });
     const tg = $('p-tag'); let was = p.tag;
@@ -2175,7 +2300,7 @@ function renderProps0() {
     renderMulti(P, multiParts(ids));
   } else if (selL && !ids.length && !w) {
     const o = partOf(S, selL), L = o && LINKS.find(x => x.own.id === selL);
-    P.innerHTML = `<h4>Dashed Link${L ? ': ' + esc(L.kind === 'light' ? (L.a.tag || 'PB') + ' to ' + (L.b.tag || 'PL') : (L.a.tag || '') + ' blocks') : ''}</h4>
+    P.innerHTML = `<h4>Dashed Link${L ? ': ' + esc(L.kind === 'light' ? (L.a.tag || 'PB') + ' to ' + (L.b.tag || 'PL') : (L.a.tag || '') + (isPB(L.a) || L.a.t === 'sel' ? ' blocks' : ' contacts')) : ''}</h4>
       <p class="help">${L && L.kind === 'light' ? 'Joins a lighted pushbutton to its light.' : 'Joins the contact blocks of one device.'} Drag a run to move it; drag an end’s dot round the symbol to fasten it to another side; double-click it to put it back.</p>
       <div class="acts">${o && o.lk ? '<button class="btn" id="lk-back">Put Link Back</button>' : ''}</div>`;
     const lb = $('lk-back'); if (lb) lb.addEventListener('click', () => { snapshot(); delete o.lk; refresh(); });

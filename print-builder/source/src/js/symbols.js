@@ -115,10 +115,12 @@ const SUP_T = [[0, 0]];
 // a device's own terminals (its symbol's, or the line-in arrow's), before it is turned
 // the line-in arrows: a phase (L1, L2, L3 of the power), and the control circuit's source (L1) and return (L2)
 const isArrowIn = t => t === 'sup' || t === 'src_l1' || t === 'src_l2';
+// how a line in is drawn, pointing right with its wire end at 0,0: Circuit Builder's chevron box (the sheet's stroke colour)
+const CHEV_IN = '<rect x="-44" y="-20" width="40" height="40" rx="7" fill="#fff" stroke-width="3"/><path d="M-33 -11l9 11-9 11M-22 -11l9 11-9 11" fill="none" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><line x1="-4" y1="0" x2="0" y2="0" stroke-width="3"/>';
 const termsOf = t => isArrowIn(t) ? SUP_T : PSYM[LIB[t].sym].t;
 // how far its drawing reaches either side of its middle, and above and below (for picking it, and its labels)
 function extentOf(t) {
-  if (isArrowIn(t)) return { x0: -70, x1: 4, y0: -20, y1: 20 };
+  if (isArrowIn(t)) return { x0: -96, x1: 4, y0: -24, y1: 24 };
   const s = PSYM[LIB[t].sym], xs = s.t.map(p => p[0]);
   let x0 = Math.min(...xs), x1 = Math.max(...xs);
   if (t === 'motor') { x0 = -140; x1 = 66; }

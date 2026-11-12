@@ -31,6 +31,8 @@ function pick(q) {
   // (a picked dashed link: its end dots, to drag round the part)
   const L0 = selL && LINKS.find(L => L.own.id === selL);
   if (L0) for (const [end, P] of [['a', L0.pts[0]], ['b', L0.pts[L0.pts.length - 1]]]) if (near(q, P, Math.max(10, 7 * pxU()))) return { kind: 'linkend', id: L0.own.id, end };
+  // (and its runs, even over a part's box, where a side end slid down its part puts one)
+  if (L0) { let bl = null; for (let k = 0; k < L0.pts.length - 1; k++) { const d = segDist(q, L0.pts[k], L0.pts[k + 1]); if (d <= Math.max(7, 5 * pxU()) && (!bl || d < bl.d)) bl = { kind: 'link', id: L0.own.id, k, d }; } if (bl) return bl; }
   for (const n of S.nodes) if (near(q, [n.x, n.y], 14)) return { kind: 'node', id: n.id };
   for (const X of XREFS) if (inBox(q, X)) return { kind: 'xref', n: X.n, tag: X.tag };
   for (const R of RUNGNUMS) if (inBox(q, R)) return { kind: 'rungnum', n: R.n };
@@ -42,7 +44,8 @@ function pick(q) {
   if (best) return best;
   for (const t of S.texts) if (inBox(q, textBox(t))) return { kind: 'text', id: t.id };
   // (a dashed link: any run of it)
-  for (const L of LINKS) for (let k = 0; k < L.pts.length - 1; k++) if (segDist(q, L.pts[k], L.pts[k + 1]) <= Math.max(7, 5 * pxU())) return { kind: 'link', id: L.own.id, k };
+  { let bl = null; for (const L of LINKS) for (let k = 0; k < L.pts.length - 1; k++) { const d = segDist(q, L.pts[k], L.pts[k + 1]); if (d <= Math.max(7, 5 * pxU()) && (!bl || d < bl.d)) bl = { kind: 'link', id: L.own.id, k, d }; }   // (the nearest run within reach)
+    if (bl) return bl; }
   let bw = null;
   for (const w of S.wires) { const P = wirePts(S, w); for (let k = 0; k < P.length - 1; k++) { const d = segDist(q, P[k], P[k + 1]); if (d <= 10 && (!bw || d < bw.d)) bw = { kind: 'wire', id: w.id, k, d }; } }
   if (bw) return bw;
@@ -62,11 +65,28 @@ function snapTarget(q, skip = null) {
   return b || { x: snap(q[0]), y: snap(q[1]), kind: 'grid', d: 0 };
 }
 
+/* ---------- the grid (Dallas, 12 Nov 2026): dots, lines or none; fine, standard or coarse; light to dark; and whether
+   notes, names and wire numbers snap to it (parts and wires always do, so their ends meet). Kept in this browser. ---------- */
+const GRIDKEY = 'oo-print-builder:grid', GRID_STEP = { fine: 20, std: 40, coarse: 100 };
+let GRID = { style: 'dots', space: 'std', strength: 35, snap: true };
+try { const g = JSON.parse(localStorage.getItem(GRIDKEY) || 'null'); if (g) GRID = { ...GRID, ...g }; } catch (_) {}
+const gridCol = () => { const a = [0xee, 0xf1, 0xf5], b = [0x6e, 0x78, 0x84], k = Math.max(0, Math.min(100, +GRID.strength || 0)) / 100;
+  return '#' + a.map((v, i) => Math.round(v + (b[i] - v) * k).toString(16).padStart(2, '0')).join(''); };
+function gridUnder() {
+  const s = GRID_STEP[GRID.space] || 40, c = gridCol();
+  if (GRID.style === 'none') return '';
+  const pat = GRID.style === 'lines' ? `<pattern id="gp" x="0" y="0" width="${s}" height="${s}" patternUnits="userSpaceOnUse"><path d="M0 0H${s}M0 0V${s}" fill="none" stroke="${c}" stroke-width="1.6"/></pattern>`
+    : `<pattern id="gp" x="${-s / 2}" y="${-s / 2}" width="${s}" height="${s}" patternUnits="userSpaceOnUse"><circle cx="${s / 2}" cy="${s / 2}" r="${s < 40 ? 1.8 : 2.2}" fill="${c}"/></pattern>`;
+  return `<defs>${pat}</defs><rect x="0" y="0" width="${VB[0]}" height="${VB[1]}" fill="url(#gp)"/>`;
+}
+// where a note, a name or a wire number goes: on the grid (in steps of g), or, with Snap off, anywhere
+const gsnap = (v, g = G) => GRID.snap ? Math.round(v / g) * g : Math.round(v);
+
 /* ---------- the editor's marks ---------- */
 function drawEd() {
   if (!svg) return;
   const under = svg.querySelector('#ed-under'), over = svg.querySelector('#ed-over');
-  under.innerHTML = `<defs><pattern id="gp" x="-20" y="-20" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="2.2" fill="#d3d9e0"/></pattern></defs><rect x="0" y="0" width="${VB[0]}" height="${VB[1]}" fill="url(#gp)"/>`;
+  under.innerHTML = gridUnder();
   let g = '';
   // picked things
   for (const id of sel) {
@@ -82,7 +102,7 @@ function drawEd() {
   if (Lp) { g += `<polyline points="${Lp.pts.map(q => q.join(',')).join(' ')}" fill="none" stroke="#2f8cff" stroke-width="12" stroke-opacity=".3" stroke-linejoin="round"/>`;
     for (const P of [Lp.pts[0], Lp.pts[Lp.pts.length - 1]]) g += `<circle cx="${P[0]}" cy="${P[1]}" r="8" fill="#fff" stroke="#2f8cff" stroke-width="3.5"/>`; }
   // a rung just gone to (a cross-reference or rung number clicked): lit up for a moment
-  if (FLASH && FLASH.k === doc.cur) g += `<rect class="flash" x="10" y="${FLASH.y - 36}" width="${VB[0] - 20}" height="72" rx="10" fill="rgba(255,192,0,.28)" stroke="#ffc000" stroke-width="4"/>`;
+  if (FLASH && FLASH.k === doc.cur) g += `<rect class="flash" x="10" y="${FLASH.y - 36}" width="${VB[0] - 20}" height="72" rx="10" fill="rgba(74,155,255,.22)" stroke="#4A9BFF" stroke-width="4"/>`;
   if (selW) { const w = S.wires.find(w => w.id === selW); if (w) g += `<polyline points="${wirePts(S, w).map(q => q.join(',')).join(' ')}" fill="none" stroke="#2f8cff" stroke-width="16" stroke-opacity=".35" stroke-linecap="round" stroke-linejoin="round"/>`; }
   // loose ends: terminals with nothing on them, wires ending in the air (small rings)
   const wired = new Set(); for (const w of S.wires) for (const e of [w.a, w.b]) wired.add(pos(S, e).join(','));
@@ -119,7 +139,7 @@ function drawEd() {
     const p = ghostPart(cursor), sym = LIB[p.t].sym, sp = splicePreview(p);
     for (const w of sp.wires) g += `<polyline points="${wirePts(S, w).map(q => q.join(',')).join(' ')}" fill="none" stroke="#2f8cff" stroke-width="12" stroke-opacity=".3"/>`;
     g += `<g opacity=".55" fill="none" stroke="#1f6fd8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">`;
-    if (isArrowIn(p.t)) g += `<path d="M${p.x - 22} ${p.y - 13}L${p.x - 22} ${p.y + 13}L${p.x} ${p.y}Z" fill="#1f6fd8"/>`;
+    if (isArrowIn(p.t)) g += `<g transform="${xform(p)}" stroke="#1f6fd8">${CHEV_IN.replace(/fill="#fff"/, 'fill="none"')}</g>`;
     else g += `<g transform="${xform(p)}">${PSYM[sym].b}</g>`;
     g += '</g>';
   }
@@ -167,14 +187,15 @@ function onDown(e) {
   // Wire (as in Circuit Builder): press anywhere and drag; the way it is first dragged is the way it goes first
   if (tool === 'wire') { const t = snapTarget(q); wd = { a: [t.x, t.y], q0: q, h: null }; svg.setPointerCapture(e.pointerId); drawEd(); return; }
   if (tool === 'rung') { const r = rungAt(q); if (r && r.ok) { snapshot(); addWire(S, [[r.x1, r.y], [r.x2, r.y]]); refresh(); } else if (r) say('There is a rung there already.'); return; }
-  if (tool === 'note') { snapshot(); const t = { id: uid('t'), x: snap(q[0]), y: snap(q[1]), s: 'Note' }; S.texts.push(t); sel = new Set([t.id]); selW = null; setTool('select'); refresh(); focusProp('note-text'); return; }
+  if (tool === 'note') { snapshot(); const t = { id: uid('t'), x: gsnap(q[0]), y: gsnap(q[1]), s: 'Note' }; S.texts.push(t); sel = new Set([t.id]); selW = null; setTool('select'); refresh(); focusProp('note-text'); return; }
   // Select: the turning handle (drag it round the part a quarter turn at a time; a click turns it clockwise)
   if (ROTH && Math.hypot(q[0] - ROTH.x, q[1] - ROTH.y) <= 26) { const p = partOf(S, ROTH.id);
     if (p) { drag = { turn: p.id, c: [p.x, p.y], a0: Math.atan2(q[1] - p.y, q[0] - p.x), n: 0, orig: clone(S), pre: JSON.stringify(doc), moved: false }; svg.setPointerCapture(e.pointerId); return; } }
-  // Select: from a terminal, a drag draws a wire
-  const ta = termAt(q);
-  if (ta) { drag = { from: [ta.x, ta.y], q0: q, add: e.shiftKey || e.ctrlKey || e.metaKey }; svg.setPointerCapture(e.pointerId); return; }
+  // Select: from a terminal, a drag draws a wire. (Not where a picked dashed link's end dot or run is: those come first,
+  // or, zoomed out, a press on an end dot would start a wire from the terminal beside it.)
   const h = pick(q), add = e.shiftKey || e.ctrlKey || e.metaKey;   // (Shift, Ctrl or Cmd: add to what is picked, as in Circuit Builder)
+  const ta = h && (h.kind === 'linkend' || (h.kind === 'link' && h.id === selL)) ? null : termAt(q);
+  if (ta) { drag = { from: [ta.x, ta.y], q0: q, add: e.shiftKey || e.ctrlKey || e.metaKey }; svg.setPointerCapture(e.pointerId); return; }
   if (h && (h.kind === 'xref' || h.kind === 'rungnum')) { goToRef(h); return; }
   // (a double-click on a dashed link puts it back as it was drawn: caught here, as the link is redrawn under the first click)
   const dbl = h && (h.kind === 'link' || h.kind === 'linkend') && lastLinkDown && lastLinkDown.id === h.id && performance.now() - lastLinkDown.t < 450 && Math.hypot(e.clientX - lastLinkDown.x, e.clientY - lastLinkDown.y) < 6;
@@ -205,12 +226,13 @@ function onMove(e) {
     const s = clone(drag.orig); doc.sheets[doc.cur] = S = s; if (n) rotateParts(S, new Set([drag.turn]), 90 * n); frame(); return; }
   if (drag.box) { drag.box[1] = q; drawEd(); return; }
   if (drag.from) { drawEd(); return; }
-  if (drag.plab) { const p = partOf(S, drag.plab.id); if (!p) return; const dx = Math.round((q[0] - drag.q0[0]) / 5) * 5, dy = Math.round((q[1] - drag.q0[1]) / 5) * 5;
+  if (drag.plab) { const p = partOf(S, drag.plab.id); if (!p) return; const dx = gsnap(q[0] - drag.q0[0], 5), dy = gsnap(q[1] - drag.q0[1], 5);
     if (!drag.moved && !dx && !dy) return; drag.moved = true; setLabOff(p, drag.plab.which, [drag.at[0] + dx, drag.at[1] + dy]); frame(); return; }
   if (drag.link) { if (dragLink(q)) frame(); return; }
-  if (drag.lab) { const w = S.wires.find(w => w.id === drag.lab); if (!w) return; const dx = Math.round((q[0] - drag.q0[0]) / 5) * 5, dy = Math.round((q[1] - drag.q0[1]) / 5) * 5;
+  if (drag.lab) { const w = S.wires.find(w => w.id === drag.lab); if (!w) return; const dx = gsnap(q[0] - drag.q0[0], 5), dy = gsnap(q[1] - drag.q0[1], 5);
     if (!drag.moved && !dx && !dy) return; drag.moved = true; w.lab = [drag.at[0] + dx, drag.at[1] + dy]; frame(); return; }
-  const dx = snap(q[0] - (drag.q0 ? drag.q0[0] : q[0])), dy = snap(q[1] - (drag.q0 ? drag.q0[1] : q[1]));
+  const free = !GRID.snap && drag.ids && [...drag.ids].every(id => S.texts.some(t => t.id === id)), sn = free ? Math.round : snap;   // (only notes picked, Snap off: they go anywhere)
+  const dx = sn(q[0] - (drag.q0 ? drag.q0[0] : q[0])), dy = sn(q[1] - (drag.q0 ? drag.q0[1] : q[1]));
   if (drag.rail) { const r = partOf(S, drag.rail), y = snap(q[1]); if (drag.k === 'y0') r.y0 = Math.min(y, r.y1 - 200); else r.y1 = Math.max(y, r.y0 + 200); drag.moved = true; frame(); return; }
   if (!drag.moved && !dx && !dy) return;
   drag.moved = true;
@@ -310,11 +332,19 @@ function dragLink(q) {
   if (d.end) {   // (an end: fastened to the side of its part nearest the pointer)
     const p = d.end === 'a' ? L.a : L.b, b = linkBox(p);
     const side = [['top', Math.abs(q[1] - b.y0)], ['bottom', Math.abs(q[1] - b.y1)], ['left', Math.abs(q[0] - b.x0)], ['right', Math.abs(q[0] - b.x1)]].sort((u, v) => u[1] - v[1])[0][0];
-    lk[d.end === 'a' ? 'ea' : 'eb'] = { s: side }; delete lk.dx; delete lk.dy;
+    lk[d.end === 'a' ? 'ea' : 'eb'] = { s: side }; delete lk.dx; delete lk.dy; delete lk.jx;
   } else {
     const P = d.pts || (d.pts = L.pts), a = P[d.k], c = P[d.k + 1], level = a[1] === c[1], n = P.length - 1;
-    if (n === 1 && !level) { const half = e => { const b = linkBox(e === ea ? L.a : L.b); return (b.x1 - b.x0) / 2 - 6; };   // (straight up and down: both ends slid across)
-      lk.ea = { s: ea.s, o: Math.max(-half(ea), Math.min(half(ea), (ea.o || 0) + dx)) }; lk.eb = { s: eb.s, o: Math.max(-half(eb), Math.min(half(eb), (eb.o || 0) + dx)) }; }
+    if (n === 1 && !level) { const half = e => { const b = linkBox(e === ea ? L.a : L.b); return (b.x1 - b.x0) / 2 - 6; };   // (straight up and down: both ends slid across;
+      const oa = (ea.o || 0) + dx, ob = (eb.o || 0) + dx;                                                            //  dragged past the parts, it steps out beside them)
+      if (Math.abs(oa) > half(ea) + 30 || Math.abs(ob) > half(eb) + 30) lk.jx = dx;
+      else { lk.ea = { s: ea.s, o: Math.max(-half(ea), Math.min(half(ea), oa)) }; lk.eb = { s: eb.s, o: Math.max(-half(eb), Math.min(half(eb), ob)) }; } }
+    else if (d.at.jx != null && n === 5) {   // (stepped out: the upright goes across; a run at an end slides that end; the runs out of the ends stay)
+      if (d.k >= 1 && d.k <= 3) lk.jx = d.at.jx + dx;   // (the upright, or a run across to it: the upright goes across)
+      else if (d.k === 0 || d.k === 4) { const which = d.k === 0 ? 'ea' : 'eb', e = d.k === 0 ? ea : eb, b = linkBox(d.k === 0 ? L.a : L.b), half = (b.x1 - b.x0) / 2 - 6; lk[which] = { s: e.s, o: Math.max(-half, Math.min(half, (e.o || 0) + dx)) }; } }
+    else if (level && (d.k === 0 || d.k === n - 1) && !vertEnd((d.k === 0 ? ea : eb).s)) {   // (a run out of a side end: that end slid up or down its side)
+      const which = d.k === 0 ? 'ea' : 'eb', e = d.k === 0 ? ea : eb, p = d.k === 0 ? L.a : L.b, b = linkBox(p);
+      lk[which] = { s: e.s, o: Math.max(b.y0 + 4 - (p.y - 30), Math.min(b.y1 - 4 - (p.y - 30), (e.o || 0) + dy)) }; }
     else if (level) lk.dy = (d.at.dy || 0) + dy;                               // (a level run: up or down)
     else if (d.k > 0 && d.k < n - 1) lk.dx = (d.at.dx || 0) + dx;              // (an upright between two sides: across)
     else {                                                                    // (an upright on an end: that end slid along its part)

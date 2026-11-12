@@ -93,7 +93,7 @@ let passed = 0, failed = 0;
     await p.click('#new-btn'); await p.click('[data-new="blank"]'); await p.waitForTimeout(100);
     const scr = (x, y) => p.evaluate(([x, y]) => { const m = svg.getScreenCTM(); return [m.a * x + m.e, m.d * y + m.f]; }, [x, y]);
     await p.click('[data-tool="rung"]'); const [rx, ry] = await scr(1000, 400); await p.mouse.move(rx, ry); await p.mouse.click(rx, ry);
-    const drop = async (t, x, y) => { await p.locator(`.pt[data-t="${t}"]`).scrollIntoViewIfNeeded(); const tile = await p.locator(`.pt[data-t="${t}"]`).boundingBox(), [sx, sy] = await scr(x, y);
+    const drop = async (t, x, y) => { await p.evaluate(t => palShow(t), t); await p.locator(`.pt[data-t="${t}"]`).scrollIntoViewIfNeeded(); const tile = await p.locator(`.pt[data-t="${t}"]`).boundingBox(), [sx, sy] = await scr(x, y);
       await p.mouse.move(tile.x + 20, tile.y + 20); await p.mouse.down(); await p.mouse.move(sx, sy, { steps: 5 }); await p.mouse.up(); };
     await drop('pb_nc', 400, 400); await drop('pb_no', 700, 400); await drop('coil', 1400, 400);
     await p.click('[data-tool="wire"]');
@@ -194,7 +194,7 @@ let passed = 0, failed = 0;
 
   await check('Clicking a part in the palette puts it in view in a clear spot; names and labels drag; the interface size changes', async p => {
     await p.click('#new-btn'); await p.click('[data-new="starter"]'); await p.waitForTimeout(100);
-    await p.locator('.pt[data-t="pl"]').scrollIntoViewIfNeeded(); await p.click('.pt[data-t="pl"]'); await p.waitForTimeout(80);
+    await p.evaluate(() => palShow('pl')); await p.locator('.pt[data-t="pl"]').scrollIntoViewIfNeeded(); await p.click('.pt[data-t="pl"]'); await p.waitForTimeout(80);
     const a = await p.evaluate(() => { const q = S.parts.find(x => x.t === 'pl' && x.tag === 'PL3'); if (!q) return 'none';
       const b = partBox(q), hit = S.parts.filter(o => o !== q && o.t !== 'rail').some(o => { const c = partBox(o); return b.x0 < c.x1 && b.x1 > c.x0 && b.y0 < c.y1 && b.y1 > c.y0; });
       const onWire = [0, 1].some(i => wiresAt(S, { p: q.id, i }).length); return [hit, onWire, sel.has(q.id), tool].join(','); });
@@ -729,6 +729,114 @@ let passed = 0, failed = 0;
     if (!(await p.evaluate(() => document.querySelector('[data-tool="select"]').title.startsWith('Select (E)')))) out.push('tip');
     await p.keyboard.press('F1');
     if (await p.evaluate(() => !!document.querySelector('#keys-dlg .kmode').offsetParent || !!$('kb-reset').offsetParent || !!document.querySelector('#kb-lists .kchip'))) out.push('Change Keys or Default Settings showing');
+    return out;
+  });
+
+  await check('Linked switches (Dallas, 12 Nov 2026): any button or switch given the same name as another of its kind is joined to it by a dashed link, with no "same tag" error; the link can be stepped out to one side and its upright moved, an end taken round to a side and slid along it, and a double-click puts it back', async p => {
+    const out = [];
+    await p.evaluate(() => { loadDoc(template('blank')); refresh(true);
+      const r1 = S.parts.find(p => p.t === 'rail' && p.label === 'L1'), r2 = S.parts.find(p => p.t === 'rail' && p.label === 'L2');
+      for (const y of [r1.y0 + 200, r1.y0 + 360, r1.y0 + 520]) addWire(S, [[r1.x, y], [r2.x, y]]); refresh(true);
+      for (const [y, t] of [[r1.y0 + 200, 'ls_no'], [r1.y0 + 360, 'ls_nc'], [r1.y0 + 520, 'fs_no']]) { startPlacing(t); putDown([r1.x + 400, y], false); }
+      for (const [y, t] of [[r1.y0 + 200, 'coil'], [r1.y0 + 360, 'pl'], [r1.y0 + 520, 'sol']]) { startPlacing(t); putDown([r2.x - 300, y], false); }
+      sel = new Set(); refresh(true); });
+    if (await p.evaluate(() => LINKS.length) !== 0) out.push('linked before renaming');
+    // the second limit switch renamed LS1 in its Name box, as a student would
+    const id = await p.evaluate(() => S.parts.filter(q => /^ls_/.test(q.t)).sort((a, b) => a.y - b.y)[1].id);
+    await p.evaluate(id => { sel = new Set([id]); setRib('part'); refresh(); }, id);
+    await p.fill('#p-tag', 'LS1'); await p.locator('#p-tag').blur(); await p.waitForTimeout(80);
+    const r = await p.evaluate(() => [LINKS.length, LINKS[0] && LINKS[0].kind, ISSUES.filter(i => i.sev === 'e' && /tagged/.test(i.title)).length, $('props').textContent.includes('Another contact of LS1')]);
+    if (r[0] !== 1 || r[1] !== 'block' || r[2] !== 0 || !r[3]) out.push('LS1 twice: links | kind | same-tag errors | note: ' + r.join(' | '));
+    // a float switch is not a limit switch: FS1 never links to LS1
+    await p.evaluate(() => { const f = S.parts.find(q => q.t === 'fs_no'); f.tag = 'LS1'; refresh(); });
+    if (await p.evaluate(() => LINKS.length) !== 1) out.push('a float switch named LS1 linked to the limit switches');
+    await p.evaluate(() => { S.parts.find(q => q.t === 'fs_no').tag = 'FS1'; sel = new Set(); refresh(); });
+    const scr = (x, y) => p.evaluate(([x, y]) => { const m = svg.getScreenCTM(); return [m.a * x + m.e, m.d * y + m.f]; }, [x, y]);
+    const drag = async (a, b, dbl) => { const [x0, y0] = await scr(...a), [x1, y1] = await scr(...b); await p.mouse.move(x0, y0); await p.mouse.down(); await p.mouse.move(x1, y1, { steps: 8 }); await p.mouse.up(); await p.waitForTimeout(60); };
+    const pts = () => p.evaluate(() => LINKS[0].pts);
+    // straight down at first; dragged well past the switches, it steps out beside them
+    let P = await pts(); if (P.length !== 2) out.push('not straight at first: ' + JSON.stringify(P));
+    const mid = [P[0][0], (P[0][1] + P[1][1]) / 2];
+    await drag(mid, [mid[0] + 160, mid[1]]);
+    P = await pts(); if (P.length !== 6 || !(P[2][0] > P[0][0] + 100)) out.push('not stepped out: ' + JSON.stringify(P));
+    // its upright dragged further across
+    const up = [P[2][0], (P[2][1] + P[3][1]) / 2], x0 = P[2][0];
+    await drag(up, [up[0] + 100, up[1]]);
+    P = await pts(); if (!(P[2][0] >= x0 + 80)) out.push('upright not moved: ' + JSON.stringify(P));
+    // the lower end taken round to the switch's left side, then slid up it (zoomed in, as the run beside the switch is short)
+    await p.evaluate(() => { const m = svg.getScreenCTM(), P = LINKS[0].pts[LINKS[0].pts.length - 1]; zoomBy(3, m.a * P[0] + m.e, m.d * P[1] + m.f); });
+    await p.waitForTimeout(500);
+    await p.evaluate(() => { const L = LINKS[0]; selL = L.own.id; drawEd(); });
+    const E = P[5]; const lo = await p.evaluate(() => { const b = linkBox(LINKS[0].b); return [b.x0, (b.y0 + b.y1) / 2]; });
+    await drag(E, [lo[0] - 4, lo[1]]);
+    let lk = await p.evaluate(() => LINKS[0].own.lk || {}); if (!lk.eb || lk.eb.s !== 'left') out.push('end not taken to the left: ' + JSON.stringify(lk));
+    await p.waitForTimeout(500);   // (not a double-click)
+    P = await pts(); const yE = P[P.length - 1][1], last = P[P.length - 2];
+    await drag([(last[0] + P[P.length - 1][0]) / 2, yE], [(last[0] + P[P.length - 1][0]) / 2, yE + 20]);
+    P = await pts(); if (!(P[P.length - 1][1] > yE)) out.push('side end not slid down: ' + yE + ' -> ' + P[P.length - 1][1]);
+    // a double-click puts it back as drawn
+    await p.waitForTimeout(500);
+    const any = [(P[1][0] + P[2][0]) / 2, (P[1][1] + P[2][1]) / 2], [sx, sy] = await scr(...any);
+    await p.mouse.dblclick(sx, sy); await p.waitForTimeout(80);
+    if ((await pts()).length !== 2) out.push('double-click did not put it back: ' + JSON.stringify(await pts()));
+    return out;
+  });
+
+  await check('The look (Dallas, 12 Nov 2026): blue accents, not gold; Circuit Builder icons on the parts buttons; CR, TR and M in the menus; chevron boxes for lines in', async p => {
+    const out = [];
+    const acc = await p.evaluate(() => [getComputedStyle(document.querySelector('[data-tool="select"]')).outlineColor, getComputedStyle(document.documentElement).getPropertyValue('--acc').trim()]);
+    if (acc[1].toLowerCase() !== '#4a9bff' || !/74, 155, 255/.test(acc[0])) out.push('accent: ' + acc.join(' | '));
+    if (await p.evaluate(() => document.querySelectorAll('.rb[data-menu] .cat-ico').length) !== 7) out.push('icons on the parts buttons: ' + await p.evaluate(() => document.querySelectorAll('.rb[data-menu] .cat-ico').length));
+    const marks = await p.evaluate(() => ['coil', 'tmr_on', 'tmr_off', 'motor', 'pl'].map(t => (document.querySelector(`#sym-menus [data-t="${t}"] svg text, #palette [data-t="${t}"] svg text`) || {}).textContent || ''));
+    if (marks.join() !== 'CR,TR,TR,M,') out.push('CR / TR / M: ' + marks.join());
+    await p.evaluate(() => { loadDoc(template('starter')); refresh(true); });
+    const chev = await p.evaluate(() => [...svg.querySelectorAll('g[transform*="rotate"] rect[rx="7"]')].length);
+    if (chev < 3) out.push('chevron boxes on the starter sheet: ' + chev);
+    if (await p.evaluate(() => /<path d="M[^"]*Z" fill="#000" stroke="#000"/.test(svg.innerHTML))) out.push('an arrowhead is still drawn');
+    return out;
+  });
+
+  await check('Grid (Dallas, 12 Nov 2026): Dots, Lines or None; Fine, Standard or Coarse; light to dark; kept in this browser. Snap off: a note goes anywhere, but parts still snap', async p => {
+    const out = [];
+    const under = () => p.evaluate(() => svg.querySelector('#ed-under').innerHTML);
+    if (!/<circle/.test(await under())) out.push('dots not the default');
+    await p.click('#grid-btn'); if (await p.evaluate(() => $('grid-menu').hidden)) out.push('menu did not open');
+    await p.click('#grid-menu [data-v="lines"]'); if (!/<path d="M0 0H40/.test(await under())) out.push('lines: ' + (await under()).slice(0, 120));
+    await p.click('#grid-menu [data-v="coarse"]'); if (!/width="100"/.test(await under())) out.push('coarse spacing');
+    await p.click('#grid-menu [data-v="none"]'); if ((await under()).trim()) out.push('none still draws');
+    await p.click('#grid-menu [data-v="dots"]'); await p.click('#grid-menu [data-v="fine"]');
+    await p.evaluate(() => { $('grid-str').value = 90; $('grid-str').dispatchEvent(new Event('input')); });
+    const dark = await p.evaluate(() => gridCol());
+    if (!/^#[0-9a-f]{6}$/.test(dark) || parseInt(dark.slice(1, 3), 16) > 0x90) out.push('strength: ' + dark);
+    if (await p.evaluate(() => $('grid-btn').textContent) !== 'Grid: Dots ▾') out.push('button: ' + await p.evaluate(() => $('grid-btn').textContent));
+    await p.keyboard.press('Escape'); if (!(await p.evaluate(() => $('grid-menu').hidden))) out.push('Esc did not close it');
+    await p.reload(); await p.waitForTimeout(300);
+    if (await p.evaluate(() => [GRID.style, GRID.space, GRID.strength].join()) !== 'dots,fine,90') out.push('not kept: ' + await p.evaluate(() => JSON.stringify(GRID)));
+    // snap off: a note put down off the grid stays there; a part still snaps
+    await p.evaluate(() => setGrid('snap', false));
+    const [nx, ny] = await p.evaluate(() => { const m = svg.getScreenCTM(); return [m.a * 513 + m.e, m.d * 707 + m.f]; });
+    await p.click('[data-tool="note"]'); await p.mouse.click(nx, ny); await p.waitForTimeout(60);
+    const nt = await p.evaluate(() => { const t = S.texts[S.texts.length - 1]; return [t.x, t.y]; });
+    if (nt[0] % 20 === 0 && nt[1] % 20 === 0) out.push('note snapped with Snap off: ' + nt);
+    const g = await p.evaluate(() => { placing = { t: 'coil' }; const g = ghostPart([513, 707]); placing = null; return g; }); if (g.x % 20 || g.y % 20) out.push('a part did not snap: ' + g.x + ',' + g.y);
+    await p.evaluate(() => setGrid('snap', true));
+    return out;
+  });
+
+  await check('Parts list (Dallas, 12 Nov 2026): a header for each kind in its colour, opening and closing; kinds with several parts in groups that open and close; what is open is kept', async p => {
+    const out = [];
+    const st = () => p.evaluate(() => [...document.querySelectorAll('#palette .pcat')].map(c => c.dataset.cat + (c.querySelector('.pbody').hidden ? '-' : '+')).join(' '));
+    if (await st() !== 'Buttons+ Switches- Outputs- Contacts- Protection- Power- Continuation-') out.push('at first: ' + await st());
+    await p.click('[data-cat="Switches"] .phd');
+    const ls = '[data-sub="Switches/Limit Switches"]';
+    if (await p.evaluate(ls => !document.querySelector(ls + ' .pg').hidden, ls)) out.push('Limit Switches open before clicked');
+    await p.click(ls + ' .shd');
+    if (!(await p.locator('.pt[data-t="ls_no"]').isVisible())) out.push('NO Limit Switch not in sight after opening its group');
+    await p.click('[data-cat="Buttons"] .phd');
+    await p.reload(); await p.waitForTimeout(300);
+    if (await st() !== 'Buttons- Switches+ Outputs- Contacts- Protection- Power- Continuation-' || !(await p.locator('.pt[data-t="ls_no"]').isVisible())) out.push('not kept: ' + await st());
+    const col = await p.evaluate(() => getComputedStyle(document.querySelector('[data-cat="Buttons"]')).getPropertyValue('--c').trim());
+    if (col !== '#00B050') out.push('Buttons colour: ' + col);
     return out;
   });
 

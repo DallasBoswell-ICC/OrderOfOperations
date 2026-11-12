@@ -22,9 +22,15 @@ function contNote(p, k) {
 // one pushbutton (or selector switch) drawn in several rungs: the parts with its number are its contact blocks; the top
 // one is the operator itself (a selector's turning arrow is drawn on it only)
 const isPB = p => p.t === 'pb_no' || p.t === 'pb_nc' || p.t === 'pbm_no' || p.t === 'pbm_nc';
-const blocksOf = p => allParts().map(q => q.p).filter(q => q.tag && q.tag === p.tag && (isPB(p) ? isPB(q) : q.t === p.t)).sort((a, b) => a.y - b.y || a.x - b.x);
+// any button or switch can have more contacts on other rungs (Dallas, 12 Nov 2026; before, pushbuttons and selectors
+// only): put down another of its kind with the same name, and a dashed link joins them. Its family: a pushbutton is one,
+// maintained or not; the rest go by their name's letters (LS, TS, PS, FS, FLS, PRS, SW, ES, SS), NO, NC or held alike
+const linkable = p => !!LIB[p.t] && LIB[p.t].kind === 'sw' && (LIB[p.t].cat === 'Buttons' || LIB[p.t].cat === 'Switches');
+const family = p => isPB(p) ? 'PB' : LIB[p.t].pre || p.t;
+const FAMILY_NAME = { PB: 'pushbutton', SS: 'selector switch', ES: 'E-stop', LS: 'limit switch', TS: 'temperature switch', PS: 'pressure switch', FS: 'float switch', FLS: 'flow switch', PRS: 'proximity switch', SW: 'switch' };
+const blocksOf = p => linkable(p) ? allParts().map(q => q.p).filter(q => q.tag && q.tag === p.tag && linkable(q) && family(q) === family(p)).sort((a, b) => a.y - b.y || a.x - b.x) : [p];
 const mainBlock = p => blocksOf(p)[0] || p;
-function blockGroups(s) { const g = new Map(); for (const p of s.parts) if ((isPB(p) || p.t === 'sel') && p.tag) { const k = (p.t === 'sel' ? 'S:' : 'P:') + p.tag; if (!g.has(k)) g.set(k, []); g.get(k).push(p); }
+function blockGroups(s) { const g = new Map(); for (const p of s.parts) if (linkable(p) && p.tag) { const k = family(p) + ':' + p.tag; if (!g.has(k)) g.set(k, []); g.get(k).push(p); }
   return [...g.values()].map(bs => bs.sort((a, b) => a.y - b.y)).filter(bs => bs.length > 1); }
 // the timer a contact belongs to (its coil, if that is a timer)
 const timerOf = p => { const c = allParts().find(q => q.p.t === 'coil' && q.p.tag === p.tag); return c && /^TR/.test(c.p.tag) ? c.p : null; };
@@ -53,15 +59,16 @@ function drawSheet(s, k, A) {
   let g = ''; PLABS = []; XREFS = []; RUNGNUMS = []; LINKS = [];
   const line = (x1, y1, x2, y2, w = PW) => { g += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke-width="${w}"/>`; };
   const text = (x, y, t, size = 26, anchor = 'middle', weight = 700, extra = '') => { if (t !== '' && t != null) g += `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}" font-weight="${weight}"${extra}>${esc(t)}</text>`; };
-  const arrow = (x, y, ux, uy) => { const bx = x - ux * 22, by = y - uy * 22, px = -uy * 13, py = ux * 13;
-    g += `<path d="M${bx + px} ${by + py}L${bx - px} ${by - py}L${x} ${y}Z" fill="#000" stroke="#000" stroke-width="2"/>`; };
+  // a line in (a phase, or a control source or return): Circuit Builder's chevron box, pointing along the wire (Dallas,
+  // 12 Nov 2026; it was an arrowhead)
+  const chev = (x, y, ux, uy) => { g += `<g transform="translate(${x} ${y}) rotate(${Math.atan2(uy, ux) * 180 / Math.PI})">${CHEV_IN}</g>`; };
   // rails
   const rails = s.parts.filter(p => p.t === 'rail');
   for (const r of rails) { line(r.x, r.y0, r.x, r.y1);
-    // (fed at its top by a wire, from the transformer: no arrow, its name beside it)
+    // (fed at its top by a wire, from the transformer: no chevrons, its name beside it)
     const fed = s.wires.some(w => [w.a, w.b].some(e => e.r === r.id && e.y <= r.y0));
     if (fed) text(r.x + (r.label === 'L1' ? -14 : 14), r.y0 + 40, r.label, 26, r.label === 'L1' ? 'end' : 'start');
-    else { arrow(r.x, r.y0, 0, 1); text(r.x, r.y0 - 34, r.label, 28); } }
+    else { chev(r.x, r.y0, 0, 1); text(r.x, r.y0 - 54, r.label, 28); } }   // (fed from above: the chevron box, as a line in)
   // wires, then their numbers (placed clear of the symbols, their tags and the other wires; see wireLabels)
   for (const w of s.wires) g += `<polyline points="${wirePts(s, w).map(q => q.join(',')).join(' ')}"/>`;
   LABS = SHOW.wn ? wireLabels(s, A) : [];
@@ -88,8 +95,8 @@ function drawSheet(s, k, A) {
     const halo = linked.has(p.id) ? ' stroke="#fff" stroke-width="8" stroke-linejoin="round" paint-order="stroke"' : '';
     const tagT = (x, y, t, size, anchor = 'middle', which = 'tag') => { if (!t) return; const o = labOff(p, which); x += o[0]; y += o[1]; text(x, y, t, size, anchor, 700, halo); PLABS.push({ id: p.id, which, ...lblBox(x, y, t, size, anchor) }); };
     const descT = (x, y, t, size, anchor = 'middle') => { if (!t) return; x += ld[0]; y += ld[1]; text(x, y, t, size, anchor, 500, halo); PLABS.push({ id: p.id, which: 'desc', ...lblBox(x, y, t, size, anchor) }); };
-    if (isArrowIn(p.t)) {   // (a line in: its arrow points along the wire, its name behind it; turned and flipped with it)
-      const u = place(p, [1, 0]), n = place(p, [-34, 0]); arrow(p.x, p.y, u[0], u[1]);
+    if (isArrowIn(p.t)) {   // (a line in: its chevrons point along the wire, its name behind it; turned and flipped with it)
+      const u = place(p, [1, 0]), n = place(p, [-56, 0]); chev(p.x, p.y, u[0], u[1]);
       tagT(p.x + n[0], p.y + n[1] + (u[1] ? (u[1] > 0 ? -6 : 30) : 10), p.tag, 28, u[0] > 0 ? 'end' : u[0] < 0 ? 'start' : 'middle'); continue; }
     const sym = PSYM[symOf(p)], r = p.rot || 0, kind = LIB[p.t].kind;
     g += `<g class="sym" transform="${xform(p)}">${sym.b}</g>`;
@@ -235,15 +242,15 @@ const linkBox = p => { const s = PSYM[symOf(p)], e = extOf(p); return { x0: p.x 
 // rung); 'stem' is just above a pushbutton's wire, where a block's dashed link has always started
 function linkEnd(p, e) { const b = linkBox(p), o = e.o || 0;
   if (e.s === 'top') return [p.x + o, b.y0]; if (e.s === 'bottom') return [p.x + o, b.y1]; if (e.s === 'stem') return [p.x + o, p.y - 20];
-  return [e.s === 'left' ? b.x0 : b.x1, p.y - 30]; }
+  return [e.s === 'left' ? b.x0 : b.x1, Math.max(b.y0 + 4, Math.min(b.y1 - 4, p.y - 30 + o))]; }   // (a side end: a little above the rung, or slid up or down its side)
 const vertEnd = s => s === 'top' || s === 'bottom' || s === 'stem';
 // the ends a link starts with (before any are dragged): the upper part's bottom to the lower part's top; two side by side
-// on one rung: over the top of both; a pushbutton's blocks lined up: from just above the upper one's wire
+// on one rung: over the top of both; a pushbutton's or selector's blocks lined up: from just above the upper one's wire
 function linkEnds(L) {
   const k = L.own.lk || {}, [hi, lo] = L.a.y <= L.b.y ? [L.a, L.b] : [L.b, L.a];
   let da, db;
   if (L.a.y === L.b.y) da = db = { s: 'top' };
-  else if (L.kind === 'block' && L.a.x === L.b.x) { da = { s: 'stem' }; db = { s: 'top' }; }
+  else if (L.kind === 'block' && L.a.x === L.b.x && (isPB(L.a) || L.a.t === 'sel')) { da = { s: 'stem' }; db = { s: 'top' }; }   // (other switches: bottom to top, below)
   else { da = { s: L.a === hi ? 'bottom' : 'top' }; db = { s: L.b === lo ? 'top' : 'bottom' }; }
   return [{ ...da, ...(k.ea || {}) }, { ...db, ...(k.eb || {}) }];
 }
@@ -251,6 +258,10 @@ function linkEnds(L) {
 // pair of ends: across at a level between them, or over/under both; a side pair: down/up at an upright between them)
 function linkRoute(L) {
   const k = L.own.lk || {}, [ea, eb] = linkEnds(L), A_ = linkEnd(L.a, ea), B = linkEnd(L.b, eb), va = vertEnd(ea.s), vb = vertEnd(eb.s);
+  if (va && vb && k.jx != null) {   // (stepped out beside them: out of each end, across to the upright, back in)
+    const out = e => e.s === 'top' ? -24 : 24, ya = A_[1] + out(ea), yb = B[1] + out(eb), x = snap((A_[0] + B[0]) / 2) + k.jx;
+    return [A_, [A_[0], ya], [x, ya], [x, yb], [B[0], yb], B];
+  }
   if (va && vb) {
     const down = s => s !== 'top', [up, lo] = A_[1] <= B[1] ? [[A_, ea], [B, eb]] : [[B, eb], [A_, ea]];
     if (A_[0] === B[0] && !k.dy && down(up[1].s) && !down(lo[1].s)) return [A_, B];

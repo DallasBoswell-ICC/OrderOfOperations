@@ -26,7 +26,7 @@ function renderProps() {
   const nP = sel ? sel.parts.size : 0, nW = sel ? sel.wires.size : 0, nT = sel && sel.terms ? sel.terms.size : 0;
   document.getElementById('selname').textContent = !sel ? 'Nothing'
     : multi ? `${G.length} ${G.every(isTimer) ? 'timers' : KIND_NAME[p.t] || 'parts'} (a setting changed here changes them all)`
-    : p ? captionOf(p) + (p.t === 'sel' && selsOf(p.L).length > 1 ? (mainSel(p.L) === p ? ` · the main one of ${selsOf(p.L).length}` : ` · an extra contact block`) + ' (turning one turns all)' : '') + (p.t === 'btn' && blocksOf(p.L).length > 1 ? (mainBtn(p.L) === p ? ` · the main one of ${blocksOf(p.L).length}` : ` · an extra contact block`) + ' (pressing one presses all)' : '')
+    : p ? captionOf(p) + (isLim(p) && limGroup(p).length > 1 ? (limGroup(p)[0] === p ? ` · the main one of ${limGroup(p).length} contacts of ${limName(p)}` : ` · another contact of ${limName(p)}`) + ' (they work together)' : '') + (p.t === 'sel' && selsOf(p.L).length > 1 ? (mainSel(p.L) === p ? ` · the main one of ${selsOf(p.L).length}` : ` · an extra contact block`) + ' (turning one turns all)' : '') + (p.t === 'btn' && blocksOf(p.L).length > 1 ? (mainBtn(p.L) === p ? ` · the main one of ${blocksOf(p.L).length}` : ` · an extra contact block`) + ' (pressing one presses all)' : '')
     : nP + nW + nT === 1 ? (nW ? 'A wire' : 'A terminal on ' + [...sel.terms][0].split(':')[0])
     : [nP ? `${nP} part${nP > 1 ? 's' : ''}` : '', nW ? `${nW} wire${nW > 1 ? 's' : ''}` : '', nT ? `${nT} terminal${nT > 1 ? 's' : ''}` : ''].filter(Boolean).join(', ').replace(/, ([^,]*)$/, ' and $1') + ' (drag any of them to move them together' + (nT ? '; terminals slide along their bar' : '') + ', Delete to remove)';
   document.getElementById('del').disabled = !sel;
@@ -88,9 +88,10 @@ function renderProps() {
     for (const o of document.querySelectorAll('#ls-kind option')) { o.hidden = p.t === 'tsw' ? o.value.endsWith('h') : p.t === 'psw' ? o.value.length > 2 : o.value.endsWith('l');
       if (p.t === 'tsw') o.textContent = { no: 'High temp., NO', nc: 'High temp., NC', nol: 'Low temp., NO', ncl: 'Low temp., NC' }[o.value] || o.textContent;
       else o.textContent = { no: 'Normally open', nc: 'Normally closed' }[o.value] || o.textContent; }
-    for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n))) ns.add(new Option(({ tsw: 'TS', psw: 'PS' }[p.t] || 'LS') + n, String(n), false, String(n) === p.L));
+    for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n)) || String(n) === p.L) ns.add(new Option(({ tsw: 'TS', psw: 'PS' }[p.t] || 'LS') + n + (String(n) === p.L && limGroup(p)[0] !== p ? ' (another contact)' : ''), String(n), false, String(n) === p.L));   // (its own number: "(another contact)" after it if it is not the main one)
+    for (const n of [...taken].filter(n => n !== p.L).sort((a, b) => a - b)) ns.add(new Option(`${({ tsw: 'TS', psw: 'PS' }[p.t] || 'LS')}${n} (another contact)`, n));
     document.getElementById('ls-kind').value = (p.nc ? 'nc' : 'no') + (p.held ? 'h' : '') + (p.low ? 'l' : '');
-    swatches(document.getElementById('ls-colour'), p.color, hex => each(q => q.color = hex));
+    swatches(document.getElementById('ls-colour'), p.color, hex => { each(q => q.color = hex); limSync(); });
     // what works it: by hand, or a process value of its kind (and then where it acts, and resets)
     const kind = PV_FOR[p.t], opts = PV.filter(v => v.kind === kind), pvs = document.getElementById('ls-pv'), same = G.every(q => q.t === p.t);
     document.getElementById('ls-pv-group').hidden = !same;
@@ -280,6 +281,15 @@ document.getElementById('preset').addEventListener('change', e => {
 /* ---- a selector switch's settings. The switch itself (its positions, their names, where it starts, its colour) is
    shared by every drawing with its letter; what each drawing has of its own is the positions it is closed in. */
 const selsOf = L => parts.filter(p => p.t === 'sel' && p.L === L);
+/* A limit, temperature or pressure switch can have more contacts (Dallas, 12 Nov 2026): another of its kind given the
+   same number (LS1 twice, say) is another contact of the same switch. They act together (the engine goes by opKey);
+   the top one is the main one; they share what works them, its settings and their colour, and each keeps its own NO
+   or NC. */
+const limGroup = p => parts.filter(q => isLim(q) && q.t === p.t && q.L === p.L).sort((a, b) => a.y - b.y || a.x - b.x);
+const limName = p => ({ tsw: 'TS', psw: 'PS' }[p.t] || 'LS') + p.L;
+const LIM_SHARED = ['pv', 'sp', 'rs', 'side', 'color'];
+// p's shared settings given to every other contact of its switch (from, if given: the contact whose settings they take)
+function syncLim(p, from = p) { for (const q of limGroup(p)) if (q !== from) for (const f of LIM_SHARED) { if (from[f] === undefined) delete q[f]; else q[f] = from[f]; } }
 const SEL_NAME_MAX = 5;
 function renderSelProps(p, multi) {
   const ls = document.getElementById('s-letter'), mine = selsOf(p.L).length, others = new Set(parts.filter(q => q.t === 'sel' && q !== p).map(q => q.L)), taken = new Set([...coilLetters(), ...btnLetters()]);
@@ -351,7 +361,9 @@ document.getElementById('ph-num').addEventListener('change', e => { if (selGroup
 document.getElementById('ph-custom').addEventListener('change', e => { const p = selGroup()[0]; if (p && isPh(p)) setPhaseCol(p.L, e.target.value); });
 document.getElementById('box-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(turns)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
 document.getElementById('pw-num').addEventListener('change', e => { const G = selGroup(); if (G.length && G.every(p => isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'fu1')) each(p => p.L = e.target.value); });
-document.getElementById('ls-num').addEventListener('change', e => { const G = selGroup(); if (G.every(p => p.t === G[0].t && isLim(p))) each(p => p.L = e.target.value); });
+document.getElementById('ls-num').addEventListener('change', e => { const G = selGroup(); if (!G.every(p => p.t === G[0].t && isLim(p))) return;
+  // (a number another switch has: this becomes another contact of it, taking its settings)
+  each(p => { const to = parts.find(q => q !== p && !G.includes(q) && q.t === p.t && q.L === e.target.value); p.L = e.target.value; if (to) syncLim(p, to); }); });
 document.getElementById('h-num').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'htr') return; snapshot(); p.L = e.target.value; draw(); });
 // what an output drives (one panel for solenoids, motors and heating elements)
 document.getElementById('d-pic').addEventListener('change', e => each(p => { if (!isDrv(p)) return; if (e.target.value === '0') p.nopic = true; else delete p.nopic; }));
@@ -364,12 +376,14 @@ for (const [id, f] of [['d-rate', 'rate'], ['d-cool', 'cool']]) {
   box.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') box.blur(); });
 }
 document.getElementById('ls-pv').addEventListener('change', e => { const id = e.target.value, G = selGroup(); if (!G.length || !G.every(q => q.t === G[0].t && isLim(q))) return;
-  each(p => { if (!id) unlinkPv(p); else { p.pv = id; if (p.t === 'lsw' && !p.side) p.side = 'hi'; pvDefaults(p, pvOf(p)); } }); });
-document.getElementById('ls-side').addEventListener('change', e => each(p => { if (p.t === 'lsw' && pvOf(p)) { p.side = e.target.value; pvDefaults(p, pvOf(p)); } }));
+  each(p => { if (!id) unlinkPv(p); else { p.pv = id; if (p.t === 'lsw' && !p.side) p.side = 'hi'; pvDefaults(p, pvOf(p)); } }); limSync(); });
+// (a setting changed on a contact: every contact of its switch takes it)
+function limSync() { for (const p of selGroup()) if (isLim(p)) syncLim(p); draw(); }
+document.getElementById('ls-side').addEventListener('change', e => { each(p => { if (p.t === 'lsw' && pvOf(p)) { p.side = e.target.value; pvDefaults(p, pvOf(p)); } }); limSync(); });
 // a setting typed in: the reset kept on the right side of it (below the setting for a switch that acts as its value rises, above it otherwise)
 for (const [id, f] of [['ls-sp', 'sp'], ['ls-rs', 'rs']]) document.getElementById(id).addEventListener('change', e => {
   const x = parseFloat(e.target.value.replace(',', '.')); if (!isFinite(x)) { renderProps(); return; }
-  each(p => { if (!pvOf(p)) return; p[f] = x; if (p.t === 'lsw') { p.rs = p.sp; return; } const fall = pvFalls(p); if (fall ? p.rs < p.sp : p.rs > p.sp) { if (f === 'sp') p.rs = p.sp; else p.sp = p.rs; } });
+  each(p => { if (!pvOf(p)) return; p[f] = x; if (p.t === 'lsw') { p.rs = p.sp; return; } const fall = pvFalls(p); if (fall ? p.rs < p.sp : p.rs > p.sp) { if (f === 'sp') p.rs = p.sp; else p.sp = p.rs; } }); limSync();
 });
 for (const id of ['ls-sp', 'ls-rs']) document.getElementById(id).addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') e.target.blur(); });
 document.getElementById('ls-kind').addEventListener('change', e => { const k = e.target.value; if (selGroup().every(isLim)) each(p => { p.nc = k.startsWith('nc'); if (k.endsWith('h') && p.t === 'lsw') p.held = true; else delete p.held; if (k.endsWith('l') && p.t === 'tsw') p.low = true; else delete p.low; }); });

@@ -2871,6 +2871,44 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('A limit switch with more contacts (Dallas, 12 Nov 2026): another one given its number (LS1 twice) takes its settings, keeps them in step, works with it, and is linked to it on the print', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    await page.evaluate(() => { W = 700; W_USER = 700;
+      [['lsw-no', 120], ['lsw-nc', 280]].forEach(([k, y]) => { parts.push(newPart(k, 240, y), P('lamp', 480, y, { L: '', color: '#00B050' })); wires.push(Wr(0, y, 180, y), Wr(300, y, 420, y), Wr(540, y, W, y)); });
+      parts.find(p => p.t === 'lsw' && p.y === 120).color = '#C00000'; normalize(); draw(); });
+    const two = () => page.evaluate(() => parts.filter(p => p.t === 'lsw').sort((a, b) => a.y - b.y));
+    let L = await two(); if (L.map(p => p.L).join() !== '1,2') out.push('numbers at first: ' + L.map(p => p.L));
+    // the second one picked; its number list offers LS1 as another contact; picked, it takes LS1's colour
+    await page.evaluate(() => { const p = parts.find(p => p.t === 'lsw' && p.y === 280); sel = selOne('p', p.id); ribbonTab = 'part'; draw(); });
+    const opts = await page.evaluate(() => [...document.getElementById('ls-num').options].map(o => o.textContent));
+    if (!opts.includes('LS1 (another contact)')) out.push('number list: ' + opts.join(', '));
+    await page.selectOption('#ls-num', '1'); await page.waitForTimeout(60);
+    L = await two(); if (L.map(p => p.L + p.color + (p.nc ? 'nc' : 'no')).join() !== '1#C00000no,1#C00000nc') out.push('after joining LS1 (number, colour, kind): ' + L.map(p => p.L + p.color + (p.nc ? 'nc' : 'no')).join());
+    const cap = await page.evaluate(() => document.getElementById('selname').textContent);
+    if (!/another contact of LS1/.test(cap)) out.push('caption: ' + cap);
+    const shown = await page.evaluate(() => { const n = document.getElementById('ls-num'); return n.options[n.selectedIndex].textContent; });
+    if (shown !== 'LS1 (another contact)') out.push('its Number box shows: ' + shown);
+    // a colour picked on the main one: the other contact takes it too
+    await page.evaluate(() => { const p = parts.find(p => p.t === 'lsw' && p.y === 120); sel = selOne('p', p.id); ribbonTab = 'part'; draw(); });
+    if (!/the main one of 2 contacts of LS1/.test(await page.evaluate(() => document.getElementById('selname').textContent))) out.push('main caption');
+    await page.locator('#ls-colour [role=radio], #ls-colour button').nth(0).click(); await page.waitForTimeout(60);
+    L = await two(); if (L[0].color !== L[1].color) out.push('colour not kept in step: ' + L.map(p => p.color));
+    if (await page.evaluate(() => [...wiringIssues(network())].length)) out.push('wiring issues: ' + JSON.stringify(await page.evaluate(() => [...wiringIssues(network())])));
+    // run: working LS1 works both contacts (NO closes, NC opens)
+    const lamps = () => page.evaluate(() => parts.filter(p => p.t === 'lamp').sort((a, b) => a.y - b.y).map(p => +!!coilOn[p.id]).join(''));
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    let st = await lamps(); if (st !== '01') out.push('at rest: ' + st);
+    await page.evaluate(() => press('1', true)); await page.waitForTimeout(400);
+    st = await lamps(); if (st !== '10') out.push('LS1 worked: ' + st);
+    await page.evaluate(() => { press('1', false); setSpeed(1); }); await page.click('#tab-edit');
+    // the print: a dashed line from one contact down to the other
+    await page.keyboard.press('Control+p'); await page.waitForTimeout(400);
+    const dash = await page.evaluate(() => [...document.querySelectorAll('#pd-view line[stroke-dasharray]')].length);
+    if (dash < 1) out.push('no dashed link on the print');
+    return out;
+  });
+
   await browser.close();
   const failed = results.filter(r => !r.ok);
   console.log(`\n${results.length - failed.length} of ${results.length} checks passed.`);

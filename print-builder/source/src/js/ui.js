@@ -69,16 +69,58 @@ function startPlacing(t, rot = 0, fx = false) { placing = { t, rot }; if (fx) pl
 let lastPlaced = null;
 
 /* ---------- the palette and the ribbon's menus ---------- */
-const thumb = t => { if (isArrowIn(t)) return `<svg viewBox="-80 -30 100 60"><path d="M-22 -13L-22 13L0 0Z" fill="#000"/><line x1="0" y1="0" x2="18" y2="0" stroke="#000" stroke-width="4"/><text x="-30" y="9" font-size="26" font-weight="700" text-anchor="end" font-family="Arial">${t === 'src_l2' ? 'L2' : 'L1'}</text></svg>`;
-  const s = PSYM[LIB[t].sym], e = extentOf(t), pad = 8; return `<svg viewBox="${e.x0 - pad} ${s.y0 - pad} ${e.x1 - e.x0 + 2 * pad} ${s.y1 - s.y0 + 2 * pad}"><g fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${s.b}</g></svg>`; };
+const thumb = t => { if (isArrowIn(t)) return `<svg viewBox="-96 -30 120 60"><g stroke="#000">${CHEV_IN}</g><line x1="0" y1="0" x2="18" y2="0" stroke="#000" stroke-width="4"/><text x="-52" y="9" font-size="26" font-weight="700" text-anchor="end" font-family="Arial">${t === 'src_l2' ? 'L2' : 'L1'}</text></svg>`;
+  const s = PSYM[LIB[t].sym], e = extentOf(t), pad = 8; return `<svg viewBox="${e.x0 - pad} ${s.y0 - pad} ${e.x1 - e.x0 + 2 * pad} ${s.y1 - s.y0 + 2 * pad}"><g fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${s.b}</g>${thumbMark(t, s)}</svg>`; };
+// (in the menus and the parts list only, not on the sheet: CR in a relay coil, TR in a timer, M in a motor, in its circle)
+function thumbMark(t, s) {
+  const m = t === 'coil' ? 'CR' : LIB[t].preset && LIB[t].preset.pre === 'TR' ? 'TR' : t === 'motor' ? 'M' : null; if (!m) return '';
+  const c = [...s.b.matchAll(/<circle\b[^>]*>/g)].map(x => { const a = n => +((x[0].match(new RegExp(`\\b${n}="([-\\d.]+)"`)) || [])[1] || 0); return { x: a('cx'), y: a('cy'), r: a('r') }; }).sort((u, v) => v.r - u.r)[0];
+  if (!c || !c.r) return '';
+  return `<text x="${c.x}" y="${c.y + c.r * .36}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="${c.r * (m.length > 1 ? .95 : 1.1)}" fill="#000">${m}</text>`;
+}
 const short = n => n.replace(' Maintained Pushbutton', ' Maint. PB').replace(', Low Temp', ' (Low)').replace(' (Control)', '').replace(' (Out)', '').replace(' (In)', '').replace('Pushbutton', 'PB').replace('Emergency Stop', 'E-Stop').replace('Temperature', 'Temp.').replace('Proximity', 'Prox.').replace('Selector Switch', 'Selector').replace(', Held Closed', ' (HC)').replace(', Held Open', ' (HO)').replace('Toggle Switch (SPST)', 'Toggle').replace('Overload Heater (1 Line)', 'OL Heater').replace('Phase (L1, L2, L3)', 'Phase').replace('3-Phase', '3Ø');
+// each kind's icon on its ribbon button and parts-list header: Circuit Builder's, in this program's colour for the kind
+const catIcon = c => { const k = CAT_COL[c], box = `<rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="${k}" stroke-width="1.6"/>`;
+  return '<svg class="cat-ico" viewBox="0 0 30 26" aria-hidden="true">' + ({
+    Buttons: box + `<rect x="8.5" y="6.5" width="13" height="13" rx="2.4" fill="${k}"/>`,
+    Switches: box + `<circle cx="15" cy="15" r="6.5" fill="#444"/><rect x="12.6" y="7.5" width="4.8" height="15" rx="2.4" fill="${k}" transform="rotate(45 15 15)"/>`,
+    Outputs: `<circle cx="15" cy="13" r="11.5" fill="#222" stroke="${k}" stroke-width="1.6"/><circle cx="15" cy="13" r="7.5" fill="#555"/>`,
+    Contacts: box + `<rect x="8" y="7" width="14" height="2.6" rx="1.3" fill="#a6a6a6"/><circle cx="10" cy="14" r="2.4" fill="#555"/><circle cx="20" cy="14" r="2.4" fill="#555"/>`,
+    Protection: box + '<g fill="#7a7a7a"><rect x="6" y="12" width="2.4" height="2"/><rect x="21.6" y="12" width="2.4" height="2"/><rect x="8.4" y="10.3" width="13.2" height="5.4" rx="1.4"/></g><g fill="#d0d0d0" stroke="#111" stroke-width=".4"><rect x="8.4" y="9.6" width="2.5" height="6.8"/><rect x="19.1" y="9.6" width="2.5" height="6.8"/></g>',
+    Power: box + `<path d="M16.8 5.2l-6.3 8.9h4.6l-1.7 6.7 6.4-9h-4.6z" fill="${k}"/>`,
+    Continuation: box + `<path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="${k}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+  }[c] || box) + '</svg>'; };
+// which of the parts list's headers are open (a kind, or a kind/group such as Switches/Limit Switches)
+const PALOPENKEY = 'oo-print-builder:palopen';
+let PALOPEN = { Buttons: true };
+try { const o = JSON.parse(localStorage.getItem(PALOPENKEY) || 'null'); if (o) PALOPEN = o; } catch (_) {}
+function palOpen(k, open) {
+  if (open) PALOPEN[k] = true; else delete PALOPEN[k];
+  try { localStorage.setItem(PALOPENKEY, JSON.stringify(PALOPEN)); } catch (_) {}
+  const box = document.querySelector(`#palette [data-cat="${k}"], #palette [data-sub="${k}"]`); if (!box) return;
+  box.querySelector('.phd, .shd').setAttribute('aria-expanded', String(open)); box.querySelector('.pbody, .pg').hidden = !open;
+}
+// a part's tile brought into sight: its kind and its group opened
+function palShow(t) { const c = LIB[t].cat, g = subOf(t); palOpen(c, true); if (g) palOpen(c + '/' + g, true); }
 function buildPalette() {
   let h = '';
-  for (const c of CATS) { h += `<div class="ph">${c}</div><div class="pg">`;
-    for (const [t, d] of Object.entries(LIB)) if (d.cat === c && !d.hide) h += `<div class="pt" data-t="${t}" title="${esc(d.name)}">${thumb(t)}<span>${esc(short(d.name))}</span></div>`;
-    h += '</div>'; }
+  // each kind under a header in its colour that opens and closes; kinds with several parts (Limit Switches, Timers...)
+  // in a group of their own inside it that opens and closes too, as in the ribbon's menus (Dallas, 12 Nov 2026). What is
+  // open is kept in this browser.
+  const tile = t => `<div class="pt" data-t="${t}" title="${esc(LIB[t].name)}">${thumb(t)}<span>${esc(short(LIB[t].name))}</span></div>`;
+  for (const c of CATS) {
+    const ts = Object.keys(LIB).filter(t => LIB[t].cat === c && !LIB[t].hide), loose = ts.filter(t => !subOf(t)), subs = [...new Set(ts.filter(subOf).map(subOf))], on = !!PALOPEN[c];
+    h += `<div class="pcat" data-cat="${c}" style="--c:${CAT_COL[c]}"><button class="phd" aria-expanded="${on}"><span class="car">▸</span>${catIcon(c)}<span class="pn">${c}</span><span class="pc">${ts.length}</span></button><div class="pbody"${on ? '' : ' hidden'}>`;
+    if (loose.length) h += `<div class="pg">${loose.map(tile).join('')}</div>`;
+    for (const g of subs) { const gs = ts.filter(t => subOf(t) === g), so = !!PALOPEN[c + '/' + g];
+      h += `<div class="psub" data-sub="${c}/${g}"><button class="shd" aria-expanded="${so}"><span class="car">▸</span><span class="pn">${esc(g)}</span><span class="pc">${gs.length}</span></button><div class="pg"${so ? '' : ' hidden'}>${gs.map(tile).join('')}</div></div>`; }
+    h += '</div></div>'; }
   $('palette').innerHTML = '<div class="pal-top"><span>Parts</span><button id="pal-hide" title="Hide the parts list (the » on the left brings it back)">« Hide</button></div>' + h;
   $('pal-hide').addEventListener('click', () => setPalette(null, true));
+  for (const b of document.querySelectorAll('#palette .phd, #palette .shd')) b.addEventListener('click', () => {
+    const box = b.parentElement, k = box.dataset.cat || box.dataset.sub, open = b.getAttribute('aria-expanded') !== 'true';
+    palOpen(k, open);
+  });
   for (const el of document.querySelectorAll('.pt')) el.addEventListener('pointerdown', e => {
     e.preventDefault(); const t = el.dataset.t, x0 = e.clientX, y0 = e.clientY; startPlacing(t);
     // dragged out onto the sheet: put down where it is let go; just clicked: put in view, in a clear spot (as in Circuit Builder)
@@ -89,7 +131,7 @@ function buildPalette() {
     window.addEventListener('pointerup', up);
   });
   let m = '';
-  for (const c of CATS) { m += `<div class="menuwrap"><button class="rb" data-menu="${c}"><span class="sw" style="border-color:${CAT_COL[c]}"></span><span>${c} ▾</span></button><div class="dmenu" hidden>`;
+  for (const c of CATS) { m += `<div class="menuwrap"><button class="rb" data-menu="${c}">${catIcon(c)}<span>${c} ▾</span></button><div class="dmenu" hidden>`;
     const item = (t, d) => `<button data-t="${t}">${thumb(t).replace('<svg', '<svg style="width:46px;height:26px;background:#f4f5f6;border-radius:4px;padding:2px"')}${esc(d.name)}</button>`;
     const subs = new Map(), done = new Set();
     for (const [t, d] of Object.entries(LIB)) if (d.cat === c && !d.hide && subOf(t)) { const g = subOf(t); if (!subs.has(g)) subs.set(g, []); subs.get(g).push(t); }
@@ -178,6 +220,20 @@ document.addEventListener('pointerdown', e => { if (!menuOpen() || e.target.clos
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && menuOpen()) { closeMenus(); e.stopPropagation(); } }, true);
 window.addEventListener('blur', closeMenus);
 
+/* ---------- the Grid menu, in the bar at the bottom (it opens upward) ---------- */
+function showGrid() {
+  for (const sg of document.querySelectorAll('#grid-menu .seg')) for (const b of sg.children) b.setAttribute('aria-pressed', String(GRID[sg.dataset.g] === b.dataset.v));
+  $('grid-str').value = GRID.strength; $('grid-snap').checked = !!GRID.snap;
+  $('grid-btn').textContent = `Grid: ${GRID.style === 'none' ? 'None' : GRID.style === 'lines' ? 'Lines' : 'Dots'} ▾`;
+}
+function setGrid(k, v) { GRID[k] = v; try { localStorage.setItem(GRIDKEY, JSON.stringify(GRID)); } catch (_) {} showGrid(); drawEd(); }
+$('grid-btn').addEventListener('click', e => { e.stopPropagation(); const d = $('grid-menu'), open = d.hidden; closeMenus(); d.hidden = !open;
+  if (open) { const r = $('grid-btn').getBoundingClientRect(), z = uiZoom(); d.style.position = 'fixed'; d.style.left = r.left / z + 'px'; d.style.top = 'auto'; d.style.bottom = (innerHeight - r.top + 6) / z + 'px'; } });
+for (const sg of document.querySelectorAll('#grid-menu .seg')) sg.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setGrid(sg.dataset.g, b.dataset.v); });
+$('grid-str').addEventListener('input', e => setGrid('strength', +e.target.value));
+$('grid-snap').addEventListener('change', e => setGrid('snap', e.target.checked));
+showGrid();
+
 /* ---------- properties ---------- */
 function focusProp(id) { setTimeout(() => { const el = $(id); if (el) { el.focus(); el.select && el.select(); } }, 0); }
 let editing = false;   // (one undo step for a run of typing in one box)
@@ -223,7 +279,7 @@ function renderProps0() {
       ${/^(con|tc)_n[oc]$/.test(p.t) && (timerOf(p) || p.t.startsWith('tc')) ? `<div class="f">Contact Type<div class="seg"><button data-ctype="tc" aria-pressed="${p.t.startsWith('tc')}">Timed</button><button data-ctype="con" aria-pressed="${p.t.startsWith('con')}">Instant</button></div></div>` : ''}
       ${p.t === 'sel' ? `<div class="f">Positions<input class="in" id="p-pos" value="${esc(selNames(p).join('/'))}" title="2 to 4 positions, with slashes: HAND/OFF/AUTO"></div><div class="f">Closed In<div class="seg">${selNames(p).map((n, i) => `<button data-cl="${i}" aria-pressed="${(p.closedIn || []).includes(i)}">${esc(n)}</button>`).join('')}</div></div>` : ''}
       ${p.t === 'pl' ? `<div class="f">Built Into<select id="p-inpb"><option value="">None (a light of its own)</option>${[...new Set(allParts().filter(q => isPB(q.p) && q.p.tag).map(q => q.p.tag).concat(p.inPB ? [p.inPB] : []))].map(t => `<option value="${esc(t)}"${t === p.inPB ? ' selected' : ''}>${esc(t)} (lighted pushbutton)</option>`).join('')}</select></div>` : ''}
-      ${isPB(p) || p.t === 'sel' ? `<p class="help">${blocksOf(p).length > 1 ? (mainBlock(p) === p ? `The main one of ${blocksOf(p).length} blocks of ${esc(p.tag)}` : `An extra contact block of ${esc(p.tag)}`) + ': they work together.' : `To give it another contact block on another rung, put down another ${p.t === 'sel' ? 'selector' : 'pushbutton'} and give it the same number (${esc(p.tag)}).`}</p>` : ''}
+      ${linkable(p) ? `<p class="help">${blocksOf(p).length > 1 ? (mainBlock(p) === p ? `The main one of ${blocksOf(p).length} contacts of ${esc(p.tag)}` : `Another contact of ${esc(p.tag)}`) + ': they work together, joined by a dashed link (drag it to shape it).' : `To give it another contact on another rung, put down another ${FAMILY_NAME[family(p)] || 'one'} and give it the same name (${esc(p.tag)}).`}</p>` : ''}
       ${k === 'coil' ? `<div class="f">Kind<select id="p-pre">${COIL_PRE.map(([v, n]) => `<option value="${v}"${(p.pre || 'CR') === v ? ' selected' : ''}>${n} (${v})</option>`).join('')}</select></div>` : ''}
       ${k === 'cont' ? `<div class="f">Direction<div class="seg"><button data-flip="cnt_out" aria-pressed="${p.t === 'cnt_out'}">Continues To</button><button data-flip="cnt_in" aria-pressed="${p.t === 'cnt_in'}">Continued From</button></div></div><p class="help">Give the arrow where the wire leaves off and the arrow where it picks up the same letter: they are one wire, numbered alike, and each says where the other is.</p>` : ''}
       ${d.flip && k !== 'cont' ? `<div class="f">Contact<div class="seg"><button data-flip="${/_no$|_hc$/.test(p.t) ? p.t : d.flip}" aria-pressed="${/_no$|_hc$/.test(p.t)}">${/_h[co]$/.test(p.t) ? 'NO (HC)' : 'NO'}</button><button data-flip="${/_nc$|_ho$/.test(p.t) ? p.t : d.flip}" aria-pressed="${/_nc$|_ho$/.test(p.t)}">${/_h[co]$/.test(p.t) ? 'NC (HO)' : 'NC'}</button></div></div>` : ''}
@@ -231,7 +287,7 @@ function renderProps0() {
       ${rn ? `<div class="f">Rung<span class="ro">${rn} (automatic)</span></div>` : ''}
       ${termNums.length ? `<div class="f">Wires<span class="ro">${termNums.join(' → ')} (automatic)</span></div>` : ''}
       ${xr && xr.length ? `<div class="f">Contacts on<span class="ro">${xr.map(o => o.n + (o.nc ? ' (NC)' : '')).join(', ')}</span></div>` : ''}
-      <div class="acts">${canTurn(p) ? `<button class="btn" id="p-rot">Rotate (${kn('rotate')})</button>` : ''}${canFlip(p) ? `<button class="btn" id="p-flip" aria-pressed="${!!p.fx}" title="Flip it left to right, about its middle (${kn('flip')}); again to put it back">Flip ⇆ (F)</button>` : ''}${p.lt || p.ld || p.lf ? '<button class="btn" id="p-lab">Put Labels Back</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
+      <div class="acts">${canTurn(p) ? `<button class="btn" id="p-rot">Rotate (${kn('rotate')})</button>` : ''}${canFlip(p) ? `<button class="btn" id="p-flip" aria-pressed="${!!p.fx}" title="Flip it left to right, about its middle (${kn('flip')}); again to put it back">Flip ⇆ (${kn('flip')})</button>` : ''}${p.lt || p.ld || p.lf ? '<button class="btn" id="p-lab">Put Labels Back</button>' : ''}<button class="btn del" id="p-del">Delete</button></div>`;
     const of = $('p-of'); if (of) of.addEventListener('change', () => { let v = of.value; if (v === '__other') { v = (prompt(k === 'olc' ? 'The overload this contact belongs to (e.g. OL2):' : 'The coil that works this contact (e.g. CR3):', p.tag || '') || '').trim().toUpperCase(); if (!v) { renderProps(); return; } }
       snapshot(); p.tag = v; refresh(); });
     const tg = $('p-tag'); let was = p.tag;
@@ -276,7 +332,7 @@ function renderProps0() {
     renderMulti(P, multiParts(ids));
   } else if (selL && !ids.length && !w) {
     const o = partOf(S, selL), L = o && LINKS.find(x => x.own.id === selL);
-    P.innerHTML = `<h4>Dashed Link${L ? ': ' + esc(L.kind === 'light' ? (L.a.tag || 'PB') + ' to ' + (L.b.tag || 'PL') : (L.a.tag || '') + ' blocks') : ''}</h4>
+    P.innerHTML = `<h4>Dashed Link${L ? ': ' + esc(L.kind === 'light' ? (L.a.tag || 'PB') + ' to ' + (L.b.tag || 'PL') : (L.a.tag || '') + (isPB(L.a) || L.a.t === 'sel' ? ' blocks' : ' contacts')) : ''}</h4>
       <p class="help">${L && L.kind === 'light' ? 'Joins a lighted pushbutton to its light.' : 'Joins the contact blocks of one device.'} Drag a run to move it; drag an end’s dot round the symbol to fasten it to another side; double-click it to put it back.</p>
       <div class="acts">${o && o.lk ? '<button class="btn" id="lk-back">Put Link Back</button>' : ''}</div>`;
     const lb = $('lk-back'); if (lb) lb.addEventListener('click', () => { snapshot(); delete o.lk; refresh(); });

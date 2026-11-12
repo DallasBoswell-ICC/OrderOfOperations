@@ -9,7 +9,7 @@ function checkPrint(A = analyse()) {
   const { parts, kindOf, label, TERMS, WIRED } = A;
   const name = p => p.tag || LIB[p.t].name;
   const sheetName = k => doc.sheets.length > 1 ? ` (sheet ${k + 1})` : '';
-  // (a pushbutton's or selector's extra contact blocks share its number)
+  // (a button's or switch's other contacts share its name: blocksOf)
   // tags: the same one on two devices that must each have their own; none at all
   const byTag = new Map();
   for (const x of parts) if (UNIQUE.has(kindOf(x.p)) && x.p.tag && !(blocksOf(x.p).length > 1 && mainBlock(x.p) !== x.p)) for (const tg of tagsOf(x.p)) { const k = (kindOf(x.p) === 'motor' ? 'motor:' : '') + tg; if (!byTag.has(k)) byTag.set(k, []); byTag.get(k).push(x); }
