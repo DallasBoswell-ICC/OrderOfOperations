@@ -153,7 +153,7 @@ let passed = 0, failed = 0;
   await check('App: the manifest and its icons are next to the page, under their new names', async p => {
     const fs = require('fs'), path = require('path'), dist = path.join(__dirname, '..', 'dist');
     const m = JSON.parse(fs.readFileSync(path.join(dist, 'print-builder.webmanifest'), 'utf8'));
-    const missing = m.icons.map(i => i.src).filter(f => !fs.existsSync(path.join(dist, f)));
+    const missing = m.icons.map(i => i.src.split('?')[0]).filter(f => !fs.existsSync(path.join(dist, f)));
     const linked = await p.evaluate(() => document.querySelector('link[rel=manifest]').getAttribute('href'));
     return !missing.length && m.icons.every(i => i.src.includes('pb-')) && linked.startsWith('print-builder.webmanifest') ? [] : ['missing: ' + missing + ', linked: ' + linked];
   });
