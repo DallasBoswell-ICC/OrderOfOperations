@@ -836,7 +836,7 @@ let passed = 0, failed = 0;
     await p.reload(); await p.waitForTimeout(300);
     if (await st() !== 'Buttons- Switches+ Outputs- Contacts- Protection- Power- Continuation-' || !(await p.locator('.pt[data-t="ls_no"]').isVisible())) out.push('not kept: ' + await st());
     const cols = await p.evaluate(() => [...document.querySelectorAll('#palette .pcat')].map(c => getComputedStyle(c).getPropertyValue('--c').trim()).join());
-    if (cols !== '#FF0032,#FF9600,#FFDC00,#00B050,#4A9BFF,#0070C0,#7030A0') out.push('the kinds\' colours, the rainbow in order: ' + cols);
+    if (cols !== '#FF0032,#FF9600,#FFDC00,#00B050,#4A9BFF,#B58CFF,#FF4FC4') out.push('the kinds\' colours, the rainbow in order: ' + cols);
     return out;
   });
 
