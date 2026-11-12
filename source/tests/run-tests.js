@@ -2822,6 +2822,44 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Keyboard shortcuts (left hand): E/W tools, Q places again, arrows nudge as one undo, X deletes, G Build/Run, Z fits, F1 lists every key', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    await page.mouse.move(650, 600);
+    await page.keyboard.press('w'); if (await page.evaluate(() => tool) !== 'wire') out.push('W: tool is ' + await page.evaluate(() => tool));
+    await page.keyboard.press('e'); if (await page.evaluate(() => tool) !== 'select') out.push('E: tool is ' + await page.evaluate(() => tool));
+    await page.keyboard.press('q'); if (await page.evaluate(() => parts.length) !== 0) out.push('Q with nothing placed yet placed something');
+    await page.evaluate(() => { closeMenus(); setTool('select'); placeFree('coil'); }); await page.waitForTimeout(60);   // (as a click on Relay Coil in the ribbon)
+    const n0 = await page.evaluate(() => parts.length), p0 = await page.evaluate(() => { const q = parts[parts.length - 1]; return [q.x, q.y]; });
+    await page.keyboard.press('q'); await page.waitForTimeout(60);
+    if (await page.evaluate(() => parts.length) !== n0 + 1 || await page.evaluate(() => parts[parts.length - 1].t) !== 'coil') out.push('Q did not place another coil');
+    const h0 = await page.evaluate(() => history.length), id = await page.evaluate(() => [...sel.parts][0]), at = () => page.evaluate(i => { const q = parts.find(z => z.id === i); return [q.x, q.y]; }, id);
+    const a0 = await at();
+    await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight'); await page.keyboard.press('Shift+ArrowDown');
+    const a1 = await at();
+    if (a1[0] !== a0[0] + 2 * 20 || a1[1] !== a0[1] + 5 * 20) out.push('arrows: ' + a0 + ' -> ' + a1);
+    if (await page.evaluate(() => history.length) !== h0 + 1) out.push('a run of nudges is not one undo step');
+    await page.keyboard.press('Control+z'); if (String(await at()) !== String(a0)) out.push('undo after nudging: ' + await at());
+    await page.keyboard.press('Escape'); await page.evaluate(i => { sel = selOne('p', i); draw(); }, id);
+    await page.keyboard.press('F2'); await page.waitForTimeout(60);
+    if (!await page.evaluate(() => { const a = document.activeElement; return !!a.closest('#editpanel') && /SELECT|INPUT/.test(a.tagName); })) out.push('F2 did not go to the letter');
+    await page.evaluate(() => document.activeElement.blur());
+    await page.keyboard.press('x'); if (await page.evaluate(i => parts.some(q => q.id === i), id)) out.push('X did not delete');
+    await page.keyboard.press('g'); await page.waitForTimeout(100); if (await page.evaluate(() => editing)) out.push('G did not go to Run');
+    await page.keyboard.press('g'); await page.waitForTimeout(100); if (!await page.evaluate(() => editing)) out.push('G did not come back to Build');
+    await page.evaluate(() => { cam = { x: 0, y: 200, z: 2, fit: false }; draw(); });
+    await page.keyboard.press('z'); if (!await page.evaluate(() => cam.fit)) out.push('Z did not fit');
+    await page.keyboard.press('F1'); await page.waitForTimeout(60);
+    if (!await page.evaluate(() => document.getElementById('keys-dlg').open)) out.push('F1 did not open the list');
+    const listed = await page.evaluate(() => document.getElementById('keys-dlg').textContent);
+    for (const w of ['Select', 'Wire', 'Switch Build and Run', 'Place another', 'Nudge a grid step', 'Jump to its letter', 'Fit the whole circuit', 'Press the picked button', 'Print Diagram']) if (!listed.includes(w)) out.push('the list leaves out ' + w);
+    await page.keyboard.press('w'); if (await page.evaluate(() => tool) === 'wire') out.push('keys reach the panel with the list open');
+    await page.click('#keys-close'); await page.click('#keys-btn'); if (!await page.evaluate(() => document.getElementById('keys-dlg').open)) out.push('the keyboard button did not open the list');
+    const tips = await page.evaluate(() => ['[data-tool="select"]', '[data-tool="wire"]', '#del', '#tab-run', '#zoom-fit'].map(q => document.querySelector(q).dataset.tip));
+    ['(E)', '(W)', 'X or Delete', 'G switches', '(Z)'].forEach((k, i) => { if (!tips[i].includes(k)) out.push('tip leaves out ' + k); });
+    return out;
+  });
+
   await browser.close();
   const failed = results.filter(r => !r.ok);
   console.log(`\n${results.length - failed.length} of ${results.length} checks passed.`);

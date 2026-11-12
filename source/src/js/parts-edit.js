@@ -56,7 +56,7 @@ function placePart(kind, x, y) {
   if (wireInTheWay({ t: kindOf(kind), x, y })) { say('There is a wire in the way.'); return; }
   snapshot();
   const p = newPart(kind, x, y);
-  parts.push(p); normalize(); sel = selOne('p', p.id); ribbonTab = mainTab; say(''); draw();
+  parts.push(p); lastKind = kind; normalize(); sel = selOne('p', p.id); ribbonTab = mainTab; say(''); draw();
 }
 
 /* A part clicked on the ribbon goes straight onto the panel: to the free spot nearest the middle of the view, clear

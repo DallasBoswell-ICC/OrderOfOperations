@@ -454,6 +454,21 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
 .rpanel[data-more="l"] { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 48px), transparent); }
 .rpanel[data-more="lr"] { -webkit-mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); }
 
+/* Keyboard Shortcuts (F1), as in Print Builder */
+dialog.keys-dlg { width: min(1000px, 96vw); max-height: 94vh; overflow: auto; }
+.keys-dlg .hint { margin: 0; color: var(--faint); font-size: .85rem; }
+.kb { display: grid; gap: 5px; padding: 10px; background: #1b1d20; border: 1px solid var(--line); border-radius: 10px; }
+.kr { display: flex; gap: 5px; } .kgap { flex: .5; }
+.kk { min-width: 0; height: 64px; border-radius: 7px; background: #2a2d31; border: 1px solid #3a3f45; border-bottom-width: 3px; display: flex; flex-direction: column; padding: 3px 6px; color: #6f7780; overflow: hidden; }
+.kk b { font-size: 12.5px; font-weight: 700; } .kk i { font-style: normal; font-size: 11px; font-weight: 600; line-height: 1.2; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kk em { font-style: normal; font-size: 9.5px; line-height: 1.2; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kk.on { background: color-mix(in srgb, var(--kc) 15%, #2a2d31); border-color: color-mix(in srgb, var(--kc) 70%, #000); color: var(--ink); }
+.kk.on b { color: var(--kc); }
+.kcols { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
+.kgrp h4 { margin: 0 0 6px; font-size: 13px; color: var(--kc); border-bottom: 2px solid var(--kc); padding-bottom: 3px; }
+.kl { display: grid; grid-template-columns: auto 1fr; gap: 10px; margin-bottom: 4px; font-size: 12px; color: var(--muted); line-height: 1.3; }
+.kl kbd { font: 600 11.5px var(--ui); color: var(--ink); }
+
 .demo-badge { font-style: normal; font-size: .7rem; font-weight: 800; letter-spacing: .08em; color: #1c1d1f; background: #9be03a; border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }
 </style>
 </head>
@@ -494,8 +509,8 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
       <button type="button" class="qbtn" id="redo" aria-label="Redo" data-tip="Redo (Ctrl+Y)" disabled><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
     </div>
     <div class="seg modeseg" role="tablist" aria-label="Mode">
-      <button type="button" role="tab" id="tab-edit" aria-selected="true">Build</button>
-      <button type="button" role="tab" id="tab-run" aria-selected="false">Run</button>
+      <button type="button" role="tab" id="tab-edit" aria-selected="true" data-tip="Build: put parts and wires on the panel (G switches Build and Run)">Build</button>
+      <button type="button" role="tab" id="tab-run" aria-selected="false" data-tip="Run: power the circuit and press its buttons (G switches Build and Run)">Run</button>
     </div>
     <button type="button" class="qbtn infobtn" id="about-btn" aria-label="About this program" data-tip="About Circuit Builder: who made it, and the license it is shared under">i</button>
   </header>
@@ -509,6 +524,7 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
       <button type="button" class="rtab ctx" id="rt-part" aria-pressed="false" hidden>Part</button>
       <button type="button" class="rtab" id="rt-run" aria-pressed="false" hidden>Simulation</button>
       <p class="msg" id="msg" role="status"></p>
+      <button type="button" class="rcollapse" id="keys-btn" aria-label="Keyboard shortcuts" data-tip="Keyboard Shortcuts: every key, on a map of the keyboard (F1)"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6 9.5h1M9.5 9.5h1M13 9.5h1M16.5 9.5h1.5M6 12.5h1M9.5 12.5h1M13 12.5h1M16.5 12.5h1.5M8 15h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
       <button type="button" class="rcollapse" id="fs-toggle" aria-pressed="false" aria-label="Full screen" data-tip="Full screen: the circuit fills the screen (Esc to leave)"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <button type="button" class="rcollapse" id="ribbon-toggle" aria-expanded="true" aria-label="Collapse the ribbon" data-tip="Fold the ribbon away for more room (the tabs stay)"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3.5 10l4.5-4.5 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
@@ -521,14 +537,14 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
           <button type="button" class="tool small" id="cut" disabled data-tip="Cut the selected parts and wires (Ctrl+X)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/><path d="M8 16L18 4M16 16L6 4"/></svg><span>Cut</span></button>
         </div>
         <div class="stack">
-          <button type="button" class="tool small danger" id="del" data-tip="Delete the selected part or wire (Delete key)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg><span>Delete</span></button>
+          <button type="button" class="tool small danger" id="del" data-tip="Delete the selected part or wire (X or Delete key)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg><span>Delete</span></button>
           <button type="button" class="tool small" id="clear" data-tip="Start with an empty panel"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg><span>Clear</span></button>
         </div>
       </div><div class="gname">Edit</div></div>
       <div class="rgrp"><div class="gbody">
-        <button type="button" class="tool big" data-tool="select" aria-pressed="true" data-tip="Select: click a part or wire to change it. Drag a part to move it (its wires follow), a wire's middle to slide it, or a wire end to pull it off and move it. Drag across empty space to select several things. Drag from a free part end or a bar to draw a wire.">
+        <button type="button" class="tool big" data-tool="select" aria-pressed="true" data-tip="Select: click a part or wire to change it. Drag a part to move it (its wires follow), a wire's middle to slide it, or a wire end to pull it off and move it. Drag across empty space to select several things. Drag from a free part end or a bar to draw a wire. (E)">
         <svg viewBox="0 0 30 26"><path d="M9 3l13 10-6 1 3 7-3 1-3-7-4 4z" fill="#cfcfcf"/></svg><span>Select</span></button>
-        <button type="button" class="tool big" data-tool="wire" aria-pressed="false" data-tip="Wire: press anywhere and drag. The wire bends once, at a right angle.">
+        <button type="button" class="tool big" data-tool="wire" aria-pressed="false" data-tip="Wire: press anywhere and drag. The wire bends once, at a right angle. (W)">
         <svg viewBox="0 0 30 26"><path d="M3 20h12V6h12" stroke="#cfcfcf" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Wire</span></button>
         <button type="button" class="tool big" data-part="jmp" data-tip="Continuation: carries the current on to every other continuation with the same number, as if a wire ran between them. Place two with the same number (the second one placed takes the first one's number), and wire to any side."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#b8c2cf" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="#c9d2dd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Continuation</span></button>
       </div><div class="gname">Tools</div></div>
@@ -683,7 +699,7 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
         <button type="button" id="zoom-out" aria-label="Zoom out" data-tip="Zoom out (Ctrl + scroll wheel)">−</button>
         <span id="zoom-pct">100%</span>
         <button type="button" id="zoom-in" aria-label="Zoom in" data-tip="Zoom in (Ctrl + scroll wheel). Then scroll to move up and down, Shift + scroll to move left and right, or drag with the scroll wheel held down, or hold Space and drag.">+</button>
-        <button type="button" id="zoom-fit" data-tip="Show the whole circuit">Fit</button>
+        <button type="button" id="zoom-fit" data-tip="Show the whole circuit (Z)">Fit</button>
       </div>
     </div>
     <!-- split view's second pane: its own view of the same circuit -->
@@ -692,7 +708,7 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
         <button type="button" id="zoom-out2" aria-label="Zoom out" data-tip="Zoom out (Ctrl + scroll wheel)">−</button>
         <span id="zoom-pct2">100%</span>
         <button type="button" id="zoom-in2" aria-label="Zoom in" data-tip="Zoom in (Ctrl + scroll wheel). Scroll to move up and down.">+</button>
-        <button type="button" id="zoom-fit2" data-tip="Show the whole circuit">Fit</button>
+        <button type="button" id="zoom-fit2" data-tip="Show the whole circuit (Z)">Fit</button>
       </div>
     </div>
   </div>
@@ -702,6 +718,7 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
 </div>
 
 <!-- About: who made it and the license it is shared under (the "i" button at the top right) -->
+<dialog id="keys-dlg" class="keys-dlg" aria-labelledby="keys-title"><div class="dlg"><h2 id="keys-title">Keyboard Shortcuts</h2><p class="hint">Left hand on the keys, right hand on the mouse. Press F1 any time to see this.</p><div class="kb" aria-hidden="true"><div class="kr"><span class="kk on" style="flex:1;--kc:#ffc000"><b>Esc</b><i>Back / Cancel</i></span><span class="kgap"></span><span class="kk on" style="flex:1;--kc:#46c46a"><b>F1</b><i>Shortcuts</i></span><span class="kk on" style="flex:1;--kc:#2f8cff"><b>F2</b><i>Letter</i></span><span class="kk" style="flex:1"><b>F3</b><i></i></span><span class="kk" style="flex:1"><b>F4</b><i></i></span></div><div class="kr"><span class="kk" style="flex:1"><b>`</b><i></i></span><span class="kk" style="flex:1"><b>1</b><i></i></span><span class="kk" style="flex:1"><b>2</b><i></i></span><span class="kk" style="flex:1"><b>3</b><i></i></span><span class="kk" style="flex:1"><b>4</b><i></i></span><span class="kk" style="flex:1"><b>5</b><i></i></span></div><div class="kr"><span class="kk" style="flex:1.5"><b>Tab</b><i></i></span><span class="kk on" style="flex:1;--kc:#2f8cff"><b>Q</b><i>Place Again</i></span><span class="kk on" style="flex:1;--kc:#ffc000"><b>W</b><i>Wire</i></span><span class="kk on" style="flex:1;--kc:#ffc000"><b>E</b><i>Select</i></span><span class="kk on" style="flex:1;--kc:#2f8cff"><b>R</b><i>Rotate</i></span><span class="kk" style="flex:1"><b>T</b><i></i></span></div><div class="kr"><span class="kk" style="flex:1.8"><b>Caps</b><i></i></span><span class="kk" style="flex:1"><b>A</b><i></i></span><span class="kk on" style="flex:1;--kc:#b58cff"><b>S</b><i></i><em>Ctrl: Save</em></span><span class="kk" style="flex:1"><b>D</b><i></i></span><span class="kk" style="flex:1"><b>F</b><i></i></span><span class="kk on" style="flex:1;--kc:#ffc000"><b>G</b><i>Build / Run</i></span></div><div class="kr"><span class="kk on" style="flex:2.3;--kc:#2f8cff"><b>Shift</b><i></i><em>With arrows: nudge ×5</em></span><span class="kk on" style="flex:1;--kc:#46c46a"><b>Z</b><i>Fit</i><em>Ctrl: Undo</em><em>Ctrl+Shift: Redo</em></span><span class="kk on" style="flex:1;--kc:#2f8cff"><b>X</b><i>Delete</i><em>Ctrl: Cut</em></span><span class="kk on" style="flex:1;--kc:#b58cff"><b>C</b><i></i><em>Ctrl: Copy</em></span><span class="kk on" style="flex:1;--kc:#b58cff"><b>V</b><i></i><em>Ctrl: Paste</em></span><span class="kk" style="flex:1"><b>B</b><i></i></span></div><div class="kr"><span class="kk on" style="flex:1.5;--kc:#46c46a"><b>Ctrl</b><i></i><em>With wheel: zoom</em></span><span class="kk" style="flex:1"><b>Alt</b><i></i></span><span class="kk on" style="flex:3.2;--kc:#46c46a"><b>Space</b><i>Hold + drag: Pan</i></span><span class="kgap"></span><span class="kk on" style="flex:2.2;--kc:#2f8cff"><b>← ↑ ↓ →</b><i>Nudge</i><em>Shift: five steps</em></span></div></div><div class="kcols"><div class="kgrp"><h4 style="--kc:#ffc000">Tools</h4><div class="kl"><kbd>E</kbd><span>Select</span></div><div class="kl"><kbd>W</kbd><span>Wire</span></div><div class="kl"><kbd>G</kbd><span>Switch Build and Run</span></div><div class="kl"><kbd>Esc</kbd><span>Back to Select, and let go of what is picked</span></div></div><div class="kgrp"><h4 style="--kc:#2f8cff">Parts</h4><div class="kl"><kbd>R</kbd><span>Turn a box or fuse a quarter turn</span></div><div class="kl"><kbd>X or Delete</kbd><span>Delete</span></div><div class="kl"><kbd>Q</kbd><span>Place another of the last part</span></div><div class="kl"><kbd>F2</kbd><span>Jump to its letter</span></div><div class="kl"><kbd>Arrows</kbd><span>Nudge a grid step</span></div><div class="kl"><kbd>Shift+Arrows</kbd><span>Nudge five steps</span></div><div class="kl"><kbd>Shift+click</kbd><span>Add to the selection, or take out</span></div></div><div class="kgrp"><h4 style="--kc:#46c46a">View</h4><div class="kl"><kbd>Space + drag</kbd><span>Pan</span></div><div class="kl"><kbd>Ctrl + wheel</kbd><span>Zoom at the pointer</span></div><div class="kl"><kbd>Z</kbd><span>Fit the whole circuit</span></div><div class="kl"><kbd>F1</kbd><span>This list</span></div></div><div class="kgrp"><h4 style="--kc:#ffc000">Run</h4><div class="kl"><kbd>Tab</kbd><span>Pick a button or switch on the panel</span></div><div class="kl"><kbd>Space or Enter</kbd><span>Press the picked button</span></div><div class="kl"><kbd>← →</kbd><span>Turn the picked selector switch</span></div></div><div class="kgrp"><h4 style="--kc:#b58cff">Edit and File</h4><div class="kl"><kbd>Ctrl+Z</kbd><span>Undo</span></div><div class="kl"><kbd>Ctrl+Shift+Z or Ctrl+Y</kbd><span>Redo</span></div><div class="kl"><kbd>Ctrl+C</kbd><span>Copy</span></div><div class="kl"><kbd>Ctrl+X</kbd><span>Cut</span></div><div class="kl"><kbd>Ctrl+V</kbd><span>Paste below the circuit</span></div><div class="kl"><kbd>Ctrl+S</kbd><span>Save</span></div><div class="kl"><kbd>Ctrl+P</kbd><span>Print Diagram</span></div></div></div><div class="dlg-end"><button type="button" class="primary" id="keys-close">Close</button></div></div></dialog>
 <dialog id="about-dlg" class="about-dlg" aria-labelledby="about-title">
   <form method="dialog" class="ab">
     <div class="ab-hd"><svg class="ab-logo" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="96" fill="#1F2328"/><ellipse cx="208.5" cy="256.0" rx="130.0" ry="150.0" fill="none" stroke="#FFC000" stroke-width="67.5"/><path fill="#FFC000" d="M415.542236328125 217.8310546875C448.958984375 217.8310546875 472.304931640625 200.893798828125 472.304931640625 176.8154296875C472.304931640625 160.15283203125 461.318603515625 148.342529296875 439.345947265625 145.87060546875V144.955078125C455.55078125 143.1240234375 467.361083984375 132.68701171875 467.361083984375 117.4892578125C467.361083984375 94.509521484375 446.120849609375 77.75537109375 415.908447265625 77.75537109375C384.963623046875 77.75537109375 362.807861328125 95.425048828125 362.807861328125 120.4189453125H398.330322265625C398.330322265625 112.087646484375 405.654541015625 106.31982421875 415.908447265625 106.31982421875C425.1552734375 106.31982421875 431.655517578125 111.904541015625 431.655517578125 119.86962890625C431.655517578125 128.109375 423.965087890625 133.96875 412.978759765625 133.96875H399.062744140625V159.603515625H412.978759765625C424.97216796875 159.603515625 433.120361328125 165.371337890625 433.120361328125 173.70263671875C433.120361328125 182.12548828125 426.162353515625 187.98486328125 415.908447265625 187.98486328125C405.19677734375 187.98486328125 397.414794921875 182.400146484375 397.414794921875 174.43505859375H360.244384765625C360.244384765625 199.88671875 383.315673828125 217.8310546875 415.542236328125 217.8310546875Z"/><rect x="8" y="8" width="496" height="496" rx="90" fill="none" stroke="#4A4F57" stroke-width="16"/></svg><div><h2 id="about-title">Order of Operations: Circuit Builder</h2>
@@ -4806,7 +4823,7 @@ function placePart(kind, x, y) {
   if (wireInTheWay({ t: kindOf(kind), x, y })) { say('There is a wire in the way.'); return; }
   snapshot();
   const p = newPart(kind, x, y);
-  parts.push(p); normalize(); sel = selOne('p', p.id); ribbonTab = mainTab; say(''); draw();
+  parts.push(p); lastKind = kind; normalize(); sel = selOne('p', p.id); ribbonTab = mainTab; say(''); draw();
 }
 
 /* A part clicked on the ribbon goes straight onto the panel: to the free spot nearest the middle of the view, clear
@@ -6699,6 +6716,79 @@ requestAnimationFrame(frame);
 
 // About: who made it and the license it is shared under
 document.getElementById('about-btn').addEventListener('click', () => document.getElementById('about-dlg').showModal());
+
+/* ---- js/keys.js ---- */
+/* ---------------- keyboard shortcuts ----------------
+   Laid out as in Print Builder, for the left hand on the keys and the right on the mouse (like WASD in a game):
+   E Select, W Wire, R turn, X delete, Q another of the last part placed, F2 its letter, Z fit, G Build/Run, the arrows
+   nudge what is picked, and F1 shows them all (as does the keyboard button by the i). Delete, Esc, R and Ctrl+Z/Y are
+   in toolbar.js; Ctrl+C/X/V in clipboard.js; Ctrl+S in storage.js; Ctrl+P in print.js; Space (pan) in camera.js. */
+let lastKind = null;   // (the last part put on the panel, for Q: set in placePart)
+const keysDlg = document.getElementById('keys-dlg');
+function openKeys() { if (!keysDlg.open) keysDlg.showModal(); }
+document.getElementById('keys-btn').addEventListener('click', openKeys);
+document.getElementById('keys-close').addEventListener('click', () => keysDlg.close());
+
+/* Nudging: a run of arrow presses is one move (one Undo), worked out each time from where things were at the first
+   press, so the wires bend once, as in a drag. A press that would put a part on another part, or a wire through one,
+   stays where the last good press left it. */
+let NUDGE = null;
+function nudge(sx, sy) {
+  if (!NUDGE || NUDGE.after !== stateOf()) {
+    const pIds = new Set(sel.parts), tIds = new Set(sel.terms || []);
+    NUDGE = { start: stateOf(), pIds, wIds: new Set(sel.wires), tIds, P0: parts.filter(q => pIds.has(q.id)).map(q => ({ id: q.id, x: q.x, y: q.y, t: q.t })),
+      T0: [...tIds].map(k => +k.split(':')[1]), dx: 0, dy: 0, moved: false };
+  }
+  const N = NUDGE, apply = (dx, dy) => {
+    restore(N.start);
+    for (let pass = 0; pass < 2; pass++) for (const q of N.P0) { const [cx, cy] = clampPart(q.x + dx, q.y + dy, q.t); dx = cx - q.x; dy = cy - q.y; }
+    for (const y of N.T0) if (y + dy < 40) dy = 40 - y;
+    if (N.P0.some(q => parts.some(o => !N.pIds.has(o.id) && Math.abs(o.x - (q.x + dx)) < halfW(q.t) + halfW(o.t) && Math.abs(o.y - (q.y + dy)) < halfH(q.t) + halfH(o.t)))) return 'There is already a part there.';
+    const m = movedGroup(N.pIds, N.wIds, dx, dy, N.tIds); wires = m.wires;
+    for (const q of parts) if (N.pIds.has(q.id)) { const o = N.P0.find(z => z.id === q.id); q.x = o.x + dx; q.y = o.y + dy; }
+    normalize();
+    if (parts.some(q => N.pIds.has(q.id) && wireInTheWay(q))) return 'There is a wire in the way.';
+    sel = { parts: N.pIds, wires: new Set(wires.filter(w => N.wIds.has(w.id)).map(w => w.id)), terms: new Set([...N.tIds].map(k => k.split(':')[0] + ':' + (+k.split(':')[1] + dy))) };
+    return '';
+  };
+  const bad = apply(N.dx + sx, N.dy + sy);
+  if (bad) { if (N.dx || N.dy) apply(N.dx, N.dy); else restore(N.start); say(bad); }   // (nothing moved yet: exactly as it was)
+  else { N.dx += sx; N.dy += sy; say(''); }
+  if (!N.moved && stateOf() !== N.start) { remember(N.start); N.moved = true; }
+  for (const x of [...parts, ...wires]) nextId = Math.max(nextId, (x.id || 0) + 1);
+  N.after = stateOf(); draw();
+}
+
+// F2: the picked part's tab on the ribbon, with its letter (or its first setting) ready to change
+function renameKey() {
+  if (!sel || sel.parts.size !== 1 || sel.wires.size || (sel.terms && sel.terms.size)) return say('Pick one part first. Then F2 jumps to its letter.');
+  ribbonTab = 'part'; showRibbon();
+  const box = [...document.querySelectorAll('#editpanel select, #editpanel input[type=text]')].find(b => b.offsetParent && !b.disabled);
+  if (box) box.focus(); else say('This part has no letter to change.');
+}
+
+document.addEventListener('keydown', e => {
+  const a = document.activeElement, typing = a && (/SELECT|INPUT|TEXTAREA/.test(a.tagName) || a.isContentEditable);
+  if (e.key === 'F1') { e.preventDefault(); if (!document.querySelector('dialog[open]')) openKeys(); return; }
+  if (typing || e.ctrlKey || e.metaKey || e.altKey || document.querySelector('dialog[open]')) return;
+  const k = e.key.toLowerCase();
+  if (k === 'g' && !LOCKED) { e.preventDefault(); setMode(editing); return; }   // (Build ↔ Run)
+  if (k === 'z' && !e.shiftKey) { e.preventDefault(); fitView(); if (editing) fit(true); draw(); return; }
+  if (!editing) return;   // (the rest are for building; in Run, Tab to a button and Space or Enter presses it)
+  const mv = { arrowleft: [-1, 0], arrowright: [1, 0], arrowup: [0, -1], arrowdown: [0, 1] }[k];
+  if (mv) {
+    if (!selCount()) return;
+    e.preventDefault();
+    if (!sel.parts.size) return say('The arrows move parts (and any wires picked with them). To move a wire on its own, drag its middle.');
+    const n = e.shiftKey ? 5 * G : G; nudge(mv[0] * n, mv[1] * n); return;
+  }
+  if (e.key === 'F2') { e.preventDefault(); renameKey(); return; }
+  if (e.shiftKey) return;
+  if (k === 'e') { setTool('select'); }
+  else if (k === 'w') { setTool('wire'); }
+  else if (k === 'x') { e.preventDefault(); del(); }
+  else if (k === 'q') { if (lastKind) { closeMenus(); setTool('select'); placeFree(lastKind); } else say('Put a part on the panel first. Then Q places another one like it.'); }
+});
 </script>
 </body>
 </html>

@@ -55,6 +55,7 @@ MODULES = [
     "properties.js",     # the selected part's settings
     "storage.js",        # saving and opening circuits (files, codes, kept in the browser)
     "main.js",           # Build/Run switching, fitting to the window, start-up
+    "keys.js",           # the left-hand keyboard shortcuts, nudging, and the Keyboard Shortcuts box (F1)
 ]
 
 
