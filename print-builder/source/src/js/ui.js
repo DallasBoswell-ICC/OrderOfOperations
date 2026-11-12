@@ -84,10 +84,13 @@ const short = n => n.replace(' Maintained Pushbutton', ' Maint. PB').replace(', 
 const CAT_SYM = { Buttons: 'pb_no', Switches: 'ls_no', Outputs: 'coil', Contacts: 'con_no', Protection: 'fuse', Power: 'sup', Continuation: 'cnt_out' };
 const catIcon = c => { const k = CAT_COL[c], t = CAT_SYM[c];
   let svg;
-  if (t === 'coil') svg = `<svg viewBox="-50 -50 100 100"><circle r="36" fill="#000" stroke="${k}" stroke-width="10"/></svg>`;   // (its ring, drawn as two discs on the sheet, too thin this small)
+  if (t === 'coil') svg = `<svg viewBox="-50 -50 100 100"><circle r="40" fill="#000" stroke="${k}" stroke-width="9"/><text y="12" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="34" fill="${k}">CR</text></svg>`;   // (CR in it: a control relay)   // (its ring, drawn as two discs on the sheet, too thin this small)
   else if (isArrowIn(t)) svg = `<svg viewBox="-50 -26 56 52"><g stroke="${k}">${CHEV_IN.replace('fill="#fff"', 'fill="#000"').replace(/stroke-width="[\d.]+"/g, 'stroke-width="5"')}</g></svg>`;
   else { const sy = PSYM[LIB[t].sym], e = extentOf(t), pad = 10, w = e.x1 - e.x0 + 2 * pad, h = sy.y1 - sy.y0 + 2 * pad, m = Math.max(w, h);
-    const b = sy.b.replace(/fill="#000"/g, `fill="${k}"`).replace(/fill="#fff"/g, 'fill="#000"').replace(/stroke="#000"/g, `stroke="${k}"`)
+    // (a terminal, a disc with a white one on it: its ring made as heavy as the lines, the outer disc a little bigger and the inner smaller)
+    const ring = sy.b.replace(/<(circle|ellipse)\b([^>]*)>/g, (m, el, at) => { const f = (at.match(/fill="(#[0-9a-f]+)"/) || [])[1]; if (f !== '#000' && f !== '#fff') return m;
+      return `<${el}${at.replace(/\b(r|rx|ry)="([\d.]+)"/g, (_, a, v) => `${a}="${f === '#000' ? v * 1.2 : Math.max(0, v - 1.8)}"`)}>`; });
+    const b = ring.replace(/fill="#000"/g, `fill="${k}"`).replace(/fill="#fff"/g, 'fill="#000"').replace(/stroke="#000"/g, `stroke="${k}"`)
       .replace(/stroke-width="([\d.]+)"/g, (_, w) => `stroke-width="${w * 1.8}"`);   // (its lines in the colour, and heavier, as it is drawn small)
     svg = `<svg viewBox="${(e.x0 + e.x1) / 2 - m / 2} ${(sy.y0 + sy.y1) / 2 - m / 2} ${m} ${m}"><g fill="none" stroke="${k}" stroke-width="${Math.max(6, m / 10)}" stroke-linecap="round" stroke-linejoin="round">${b}</g></svg>`; }
   return `<span class="sw cat-ico" style="border-color:${k}" aria-hidden="true">${svg}</span>`; };
@@ -102,7 +105,9 @@ function palOpen(k, open) {
   box.querySelector('.phd, .shd').setAttribute('aria-expanded', String(open)); box.querySelector('.pbody, .pg').hidden = !open;
 }
 // a part's tile brought into sight: its kind and its group opened
-function palShow(t) { const c = LIB[t].cat, g = subOf(t); palOpen(c, true); if (g) palOpen(c + '/' + g, true); }
+function palShow(t) { const c = LIB[t].cat; palOpen(c, true); palOpen(c + '/' + palGroup(t), true); }
+// a part's group in the parts list: its kind's (Limit Switches...), or, a part with no others of its kind, its own (Dallas: every part in one)
+const palGroup = t => subOf(t) || LIB[t].name;
 function buildPalette() {
   let h = '';
   // each kind under a header in its colour that opens and closes; kinds with several parts (Limit Switches, Timers...)
@@ -110,10 +115,9 @@ function buildPalette() {
   // open is kept in this browser.
   const tile = t => `<div class="pt" data-t="${t}" title="${esc(LIB[t].name)}">${thumb(t)}<span>${esc(short(LIB[t].name))}</span></div>`;
   for (const c of CATS) {
-    const ts = Object.keys(LIB).filter(t => LIB[t].cat === c && !LIB[t].hide), loose = ts.filter(t => !subOf(t)), subs = [...new Set(ts.filter(subOf).map(subOf))], on = !!PALOPEN[c];
-    h += `<div class="pcat" data-cat="${c}" style="--c:${CAT_COL[c]}"><button class="phd" aria-expanded="${on}"><span class="car">▸</span>${catIcon(c)}<span class="pn">${c}</span><span class="pc">${ts.length}</span></button><div class="pbody"${on ? '' : ' hidden'}>`;
-    if (loose.length) h += `<div class="pg">${loose.map(tile).join('')}</div>`;
-    for (const g of subs) { const gs = ts.filter(t => subOf(t) === g), so = !!PALOPEN[c + '/' + g];
+    const ts = Object.keys(LIB).filter(t => LIB[t].cat === c && !LIB[t].hide), subs = [...new Set(ts.map(palGroup))], on = !!PALOPEN[c];
+    h += `<div class="pcat" data-cat="${c}" style="--c:${CAT_COL[c]}"><button class="phd" aria-expanded="${on}"><span class="car">▸</span><span class="pn">${c}</span><span class="pc">${ts.length}</span></button><div class="pbody"${on ? '' : ' hidden'}>`;
+    for (const g of subs) { const gs = ts.filter(t => palGroup(t) === g), so = !!PALOPEN[c + '/' + g];
       h += `<div class="psub" data-sub="${c}/${g}"><button class="shd" aria-expanded="${so}"><span class="car">▸</span><span class="pn">${esc(g)}</span><span class="pc">${gs.length}</span></button><div class="pg"${so ? '' : ' hidden'}>${gs.map(tile).join('')}</div></div>`; }
     h += '</div></div>'; }
   $('palette').innerHTML = '<div class="pal-top"><span>Parts</span><button id="pal-hide" title="Hide the parts list (the » on the left brings it back)">« Hide</button></div>' + h;
