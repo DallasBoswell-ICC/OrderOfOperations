@@ -71,7 +71,7 @@ def build() -> Path:
         raise SystemExit("A script contains </script, which would end the page's <script> early: write it <\\/script")
     # the O³ icon, built into the page as a data URL
     from urllib.parse import quote
-    icon = "data:image/svg+xml," + quote(" ".join((SRC / ICONS / "icon.svg").read_text(encoding="utf-8").split()), safe=" =:/'(),")
+    icon = "data:image/svg+xml," + quote(" ".join((SRC / ICONS / "favicon.svg").read_text(encoding="utf-8").split()), safe=" =:/'(),")
     if DEMO:
         # its own name and badge, and its own keys in the browser's storage (autosave, view and other settings)
         js = js.replace("'oo-circuit-builder:", "'oo-circuit-builder-demo:")

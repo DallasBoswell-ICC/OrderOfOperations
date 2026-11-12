@@ -46,9 +46,9 @@ def build() -> Path:
     js = "\n".join(f"/* ---- js/{n} ---- */\n" + (SRC / "js" / n).read_text(encoding="utf-8") for n in MODULES)
     if "</script" in js.lower():
         raise SystemExit("A script contains </script, which would end the page's <script> early")
-    icon = "data:image/svg+xml," + quote(" ".join((SRC / "icons" / "pb-icon.svg").read_text(encoding="utf-8").split()), safe=" =:/'(),")
+    icon = "data:image/svg+xml," + quote(" ".join((SRC / "icons" / "pb-favicon.svg").read_text(encoding="utf-8").split()), safe=" =:/'(),")
     if DEMO:
-        icon = "data:image/svg+xml," + quote(" ".join((SRC / "icons-demo" / "pbd-icon.svg").read_text(encoding="utf-8").split()), safe=" =:/'(),")
+        icon = "data:image/svg+xml," + quote(" ".join((SRC / "icons-demo" / "pbd-favicon.svg").read_text(encoding="utf-8").split()), safe=" =:/'(),")
         js = js.replace("'oo-print-builder:", "'oo-print-builder-demo:")
         page = page.replace("<title>Print Builder</title>", "<title>Print Builder (Demo)</title>")
         page = page.replace("<h1>Order of Operations: <span>Print Builder</span></h1>", '<h1>Order of Operations: <span>Print Builder</span> <em class="demo-badge" title="The demo build: new features are tried out here before they go into the full Print Builder">DEMO</em></h1>')
