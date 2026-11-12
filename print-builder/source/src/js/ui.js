@@ -79,17 +79,18 @@ function thumbMark(t, s) {
   return `<text x="${c.x}" y="${c.y + c.r * .36}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="${c.r * (m.length > 1 ? .95 : 1.1)}" fill="#000">${m}</text>`;
 }
 const short = n => n.replace(' Maintained Pushbutton', ' Maint. PB').replace(', Low Temp', ' (Low)').replace(' (Control)', '').replace(' (Out)', '').replace(' (In)', '').replace('Pushbutton', 'PB').replace('Emergency Stop', 'E-Stop').replace('Temperature', 'Temp.').replace('Proximity', 'Prox.').replace('Selector Switch', 'Selector').replace(', Held Closed', ' (HC)').replace(', Held Open', ' (HO)').replace('Toggle Switch (SPST)', 'Toggle').replace('Overload Heater (1 Line)', 'OL Heater').replace('Phase (L1, L2, L3)', 'Phase').replace('3-Phase', '3Ø');
-// each kind's icon on its ribbon button and parts-list header: Circuit Builder's, in this program's colour for the kind
-const catIcon = c => { const k = CAT_COL[c], box = `<rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="${k}" stroke-width="1.6"/>`;
-  return '<svg class="cat-ico" viewBox="0 0 30 26" aria-hidden="true">' + ({
-    Buttons: box + `<rect x="8.5" y="6.5" width="13" height="13" rx="2.4" fill="${k}"/>`,
-    Switches: box + `<circle cx="15" cy="15" r="6.5" fill="#444"/><rect x="12.6" y="7.5" width="4.8" height="15" rx="2.4" fill="${k}" transform="rotate(45 15 15)"/>`,
-    Outputs: `<circle cx="15" cy="13" r="11.5" fill="#222" stroke="${k}" stroke-width="1.6"/><circle cx="15" cy="13" r="7.5" fill="#555"/>`,
-    Contacts: box + `<rect x="8" y="7" width="14" height="2.6" rx="1.3" fill="#a6a6a6"/><circle cx="10" cy="14" r="2.4" fill="#555"/><circle cx="20" cy="14" r="2.4" fill="#555"/>`,
-    Protection: box + '<g fill="#7a7a7a"><rect x="6" y="12" width="2.4" height="2"/><rect x="21.6" y="12" width="2.4" height="2"/><rect x="8.4" y="10.3" width="13.2" height="5.4" rx="1.4"/></g><g fill="#d0d0d0" stroke="#111" stroke-width=".4"><rect x="8.4" y="9.6" width="2.5" height="6.8"/><rect x="19.1" y="9.6" width="2.5" height="6.8"/></g>',
-    Power: box + `<path d="M16.8 5.2l-6.3 8.9h4.6l-1.7 6.7 6.4-9h-4.6z" fill="${k}"/>`,
-    Continuation: box + `<path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="${k}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
-  }[c] || box) + '</svg>'; };
+// each kind's icon on its ribbon button and parts-list header (Dallas, 12 Nov 2026): a black square outlined in the kind's
+// colour, with the print symbol of one of its parts drawn inside in that colour
+const CAT_SYM = { Buttons: 'pb_no', Switches: 'ls_no', Outputs: 'coil', Contacts: 'con_no', Protection: 'fuse', Power: 'sup', Continuation: 'cnt_out' };
+const catIcon = c => { const k = CAT_COL[c], t = CAT_SYM[c];
+  let svg;
+  if (t === 'coil') svg = `<svg viewBox="-50 -50 100 100"><circle r="36" fill="#000" stroke="${k}" stroke-width="10"/></svg>`;   // (its ring, drawn as two discs on the sheet, too thin this small)
+  else if (isArrowIn(t)) svg = `<svg viewBox="-50 -26 56 52"><g stroke="${k}">${CHEV_IN.replace('fill="#fff"', 'fill="#000"').replace(/stroke-width="[\d.]+"/g, 'stroke-width="5"')}</g></svg>`;
+  else { const sy = PSYM[LIB[t].sym], e = extentOf(t), pad = 10, w = e.x1 - e.x0 + 2 * pad, h = sy.y1 - sy.y0 + 2 * pad, m = Math.max(w, h);
+    const b = sy.b.replace(/fill="#000"/g, `fill="${k}"`).replace(/fill="#fff"/g, 'fill="#000"').replace(/stroke="#000"/g, `stroke="${k}"`)
+      .replace(/stroke-width="([\d.]+)"/g, (_, w) => `stroke-width="${w * 1.8}"`);   // (its lines in the colour, and heavier, as it is drawn small)
+    svg = `<svg viewBox="${(e.x0 + e.x1) / 2 - m / 2} ${(sy.y0 + sy.y1) / 2 - m / 2} ${m} ${m}"><g fill="none" stroke="${k}" stroke-width="${Math.max(6, m / 10)}" stroke-linecap="round" stroke-linejoin="round">${b}</g></svg>`; }
+  return `<span class="sw cat-ico" style="border-color:${k}" aria-hidden="true">${svg}</span>`; };
 // which of the parts list's headers are open (a kind, or a kind/group such as Switches/Limit Switches)
 const PALOPENKEY = 'oo-print-builder:palopen';
 let PALOPEN = { Buttons: true };
