@@ -676,6 +676,49 @@ let passed = 0, failed = 0;
     return out;
   });
 
+
+  await check('Keyboard shortcuts (left hand): E/W/V/T tools (L, N too), X deletes, Q places another, A organizes, Shift+A lines up, Shift+C checks, Z fits, 1–9 sheets, F2 renames, arrows nudge (Shift: five) as one undo; F1 and the keyboard button show every key', async p => {
+    const out = [];
+    const tool_ = () => p.evaluate(() => tool);
+    for (const [k, want] of [['w', 'wire'], ['v', 'rung'], ['t', 'note'], ['e', 'select'], ['l', 'rung'], ['n', 'note'], ['Escape', 'select']]) { await p.keyboard.press(k); const t = await tool_(); if (t !== want) out.push(`${k}: ${t}, not ${want}`); }
+    const id = await p.evaluate(() => { const q = S.parts.find(q => q.t === 'coil'); sel = new Set([q.id]); selW = null; refresh(); return q.id; });
+    const x0 = await p.evaluate(id => partOf(S, id).x, id), u0 = await p.evaluate(() => UNDO.length);
+    for (const k of ['ArrowRight', 'ArrowRight', 'ArrowRight', 'Shift+ArrowLeft', 'ArrowDown']) await p.keyboard.press(k);
+    const [dx, dy, du] = await p.evaluate(([id, x0, u0]) => [partOf(S, id).x - x0, 0, UNDO.length - u0], [id, x0, u0]);
+    if (dx !== -40 || du !== 1) out.push(`nudge: moved ${dx} with ${du} undo steps (want -40, 1)`);
+    await p.keyboard.press('Control+z'); if (await p.evaluate(([id, x0]) => partOf(S, id).x !== x0, [id, x0])) out.push('one Ctrl+Z did not undo the nudges');
+    await p.evaluate(id => { sel = new Set([id]); refresh(); }, id);
+    await p.keyboard.press('F2'); await p.waitForTimeout(80); if (await p.evaluate(() => document.activeElement.id) !== 'p-tag') out.push('F2 did not go to the Number box');
+    await p.evaluate(() => document.activeElement.blur());
+    const n0 = await p.evaluate(() => S.parts.length); await p.evaluate(id => { sel = new Set([id]); refresh(); }, id); await p.keyboard.press('x');
+    if (await p.evaluate(() => S.parts.length) !== n0 - 1) out.push('X did not delete'); await p.keyboard.press('Control+z');
+    await p.evaluate(() => placeInView('pl')); await p.keyboard.press('Escape'); await p.keyboard.press('q');
+    if ((await p.evaluate(() => [tool, placing && placing.t])).join() !== 'place,pl') out.push('Q did not pick up another pilot light'); await p.keyboard.press('Escape');
+    await p.evaluate(() => { $('addsheet-btn').click(); }); await p.keyboard.press('1'); if (await p.evaluate(() => doc.cur) !== 0) out.push('1 did not go to sheet 1');
+    await p.keyboard.press('2'); if (await p.evaluate(() => doc.cur) !== 1) out.push('2 did not go to sheet 2'); await p.keyboard.press('1');
+    await p.keyboard.press('Shift+C'); if (await p.evaluate(() => ribTab) !== 'check') out.push('Shift+C did not open Check Print');
+    await p.evaluate(() => { zoom = 2; applyZoom(); }); await p.keyboard.press('z'); if (await p.evaluate(() => zoom) === 2) out.push('Z did not fit the page');
+    // A and Shift+A work the Organize and Line Up buttons
+    await p.evaluate(() => { sel = new Set(); selW = null; refresh(); }); await p.keyboard.press('a');
+    if (!/Pick a rung first/.test(await p.evaluate(() => $('hint').textContent))) out.push('A with nothing picked did not say to pick a rung');
+    await p.evaluate(() => { const q = S.parts.find(q => q.t === 'coil'); sel = new Set([q.id]); refresh(); window.__n = 0; $('org-btn').addEventListener('click', () => window.__n++); });
+    await p.keyboard.press('a'); if (!(await p.evaluate(() => window.__n === 1))) out.push('A did not Organize the picked rung');
+    await p.evaluate(() => { sel = new Set(); refresh(); }); await p.keyboard.press('Shift+A');
+    if (!/Pick two or more parts/.test(await p.evaluate(() => $('hint').textContent))) out.push('Shift+A did not Line Up');
+    // F1 and the button: the panel names every key, Shift and Ctrl ones too
+    await p.keyboard.press('F1'); if (!(await p.evaluate(() => $('keys-dlg').open))) out.push('F1 did not open the shortcuts');
+    const txt = await p.evaluate(() => $('keys-dlg').textContent);
+    for (const s of ['Select', 'Wire', 'Rung', 'Note', 'Rotate', 'Flip', 'Delete', 'Place Again', 'Organize', 'Shift: Line Up', 'Shift: Check Print', 'Fit', 'Sheet 1', 'Rename', 'Nudge', 'Shift: five steps', 'Ctrl: Undo', 'Ctrl: Cut', 'Ctrl: Copy', 'Ctrl: Paste', 'Ctrl: Save', 'Ctrl: Duplicate', 'Hold + drag: Pan', 'Ctrl+P', 'Ctrl+Shift+S'])
+      if (!txt.includes(s)) out.push('panel lacks: ' + s);
+    await p.keyboard.press('w'); if (await tool_() !== 'select') out.push('a key went through to the sheet with the panel open');
+    await p.keyboard.press('Escape'); if (await p.evaluate(() => $('keys-dlg').open)) out.push('Escape did not close the panel');
+    await p.click('#keys-btn'); if (!(await p.evaluate(() => $('keys-dlg').open))) out.push('the keyboard button did not open the panel');
+    await p.click('#keys-close');
+    const tips = await p.evaluate(() => ['[data-tool="select"]', '[data-tool="rung"]', '[data-tool="note"]', '#del-btn', '#org-btn', '#lineup-btn', '#check-btn', '#z-fit'].map(q => { const b = document.querySelector(q); return b ? b.title || b.dataset.tip || '' : 'missing'; }));
+    for (const [i, s] of [[0, '(E)'], [1, '(V or L)'], [2, '(T or N)'], [3, '(X or Delete)'], [4, '(A)'], [5, '(Shift+A)'], [6, '(Shift+C)'], [7, '(Z or Ctrl+0)']]) if (!(tips[i] || '').includes(s)) out.push(`tip ${i} lacks ${s}: ${tips[i]}`);
+    return out;
+  });
+
   await b.close();
   console.log(`\n${passed} of ${passed + failed} checks passed.`);
   process.exit(failed ? 1 : 0);

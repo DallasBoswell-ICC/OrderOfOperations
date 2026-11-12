@@ -8,7 +8,7 @@ const AUTOSAVE = 'oo-print-builder:autosave', SHOWKEY = 'oo-print-builder:show';
 let zoom = 1, spaceDown = false, pan = null, pageFor = null;
 const say = s => { $('hint').textContent = s || hintFor(); };
 const hintFor = () => ({
-  select: 'Click to pick · drag to move · drag empty paper to pick several · R turns · F flips · Delete deletes',
+  select: 'Click to pick · drag to move · drag empty paper to pick several · R turns · F flips · X deletes · F1 shortcuts',
   wire: 'Click to start · click to bend · click a terminal, rail or wire to finish · Esc stops',
   rung: 'Click between the rails to add a rung, then drop symbols onto it',
   note: 'Click where the note goes',
@@ -64,7 +64,9 @@ function setTool(t) {
   if (svg) svg.setAttribute('class', 'tool-' + t);
   $('tip').hidden = true; say(); updateButtons(); drawEd();
 }
-function startPlacing(t) { placing = { t, rot: 0 }; sel = new Set(); selW = null; setTool('place'); renderProps(); }
+function startPlacing(t, rot = 0, fx = false) { placing = { t, rot }; if (fx) placing.fx = true; lastPlaced = { t, rot, fx }; sel = new Set(); selW = null; setTool('place'); renderProps(); }
+// the last part put on the sheet, for Q (place another of it)
+let lastPlaced = null;
 
 /* ---------- the palette and the ribbon's menus ---------- */
 const thumb = t => { if (isArrowIn(t)) return `<svg viewBox="-80 -30 100 60"><path d="M-22 -13L-22 13L0 0Z" fill="#000"/><line x1="0" y1="0" x2="18" y2="0" stroke="#000" stroke-width="4"/><text x="-30" y="9" font-size="26" font-weight="700" text-anchor="end" font-family="Arial">${t === 'src_l2' ? 'L2' : 'L1'}</text></svg>`;
@@ -136,7 +138,7 @@ function placeInView(t) {
   let at = null;
   for (let ring = 0; ring <= 40 && !at; ring++) for (let i = -ring; i <= ring && !at; i++) for (const [dx, dy] of [[i, -ring], [i, ring], [-ring, i], [ring, i]]) { const x = c[0] + dx * 2 * G, y = c[1] + dy * 2 * G; if (free(x, y)) { at = [x, y]; break; } }
   at ||= c;
-  snapshot(); const p = addPart(S, t, at[0], at[1]);
+  snapshot(); const p = addPart(S, t, at[0], at[1]); lastPlaced = { t, rot: 0, fx: false };
   sel = new Set([p.id]); selW = null; keepTab = true; refresh(); keepTab = false;
   const sr = svg.getScreenCTM(), sx = sr.a * at[0] + sr.e, sy = sr.d * at[1] + sr.f; if (sx < r.left || sx > r.right || sy < r.top || sy > r.bottom) showPoint(at[0], at[1]);
   say(`${LIB[t].name} added${p.tag ? ' as ' + p.tag : ''}. Drag it into place, onto a wire to put it in the wire.`);
@@ -503,17 +505,55 @@ document.addEventListener('keydown', e => {
     if (k === '-') { e.preventDefault(); zoomBy(.8); return; }
     return;
   }
-  if (typing) return;
+  if (e.key === 'F1') { e.preventDefault(); if (!typing) openKeys(); return; }   // (F1 opens the shortcuts even while typing in a box)
+  if (typing || document.querySelector('dialog[open]')) return;   // (a box being typed in, or a window open over the sheet: the keys are its)
   if (e.key === ' ') { spaceDown = true; e.preventDefault(); return; }
   if (e.key === 'Escape') { if (wd) finishWire(); else if (tool !== 'select') setTool('select'); else { sel = new Set(); selW = null; selL = null; refresh(); } return; }
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); removeSelection(); return; }
+  if (e.altKey) return;
   const k = e.key.toLowerCase();
-  if (k === 'f' && !e.ctrlKey && !e.metaKey) { if (tool === 'place' && placing) { placing.fx = !placing.fx; drawEd(); } else if (sel.size && [...sel].some(id => canFlip(partOf(S, id)))) { snapshot(); flipParts(S, sel); refresh(); } return; }
+  // arrows: nudge what is picked a grid step (Shift: five). A run of presses is one undo, worked out from where it started,
+  // so the wires bend once, beside the part, however many presses
+  const mv = { arrowleft: [-1, 0], arrowright: [1, 0], arrowup: [0, -1], arrowdown: [0, 1] }[k];
+  if (mv) { if (sel.size) { e.preventDefault(); nudge(mv[0] * G * (e.shiftKey ? 5 : 1), mv[1] * G * (e.shiftKey ? 5 : 1)); } return; }
+  if (e.shiftKey) {
+    if (k === 'a') { e.preventDefault(); lineUp(); return; }
+    if (k === 'c') { e.preventDefault(); $('check-btn').click(); return; }
+    return;
+  }
+  if (k === 'f') { if (tool === 'place' && placing) { placing.fx = !placing.fx; drawEd(); } else if (sel.size && [...sel].some(id => canFlip(partOf(S, id)))) { snapshot(); flipParts(S, sel); refresh(); } return; }
   if (k === 'r') { if (tool === 'place' && placing) { if (canTurn({ t: placing.t })) placing.rot = ((placing.rot || 0) + 90) % 360; drawEd(); } else if (sel.size) { snapshot(); rotateParts(S, sel); refresh(); } return; }
-  if (k === 'v') setTool('select'); if (k === 'w') setTool('wire'); if (k === 'l') setTool('rung'); if (k === 'n') setTool('note');
-  const mv = { arrowleft: [-G, 0], arrowright: [G, 0], arrowup: [0, -G], arrowdown: [0, G] }[k];
-  if (mv && sel.size) { e.preventDefault(); snapshot(); moveItems(S, sel, ...mv); tidy(S); refresh(); }
+  if (k === 'e') return setTool('select');
+  if (k === 'w') return setTool('wire');
+  if (k === 'v' || k === 'l') return setTool('rung');
+  if (k === 't' || k === 'n') return setTool('note');
+  if (k === 'x') { e.preventDefault(); removeSelection(); return; }
+  if (k === 'q') { if (lastPlaced) { startPlacing(lastPlaced.t, lastPlaced.rot, lastPlaced.fx); say(`${LIB[lastPlaced.t].name}: click where it goes (Q again after, for another)`); } else say('Place a part first; then Q puts down another of it.'); return; }
+  if (k === 'a') { e.preventDefault(); if ($('org-btn').disabled) say('Pick a rung first: click its wire, or any part on it. Then A organizes it.'); else $('org-btn').click(); return; }
+  if (k === 'z') { fitZoom(); return; }
+  if (e.key === 'F2') { e.preventDefault(); renameKey(); return; }
+  if (/^[1-9]$/.test(k)) { const n = +k - 1; if (n < doc.sheets.length) { if (n !== doc.cur) { doc.cur = n; sel = new Set(); selW = null; selL = null; refresh(true); } say(`Sheet ${n + 1} of ${doc.sheets.length}`); } else say(`There is no sheet ${n + 1} (this print has ${doc.sheets.length}).`); return; }
 });
+// arrows: nudge (see the key handler)
+let NUDGE = null;
+function nudge(dx, dy) {
+  const key = [...sel].sort().join(',');
+  if (!NUDGE || NUDGE.key !== key || NUDGE.after !== JSON.stringify(doc) || NUDGE.cur !== doc.cur) { snapshot(); NUDGE = { key, cur: doc.cur, orig: clone(S), dx: 0, dy: 0 }; }
+  NUDGE.dx += dx; NUDGE.dy += dy;
+  const s = clone(NUDGE.orig); doc.sheets[doc.cur] = S = s; moveItems(S, new Set(sel), NUDGE.dx, NUDGE.dy); tidy(S);
+  refresh(); NUDGE.after = JSON.stringify(doc);
+}
+// F2: the picked part's number (or the picked wire's), ready to type over
+function renameKey() {
+  if (selW) { setRib('part'); focusProp('w-num'); return; }
+  const ps = [...sel].map(id => partOf(S, id)).filter(Boolean);
+  if (ps.length !== 1 || ps[0].t === 'rail') { say('Pick one part first; F2 then jumps to its Number to rename it.'); return; }
+  setRib('part'); setTimeout(() => { const el = $('p-tag') || $('p-of'); if (el) { el.focus(); el.select && el.select(); } else say('This part has no number to rename.'); }, 0);
+}
+// F1: the Keyboard Shortcuts panel
+function openKeys() { if (!$('keys-dlg').open) $('keys-dlg').showModal(); }
+$('keys-btn').addEventListener('click', openKeys);
+$('keys-close').addEventListener('click', () => $('keys-dlg').close());
 document.addEventListener('keyup', e => { if (e.key === ' ') spaceDown = false; });
 
 /* ---------- starting up ---------- */
