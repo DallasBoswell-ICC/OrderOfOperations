@@ -136,7 +136,7 @@ body.locked .top-right, body.locked .modeseg, body.locked #toolbar, body.locked 
 /* ---------------- an application window: title bar, quick access toolbar and ribbon, as in Office ---------------- */
 .wrap { gap: 8px; }
 .titlebar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-.logo { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: var(--gold); color: #1c1d1f; font-weight: 800; font-size: 15px; line-height: 1; flex: none; }
+.logo { display: block; width: 30px; height: 30px; flex: none; }
 .logo sup { font-size: 9px; margin-left: 1px; }
 .titlebar h1 { font-size: 1.15rem; white-space: nowrap; }
 .qat { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: auto; }
@@ -411,7 +411,7 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
 .ab { display: grid; gap: 12px; padding: 20px 22px 18px; font-size: .9rem; line-height: 1.5; color: #d6dbe0; }
 .ab-hd { display: flex; gap: 14px; align-items: flex-start; }
 .ab-hd h2 { margin: 0; font-size: 1.15rem; color: var(--ink); line-height: 1.3; }
-.ab-logo { flex: none; width: 46px; height: 46px; border-radius: 10px; background: #ffc000; color: #111; display: grid; place-items: center; font-weight: 800; font-size: 19px; }
+.ab-logo { flex: none; width: 46px; height: 46px; display: block; }
 .ab-by { margin: 4px 0 0; font-size: .82rem; color: var(--muted); line-height: 1.45; }
 .ab-lic { display: flex; gap: 12px; align-items: flex-start; background: #1f2124; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; color: var(--ink); }
 .ab-p { margin: 0; } .ab-ul { margin: -6px 0 0; padding-left: 18px; color: var(--muted); } .ab-ul li { margin: 4px 0; } .ab-ul b { color: #d6dbe0; }
