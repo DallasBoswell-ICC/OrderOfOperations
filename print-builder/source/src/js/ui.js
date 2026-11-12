@@ -85,7 +85,7 @@ const CAT_SYM = { Buttons: 'pb_no', Switches: 'ls_no', Outputs: 'coil', Contacts
 const catIcon = c => { const k = CAT_COL[c], t = CAT_SYM[c];
   let svg;
   if (t === 'coil') svg = `<svg viewBox="-50 -50 100 100"><circle r="40" fill="#000" stroke="${k}" stroke-width="9"/><text y="12" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="34" fill="${k}">CR</text></svg>`;   // (CR in it: a control relay)   // (its ring, drawn as two discs on the sheet, too thin this small)
-  else if (c === 'Power') svg = `<svg viewBox="4.4 3.5 19 19"><path d="M16.8 5.2l-6.3 8.9h4.6l-1.7 6.7 6.4-9h-4.6z" fill="${k}"/></svg>`;   // (Power: the lightning bolt, as in Circuit Builder)
+  else if (c === 'Power') svg = `<svg viewBox="5.65 3.5 19 19"><path d="M16.8 5.2l-6.3 8.9h4.6l-1.7 6.7 6.4-9h-4.6z" fill="${k}"/></svg>`;   // (Power: the lightning bolt, as in Circuit Builder)
   else if (isArrowIn(t)) svg = `<svg viewBox="-50 -26 56 52"><g stroke="${k}">${CHEV_IN.replace('fill="#fff"', 'fill="#000"').replace(/stroke-width="[\d.]+"/g, 'stroke-width="5"')}</g></svg>`;
   else { const sy = PSYM[LIB[t].sym], e = extentOf(t), pad = 10, w = e.x1 - e.x0 + 2 * pad, h = sy.y1 - sy.y0 + 2 * pad, m = Math.max(w, h);
     // (a terminal, a disc with a white one on it: its ring made as heavy as the lines, the outer disc a little bigger and the inner smaller)
