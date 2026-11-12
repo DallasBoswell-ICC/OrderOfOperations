@@ -287,3 +287,4 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .kl { display: grid; grid-template-columns: auto 1fr; gap: 10px; margin-bottom: 4px; font-size: 12px; color: var(--muted); line-height: 1.3; }
 .kl kbd { font: 600 11.5px var(--ui); color: var(--ink); }
 .infobtn svg { display: block; margin: 0 auto; }
+.btn.icon.infobtn { padding: 6px 0; }   /* (.btn.icon's side padding left only 14px for the 18px keyboard, pushing it right of centre) */
