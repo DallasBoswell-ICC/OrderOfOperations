@@ -340,15 +340,15 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 /* the parts list: a coloured header for each kind, opening and closing; a kind's groups inside it (Dallas, 12 Nov 2026) */
 .pcat { margin: 0 0 7px; border-radius: 8px; overflow: hidden; border: 2.5px solid var(--c); }
 .phd, .shd { width: 100%; display: flex; align-items: center; gap: 8px; border: 0; cursor: pointer; font: inherit; text-align: left; }
-.phd { padding: 8px 10px; background: var(--c); color: #26292d; font-weight: 800; font-size: 13px; letter-spacing: .03em; border-radius: 4px; }   /* (Dallas: solid in the kind's colour, its text dark grey) */
-.phd:hover { background: color-mix(in srgb, var(--c) 85%, #fff); } .phd .car, .phd .pc { color: #26292d; font-weight: 700; }
+.phd { padding: 8px 10px; background: var(--c); color: var(--ink-on, #26292d); font-weight: 800; font-size: 13px; letter-spacing: .03em; border-radius: 4px; }   /* (Dallas: solid in the kind's colour, its text dark grey) */
+.phd:hover { background: color-mix(in srgb, var(--c) 85%, #fff); } .phd .car, .phd .pc { color: var(--ink-on, #26292d); font-weight: 700; }
 .phd .pc, .shd .pc { margin-left: auto; font-weight: 500; font-size: 11px; color: #aab3bb; }
 .car { width: 10px; flex: none; color: #cfd5db; font-size: 10px; transition: transform .12s; } [aria-expanded="true"] > .car { transform: rotate(90deg); }
 .pbody { padding: 6px; background: #1b1d20; display: grid; gap: 6px; } .pbody[hidden] { display: none; }
 .psub { border-radius: 6px; background: #24272b; }
 .shd { padding: 6px 8px; background: transparent; color: #dfe4e8; font-size: 12px; border-radius: 6px; } .shd:hover { background: #2d3136; }
 .psub .pg { padding: 0 5px 6px; } .pg[hidden] { display: none; }
-.pcat .phd .pc { color: #26292d; opacity: .8; }
+.pcat .phd .pc { color: var(--ink-on, #26292d); opacity: .85; }
 
 .demo-badge { font-style: normal; font-size: .7rem; font-weight: 800; letter-spacing: .08em; color: #1c1d1f; background: #9be03a; border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }
 </style>
@@ -610,7 +610,10 @@ const SUBS = [['Pushbuttons', /^pb_/], ['Maintained Pushbuttons', /^pbm_/], ['Ti
   ['Proximity Switches', /^prs_/], ['Toggle & Multi-Pole Switches', /^(spst|spdt|dpst|dpdt|xover)$/]];
 const subOf = t => { const s = SUBS.find(([, re]) => re.test(t)); return s ? s[0] : null; };
 const CATS = ['Buttons', 'Switches', 'Outputs', 'Contacts', 'Protection', 'Power', 'Continuation'];
-const CAT_COL = { 'Buttons': '#00B050', 'Switches': '#0070C0', 'Outputs': '#FFC000', 'Contacts': '#c9c9c9', 'Protection': '#e5484d', 'Power': '#FF9C37', 'Continuation': '#a26bf5' };
+// each kind's colour: the rainbow in order, from the colours already chosen (Dallas, 12 Nov 2026: Circuit Builder's red,
+// orange, yellow, green and violet; for blue the title's blue, for indigo the deeper blue of Circuit Builder's swatches)
+const CAT_COL = { 'Buttons': '#FF0032', 'Switches': '#FF9600', 'Outputs': '#FFDC00', 'Contacts': '#00B050', 'Protection': '#4A9BFF', 'Power': '#0070C0', 'Continuation': '#7030A0' };
+const CAT_INK = c => ['Power', 'Continuation'].includes(c) ? '#fff' : '#26292d';   // (the text on it: white on the two dark ones)
 // the motor as Circuit Builder prints it: T1, T2, T3 on its left, a line apart like the power circuit's poles, T2's
 // lead straight in, T1's and T3's bending in to the circle (so its wires come in level, on the grid)
 // the fused disconnect, Dallas's design drawn at the same size as the plain disconnect and a single fuse (its switch
@@ -2087,7 +2090,7 @@ function buildPalette() {
   const tile = t => `<div class="pt" data-t="${t}" title="${esc(LIB[t].name)}">${thumb(t)}<span>${esc(short(LIB[t].name))}</span></div>`;
   for (const c of CATS) {
     const ts = Object.keys(LIB).filter(t => LIB[t].cat === c && !LIB[t].hide), subs = [...new Set(ts.map(palGroup))], on = !!PALOPEN[c];
-    h += `<div class="pcat" data-cat="${c}" style="--c:${CAT_COL[c]}"><button class="phd" aria-expanded="${on}"><span class="car">▸</span><span class="pn">${c}</span><span class="pc">${ts.length}</span></button><div class="pbody"${on ? '' : ' hidden'}>`;
+    h += `<div class="pcat" data-cat="${c}" style="--c:${CAT_COL[c]};--ink-on:${CAT_INK(c)}"><button class="phd" aria-expanded="${on}"><span class="car">▸</span><span class="pn">${c}</span><span class="pc">${ts.length}</span></button><div class="pbody"${on ? '' : ' hidden'}>`;
     for (const g of subs) { const gs = ts.filter(t => palGroup(t) === g), so = !!PALOPEN[c + '/' + g];
       h += `<div class="psub" data-sub="${c}/${g}"><button class="shd" aria-expanded="${so}"><span class="car">▸</span><span class="pn">${esc(g)}</span><span class="pc">${gs.length}</span></button><div class="pg"${so ? '' : ' hidden'}>${gs.map(tile).join('')}</div></div>`; }
     h += '</div></div>'; }

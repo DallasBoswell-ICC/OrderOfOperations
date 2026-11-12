@@ -117,7 +117,7 @@ function buildPalette() {
   const tile = t => `<div class="pt" data-t="${t}" title="${esc(LIB[t].name)}">${thumb(t)}<span>${esc(short(LIB[t].name))}</span></div>`;
   for (const c of CATS) {
     const ts = Object.keys(LIB).filter(t => LIB[t].cat === c && !LIB[t].hide), subs = [...new Set(ts.map(palGroup))], on = !!PALOPEN[c];
-    h += `<div class="pcat" data-cat="${c}" style="--c:${CAT_COL[c]}"><button class="phd" aria-expanded="${on}"><span class="car">▸</span><span class="pn">${c}</span><span class="pc">${ts.length}</span></button><div class="pbody"${on ? '' : ' hidden'}>`;
+    h += `<div class="pcat" data-cat="${c}" style="--c:${CAT_COL[c]};--ink-on:${CAT_INK(c)}"><button class="phd" aria-expanded="${on}"><span class="car">▸</span><span class="pn">${c}</span><span class="pc">${ts.length}</span></button><div class="pbody"${on ? '' : ' hidden'}>`;
     for (const g of subs) { const gs = ts.filter(t => palGroup(t) === g), so = !!PALOPEN[c + '/' + g];
       h += `<div class="psub" data-sub="${c}/${g}"><button class="shd" aria-expanded="${so}"><span class="car">▸</span><span class="pn">${esc(g)}</span><span class="pc">${gs.length}</span></button><div class="pg"${so ? '' : ' hidden'}>${gs.map(tile).join('')}</div></div>`; }
     h += '</div></div>'; }

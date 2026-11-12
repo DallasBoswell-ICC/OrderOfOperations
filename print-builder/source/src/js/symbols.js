@@ -81,7 +81,10 @@ const SUBS = [['Pushbuttons', /^pb_/], ['Maintained Pushbuttons', /^pbm_/], ['Ti
   ['Proximity Switches', /^prs_/], ['Toggle & Multi-Pole Switches', /^(spst|spdt|dpst|dpdt|xover)$/]];
 const subOf = t => { const s = SUBS.find(([, re]) => re.test(t)); return s ? s[0] : null; };
 const CATS = ['Buttons', 'Switches', 'Outputs', 'Contacts', 'Protection', 'Power', 'Continuation'];
-const CAT_COL = { 'Buttons': '#00B050', 'Switches': '#0070C0', 'Outputs': '#FFC000', 'Contacts': '#c9c9c9', 'Protection': '#e5484d', 'Power': '#FF9C37', 'Continuation': '#a26bf5' };
+// each kind's colour: the rainbow in order, from the colours already chosen (Dallas, 12 Nov 2026: Circuit Builder's red,
+// orange, yellow, green and violet; for blue the title's blue, for indigo the deeper blue of Circuit Builder's swatches)
+const CAT_COL = { 'Buttons': '#FF0032', 'Switches': '#FF9600', 'Outputs': '#FFDC00', 'Contacts': '#00B050', 'Protection': '#4A9BFF', 'Power': '#0070C0', 'Continuation': '#7030A0' };
+const CAT_INK = c => ['Power', 'Continuation'].includes(c) ? '#fff' : '#26292d';   // (the text on it: white on the two dark ones)
 // the motor as Circuit Builder prints it: T1, T2, T3 on its left, a line apart like the power circuit's poles, T2's
 // lead straight in, T1's and T3's bending in to the circle (so its wires come in level, on the grid)
 // the fused disconnect, Dallas's design drawn at the same size as the plain disconnect and a single fuse (its switch
