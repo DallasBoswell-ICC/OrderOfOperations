@@ -16,9 +16,9 @@
 <title>Circuit Builder</title>
 <!-- the O³ icon: built into the page (so it shows even opened from a USB stick), and, on the website, the app icons for
      installing it as an app (circuit-builder.webmanifest and icons/ sit next to Circuit_Builder.html) -->
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22%3E %3Crect width=%22512%22 height=%22512%22 rx=%22112%22 fill=%22%231c1d1f%22/%3E %3Crect x=%2210%22 y=%2210%22 width=%22492%22 height=%22492%22 rx=%22104%22 fill=%22none%22 stroke=%22%233a3b3f%22 stroke-width=%228%22/%3E %3Cellipse cx=%22208%22 cy=%22296%22 rx=%22128%22 ry=%22146%22 fill=%22none%22 stroke=%22%23ffc000%22 stroke-width=%2262%22/%3E %3Ctext x=%22402%22 y=%22232%22 text-anchor=%22middle%22 font-family=%22Arial, Helvetica, 'DejaVu Sans', sans-serif%22 font-weight=%22700%22 font-size=%22200%22 fill=%22%23ffc000%22%3E3%3C/text%3E %3C/svg%3E">
-<link rel="manifest" href="circuit-builder.webmanifest">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22%3E%3Crect width=%22512%22 height=%22512%22 rx=%2296%22 fill=%22%231F2328%22/%3E%3Cellipse cx=%22208.5%22 cy=%22256.0%22 rx=%22130.0%22 ry=%22150.0%22 fill=%22none%22 stroke=%22%23FFC000%22 stroke-width=%2267.5%22/%3E%3Cpath fill=%22%23FFC000%22 d=%22M415.542236328125 217.8310546875C448.958984375 217.8310546875 472.304931640625 200.893798828125 472.304931640625 176.8154296875C472.304931640625 160.15283203125 461.318603515625 148.342529296875 439.345947265625 145.87060546875V144.955078125C455.55078125 143.1240234375 467.361083984375 132.68701171875 467.361083984375 117.4892578125C467.361083984375 94.509521484375 446.120849609375 77.75537109375 415.908447265625 77.75537109375C384.963623046875 77.75537109375 362.807861328125 95.425048828125 362.807861328125 120.4189453125H398.330322265625C398.330322265625 112.087646484375 405.654541015625 106.31982421875 415.908447265625 106.31982421875C425.1552734375 106.31982421875 431.655517578125 111.904541015625 431.655517578125 119.86962890625C431.655517578125 128.109375 423.965087890625 133.96875 412.978759765625 133.96875H399.062744140625V159.603515625H412.978759765625C424.97216796875 159.603515625 433.120361328125 165.371337890625 433.120361328125 173.70263671875C433.120361328125 182.12548828125 426.162353515625 187.98486328125 415.908447265625 187.98486328125C405.19677734375 187.98486328125 397.414794921875 182.400146484375 397.414794921875 174.43505859375H360.244384765625C360.244384765625 199.88671875 383.315673828125 217.8310546875 415.542236328125 217.8310546875Z%22/%3E%3C/svg%3E">
+<link rel="manifest" href="circuit-builder.webmanifest?v=3">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2">
 <meta name="theme-color" content="#1c1d1f">
 <style>
 :root {
@@ -159,7 +159,7 @@ body.locked .top-right, body.locked .modeseg, body.locked #toolbar, body.locked 
 /* ---------------- an application window: title bar, quick access toolbar and ribbon, as in Office ---------------- */
 .wrap { gap: 8px; }
 .titlebar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-.logo { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: var(--gold); color: #1c1d1f; font-weight: 800; font-size: 15px; line-height: 1; flex: none; }
+.logo { display: block; width: 30px; height: 30px; flex: none; }
 .logo sup { font-size: 9px; margin-left: 1px; }
 .titlebar h1 { font-size: 1.15rem; white-space: nowrap; }
 .qat { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: auto; }
@@ -434,7 +434,7 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
 .ab { display: grid; gap: 12px; padding: 20px 22px 18px; font-size: .9rem; line-height: 1.5; color: #d6dbe0; }
 .ab-hd { display: flex; gap: 14px; align-items: flex-start; }
 .ab-hd h2 { margin: 0; font-size: 1.15rem; color: var(--ink); line-height: 1.3; }
-.ab-logo { flex: none; width: 46px; height: 46px; border-radius: 10px; background: #ffc000; color: #111; display: grid; place-items: center; font-weight: 800; font-size: 19px; }
+.ab-logo { flex: none; width: 46px; height: 46px; display: block; }
 .ab-by { margin: 4px 0 0; font-size: .82rem; color: var(--muted); line-height: 1.45; }
 .ab-lic { display: flex; gap: 12px; align-items: flex-start; background: #1f2124; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; color: var(--ink); }
 .ab-p { margin: 0; } .ab-ul { margin: -6px 0 0; padding-left: 18px; color: var(--muted); } .ab-ul li { margin: 4px 0; } .ab-ul b { color: #d6dbe0; }
@@ -458,7 +458,8 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
 <body>
 <div class="wrap">
   <header class="titlebar">
-    <span class="logo" aria-hidden="true">O³</span>
+    <!-- the O³ mark (the same as the tab icon, with a rim so it shows on the dark bar) -->
+    <svg class="logo" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="96" fill="#1F2328"/><ellipse cx="208.5" cy="256.0" rx="130.0" ry="150.0" fill="none" stroke="#FFC000" stroke-width="67.5"/><path fill="#FFC000" d="M415.542236328125 217.8310546875C448.958984375 217.8310546875 472.304931640625 200.893798828125 472.304931640625 176.8154296875C472.304931640625 160.15283203125 461.318603515625 148.342529296875 439.345947265625 145.87060546875V144.955078125C455.55078125 143.1240234375 467.361083984375 132.68701171875 467.361083984375 117.4892578125C467.361083984375 94.509521484375 446.120849609375 77.75537109375 415.908447265625 77.75537109375C384.963623046875 77.75537109375 362.807861328125 95.425048828125 362.807861328125 120.4189453125H398.330322265625C398.330322265625 112.087646484375 405.654541015625 106.31982421875 415.908447265625 106.31982421875C425.1552734375 106.31982421875 431.655517578125 111.904541015625 431.655517578125 119.86962890625C431.655517578125 128.109375 423.965087890625 133.96875 412.978759765625 133.96875H399.062744140625V159.603515625H412.978759765625C424.97216796875 159.603515625 433.120361328125 165.371337890625 433.120361328125 173.70263671875C433.120361328125 182.12548828125 426.162353515625 187.98486328125 415.908447265625 187.98486328125C405.19677734375 187.98486328125 397.414794921875 182.400146484375 397.414794921875 174.43505859375H360.244384765625C360.244384765625 199.88671875 383.315673828125 217.8310546875 415.542236328125 217.8310546875Z"/><rect x="8" y="8" width="496" height="496" rx="90" fill="none" stroke="#4A4F57" stroke-width="16"/></svg>
     <h1>Order of Operations: <span>Circuit Builder</span></h1>
     <span class="file-label" id="file-label" hidden></span>
     <!-- the quick access toolbar, as in Office: where the circuit comes from and goes to, and undo / redo (in Build and Run) -->
@@ -701,7 +702,7 @@ dialog.printdlg[open] { display: flex; flex-direction: column; }
 <!-- About: who made it and the license it is shared under (the "i" button at the top right) -->
 <dialog id="about-dlg" class="about-dlg" aria-labelledby="about-title">
   <form method="dialog" class="ab">
-    <div class="ab-hd"><span class="ab-logo" aria-hidden="true">O³</span><div><h2 id="about-title">Order of Operations: Circuit Builder</h2>
+    <div class="ab-hd"><svg class="ab-logo" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="96" fill="#1F2328"/><ellipse cx="208.5" cy="256.0" rx="130.0" ry="150.0" fill="none" stroke="#FFC000" stroke-width="67.5"/><path fill="#FFC000" d="M415.542236328125 217.8310546875C448.958984375 217.8310546875 472.304931640625 200.893798828125 472.304931640625 176.8154296875C472.304931640625 160.15283203125 461.318603515625 148.342529296875 439.345947265625 145.87060546875V144.955078125C455.55078125 143.1240234375 467.361083984375 132.68701171875 467.361083984375 117.4892578125C467.361083984375 94.509521484375 446.120849609375 77.75537109375 415.908447265625 77.75537109375C384.963623046875 77.75537109375 362.807861328125 95.425048828125 362.807861328125 120.4189453125H398.330322265625C398.330322265625 112.087646484375 405.654541015625 106.31982421875 415.908447265625 106.31982421875C425.1552734375 106.31982421875 431.655517578125 111.904541015625 431.655517578125 119.86962890625C431.655517578125 128.109375 423.965087890625 133.96875 412.978759765625 133.96875H399.062744140625V159.603515625H412.978759765625C424.97216796875 159.603515625 433.120361328125 165.371337890625 433.120361328125 173.70263671875C433.120361328125 182.12548828125 426.162353515625 187.98486328125 415.908447265625 187.98486328125C405.19677734375 187.98486328125 397.414794921875 182.400146484375 397.414794921875 174.43505859375H360.244384765625C360.244384765625 199.88671875 383.315673828125 217.8310546875 415.542236328125 217.8310546875Z"/><rect x="8" y="8" width="496" height="496" rx="90" fill="none" stroke="#4A4F57" stroke-width="16"/></svg><div><h2 id="about-title">Order of Operations: Circuit Builder</h2>
       <p class="ab-by"><b class="ab-name">Made by Dallas Boswell</b><br>Illinois Central College<br>Industrial Electrical Technology</p></div></div>
     <div class="ab-lic"><svg class="cc-mark big" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="5"/><text x="32" y="42" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="29" fill="currentColor">cc</text></svg><div><b>© 2026 Dallas Boswell. Some rights reserved.</b><br>This software is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (CC BY-NC-SA 4.0).</div></div>
     <p class="ab-p">Under the terms of this license, you may copy, redistribute and adapt this software, provided that:</p>
