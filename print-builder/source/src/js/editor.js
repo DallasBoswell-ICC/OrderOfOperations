@@ -5,7 +5,7 @@ let A = null, ISSUES = [];                 // the drawing read (nets.js), and wh
 let tool = 'select', placing = null;       // the tool; the symbol being put down ({ t, rot })
 let sel = new Set(), selW = null;          // what is picked: parts, rails, nodes, notes (ids); a wire (id)
 let checkOn = false, hover = null, drag = null, wd = null, cursor = null;
-let svg = null, VB = [0, 0], wireDown = null, hoverT = false;
+let svg = null, VB = [0, 0], hoverT = false;
 let ROTH = null;                           // the turning handle on screen ({ id, x, y })
 let selL = null, lastLinkDown = null;                           // a dashed link picked: the id of the part its shape is kept on
 let FLASH = null;                          // a rung just gone to, lit up for a moment ({ k, y })
@@ -111,7 +111,7 @@ function drawEd() {
   // the tool's preview
   if (tool === 'wire' && cursor) {
     const t = snapTarget(cursor);
-    if (wd) { const P = [...wd.pts, ...lRoute(wd.pts[wd.pts.length - 1], [t.x, t.y], wd.pts)]; g += `<polyline points="${P.map(q => q.join(',')).join(' ')}" fill="none" stroke="#2f8cff" stroke-width="5" stroke-dasharray="14 8" stroke-linejoin="round"/>`; }
+    if (wd) { const P = [wd.a, ...wireRoute(wd.a, [t.x, t.y], wd.h !== false)]; g += `<polyline points="${P.map(q => q.join(',')).join(' ')}" fill="none" stroke="#2f8cff" stroke-width="5" stroke-dasharray="14 8" stroke-linejoin="round"/>`; }
     g += `<circle cx="${t.x}" cy="${t.y}" r="${t.kind === 'grid' ? 6 : 11}" fill="${t.kind === 'grid' ? '#2f8cff' : 'none'}" stroke="#2f8cff" stroke-width="4"/>`;
   }
   if (tool === 'rung' && cursor) { const r = rungAt(cursor); if (r) g += `<line x1="${r.x1}" y1="${r.y}" x2="${r.x2}" y2="${r.y}" stroke="#2f8cff" stroke-width="6" stroke-dasharray="16 10" opacity="${r.ok ? 1 : .35}"/>`; }
@@ -130,6 +130,8 @@ function drawEd() {
   for (const e of over.querySelectorAll('g[opacity] [fill="#000"]')) e.setAttribute('fill', '#1f6fd8');
 }
 // an L from a to b (along first, then across; the way that carries on from the last run, or the longer way first)
+// the Wire tool's wire, as in Circuit Builder: one bend, at a right angle; across first or down first (h)
+function wireRoute(a, b, h) { return a[0] === b[0] || a[1] === b[1] ? [b] : [h ? [b[0], a[1]] : [a[0], b[1]], b]; }
 function lRoute(a, b, pts) {
   if (a[0] === b[0] || a[1] === b[1]) return [b];
   let hFirst = Math.abs(b[0] - a[0]) >= Math.abs(b[1] - a[1]);
@@ -158,11 +160,12 @@ function splicePreview(p) {
 /* ---------- the pointer ---------- */
 function onDown(e) {
   if (e.button === 1 || (e.button === 0 && spaceDown)) return startPan(e);
-  if (e.button !== 0) { if (tool === 'wire' && wd) { wd = null; drawEd(); } return; }
+  if (e.button !== 0) { if (wd) { wd = null; drawEd(); } return; }
   e.preventDefault();   // (no text on the page highlighted by a drag)
   const q = sheetPt(e);
   if (tool === 'place' && placing) { putDown(q, e.shiftKey); return; }
-  if (tool === 'wire') { svg.setPointerCapture(e.pointerId); wireDown = q; return wireClick(q, e.detail >= 2); }
+  // Wire (as in Circuit Builder): press anywhere and drag; the way it is first dragged is the way it goes first
+  if (tool === 'wire') { const t = snapTarget(q); wd = { a: [t.x, t.y], q0: q, h: null }; svg.setPointerCapture(e.pointerId); drawEd(); return; }
   if (tool === 'rung') { const r = rungAt(q); if (r && r.ok) { snapshot(); addWire(S, [[r.x1, r.y], [r.x2, r.y]]); refresh(); } else if (r) say('There is a rung there already.'); return; }
   if (tool === 'note') { snapshot(); const t = { id: uid('t'), x: snap(q[0]), y: snap(q[1]), s: 'Note' }; S.texts.push(t); sel = new Set([t.id]); selW = null; setTool('select'); refresh(); focusProp('note-text'); return; }
   // Select: the turning handle (drag it round the part a quarter turn at a time; a click turns it clockwise)
@@ -194,6 +197,7 @@ function onDown(e) {
 function onMove(e) {
   const q = sheetPt(e); cursor = q;
   if (pan) return doPan(e);
+  if (wd) { if (wd.h === null && Math.hypot(q[0] - wd.q0[0], q[1] - wd.q0[1]) > 8) wd.h = Math.abs(q[0] - wd.q0[0]) >= Math.abs(q[1] - wd.q0[1]); drawEd(); tipFor(q, e); return; }
   if (!drag) { if (tool !== 'select') { drawEd(); tipFor(q, e); } else { const t = termAt(q); svg.classList.toggle('on-term', !!t); svg.classList.toggle('on-rot', !!ROTH && Math.hypot(q[0] - ROTH.x, q[1] - ROTH.y) <= 26); { const h = t ? null : pick(q); svg.classList.toggle('on-ref', !!h && (h.kind === 'xref' || h.kind === 'rungnum')); svg.classList.toggle('on-link', !!h && (h.kind === 'link' || h.kind === 'linkend')); } if (t || hoverT) drawEd(); hoverT = !!t; tipFor(q, e); } return; }
   if (drag.turn) { let d = Math.atan2(q[1] - drag.c[1], q[0] - drag.c[0]) - drag.a0; d = Math.atan2(Math.sin(d), Math.cos(d));
     if (!drag.moved && Math.abs(d) < .25) return; drag.moved = true;
@@ -216,9 +220,9 @@ function onMove(e) {
 }
 function onUp(e) {
   if (pan) { pan = null; desk.classList.remove('pan'); return; }
-  if (tool === 'wire' && wireDown && wd && wd.pts.length === 1) {   // (Wire tool: press, drag, let go also draws one)
-    const q = sheetPt(e), a = wireDown; wireDown = null; if (Math.hypot(q[0] - a[0], q[1] - a[1]) >= G) wireClick(q, false); return; }
-  wireDown = null;
+  if (wd) { const t = snapTarget(sheetPt(e)), b = [t.x, t.y], w = wd; wd = null;
+    if (b[0] !== w.a[0] || b[1] !== w.a[1]) { snapshot(); addWire(S, [w.a, ...wireRoute(w.a, b, w.h !== false)]); refresh(); } else drawEd();
+    return; }
   if (!drag) return;
   const d = drag; drag = null;
   if (d.turn) { if (!d.moved) { snapshot(); rotateParts(S, new Set([d.turn])); } else if (d.n) { UNDO.push(d.pre); REDO.length = 0; } refresh(); return; }
@@ -261,29 +265,13 @@ function putDown(q, keep) {
   if (!keep) { placing = null; setTool('select'); }
   keepTab = true; refresh(); keepTab = false;   // (a part just put down: the tools stay in view; click it for its Part tab)
 }
-// the Wire tool: a click starts, bends or (on something to join) finishes a wire; a double click finishes it anywhere
-function wireClick(q, dbl) {
-  const t = snapTarget(q), pt = [t.x, t.y];
-  if (!wd) { wd = { pts: [pt], startKind: t.kind }; drawEd(); return; }
-  const last = wd.pts[wd.pts.length - 1];
-  if (!(pt[0] === last[0] && pt[1] === last[1])) wd.pts.push(...lRoute(last, pt, wd.pts));
-  const start = wd.pts[0];
-  if (dbl || (t.kind !== 'grid' && !(pt[0] === start[0] && pt[1] === start[1]))) finishWire();
-  else drawEd();
-}
-function finishWire() {
-  if (!wd) return;
-  const P = wd.pts; wd = null;
-  if (P.length >= 2 && !(P.length === 2 && P[0][0] === P[1][0] && P[0][1] === P[1][1])) { snapshot(); addWire(S, P); }
-  refresh();
-}
 // what the pointer would do, said beside it
 function tipFor(q, e) {
   const tip = document.getElementById('tip'); let s = '';
   if (tool === 'place' && placing) { const p = ghostPart(q), sp = splicePreview(p);
     if (sp.wires.length) { const ns = sp.wires.map(w => A.label.get(A.wireRoot(S, w))).filter(Boolean), rn = A.rows[doc.cur]?.find(r => r.y === p.y);
       s = `Drop ${rn ? `on <b>rung ${rn.n}</b>` : 'here'}: it goes into wire${ns.length > 1 ? 's' : ''} <b>${[...new Set(ns)].join(', ')}</b>`; } }
-  if (tool === 'wire') { const t = snapTarget(q); s = wd ? (t.kind === 'grid' ? 'Click to bend · double-click to end here' : 'Click to join here') : (t.kind === 'grid' ? 'Click to start a wire' : `Click to start from this ${({ term: 'terminal', node: 'joint', rail: 'rail', wire: 'wire' })[t.kind]}`); }
+  if (tool === 'wire') { const t = snapTarget(q), at = ({ term: 'terminal', node: 'joint', rail: 'rail', wire: 'wire' })[t.kind]; s = wd ? (at ? `Let go to join this ${at}` : 'Let go to end the wire here') : (at ? `Press and drag from this ${at} for a wire` : 'Press and drag for a wire: it bends once, at a right angle'); }
   if (tool === 'rung') { const r = rungAt(q); s = r ? (r.ok ? 'Click to add a rung here' : 'There is a rung here already') : 'Rungs go between the L1 and L2 rails'; }
   if (tool === 'select' && termAt(q)) s = 'Drag from here to draw a wire';
   else if (tool === 'select') { const h = pick(q); if (h && h.kind === 'xref') s = h.n === 'PWR' ? `Go to ${esc(h.tag)}’s power contacts` : `Go to rung <b>${h.n}</b>`;

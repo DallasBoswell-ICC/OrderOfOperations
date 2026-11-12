@@ -9,7 +9,7 @@ let zoom = 1, spaceDown = false, pan = null, pageFor = null;
 const say = s => { $('hint').textContent = s || hintFor(); };
 const hintFor = () => ({
   select: `Click to pick · drag to move · drag empty paper to pick several · ${kn('rotate')} turns · ${kn('flip')} flips · ${kn('del')} deletes · F1 shortcuts`,
-  wire: 'Click to start · click to bend · click a terminal, rail or wire to finish · Esc stops',
+  wire: 'Press anywhere and drag · the wire bends once, at a right angle (the way you first drag is the way it goes first) · Esc stops',
   rung: 'Click between the rails to add a rung, then drop symbols onto it',
   note: 'Click where the note goes',
   place: `Click on a rung to put it in the wire · Shift+click to put down more · ${kn('rotate')} turns it · ${kn('flip')} flips it · Esc stops`,
@@ -508,7 +508,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'F1') { e.preventDefault(); if (!typing) openKeys(); return; }   // (F1 opens the shortcuts even while typing in a box)
   if (typing || document.querySelector('dialog[open]')) return;   // (a box being typed in, or a window open over the sheet: the keys are its)
   if (e.key === ' ') { spaceDown = true; e.preventDefault(); return; }
-  if (e.key === 'Escape') { if (wd) finishWire(); else if (tool !== 'select') setTool('select'); else { sel = new Set(); selW = null; selL = null; refresh(); } return; }
+  if (e.key === 'Escape') { if (wd) { wd = null; drawEd(); } else if (tool !== 'select') setTool('select'); else { sel = new Set(); selW = null; selL = null; refresh(); } return; }
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); removeSelection(); return; }
   if (e.altKey) return;
   const k = e.key.toLowerCase();

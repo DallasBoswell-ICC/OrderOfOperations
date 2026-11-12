@@ -324,6 +324,8 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .keys-dlg .kl { align-items: center; }
 .kk.chg { outline: 2px dashed #ffc000; outline-offset: -4px; }
 .kmsg { font-size: 12.5px; color: #ffcf4a; background: #3a3016; border: 1px solid #6b5a1e; border-radius: 8px; padding: 6px 10px; margin: 10px 0 0; }
+.kmode[hidden] { display: none; }   /* (keys fixed for now: KB.canChange) */
+#keys-close { margin-left: auto; }
 
 .demo-badge { font-style: normal; font-size: .7rem; font-weight: 800; letter-spacing: .08em; color: #1c1d1f; background: #9be03a; border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }
 </style>
@@ -383,7 +385,7 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
     </div><div class="gl">Edit</div></div>
     <div class="grp"><div class="row" id="tools">
       <button class="rb" data-tool="select" data-kb title="Select ({select}): click a symbol or wire to change it; drag a symbol to move it; drag from a terminal to draw a wire; drag a wire number to move it"><svg viewBox="0 0 24 24"><path d="M6 3l12 9-5 1 3 6-2 1-3-6-4 4z" fill="currentColor"/></svg><span>Select</span></button>
-      <button class="rb" data-tool="wire" data-kb title="Wire ({wire}): drag from one point to another, or click to start, click to bend, click a terminal, rail or wire to finish. (In Select you can also drag straight from a terminal.)"><svg viewBox="0 0 24 24"><path d="M4 18h6V6h10" fill="none" stroke="currentColor" stroke-width="2.2"/></svg><span>Wire</span></button>
+      <button class="rb" data-tool="wire" data-kb title="Wire ({wire}): press anywhere and drag. The wire bends once, at a right angle. (In Select you can also drag from a terminal.)"><svg viewBox="0 0 24 24"><path d="M4 18h6V6h10" fill="none" stroke="currentColor" stroke-width="2.2"/></svg><span>Wire</span></button>
       <button class="rb" data-tool="rung" data-kb title="Add a rung ({rung}): click between the rails"><svg viewBox="0 0 24 24"><path d="M4 3v18M20 3v18M4 9h16M4 15h16" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>Rung</span></button>
       <button class="rb" data-tool="note" data-kb title="Add a note ({note})"><svg viewBox="0 0 24 24"><path d="M5 5h14M12 5v14" stroke="currentColor" stroke-width="2.4" fill="none"/></svg><span>Note</span></button>
     </div><div class="gl">Tools</div></div>
@@ -1520,7 +1522,7 @@ let A = null, ISSUES = [];                 // the drawing read (nets.js), and wh
 let tool = 'select', placing = null;       // the tool; the symbol being put down ({ t, rot })
 let sel = new Set(), selW = null;          // what is picked: parts, rails, nodes, notes (ids); a wire (id)
 let checkOn = false, hover = null, drag = null, wd = null, cursor = null;
-let svg = null, VB = [0, 0], wireDown = null, hoverT = false;
+let svg = null, VB = [0, 0], hoverT = false;
 let ROTH = null;                           // the turning handle on screen ({ id, x, y })
 let selL = null, lastLinkDown = null;                           // a dashed link picked: the id of the part its shape is kept on
 let FLASH = null;                          // a rung just gone to, lit up for a moment ({ k, y })
@@ -1626,7 +1628,7 @@ function drawEd() {
   // the tool's preview
   if (tool === 'wire' && cursor) {
     const t = snapTarget(cursor);
-    if (wd) { const P = [...wd.pts, ...lRoute(wd.pts[wd.pts.length - 1], [t.x, t.y], wd.pts)]; g += `<polyline points="${P.map(q => q.join(',')).join(' ')}" fill="none" stroke="#2f8cff" stroke-width="5" stroke-dasharray="14 8" stroke-linejoin="round"/>`; }
+    if (wd) { const P = [wd.a, ...wireRoute(wd.a, [t.x, t.y], wd.h !== false)]; g += `<polyline points="${P.map(q => q.join(',')).join(' ')}" fill="none" stroke="#2f8cff" stroke-width="5" stroke-dasharray="14 8" stroke-linejoin="round"/>`; }
     g += `<circle cx="${t.x}" cy="${t.y}" r="${t.kind === 'grid' ? 6 : 11}" fill="${t.kind === 'grid' ? '#2f8cff' : 'none'}" stroke="#2f8cff" stroke-width="4"/>`;
   }
   if (tool === 'rung' && cursor) { const r = rungAt(cursor); if (r) g += `<line x1="${r.x1}" y1="${r.y}" x2="${r.x2}" y2="${r.y}" stroke="#2f8cff" stroke-width="6" stroke-dasharray="16 10" opacity="${r.ok ? 1 : .35}"/>`; }
@@ -1645,6 +1647,8 @@ function drawEd() {
   for (const e of over.querySelectorAll('g[opacity] [fill="#000"]')) e.setAttribute('fill', '#1f6fd8');
 }
 // an L from a to b (along first, then across; the way that carries on from the last run, or the longer way first)
+// the Wire tool's wire, as in Circuit Builder: one bend, at a right angle; across first or down first (h)
+function wireRoute(a, b, h) { return a[0] === b[0] || a[1] === b[1] ? [b] : [h ? [b[0], a[1]] : [a[0], b[1]], b]; }
 function lRoute(a, b, pts) {
   if (a[0] === b[0] || a[1] === b[1]) return [b];
   let hFirst = Math.abs(b[0] - a[0]) >= Math.abs(b[1] - a[1]);
@@ -1673,11 +1677,12 @@ function splicePreview(p) {
 /* ---------- the pointer ---------- */
 function onDown(e) {
   if (e.button === 1 || (e.button === 0 && spaceDown)) return startPan(e);
-  if (e.button !== 0) { if (tool === 'wire' && wd) { wd = null; drawEd(); } return; }
+  if (e.button !== 0) { if (wd) { wd = null; drawEd(); } return; }
   e.preventDefault();   // (no text on the page highlighted by a drag)
   const q = sheetPt(e);
   if (tool === 'place' && placing) { putDown(q, e.shiftKey); return; }
-  if (tool === 'wire') { svg.setPointerCapture(e.pointerId); wireDown = q; return wireClick(q, e.detail >= 2); }
+  // Wire (as in Circuit Builder): press anywhere and drag; the way it is first dragged is the way it goes first
+  if (tool === 'wire') { const t = snapTarget(q); wd = { a: [t.x, t.y], q0: q, h: null }; svg.setPointerCapture(e.pointerId); drawEd(); return; }
   if (tool === 'rung') { const r = rungAt(q); if (r && r.ok) { snapshot(); addWire(S, [[r.x1, r.y], [r.x2, r.y]]); refresh(); } else if (r) say('There is a rung there already.'); return; }
   if (tool === 'note') { snapshot(); const t = { id: uid('t'), x: snap(q[0]), y: snap(q[1]), s: 'Note' }; S.texts.push(t); sel = new Set([t.id]); selW = null; setTool('select'); refresh(); focusProp('note-text'); return; }
   // Select: the turning handle (drag it round the part a quarter turn at a time; a click turns it clockwise)
@@ -1709,6 +1714,7 @@ function onDown(e) {
 function onMove(e) {
   const q = sheetPt(e); cursor = q;
   if (pan) return doPan(e);
+  if (wd) { if (wd.h === null && Math.hypot(q[0] - wd.q0[0], q[1] - wd.q0[1]) > 8) wd.h = Math.abs(q[0] - wd.q0[0]) >= Math.abs(q[1] - wd.q0[1]); drawEd(); tipFor(q, e); return; }
   if (!drag) { if (tool !== 'select') { drawEd(); tipFor(q, e); } else { const t = termAt(q); svg.classList.toggle('on-term', !!t); svg.classList.toggle('on-rot', !!ROTH && Math.hypot(q[0] - ROTH.x, q[1] - ROTH.y) <= 26); { const h = t ? null : pick(q); svg.classList.toggle('on-ref', !!h && (h.kind === 'xref' || h.kind === 'rungnum')); svg.classList.toggle('on-link', !!h && (h.kind === 'link' || h.kind === 'linkend')); } if (t || hoverT) drawEd(); hoverT = !!t; tipFor(q, e); } return; }
   if (drag.turn) { let d = Math.atan2(q[1] - drag.c[1], q[0] - drag.c[0]) - drag.a0; d = Math.atan2(Math.sin(d), Math.cos(d));
     if (!drag.moved && Math.abs(d) < .25) return; drag.moved = true;
@@ -1731,9 +1737,9 @@ function onMove(e) {
 }
 function onUp(e) {
   if (pan) { pan = null; desk.classList.remove('pan'); return; }
-  if (tool === 'wire' && wireDown && wd && wd.pts.length === 1) {   // (Wire tool: press, drag, let go also draws one)
-    const q = sheetPt(e), a = wireDown; wireDown = null; if (Math.hypot(q[0] - a[0], q[1] - a[1]) >= G) wireClick(q, false); return; }
-  wireDown = null;
+  if (wd) { const t = snapTarget(sheetPt(e)), b = [t.x, t.y], w = wd; wd = null;
+    if (b[0] !== w.a[0] || b[1] !== w.a[1]) { snapshot(); addWire(S, [w.a, ...wireRoute(w.a, b, w.h !== false)]); refresh(); } else drawEd();
+    return; }
   if (!drag) return;
   const d = drag; drag = null;
   if (d.turn) { if (!d.moved) { snapshot(); rotateParts(S, new Set([d.turn])); } else if (d.n) { UNDO.push(d.pre); REDO.length = 0; } refresh(); return; }
@@ -1776,29 +1782,13 @@ function putDown(q, keep) {
   if (!keep) { placing = null; setTool('select'); }
   keepTab = true; refresh(); keepTab = false;   // (a part just put down: the tools stay in view; click it for its Part tab)
 }
-// the Wire tool: a click starts, bends or (on something to join) finishes a wire; a double click finishes it anywhere
-function wireClick(q, dbl) {
-  const t = snapTarget(q), pt = [t.x, t.y];
-  if (!wd) { wd = { pts: [pt], startKind: t.kind }; drawEd(); return; }
-  const last = wd.pts[wd.pts.length - 1];
-  if (!(pt[0] === last[0] && pt[1] === last[1])) wd.pts.push(...lRoute(last, pt, wd.pts));
-  const start = wd.pts[0];
-  if (dbl || (t.kind !== 'grid' && !(pt[0] === start[0] && pt[1] === start[1]))) finishWire();
-  else drawEd();
-}
-function finishWire() {
-  if (!wd) return;
-  const P = wd.pts; wd = null;
-  if (P.length >= 2 && !(P.length === 2 && P[0][0] === P[1][0] && P[0][1] === P[1][1])) { snapshot(); addWire(S, P); }
-  refresh();
-}
 // what the pointer would do, said beside it
 function tipFor(q, e) {
   const tip = document.getElementById('tip'); let s = '';
   if (tool === 'place' && placing) { const p = ghostPart(q), sp = splicePreview(p);
     if (sp.wires.length) { const ns = sp.wires.map(w => A.label.get(A.wireRoot(S, w))).filter(Boolean), rn = A.rows[doc.cur]?.find(r => r.y === p.y);
       s = `Drop ${rn ? `on <b>rung ${rn.n}</b>` : 'here'}: it goes into wire${ns.length > 1 ? 's' : ''} <b>${[...new Set(ns)].join(', ')}</b>`; } }
-  if (tool === 'wire') { const t = snapTarget(q); s = wd ? (t.kind === 'grid' ? 'Click to bend · double-click to end here' : 'Click to join here') : (t.kind === 'grid' ? 'Click to start a wire' : `Click to start from this ${({ term: 'terminal', node: 'joint', rail: 'rail', wire: 'wire' })[t.kind]}`); }
+  if (tool === 'wire') { const t = snapTarget(q), at = ({ term: 'terminal', node: 'joint', rail: 'rail', wire: 'wire' })[t.kind]; s = wd ? (at ? `Let go to join this ${at}` : 'Let go to end the wire here') : (at ? `Press and drag from this ${at} for a wire` : 'Press and drag for a wire: it bends once, at a right angle'); }
   if (tool === 'rung') { const r = rungAt(q); s = r ? (r.ok ? 'Click to add a rung here' : 'There is a rung here already') : 'Rungs go between the L1 and L2 rails'; }
   if (tool === 'select' && termAt(q)) s = 'Drag from here to draw a wire';
   else if (tool === 'select') { const h = pick(q); if (h && h.kind === 'xref') s = h.n === 'PWR' ? `Go to ${esc(h.tag)}’s power contacts` : `Go to rung <b>${h.n}</b>`;
@@ -1918,7 +1908,7 @@ let zoom = 1, spaceDown = false, pan = null, pageFor = null;
 const say = s => { $('hint').textContent = s || hintFor(); };
 const hintFor = () => ({
   select: `Click to pick · drag to move · drag empty paper to pick several · ${kn('rotate')} turns · ${kn('flip')} flips · ${kn('del')} deletes · F1 shortcuts`,
-  wire: 'Click to start · click to bend · click a terminal, rail or wire to finish · Esc stops',
+  wire: 'Press anywhere and drag · the wire bends once, at a right angle (the way you first drag is the way it goes first) · Esc stops',
   rung: 'Click between the rails to add a rung, then drop symbols onto it',
   note: 'Click where the note goes',
   place: `Click on a rung to put it in the wire · Shift+click to put down more · ${kn('rotate')} turns it · ${kn('flip')} flips it · Esc stops`,
@@ -2417,7 +2407,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'F1') { e.preventDefault(); if (!typing) openKeys(); return; }   // (F1 opens the shortcuts even while typing in a box)
   if (typing || document.querySelector('dialog[open]')) return;   // (a box being typed in, or a window open over the sheet: the keys are its)
   if (e.key === ' ') { spaceDown = true; e.preventDefault(); return; }
-  if (e.key === 'Escape') { if (wd) finishWire(); else if (tool !== 'select') setTool('select'); else { sel = new Set(); selW = null; selL = null; refresh(); } return; }
+  if (e.key === 'Escape') { if (wd) { wd = null; drawEd(); } else if (tool !== 'select') setTool('select'); else { sel = new Set(); selW = null; selL = null; refresh(); } return; }
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); removeSelection(); return; }
   if (e.altKey) return;
   const k = e.key.toLowerCase();
@@ -2747,6 +2737,7 @@ $('about-btn').addEventListener('click', () => $('about-dlg').showModal());
    here; the ones with an id can be changed in the Keyboard Shortcuts box (F1 › Change Keys), kept in this browser.
    The key handler is in ui.js; it asks kbAction which of these a key press is for, and runs it. */
 const KB = {
+  canChange: false,   // (Dallas, 12 Nov 2026: each key fixed for now; true brings back Change Keys and Default Settings)
   store: 'oo-print-builder-demo:keys', tipAttr: 'title',
   groups: [{ id: 'tools', name: 'Tools', c: '#ffc000' }, { id: 'parts', name: 'Parts', c: '#2f8cff' }, { id: 'view', name: 'View', c: '#46c46a' }, { id: 'file', name: 'Edit and File', c: '#b58cff' }],
   items: [
@@ -2754,7 +2745,7 @@ const KB = {
     { g: 'tools', id: 'wire', keys: ['w'], label: 'Wire', short: 'Wire', run: () => setTool('wire') },
     { g: 'tools', id: 'rung', keys: ['v', 'l'], label: 'Add a rung', short: 'Rung', run: () => setTool('rung') },
     { g: 'tools', id: 'note', keys: ['t', 'n'], label: 'Add a note', short: 'Note', run: () => setTool('note') },
-    { g: 'tools', show: 'Esc', label: 'Finish a wire, back to Select, or let go of what is picked' },
+    { g: 'tools', show: 'Esc', label: 'Stop a wire being drawn, back to Select, or let go of what is picked' },
     { g: 'parts', id: 'rotate', keys: ['r'], label: 'Rotate', short: 'Rotate', run: () => rotateKey() },
     { g: 'parts', id: 'flip', keys: ['f'], label: 'Flip', short: 'Flip', run: () => flipKey() },
     { g: 'parts', id: 'del', keys: ['x'], also: 'Delete', label: 'Delete', short: 'Delete', run: () => removeSelection() },
@@ -2829,6 +2820,7 @@ function kbFromEvent(e) {
 const kbAction = e => { const k = kbFromEvent(e); return k ? Object.keys(KB_NOW).find(id => KB_NOW[id].includes(k)) || null : null; };
 function kbLoad() {
   KB_NOW = kbClone(KB_DEF);
+  if (!KB.canChange) return;   // (keys fixed for now: a change left in this browser is set aside, not used)
   let s = null; try { s = JSON.parse(localStorage.getItem(KB.store) || 'null'); } catch (_) {}
   if (!s) return;
   const got = kbClone(KB_DEF);
@@ -2871,6 +2863,7 @@ function kbDraw() {
   document.getElementById('kb-change').setAttribute('aria-pressed', String(change));
   document.getElementById('kb-note').textContent = change ? 'Click a key below, then press the key you want (Esc to stop). Kept in this browser on this computer.' : kbChanged() ? 'Keys you have changed are marked in gold.' : '';
   document.getElementById('kb-reset').disabled = !kbChanged();
+  document.querySelector('#keys-dlg .kmode').hidden = document.getElementById('kb-reset').hidden = !KB.canChange;
 }
 const kbMsg = t => { const m = document.getElementById('kb-msg'); m.textContent = t || ''; m.hidden = !t; };
 // everything that shows a key: the box, the buttons' tips, and the program's own hints

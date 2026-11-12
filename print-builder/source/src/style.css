@@ -302,3 +302,5 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .keys-dlg .kl { align-items: center; }
 .kk.chg { outline: 2px dashed #ffc000; outline-offset: -4px; }
 .kmsg { font-size: 12.5px; color: #ffcf4a; background: #3a3016; border: 1px solid #6b5a1e; border-radius: 8px; padding: 6px 10px; margin: 10px 0 0; }
+.kmode[hidden] { display: none; }   /* (keys fixed for now: KB.canChange) */
+#keys-close { margin-left: auto; }

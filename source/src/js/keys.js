@@ -4,6 +4,7 @@
    this browser (apart from Print Builder's). Delete, Esc and Ctrl+Z/Y are in toolbar.js; Ctrl+C/X/V in clipboard.js;
    Ctrl+S in storage.js; Ctrl+P in print.js; Space (pan) in camera.js; the key handler is at the end of this file. */
 const KB = {
+  canChange: false,   // (Dallas, 12 Nov 2026: each key fixed for now; true brings back Change Keys and Default Settings)
   store: 'oo-circuit-builder:keys', tipAttr: 'data-tip',
   groups: [{ id: 'tools', name: 'Tools', c: '#ffc000' }, { id: 'parts', name: 'Parts', c: '#2f8cff' }, { id: 'view', name: 'View', c: '#46c46a' }, { id: 'run', name: 'Run', c: '#ffc000' }, { id: 'file', name: 'Edit and File', c: '#b58cff' }],
   items: [
@@ -133,6 +134,7 @@ function kbFromEvent(e) {
 const kbAction = e => { const k = kbFromEvent(e); return k ? Object.keys(KB_NOW).find(id => KB_NOW[id].includes(k)) || null : null; };
 function kbLoad() {
   KB_NOW = kbClone(KB_DEF);
+  if (!KB.canChange) return;   // (keys fixed for now: a change left in this browser is set aside, not used)
   let s = null; try { s = JSON.parse(localStorage.getItem(KB.store) || 'null'); } catch (_) {}
   if (!s) return;
   const got = kbClone(KB_DEF);
@@ -175,6 +177,7 @@ function kbDraw() {
   document.getElementById('kb-change').setAttribute('aria-pressed', String(change));
   document.getElementById('kb-note').textContent = change ? 'Click a key below, then press the key you want (Esc to stop). Kept in this browser on this computer.' : kbChanged() ? 'Keys you have changed are marked in gold.' : '';
   document.getElementById('kb-reset').disabled = !kbChanged();
+  document.querySelector('#keys-dlg .kmode').hidden = document.getElementById('kb-reset').hidden = !KB.canChange;
 }
 const kbMsg = t => { const m = document.getElementById('kb-msg'); m.textContent = t || ''; m.hidden = !t; };
 // everything that shows a key: the box, the buttons' tips, and the program's own hints

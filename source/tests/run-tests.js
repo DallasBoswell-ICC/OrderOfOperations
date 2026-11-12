@@ -2860,36 +2860,14 @@ const DEF_CIRCUIT = `
     return out;
   });
 
-  await check('Changing keys (F1 › Change Keys): a key moves, a key in use swaps, F1 and Ctrl are kept; tips and the map follow; kept after a reload; Default Settings puts them back', async page => {
-    const out = [], msg = () => page.textContent('#kb-msg'), st = () => page.evaluate(() => localStorage.getItem(KB.store));
-    await page.mouse.move(650, 600);
-    await page.keyboard.press('F1'); await page.click('#kb-change');
-    await page.click('.kchip[data-kid="select"]'); await page.keyboard.press('s');
-    if (!/Select is now S/.test(await msg())) out.push('S for Select: ' + await msg());
-    await page.click('.kchip[data-kid="mode"]'); await page.keyboard.press('w');
-    if (!/Wire moved to G/.test(await msg())) out.push('W for Build/Run did not swap: ' + await msg());
-    await page.click('.kchip[data-kid="again"]'); await page.keyboard.press('F1'); if (!/kept for this list/.test(await msg())) out.push('F1 not refused');
-    await page.keyboard.press('Control+k'); if (!/Ctrl and Alt shortcuts stay/.test(await msg())) out.push('Ctrl+K not refused');
-    await page.keyboard.press('Escape');
-    if (!(await page.evaluate(() => document.getElementById('keys-dlg').open)) || await page.evaluate(() => !!KB_WAIT)) out.push('Esc while waiting closed the box or kept waiting');
-    await page.click('.kchip[data-kid="fit"]'); await page.keyboard.press('7');
-    const map = await page.evaluate(() => [...document.querySelectorAll('#kb-map .kk')].map(k => k.textContent));
-    if (!map.some(t => /^SSelect/.test(t)) || !map.some(t => /^WBuild \/ Run/.test(t)) || !map.some(t => /^GWire/.test(t))) out.push('map: ' + map.filter(t => /^[SWG]/.test(t)).join(' | '));
-    await page.click('#keys-close');
-    await page.keyboard.press('g'); if (await page.evaluate(() => tool) !== 'wire') out.push('G did not pick Wire');
-    await page.keyboard.press('s'); if (await page.evaluate(() => tool) !== 'select') out.push('S did not pick Select');
-    await page.keyboard.press('w'); await page.waitForTimeout(100); if (await page.evaluate(() => editing)) out.push('W did not go to Run');
-    await page.evaluate(() => { cam = { x: 0, y: 200, z: 2, fit: false }; draw(); });
-    await page.keyboard.press('7'); if (!(await page.evaluate(() => cam.fit))) out.push('7 did not fit (in Run)');
-    await page.keyboard.press('w'); await page.waitForTimeout(100); if (!(await page.evaluate(() => editing))) out.push('W did not come back to Build');
-    const tips = await page.evaluate(() => ['[data-tool="select"]', '#tab-run', '#zoom-fit'].map(q => document.querySelector(q).dataset.tip));
-    if (!tips[0].endsWith('(S)') || !tips[1].includes('(W switches') || !tips[2].includes('(7)')) out.push('tips: ' + tips.map(t => t.slice(-24)).join(' | '));
-    if (!(await st())) out.push('not kept in the browser');
-    await page.reload(); await page.waitForTimeout(300);
-    if (await page.evaluate(() => [KB_NOW.select[0], KB_NOW.mode[0], KB_NOW.wire[0], KB_NOW.fit[0]].join()) !== 's,w,g,7') out.push('after reload: ' + await page.evaluate(() => JSON.stringify(KB_NOW)));
-    await page.keyboard.press('F1'); await page.click('#kb-reset');
-    if (await st() !== null || await page.evaluate(() => KB_NOW.select[0]) !== 'e' || !(await page.evaluate(() => document.getElementById('kb-reset').disabled))) out.push('Default Settings did not put them back');
-    if (!(await page.evaluate(() => document.querySelector('[data-tool="select"]').dataset.tip.endsWith('(E)')))) out.push('tip after Default Settings');
+  await check('Keys fixed for now (Dallas, 12 Nov 2026): no Change Keys or Default Settings in the F1 box; a change left in this browser by the trial is not used', async page => {
+    const out = [];
+    await page.evaluate(() => localStorage.setItem(KB.store, JSON.stringify({ select: ['s'] }))); await page.reload(); await page.waitForTimeout(300);
+    await page.mouse.move(650, 600); await page.keyboard.press('w'); await page.keyboard.press('e');
+    if (await page.evaluate(() => tool) !== 'select' || await page.evaluate(() => KB_NOW.select[0]) !== 'e') out.push('the stored change was used');
+    if (!(await page.evaluate(() => document.querySelector('[data-tool="select"]').dataset.tip.endsWith('(E)')))) out.push('tip');
+    await page.keyboard.press('F1');
+    if (await page.evaluate(() => !!document.querySelector('#keys-dlg .kmode').offsetParent || !!document.getElementById('kb-reset').offsetParent || !!document.querySelector('#kb-lists .kchip'))) out.push('Change Keys or Default Settings showing');
     return out;
   });
 

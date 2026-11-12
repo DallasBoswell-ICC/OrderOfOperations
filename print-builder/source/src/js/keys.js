@@ -3,6 +3,7 @@
    here; the ones with an id can be changed in the Keyboard Shortcuts box (F1 › Change Keys), kept in this browser.
    The key handler is in ui.js; it asks kbAction which of these a key press is for, and runs it. */
 const KB = {
+  canChange: false,   // (Dallas, 12 Nov 2026: each key fixed for now; true brings back Change Keys and Default Settings)
   store: 'oo-print-builder:keys', tipAttr: 'title',
   groups: [{ id: 'tools', name: 'Tools', c: '#ffc000' }, { id: 'parts', name: 'Parts', c: '#2f8cff' }, { id: 'view', name: 'View', c: '#46c46a' }, { id: 'file', name: 'Edit and File', c: '#b58cff' }],
   items: [
@@ -10,7 +11,7 @@ const KB = {
     { g: 'tools', id: 'wire', keys: ['w'], label: 'Wire', short: 'Wire', run: () => setTool('wire') },
     { g: 'tools', id: 'rung', keys: ['v', 'l'], label: 'Add a rung', short: 'Rung', run: () => setTool('rung') },
     { g: 'tools', id: 'note', keys: ['t', 'n'], label: 'Add a note', short: 'Note', run: () => setTool('note') },
-    { g: 'tools', show: 'Esc', label: 'Finish a wire, back to Select, or let go of what is picked' },
+    { g: 'tools', show: 'Esc', label: 'Stop a wire being drawn, back to Select, or let go of what is picked' },
     { g: 'parts', id: 'rotate', keys: ['r'], label: 'Rotate', short: 'Rotate', run: () => rotateKey() },
     { g: 'parts', id: 'flip', keys: ['f'], label: 'Flip', short: 'Flip', run: () => flipKey() },
     { g: 'parts', id: 'del', keys: ['x'], also: 'Delete', label: 'Delete', short: 'Delete', run: () => removeSelection() },
@@ -85,6 +86,7 @@ function kbFromEvent(e) {
 const kbAction = e => { const k = kbFromEvent(e); return k ? Object.keys(KB_NOW).find(id => KB_NOW[id].includes(k)) || null : null; };
 function kbLoad() {
   KB_NOW = kbClone(KB_DEF);
+  if (!KB.canChange) return;   // (keys fixed for now: a change left in this browser is set aside, not used)
   let s = null; try { s = JSON.parse(localStorage.getItem(KB.store) || 'null'); } catch (_) {}
   if (!s) return;
   const got = kbClone(KB_DEF);
@@ -127,6 +129,7 @@ function kbDraw() {
   document.getElementById('kb-change').setAttribute('aria-pressed', String(change));
   document.getElementById('kb-note').textContent = change ? 'Click a key below, then press the key you want (Esc to stop). Kept in this browser on this computer.' : kbChanged() ? 'Keys you have changed are marked in gold.' : '';
   document.getElementById('kb-reset').disabled = !kbChanged();
+  document.querySelector('#keys-dlg .kmode').hidden = document.getElementById('kb-reset').hidden = !KB.canChange;
 }
 const kbMsg = t => { const m = document.getElementById('kb-msg'); m.textContent = t || ''; m.hidden = !t; };
 // everything that shows a key: the box, the buttons' tips, and the program's own hints

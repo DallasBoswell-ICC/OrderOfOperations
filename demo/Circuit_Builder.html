@@ -33,7 +33,8 @@
 body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--ui); }
 .wrap { max-width: none; margin: 0 auto; padding: 12px 16px 16px; display: grid; gap: 10px; }
 .wrap > * { min-width: 0; }
-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 18px; }
+header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; }
+.hdr-end { display: flex; gap: 6px; }   /* (the keyboard and i buttons, together) */
 h1 { margin: 0; font-size: 1.35rem; font-weight: 700; letter-spacing: .01em; }
 h1 span { color: var(--gold); }
 .top-right { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
@@ -125,7 +126,7 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 .splitbtn { display: inline-flex; }
 .splitbtn #save-btn { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .splitbtn .more { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 0; padding: 6px 7px; }
-.file-label { font-size: .8rem; color: var(--muted); max-width: 28ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-label { font-size: .8rem; color: var(--muted); max-width: 28ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 0; min-width: 0; }   /* (it takes the room left over, never more: a name or its ● can never push the title bar onto two lines) */
 .file-label.dirty { color: var(--gold); }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60; background: #26272a; color: var(--ink); border: 1px solid var(--gold); border-radius: 10px; padding: 9px 16px; font-size: .9rem; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
 
@@ -527,7 +528,10 @@ dialog.keys-dlg { width: min(1000px, 96vw); max-height: 94vh; overflow: auto; }
       <button type="button" role="tab" id="tab-edit" aria-selected="true" data-kb data-tip="Build: put parts and wires on the panel ({mode} switches Build and Run)">Build</button>
       <button type="button" role="tab" id="tab-run" aria-selected="false" data-kb data-tip="Run: power the circuit and press its buttons ({mode} switches Build and Run)">Run</button>
     </div>
-    <button type="button" class="qbtn infobtn" id="about-btn" aria-label="About this program" data-tip="About Circuit Builder: who made it, and the license it is shared under">i</button>
+    <span class="hdr-end">
+      <button type="button" class="qbtn" id="keys-btn" aria-label="Keyboard shortcuts" data-tip="Keyboard Shortcuts: every key, on a map of the keyboard (F1)"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6 9.5h1M9.5 9.5h1M13 9.5h1M16.5 9.5h1.5M6 12.5h1M9.5 12.5h1M13 12.5h1M16.5 12.5h1.5M8 15h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
+      <button type="button" class="qbtn infobtn" id="about-btn" aria-label="About this program" data-tip="About Circuit Builder: who made it, and the license it is shared under">i</button>
+    </span>
   </header>
 
   <!-- the ribbon: Home (everything for building, always there), a gold tab for the selected part's settings, and
@@ -539,7 +543,6 @@ dialog.keys-dlg { width: min(1000px, 96vw); max-height: 94vh; overflow: auto; }
       <button type="button" class="rtab ctx" id="rt-part" aria-pressed="false" hidden>Part</button>
       <button type="button" class="rtab" id="rt-run" aria-pressed="false" hidden>Simulation</button>
       <p class="msg" id="msg" role="status"></p>
-      <button type="button" class="rcollapse" id="keys-btn" aria-label="Keyboard shortcuts" data-tip="Keyboard Shortcuts: every key, on a map of the keyboard (F1)"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6 9.5h1M9.5 9.5h1M13 9.5h1M16.5 9.5h1.5M6 12.5h1M9.5 12.5h1M13 12.5h1M16.5 12.5h1.5M8 15h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
       <button type="button" class="rcollapse" id="fs-toggle" aria-pressed="false" aria-label="Full screen" data-tip="Full screen: the circuit fills the screen (Esc to leave)"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <button type="button" class="rcollapse" id="ribbon-toggle" aria-expanded="true" aria-label="Collapse the ribbon" data-tip="Fold the ribbon away for more room (the tabs stay)"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3.5 10l4.5-4.5 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
@@ -6738,6 +6741,7 @@ document.getElementById('about-btn').addEventListener('click', () => document.ge
    this browser (apart from Print Builder's). Delete, Esc and Ctrl+Z/Y are in toolbar.js; Ctrl+C/X/V in clipboard.js;
    Ctrl+S in storage.js; Ctrl+P in print.js; Space (pan) in camera.js; the key handler is at the end of this file. */
 const KB = {
+  canChange: false,   // (Dallas, 12 Nov 2026: each key fixed for now; true brings back Change Keys and Default Settings)
   store: 'oo-circuit-builder-demo:keys', tipAttr: 'data-tip',
   groups: [{ id: 'tools', name: 'Tools', c: '#ffc000' }, { id: 'parts', name: 'Parts', c: '#2f8cff' }, { id: 'view', name: 'View', c: '#46c46a' }, { id: 'run', name: 'Run', c: '#ffc000' }, { id: 'file', name: 'Edit and File', c: '#b58cff' }],
   items: [
@@ -6867,6 +6871,7 @@ function kbFromEvent(e) {
 const kbAction = e => { const k = kbFromEvent(e); return k ? Object.keys(KB_NOW).find(id => KB_NOW[id].includes(k)) || null : null; };
 function kbLoad() {
   KB_NOW = kbClone(KB_DEF);
+  if (!KB.canChange) return;   // (keys fixed for now: a change left in this browser is set aside, not used)
   let s = null; try { s = JSON.parse(localStorage.getItem(KB.store) || 'null'); } catch (_) {}
   if (!s) return;
   const got = kbClone(KB_DEF);
@@ -6909,6 +6914,7 @@ function kbDraw() {
   document.getElementById('kb-change').setAttribute('aria-pressed', String(change));
   document.getElementById('kb-note').textContent = change ? 'Click a key below, then press the key you want (Esc to stop). Kept in this browser on this computer.' : kbChanged() ? 'Keys you have changed are marked in gold.' : '';
   document.getElementById('kb-reset').disabled = !kbChanged();
+  document.querySelector('#keys-dlg .kmode').hidden = document.getElementById('kb-reset').hidden = !KB.canChange;
 }
 const kbMsg = t => { const m = document.getElementById('kb-msg'); m.textContent = t || ''; m.hidden = !t; };
 // everything that shows a key: the box, the buttons' tips, and the program's own hints
