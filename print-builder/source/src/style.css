@@ -36,7 +36,7 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .rb { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 8px; border-radius: 7px; font-size: 12.5px; color: #d6dbe0; min-width: 50px; background: transparent; border: 0; cursor: pointer; position: relative; }
 .rb:hover { background: #2e3236; } .rb[aria-pressed="true"] { background: var(--acc-dim); outline: 1.5px solid var(--acc); }
 .rb svg { width: 22px; height: 22px; }
-.cat-ico { width: 36px; height: 36px; border-radius: 7px; border: 1.5px solid #4a5057; background: #202326; box-shadow: inset 0 -4px 0 var(--c); overflow: hidden; display: grid; place-items: center; flex: none; } .cat-ico svg { width: 28px; height: 28px; overflow: visible; }
+.cat-ico { width: 36px; height: 36px; border-radius: 7px; border: 1.5px solid #4a5057; background: #202326; box-shadow: inset 0 -4px 0 var(--c); overflow: hidden; display: grid; place-items: center; flex: none; } .cat-ico svg { width: 26px; height: 26px; margin-bottom: 5px; overflow: visible; }   /* (lifted clear of the coloured bar along the bottom) */
 .rb .cat-ico { margin: 0 auto 1px; }
 .chkbtn[aria-pressed="true"] { outline-color: var(--err); background: #3a2426; }
 .badge { background: var(--err); color: #fff; font-size: 10.5px; font-weight: 800; border-radius: 9px; padding: 0 6px; margin-left: 4px; } .badge.w { background: var(--warn); color: #111; }
