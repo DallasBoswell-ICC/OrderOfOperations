@@ -83,8 +83,11 @@ const subOf = t => { const s = SUBS.find(([, re]) => re.test(t)); return s ? s[0
 const CATS = ['Buttons', 'Switches', 'Outputs', 'Contacts', 'Protection', 'Power', 'Continuation'];
 // each kind's colour: the rainbow in order, from the colours already chosen (Dallas, 12 Nov 2026: Circuit Builder's red,
 // orange, yellow and green; the title's blue; a lighter violet; and close to magenta), light enough for dark text on each
-const CAT_COL = { 'Buttons': '#FF0032', 'Switches': '#FF9600', 'Outputs': '#FFDC00', 'Contacts': '#00B050', 'Protection': '#4A9BFF', 'Power': '#B58CFF', 'Continuation': '#FF4FC4' };
-const CAT_INK = () => '#26292d';   // (the text on it: dark grey)
+// each kind's colour (Dallas, 12 Nov 2026, option B "Colour as a Tag"): the rainbow, toned down, shown only as a thin bar
+// under each ribbon icon and on the left edge of each parts-list header; the icons and headers themselves are grey
+const CAT_COL = { 'Buttons': '#E06C75', 'Switches': '#E39B5B', 'Outputs': '#DDBF5E', 'Contacts': '#5FB97C', 'Protection': '#5FA3E6', 'Power': '#A48BDB', 'Continuation': '#D47BB6' };
+const CAT_INK = () => '#e6e9ec';   // (the header's text: light grey)
+const CAT_SYMCOL = '#cfd5db';     // (the symbol in each icon: light grey)
 // the motor as Circuit Builder prints it: T1, T2, T3 on its left, a line apart like the power circuit's poles, T2's
 // lead straight in, T1's and T3's bending in to the circle (so its wires come in level, on the grid)
 // the fused disconnect, Dallas's design drawn at the same size as the plain disconnect and a single fuse (its switch

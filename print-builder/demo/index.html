@@ -58,7 +58,7 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .rb { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 8px; border-radius: 7px; font-size: 12.5px; color: #d6dbe0; min-width: 50px; background: transparent; border: 0; cursor: pointer; position: relative; }
 .rb:hover { background: #2e3236; } .rb[aria-pressed="true"] { background: var(--acc-dim); outline: 1.5px solid var(--acc); }
 .rb svg { width: 22px; height: 22px; }
-.cat-ico { width: 36px; height: 36px; border-radius: 7px; border: 3px solid; background: #000; display: grid; place-items: center; flex: none; } .cat-ico svg { width: 28px; height: 28px; overflow: visible; }
+.cat-ico { width: 36px; height: 36px; border-radius: 7px; border: 1.5px solid #4a5057; background: #202326; box-shadow: inset 0 -4px 0 var(--c); overflow: hidden; display: grid; place-items: center; flex: none; } .cat-ico svg { width: 28px; height: 28px; overflow: visible; }
 .rb .cat-ico { margin: 0 auto 1px; }
 .chkbtn[aria-pressed="true"] { outline-color: var(--err); background: #3a2426; }
 .badge { background: var(--err); color: #fff; font-size: 10.5px; font-weight: 800; border-radius: 9px; padding: 0 6px; margin-left: 4px; } .badge.w { background: var(--warn); color: #111; }
@@ -337,18 +337,18 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .gnote { margin: 0; font-size: 11.5px; line-height: 1.35; color: var(--faint); }
 .gridmenu .seg button { justify-content: center; text-align: center; padding: 5px 0; border-radius: 0; font-size: 12.5px; }
 
-/* the parts list: a coloured header for each kind, opening and closing; a kind's groups inside it (Dallas, 12 Nov 2026) */
-.pcat { margin: 0 0 7px; border-radius: 8px; overflow: hidden; border: 2.5px solid var(--c); }
+/* the parts list: a grey header for each kind with its colour along the left edge (option B), opening and closing; a kind's groups inside it (Dallas, 12 Nov 2026) */
+.pcat { margin: 0 0 7px; border-radius: 8px; overflow: hidden; border: 1px solid #3a3f45; border-left: 4px solid var(--c); }
 .phd, .shd { width: 100%; display: flex; align-items: center; gap: 8px; border: 0; cursor: pointer; font: inherit; text-align: left; }
-.phd { padding: 8px 10px; background: var(--c); color: var(--ink-on, #26292d); font-weight: 800; font-size: 13px; letter-spacing: .03em; border-radius: 4px; }   /* (Dallas: solid in the kind's colour, its text dark grey) */
-.phd:hover { background: color-mix(in srgb, var(--c) 85%, #fff); } .phd .car, .phd .pc { color: var(--ink-on, #26292d); font-weight: 700; }
+.phd { padding: 8px 10px; background: #2b2f34; color: var(--ink-on, #e6e9ec); font-weight: 800; font-size: 13px; letter-spacing: .03em; border-radius: 0; }
+.phd:hover { background: #33383e; } .phd .car, .phd .pc { color: #9aa3ab; font-weight: 700; }
 .phd .pc, .shd .pc { margin-left: auto; font-weight: 500; font-size: 11px; color: #aab3bb; }
 .car { width: 10px; flex: none; color: #cfd5db; font-size: 10px; transition: transform .12s; } [aria-expanded="true"] > .car { transform: rotate(90deg); }
 .pbody { padding: 6px; background: #1b1d20; display: grid; gap: 6px; } .pbody[hidden] { display: none; }
 .psub { border-radius: 6px; background: #24272b; }
 .shd { padding: 6px 8px; background: transparent; color: #dfe4e8; font-size: 12px; border-radius: 6px; } .shd:hover { background: #2d3136; }
 .psub .pg { padding: 0 5px 6px; } .pg[hidden] { display: none; }
-.pcat .phd .pc { color: var(--ink-on, #26292d); opacity: .85; }
+.pcat .phd .pc { color: #9aa3ab; }
 
 .demo-badge { font-style: normal; font-size: .7rem; font-weight: 800; letter-spacing: .08em; color: #1c1d1f; background: #9be03a; border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }
 </style>
@@ -612,8 +612,11 @@ const subOf = t => { const s = SUBS.find(([, re]) => re.test(t)); return s ? s[0
 const CATS = ['Buttons', 'Switches', 'Outputs', 'Contacts', 'Protection', 'Power', 'Continuation'];
 // each kind's colour: the rainbow in order, from the colours already chosen (Dallas, 12 Nov 2026: Circuit Builder's red,
 // orange, yellow and green; the title's blue; a lighter violet; and close to magenta), light enough for dark text on each
-const CAT_COL = { 'Buttons': '#FF0032', 'Switches': '#FF9600', 'Outputs': '#FFDC00', 'Contacts': '#00B050', 'Protection': '#4A9BFF', 'Power': '#B58CFF', 'Continuation': '#FF4FC4' };
-const CAT_INK = () => '#26292d';   // (the text on it: dark grey)
+// each kind's colour (Dallas, 12 Nov 2026, option B "Colour as a Tag"): the rainbow, toned down, shown only as a thin bar
+// under each ribbon icon and on the left edge of each parts-list header; the icons and headers themselves are grey
+const CAT_COL = { 'Buttons': '#E06C75', 'Switches': '#E39B5B', 'Outputs': '#DDBF5E', 'Contacts': '#5FB97C', 'Protection': '#5FA3E6', 'Power': '#A48BDB', 'Continuation': '#D47BB6' };
+const CAT_INK = () => '#e6e9ec';   // (the header's text: light grey)
+const CAT_SYMCOL = '#cfd5db';     // (the symbol in each icon: light grey)
 // the motor as Circuit Builder prints it: T1, T2, T3 on its left, a line apart like the power circuit's poles, T2's
 // lead straight in, T1's and T3's bending in to the circle (so its wires come in level, on the grid)
 // the fused disconnect, Dallas's design drawn at the same size as the plain disconnect and a single fuse (its switch
@@ -2052,10 +2055,10 @@ function thumbMark(t, s) {
   return `<text x="${c.x}" y="${c.y + c.r * .36}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="${c.r * (m.length > 1 ? .95 : 1.1)}" fill="#000">${m}</text>`;
 }
 const short = n => n.replace(' Maintained Pushbutton', ' Maint. PB').replace(', Low Temp', ' (Low)').replace(' (Control)', '').replace(' (Out)', '').replace(' (In)', '').replace('Pushbutton', 'PB').replace('Emergency Stop', 'E-Stop').replace('Temperature', 'Temp.').replace('Proximity', 'Prox.').replace('Selector Switch', 'Selector').replace(', Held Closed', ' (HC)').replace(', Held Open', ' (HO)').replace('Toggle Switch (SPST)', 'Toggle').replace('Overload Heater (1 Line)', 'OL Heater').replace('Phase (L1, L2, L3)', 'Phase').replace('3-Phase', '3Ø');
-// each kind's icon on its ribbon button and parts-list header (Dallas, 12 Nov 2026): a black square outlined in the kind's
-// colour, with the print symbol of one of its parts drawn inside in that colour
+// each kind's icon on its ribbon button (Dallas, 12 Nov 2026): a dark grey square with the print symbol of one of its parts
+// in light grey, and a thin bar in the kind's colour along its bottom (option B, "Colour as a Tag")
 const CAT_SYM = { Buttons: 'pb_no', Switches: 'ls_no', Outputs: 'coil', Contacts: 'con_no', Protection: 'fuse', Power: 'sup', Continuation: 'cnt_out' };
-const catIcon = c => { const k = CAT_COL[c], t = CAT_SYM[c];
+const catIcon = c => { const k = CAT_SYMCOL, t = CAT_SYM[c];
   let svg;
   if (t === 'coil') svg = `<svg viewBox="-50 -50 100 100"><circle r="40" fill="#000" stroke="${k}" stroke-width="9"/><text y="12" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="34" fill="${k}">CR</text></svg>`;   // (CR in it: a control relay)   // (its ring, drawn as two discs on the sheet, too thin this small)
   else if (c === 'Power') svg = `<svg viewBox="5.65 3.5 19 19"><path d="M16.8 5.2l-6.3 8.9h4.6l-1.7 6.7 6.4-9h-4.6z" fill="${k}"/></svg>`;   // (Power: the lightning bolt, as in Circuit Builder)
@@ -2067,7 +2070,7 @@ const catIcon = c => { const k = CAT_COL[c], t = CAT_SYM[c];
     const b = ring.replace(/fill="#000"/g, `fill="${k}"`).replace(/fill="#fff"/g, 'fill="#000"').replace(/stroke="#000"/g, `stroke="${k}"`)
       .replace(/stroke-width="([\d.]+)"/g, (_, w) => `stroke-width="${w * 1.8}"`);   // (its lines in the colour, and heavier, as it is drawn small)
     svg = `<svg viewBox="${(e.x0 + e.x1) / 2 - m / 2} ${(sy.y0 + sy.y1) / 2 - m / 2} ${m} ${m}"><g fill="none" stroke="${k}" stroke-width="${Math.max(6, m / 10)}" stroke-linecap="round" stroke-linejoin="round">${b}</g></svg>`; }
-  return `<span class="sw cat-ico" style="border-color:${k}" aria-hidden="true">${svg}</span>`; };
+  return `<span class="sw cat-ico" style="--c:${CAT_COL[c]}" aria-hidden="true">${svg}</span>`; };
 // which of the parts list's headers are open (a kind, or a kind/group such as Switches/Limit Switches)
 const PALOPENKEY = 'oo-print-builder-demo:palopen';
 let PALOPEN = { Buttons: true };

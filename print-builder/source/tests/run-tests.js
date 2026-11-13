@@ -836,7 +836,12 @@ let passed = 0, failed = 0;
     await p.reload(); await p.waitForTimeout(300);
     if (await st() !== 'Buttons- Switches+ Outputs- Contacts- Protection- Power- Continuation-' || !(await p.locator('.pt[data-t="ls_no"]').isVisible())) out.push('not kept: ' + await st());
     const cols = await p.evaluate(() => [...document.querySelectorAll('#palette .pcat')].map(c => getComputedStyle(c).getPropertyValue('--c').trim()).join());
-    if (cols !== '#FF0032,#FF9600,#FFDC00,#00B050,#4A9BFF,#B58CFF,#FF4FC4') out.push('the kinds\' colours, the rainbow in order: ' + cols);
+    if (cols !== '#E06C75,#E39B5B,#DDBF5E,#5FB97C,#5FA3E6,#A48BDB,#D47BB6') out.push('the kinds\' colours, the toned-down rainbow in order: ' + cols);
+    // (option B: the header grey with the colour on its left edge; the ribbon icons grey with a bar in the colour)
+    const hd = await p.evaluate(() => { const c = document.querySelector('#palette .pcat'), h = c.querySelector('.phd'); return [getComputedStyle(h).backgroundColor, getComputedStyle(c).borderLeftColor].join(); });
+    if (hd !== 'rgb(43, 47, 52),rgb(224, 108, 117)') out.push('Buttons header not grey with a red edge: ' + hd);
+    const ic = await p.evaluate(() => { const i = document.querySelector('.rb[data-menu="Buttons"] .cat-ico'); return getComputedStyle(i).boxShadow + ' | ' + /#E06C75/i.test(i.innerHTML); });
+    if (!/224, 108, 117/.test(ic) || / true$/.test(ic)) out.push('Buttons icon not grey with a red bar: ' + ic);
     return out;
   });
 

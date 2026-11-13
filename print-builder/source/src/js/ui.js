@@ -79,10 +79,10 @@ function thumbMark(t, s) {
   return `<text x="${c.x}" y="${c.y + c.r * .36}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="${c.r * (m.length > 1 ? .95 : 1.1)}" fill="#000">${m}</text>`;
 }
 const short = n => n.replace(' Maintained Pushbutton', ' Maint. PB').replace(', Low Temp', ' (Low)').replace(' (Control)', '').replace(' (Out)', '').replace(' (In)', '').replace('Pushbutton', 'PB').replace('Emergency Stop', 'E-Stop').replace('Temperature', 'Temp.').replace('Proximity', 'Prox.').replace('Selector Switch', 'Selector').replace(', Held Closed', ' (HC)').replace(', Held Open', ' (HO)').replace('Toggle Switch (SPST)', 'Toggle').replace('Overload Heater (1 Line)', 'OL Heater').replace('Phase (L1, L2, L3)', 'Phase').replace('3-Phase', '3Ø');
-// each kind's icon on its ribbon button and parts-list header (Dallas, 12 Nov 2026): a black square outlined in the kind's
-// colour, with the print symbol of one of its parts drawn inside in that colour
+// each kind's icon on its ribbon button (Dallas, 12 Nov 2026): a dark grey square with the print symbol of one of its parts
+// in light grey, and a thin bar in the kind's colour along its bottom (option B, "Colour as a Tag")
 const CAT_SYM = { Buttons: 'pb_no', Switches: 'ls_no', Outputs: 'coil', Contacts: 'con_no', Protection: 'fuse', Power: 'sup', Continuation: 'cnt_out' };
-const catIcon = c => { const k = CAT_COL[c], t = CAT_SYM[c];
+const catIcon = c => { const k = CAT_SYMCOL, t = CAT_SYM[c];
   let svg;
   if (t === 'coil') svg = `<svg viewBox="-50 -50 100 100"><circle r="40" fill="#000" stroke="${k}" stroke-width="9"/><text y="12" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="34" fill="${k}">CR</text></svg>`;   // (CR in it: a control relay)   // (its ring, drawn as two discs on the sheet, too thin this small)
   else if (c === 'Power') svg = `<svg viewBox="5.65 3.5 19 19"><path d="M16.8 5.2l-6.3 8.9h4.6l-1.7 6.7 6.4-9h-4.6z" fill="${k}"/></svg>`;   // (Power: the lightning bolt, as in Circuit Builder)
@@ -94,7 +94,7 @@ const catIcon = c => { const k = CAT_COL[c], t = CAT_SYM[c];
     const b = ring.replace(/fill="#000"/g, `fill="${k}"`).replace(/fill="#fff"/g, 'fill="#000"').replace(/stroke="#000"/g, `stroke="${k}"`)
       .replace(/stroke-width="([\d.]+)"/g, (_, w) => `stroke-width="${w * 1.8}"`);   // (its lines in the colour, and heavier, as it is drawn small)
     svg = `<svg viewBox="${(e.x0 + e.x1) / 2 - m / 2} ${(sy.y0 + sy.y1) / 2 - m / 2} ${m} ${m}"><g fill="none" stroke="${k}" stroke-width="${Math.max(6, m / 10)}" stroke-linecap="round" stroke-linejoin="round">${b}</g></svg>`; }
-  return `<span class="sw cat-ico" style="border-color:${k}" aria-hidden="true">${svg}</span>`; };
+  return `<span class="sw cat-ico" style="--c:${CAT_COL[c]}" aria-hidden="true">${svg}</span>`; };
 // which of the parts list's headers are open (a kind, or a kind/group such as Switches/Limit Switches)
 const PALOPENKEY = 'oo-print-builder:palopen';
 let PALOPEN = { Buttons: true };
