@@ -21,7 +21,9 @@ function circuitData() {
       if (p.t === 'sel') { while (a.length < 7) a.push(null); a.length = 7; a.push(selN(p), (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, (p.names || []).join('/'), p.pos || 0); }   // a selector switch: positions, closed-in mask, (no label), names, start
       if (p.lk || p.ls) { while (a.length < 12) a.push(null); a.push(p.lk ? p.lk[0] : 0, p.lk ? p.lk[1] : 0); if (p.ls) a.push(p.ls.join('')); }   // (its dashed link line, moved out of the way; the sides its ends join)
       return a; }),
-    wires: wires.map(q => [x(q.x1), q.y1, x(q.x2), q.y2]),
+    wires: wires.map(q => { const a = [x(q.x1), q.y1, x(q.x2), q.y2]; if (WIRE_FAULTS[q.fault]) a.push(q.fault); return a; }),   // (a fault planted on a wire: its 5th)
+    // (faults planted on parts: [part, fault]; the work order for the student)
+    ...(parts.some(p => PART_FAULTS[p.fault] && canFault(p)) ? { fl: parts.map((p, i) => PART_FAULTS[p.fault] && canFault(p) ? [i, p.fault] : null).filter(Boolean) } : {}), ...(WORK_ORDER.trim() ? { wo: WORK_ORDER } : {}),
     // (its process values: id, name, kind, unit, lowest, highest, start; and the switches they work: part, value, setting, reset, side)
     ...(PV.length ? { pv: PV.map(v => [v.id, v.name, v.kind, v.unit, v.min, v.max, v.start]), pd: parts.map((p, i) => isDrv(p) && pvOf(p) ? [i, p.pv, +p.rate || 0, +p.cool || 0, drvPer(p), p.dir === 'down' ? 'down' : 'up', drvOff(p)] : null).filter(Boolean), pl: parts.map((p, i) => pvLinked(p) ? [i, p.pv, +p.sp, +(p.rs ?? p.sp), p.side === 'lo' ? 'lo' : 'hi'] : null).filter(Boolean),
       ...(PV.some(v => v.pic) ? { pp: PV.filter(v => v.pic).map(v => [v.id, v.pic.x, v.pic.y]) } : {}), ...(parts.some(p => p.nopic) ? { pn: parts.map((p, i) => p.nopic ? i : -1).filter(i => i >= 0) } : {}) } : {}),
@@ -71,14 +73,15 @@ function readCircuit(d) {
   for (const a of Array.isArray(d.pp) ? d.pp : []) { const v = Array.isArray(a) && pv.find(q => q.id === a[0]); if (v) v.pic = { x: snap(Math.max(0, Math.min(20000, fin(a[1], 0)))), y: snap(Math.max(0, Math.min(20000, fin(a[2], 0)))) }; }
   for (const i of Array.isArray(d.pn) ? d.pn : []) { const p = ps[i]; if (p && isDrv(p)) p.nopic = true; }
   const w = Math.max(d.fw ? BAR_MIN : W_MIN, Math.min(20000, d.w === undefined ? W_MIN : num(d.w)));
-  const ws = d.wires.slice(0, 2000).map(a => [num(a[0]), num(a[1]), num(a[2]), num(a[3])])
+  const ws = d.wires.slice(0, 2000).map(a => [num(a[0]), num(a[1]), num(a[2]), num(a[3]), WIRE_FAULTS[a[4]] ? a[4] : null])
     .filter(([x1, y1, x2, y2]) => (x1 === x2 || y1 === y2) && (x1 !== x2 || y1 !== y2))
-    .map(([x1, y1, x2, y2]) => Wr(Math.min(w, Math.max(0, x1)), Math.max(0, y1), Math.min(w, Math.max(0, x2)), Math.max(0, y2)));
-  return { w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', src: SRC_PAL.some(([, h]) => h === d.sc) ? d.sc : SRC_DEFAULT, ph: Array.isArray(d.pc) && d.pc.length === 3 && d.pc.every(hex) ? d.pc.map(hex) : [...PH_DEFAULT], pv, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
+    .map(([x1, y1, x2, y2, f]) => { const q = Wr(Math.min(w, Math.max(0, x1)), Math.max(0, y1), Math.min(w, Math.max(0, x2)), Math.max(0, y2)); if (f) q.fault = f; return q; });
+  for (const a of Array.isArray(d.fl) ? d.fl : []) { const p = Array.isArray(a) && ps[a[0]]; if (p && canFault(p) && PART_FAULTS[a[1]]) p.fault = a[1]; }   // (faults planted on parts)
+  return { wo: typeof d.wo === 'string' ? d.wo.slice(0, 400) : '', w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', src: SRC_PAL.some(([, h]) => h === d.sc) ? d.sc : SRC_DEFAULT, ph: Array.isArray(d.pc) && d.pc.length === 3 && d.pc.every(hex) ? d.pc.map(hex) : [...PH_DEFAULT], pv, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
 }
 function useCircuit(c, how) {
   snapshot();
-  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; normalize(); sel = null;
+  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; WORK_ORDER = c.wo || ''; normalize(); sel = null;
   fitView(); fit(true);
   say(how);
   if (editing) draw(); else { NET = network(); draw(); startRun(); afterRunStart(); }
@@ -186,7 +189,7 @@ function scheduleAutosave() {
   autosaveTimer = setTimeout(() => { try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(circuitData())); } catch (_) {} }, 400);
 }
 function restoreAutosave() {
-  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; normalize(); return true; }
+  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; WORK_ORDER = c.wo || ''; normalize(); return true; }
   catch (_) { return false; }
 }
 

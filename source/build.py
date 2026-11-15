@@ -53,6 +53,7 @@ MODULES = [
     "toolbar.js",        # the toolbar, Delete/Undo/Clear, keyboard shortcuts
     "clipboard.js",      # copy, cut and paste
     "properties.js",     # the selected part's settings
+    "faults.js",         # planting faults (open, shorted) on parts and wires: the Faults tab
     "storage.js",        # saving and opening circuits (files, codes, kept in the browser)
     "main.js",           # Build/Run switching, fitting to the window, start-up
     "keys.js",           # the left-hand keyboard shortcuts, nudging, and the Keyboard Shortcuts box (F1)

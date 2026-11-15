@@ -161,7 +161,7 @@ svg.addEventListener('pointerdown', e => {
   if (barsOn() && p.x <= W && p.x > W - BAR - 6) return startWire([W, clampY(p.y)]);
   // a part: drag it, and its wires follow
   if (q) {
-    sel = selOne('p', q.id); ribbonTab = 'part'; say(''); draw();   // (a part picked on the panel opens its tab on the ribbon)
+    sel = selOne('p', q.id); ribbonTab = mainTab === 'faults' ? 'faults' : 'part'; say(''); draw();   // (on the Faults tab, it stays there: the part picked is the one to plant a fault on)   // (a part picked on the panel opens its tab on the ribbon)
     const id = q.id, ox = q.x, oy = q.y, sx = p.x, sy = p.y, st0 = stateOf();
     return liveDrag(e, r => {
       const qq = parts.find(z => z.id === id);

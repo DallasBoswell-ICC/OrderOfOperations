@@ -2006,6 +2006,56 @@ const DEF_CIRCUIT = `
     if (pr !== '111') out.push('on the print (FLS1, FLS2, FLS3 tagged): ' + pr);
     return out;
   });
+  await check('Faults (troubleshooting): planted from the Faults tab and a part\'s tab; open and shorted parts, open wires and wires shorted to L2 act in Run; Faults On in Run; badges; random and Clear All; saved with the work order; undone', async page => {
+    const out = [];
+    if (await page.evaluate(() => !editing)) await page.click('#tab-edit');
+    await page.selectOption('#preset', 'seal'); await page.waitForTimeout(80);
+    await page.evaluate(() => { parts.push(P('con', 300, 420, { L: 'X' }), P('lamp', 700, 420, { L: '', color: '#00B050' })); wires.push(Wr(0, 420, 260, 420), Wr(340, 420, 640, 420), Wr(760, 420, W, 420)); normalize(); FAULTS_ON = true; draw(); });
+    const state = async (hold) => {
+      await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(250);
+      let held = '';
+      if (hold) { await page.evaluate(() => press('A', true)); await page.waitForTimeout(250); held = await page.evaluate(() => shortNow ? 'S' : '-'); await page.evaluate(() => press('A', false)); await page.waitForTimeout(250); }
+      const r = await page.evaluate(() => { const X = parts.find(q => q.t === 'coil'), L = parts.find(q => q.t === 'lamp'); return (coilOn[X.id] ? 'X' : 'x') + (coilOn[L.id] ? 'L' : 'l'); });
+      await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit'); return r + held;
+    };
+    const s0 = await state(true); if (s0 !== 'XL-') out.push('no faults, START pressed: ' + s0);
+    // planted from the Faults tab: the coil picked on the panel, then Open
+    await page.click('#rt-faults');
+    const id = await page.evaluate(() => parts.find(q => q.t === 'coil').id), bx = await page.locator(`#svg [data-part="${id}"]`).boundingBox();
+    await page.mouse.click(bx.x + bx.width / 2, bx.y + bx.height / 2); await page.waitForTimeout(120);
+    const tabStays = await page.evaluate(() => !document.getElementById('faultbar').hidden && document.getElementById('fz-what').textContent);
+    if (tabStays !== 'X Coil') out.push('picking the coil on the Faults tab: ' + tabStays);
+    await page.click('#fz-kinds [data-fz="open"]');
+    let s = await state(true); if (s !== 'xl-') out.push('X coil open, START pressed: ' + s);
+    const badges = await page.evaluate(() => document.querySelectorAll('#svg .fz-badge').length);
+    if (badges !== 1) out.push('badges for one fault: ' + badges);
+    const listed = await page.evaluate(() => document.getElementById('rt-faults').textContent + ' | ' + document.getElementById('fz-list').textContent.replace(/\s+/g, ' ').trim());
+    if (!/^Faults \(1\) \| 1\. X Coil\s*Open/.test(listed)) out.push('listed as: ' + listed);
+    // Faults On in Run, off: it works as it should
+    await page.click('#rt-faults'); await page.click('#fz-on'); s = await state(true); if (s !== 'XL-') out.push('faults off, START pressed: ' + s);
+    await page.click('#rt-faults'); await page.click('#fz-on');
+    await page.evaluate(() => { delete parts.find(q => q.t === 'coil').fault; draw(); });
+    // a part's own tab: the lamp's contact shorted (welded): the light is on with nothing pressed
+    await page.evaluate(() => { const c = parts.filter(q => q.t === 'con').find(q => q.y === 420); sel = selOne('p', c.id); ribbonTab = 'part'; draw(); });
+    await page.selectOption('#p-fault', 'short'); s = await state(false); if (s !== 'xL') out.push('contact shorted, nothing pressed: ' + s);
+    await page.evaluate(() => { for (const p of parts) delete p.fault; draw(); });
+    const cases = [['wire on line 3 open', () => { wires.find(w => w.y1 === 420 && w.x1 === 340).fault = 'open'; }, 'Xl-'],
+      ['STOP stuck open', () => { parts.find(q => q.L === 'D').fault = 'open'; }, 'xl-'],
+      ['light burned out (open)', () => { parts.find(q => q.t === 'lamp').fault = 'open'; }, 'Xl-'],
+      ['wire to the coil shorted to L2', () => { wires.find(w => w.y1 === 200 && w.x1 === 340).fault = 'l2'; }, 'xlS']];
+    for (const [n, f, want] of cases) { await page.evaluate(f); await page.evaluate(() => draw()); s = await state(true); if (s !== want) out.push(`${n}: ${s} (want ${want})`); await page.evaluate(() => { for (const x of [...parts, ...wires]) delete x.fault; draw(); }); }
+    // saved: faults on parts (fl), on wires (5th), the work order (wo); read back
+    await page.evaluate(() => { parts.find(q => q.t === 'coil').fault = 'short'; wires.find(w => w.y1 === 420 && w.x1 === 340).fault = 'open'; draw(); });
+    await page.click('#rt-faults'); await page.fill('#fz-wo', 'Nothing happens when START is pressed.');
+    const back = await page.evaluate(() => { const d = JSON.parse(JSON.stringify(circuitData())), c = readCircuit(d); return [d.fl.length, c.parts.filter(p => p.fault).map(p => p.t + ':' + p.fault).join(), c.wires.filter(w => w.fault).map(w => w.fault).join(), c.wo].join(' | '); });
+    if (back !== '1 | coil:short | open | Nothing happens when START is pressed.') out.push('read back: ' + back);
+    // random and Clear All; undo brings them back
+    await page.click('#fz-clear'); let n = await page.evaluate(() => faulted().length); if (n !== 0) out.push('after Clear All: ' + n);
+    await page.evaluate(() => undo()); n = await page.evaluate(() => faulted().length); if (n !== 2) out.push('after undoing Clear All: ' + n);
+    await page.click('#fz-random'); n = await page.evaluate(() => faulted().length); if (n !== 3) out.push('after Random Fault: ' + n);
+    await page.evaluate(() => { for (const x of [...parts, ...wires]) delete x.fault; WORK_ORDER = ''; mainTab = 'home'; ribbonTab = 'home'; sel = null; draw(); });
+    return out;
+  });
   await check('Process values: switches worked by a position, a pressure and a temperature (with their deadbands), the Process window, saved and undone', async page => {
     const out = [];
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);

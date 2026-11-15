@@ -131,3 +131,16 @@ const lighten = (c, f) => { const n = parseInt(c.slice(1), 16), m = k => Math.ro
 const JMP_EDGE = '#b8c2cf';
 const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel' || p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw' || p.t === 'fsw' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc' || p.t === 'fu1';
 const isCon = p => p.t === 'con' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc' || p.t === 'fu1';   // (a relay contact, or a transformer's switch inside it: passes on what it is given)   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre
+/* Faults (Troubleshooter, stage 1, Dallas 15 Nov 2026): planted on parts and wires in Build, they act while running
+   (FAULTS_ON; it can be turned off to run the circuit as it should be). A part (switch, contact, button, fuse,
+   overload contact, coil, light, solenoid, heating element) can be open (never passes current: a switch stuck open,
+   an open coil, a burned-out lamp, a blown fuse) or shorted (always passes: a welded contact, a switch stuck closed; a
+   shorted load joins its ends, a short circuit that blows the fuse before it). A wire can be open (broken, at its
+   middle) or shorted to L2 (at its middle). p.fault / w.fault: 'open', 'short' or 'l2' (wires). WORK_ORDER: the
+   symptom the instructor writes for the student (saved with the circuit). */
+let FAULTS_ON = true, FAULT_BADGES = true, WORK_ORDER = '';
+const FAULT_LOADS = ['coil', 'lamp', 'sol', 'htr'];
+const canFault = p => !!p && (FAULT_LOADS.includes(p.t) || ['btn', 'con', 'sel', 'lsw', 'tsw', 'psw', 'fsw', 'olc', 'fu1'].includes(p.t));
+const PART_FAULTS = { open: 'Open', short: 'Shorted' }, WIRE_FAULTS = { open: 'Open (Broken)', l2: 'Shorted to L2' };
+const faultsLive = () => !editing && FAULTS_ON;
+const faultOf = x => faultsLive() && x && x.fault ? x.fault : null;

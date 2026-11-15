@@ -76,6 +76,7 @@
   <div class="ribbon" id="ribbon">
     <div class="rtabs">
       <button type="button" class="rtab" id="rt-home" aria-pressed="true">Home</button>
+      <button type="button" class="rtab" id="rt-faults" aria-pressed="false" data-tip="Faults: plant opens and shorts on parts and wires, for troubleshooting">Faults</button>
       <button type="button" class="rtab ctx" id="rt-part" aria-pressed="false" hidden>Part</button>
       <button type="button" class="rtab" id="rt-run" aria-pressed="false" hidden>Simulation</button>
       <p class="msg" id="msg" role="status"></p>
@@ -111,6 +112,22 @@
           <button type="button" class="tool small" data-show="overview" aria-pressed="true" data-tip="The overview strip: the whole circuit, small, down the right of the panel (when it is too long to fit). Press or drag on it to move the view."><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="2" width="11" height="16" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="15" y="2" width="3" height="16" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="15" y="5" width="3" height="5" fill="currentColor"/></svg><span>Overview</span></button>
         </div></div><div class="gname">Show</div></div>
       <div class="rgrp" id="pv-group"><div class="gbody"><button type="button" class="tool big" id="pv-btn" data-tip="Process values: numbers the simulation keeps in the background (positions, pressures, temperatures...). Set them up here, then link limit, pressure and temperature switches to them on each switch's tab. While running, set them in the Process window."><svg viewBox="0 0 30 26"><rect x="3" y="3" width="24" height="20" rx="3" fill="#14161a" stroke="#8a96a3" stroke-width="1.3"/><g stroke-linecap="round"><path d="M7 9h11" stroke="#5ee08a" stroke-width="2"/><path d="M7 15h7" stroke="#5ee08a" stroke-width="2"/><path d="M18 9h5M14 15h9" stroke="#3a414a" stroke-width="2"/></g><circle cx="18" cy="9" r="2.2" fill="#e8e8e8"/><circle cx="14" cy="15" r="2.2" fill="#e8e8e8"/><path d="M7 19.5h5" stroke="#8a96a3" stroke-width="1.2"/></svg><span>Process<br>Values</span></button></div><div class="gname">Process</div></div>
+    </div>
+    <div class="rpanel" id="faultbar" role="toolbar" aria-label="Faults" hidden>
+      <div class="rgrp fz-plant"><div class="gbody"><div class="fz-col">
+        <div class="fz-what" id="fz-what">Pick a part or wire on the panel</div>
+        <div class="seg" role="group" id="fz-kinds" aria-label="The fault to plant on it"></div>
+      </div></div><div class="gname">Plant a Fault</div></div>
+      <div class="rgrp"><div class="gbody">
+        <button type="button" class="tool big" id="fz-random" data-tip="Plant a fault on a part or wire picked at random (open or shorted)"><svg viewBox="0 0 30 26"><rect x="6" y="4" width="18" height="18" rx="4" fill="none" stroke="#cfcfcf" stroke-width="1.8"/><circle cx="11" cy="9" r="1.7" fill="#cfcfcf"/><circle cx="19" cy="17" r="1.7" fill="#cfcfcf"/><circle cx="15" cy="13" r="1.7" fill="#cfcfcf"/></svg><span>Random<br>Fault</span></button>
+        <button type="button" class="tool big" id="fz-clear" data-tip="Take every planted fault off the circuit"><svg viewBox="0 0 30 26"><path d="M8 7l14 14M22 7L8 21" stroke="#cfcfcf" stroke-width="2.2" stroke-linecap="round"/></svg><span>Clear<br>All</span></button>
+      </div><div class="gname">Faults</div></div>
+      <div class="rgrp fz-listgrp"><div class="gbody"><div class="fz-list" id="fz-list"></div></div><div class="gname">Planted Faults</div></div>
+      <div class="rgrp"><div class="gbody"><div class="stack">
+        <button type="button" class="tool small" id="fz-on" aria-pressed="true" data-tip="Faults on: Run works the circuit with its faults. Off: Run works it as it should be."><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L3.6 17.2a1.6 1.6 0 0 0 2.3 2.3l5.7-5.7a4 4 0 0 0 5.2-5.4l-2.4 2.4-2.1-.4-.4-2.1z"/></svg><span>Faults On in Run</span></button>
+        <button type="button" class="tool small" id="fz-badges" aria-pressed="true" data-tip="Show a small red badge on each part and wire with a fault planted on it"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L3.6 17.2a1.6 1.6 0 0 0 2.3 2.3l5.7-5.7a4 4 0 0 0 5.2-5.4l-2.4 2.4-2.1-.4-.4-2.1z"/></svg><span>Show Fault Badges</span></button>
+      </div></div><div class="gname">View</div></div>
+      <div class="rgrp fz-wogrp"><div class="gbody"><textarea id="fz-wo" rows="3" maxlength="400" aria-label="Work order" placeholder="What the student is told, such as: The machine won't start. When you press START, nothing happens."></textarea></div><div class="gname">Work Order</div></div>
     </div>
     <div class="rpanel" id="editpanel" aria-label="Settings of the selected part" hidden>
       <div class="props">
@@ -199,6 +216,7 @@
         <div class="tgroup" id="o-delay-group" hidden><span class="label">Delay</span><input type="number" id="o-delay" min="1" max="999" step="1" inputmode="numeric" aria-label="Timer delay in seconds" data-tip="How long the timer must be energized before its contacts change (whole seconds, 1 to 999)"><span class="unit">s</span></div>
         <div class="tgroup"><span class="label">Colour</span><div class="swatches" id="o-colour" role="radiogroup" aria-label="Coil colour"></div></div>
       </div>
+      <div class="tgroup" id="p-fault-group" hidden><span class="label">Fault</span><select id="p-fault" aria-label="A fault planted on this part" data-tip="A fault planted on this part, for troubleshooting (it acts in Run while Faults On in Run is on, on the Faults tab)"></select></div>
       <div class="tgroup"><span class="label">Part</span><button type="button" class="tool small danger" id="p-del" data-tip="Delete this part (Delete key)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg><span>Delete</span></button></div>
       </div>
     </div>

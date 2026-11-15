@@ -39,6 +39,7 @@ function renderProps() {
   // the gold tab for one selected part, named after it (a part picked on the panel opens it; one just placed from
   // the ribbon leaves Home open, to place more)
   if (!p && ribbonTab === 'part') ribbonTab = mainTab;
+  showPartFault(G);
   document.getElementById('rt-part').textContent = multi ? `${G.length} ${G.every(isTimer) ? 'timers' : KIND_NAME[p.t] || 'parts'}` : p ? captionOf(p) : 'Part';
   showRibbon();
   document.getElementById('props-btn').hidden = !(p && p.t === 'btn');

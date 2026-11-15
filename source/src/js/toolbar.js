@@ -62,16 +62,17 @@ function closeMenus() { document.body.classList.remove('ribbon-peek'); tpMenu(fa
 function showRibbon() {
   const run = !editing, part = !run && selGroup().length > 0, tab = run ? 'run' : part && ribbonTab === 'part' ? 'part' : mainTab;
   const set = (id, shown, on) => { const b = document.getElementById(id); b.hidden = !shown; b.setAttribute('aria-pressed', String(on)); };
-  set('rt-home', !run, tab === 'home'); set('rt-part', part, tab === 'part'); set('rt-run', run, tab === 'run');
+  set('rt-home', !run, tab === 'home'); set('rt-faults', !run, tab === 'faults'); set('rt-part', part, tab === 'part'); set('rt-run', run, tab === 'run');
   document.getElementById('toolbar').hidden = tab !== 'home';
   if (tab !== 'home') tpMenu(false);
   document.getElementById('editpanel').hidden = tab !== 'part';
+  document.getElementById('faultbar').hidden = tab !== 'faults'; if (tab === 'faults') showFaults();
   document.getElementById('runbar').hidden = tab !== 'run';
 }
-for (const [id, t] of [['rt-home', 'home'], ['rt-part', 'part'], ['rt-run', 'run']])
+for (const [id, t] of [['rt-home', 'home'], ['rt-faults', 'faults'], ['rt-part', 'part'], ['rt-run', 'run']])
   document.getElementById(id).addEventListener('click', () => {
     if (t !== 'run') ribbonTab = t;
-    if (t === 'home') mainTab = t;
+    if (t === 'home' || t === 'faults') mainTab = t;
     if (document.body.classList.contains('ribbon-min') || document.body.classList.contains('fs')) document.body.classList.add('ribbon-peek');
     showRibbon();
   });

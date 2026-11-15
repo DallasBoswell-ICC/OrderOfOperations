@@ -125,6 +125,14 @@ function renderInto(target, V, L) {
     f.textContent = issues.has('short') ? 'Warning: with every button passing current, L1 connects straight to L2 with no coil in between. That is a short circuit.'
       : `Warning: ${issues.get('phshort')} (with every switch but the starters closed). That is a short circuit.`;
   }
+  // planted faults: a red badge on each faulted part (the top right of it) and wire (its middle), while building, and
+  // while running with faults on (Faults tab: Show Fault Badges)
+  if (FAULT_BADGES && (editing || FAULTS_ON)) {
+    for (const p of parts) if (p.fault && canFault(p)) {   // (on the body's top right corner; on a round or diamond load, at 45° on its edge)
+      const rnd = FAULT_LOADS.includes(p.t), bw = isLim(p) ? LSW_W / 2 : p.t === 'sel' ? SEL_BOX / 2 : rnd ? COIL / 2 * .74 : BOX / 2, bh = isLim(p) ? LSW_TOP : p.t === 'sel' ? SEL_BOX / 2 : rnd ? COIL / 2 * .74 : BOX / 2;
+      faultBadge(vert(p) ? p.x + bh : p.x + bw, vert(p) ? p.y - bw : p.y - bh, B(p.y).g, `Fault: ${PART_FAULTS[p.fault]}`); }
+    for (const w of wires) if (w.fault) faultBadge((w.x1 + w.x2) / 2, (w.y1 + w.y2) / 2, B((w.y1 + w.y2) / 2).g, `Fault: ${WIRE_FAULTS[w.fault]}`);
+  }
   if (V === view) { V.overlay = el('g', { 'pointer-events': 'none' }); if (preview) drawPreview(); }
 }
 /* captions kept apart: where two parts sit close together on a row, their names shrink to fit the room between them

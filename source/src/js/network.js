@@ -12,15 +12,25 @@ function network() {
   const edges = [], subs = [];
   // jedges: the same wiring seen as junctions (wire ends, part ends, T-points) joined by runs of wire and by parts
   const jedges = [];
+  const toL2 = [];   // (wires shorted to L2: the points where they are)
   for (const w of wires) {
     const len = Math.abs(w.x2 - w.x1) + Math.abs(w.y2 - w.y1), n = Math.max(1, Math.round(len / SUB));
+    // (a fault planted on the wire, while running: open, broken at its middle; or shorted to L2 there)
+    const wf = faultOf(w), brk = wf ? Math.max(1, Math.ceil(n / 2)) : -1;
     let prev = null, chain = [];
     for (let i = 0; i <= n; i++) {
       const x = w.x1 + (w.x2 - w.x1) * i / n, y = w.y1 + (w.y2 - w.y1) * i / n, k0 = key(x, y);
       const id = node(x, y, shared.has(k0) ? k0 : k0 + '#' + w.id);
+      if (prev && i === brk && wf === 'open') {   // the break: drawn, but no way across it
+        subs.push({ a: prev.id, b: id, x1: prev.x, y1: prev.y, x2: x, y2: y, wire: w });
+        if (chain.length > 1) jedges.push({ kind: 'seg', a: chain[0], b: prev.id, len: (chain.length - 1) * len / n, chain });
+        chain = [id]; prev = { id, x, y }; continue;
+      }
       if (prev) { edges.push({ a: prev.id, b: id, w: len / n, kind: 'w' }); subs.push({ a: prev.id, b: id, x1: prev.x, y1: prev.y, x2: x, y2: y, wire: w }); }
       chain.push(id);
-      if (shared.has(k0) && chain.length > 1) { jedges.push({ kind: 'seg', a: chain[0], b: id, len: (chain.length - 1) * len / n, chain }); chain = [id]; }
+      const sh = i === brk && wf === 'l2';
+      if ((shared.has(k0) || sh) && chain.length > 1) { jedges.push({ kind: 'seg', a: chain[0], b: id, len: (chain.length - 1) * len / n, chain }); chain = [id]; }
+      if (sh) toL2.push(id);
       prev = { id, x, y };
     }
   }
@@ -28,6 +38,10 @@ function network() {
     if (isBox(p) || isPwr3(p) || p.t === 'mtr') continue;   // (supply boxes are not a way through: their connection points are L1 or L2, below; continuations: further down)
     const [[ax, ay], [bx, by]] = terms(p);
     p._a = node(ax, ay, key(ax, ay)); p._b = node(bx, by, key(bx, by));
+    // (a fault planted on a load, while running: open, no way through it; shorted, its ends joined straight through)
+    const f = FAULT_LOADS.includes(p.t) ? faultOf(p) : null;
+    if (f === 'open') continue;
+    if (f === 'short') { edges.push({ a: p._a, b: p._b, w: 1, kind: 'w' }); jedges.push({ kind: 'seg', a: p._a, b: p._b, len: 2 * TERM(p), chain: [p._a, p._b] }); continue; }
     edges.push({ a: p._a, b: p._b, w: 2 * TERM(p), kind: 'part', part: p });
     jedges.push({ kind: 'part', a: p._a, b: p._b, len: 2 * TERM(p), part: p });
   }
@@ -64,6 +78,7 @@ function network() {
   for (const p of parts) if (p.t === 'mtr') p._t = terms(p).map(([x, y]) => node(x, y, key(x, y)));
   const jadj = new Map(), feedV = new Map();
   for (const [i, v] of xfmFeeds) feedV.set(i, v);
+  for (const i of toL2) { edges.push({ a: L2, b: i, w: 0, kind: 'w' }); feedV.set(i, 0); }   // (a wire shorted to L2)
   jedges.forEach((e, i) => { e.i = i; for (const v of [e.a, e.b]) { if (!jadj.has(v)) jadj.set(v, []); jadj.get(v).push(e); } });
   const feeds = [];
   for (const [k, i] of index) {
