@@ -13,6 +13,7 @@ function frameBody(now) {
     const target = simT + dt * speed, ran = eventsRun, was = simT;
     tickRealTimers(real);   // (timers counting real time go by the clock; one timing out now is acted on below)
     if (runEvents(target, performance.now() + 12)) simT = target;
+    flowTick(real);   // (flow switches' water, by the clock)
     pvTick(was, simT, dt);   // (heaters and the like moving their process values on: by the circuit's time, or in real time)
     if (mode === 'click') for (const L in autoRel) if (!busyQueue() && simT > busyUntil + .5) { delete autoRel[L]; press(L, false); }
     // once the circuit has settled (nothing on its way, and the last coil, light and contact has finished changing)

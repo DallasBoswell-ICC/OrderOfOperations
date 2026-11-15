@@ -461,7 +461,3 @@ dialog.keys-dlg { width: min(1000px, 96vw); max-height: 94vh; overflow: auto; }
 .kk.chg { outline: 2px dashed #ffc000; outline-offset: -4px; }
 .kmsg { margin: 0; font-size: .82rem; color: #ffcf4a; background: #3a3016; border: 1px solid #6b5a1e; border-radius: 8px; padding: 6px 10px; }
 .kfoot .kfill { flex: 1; } .dlg button:disabled { opacity: .4; cursor: default; }
-/* a flow switch's water: its streaks drift left to right along the pipe, one period (100 of Dallas's units) and over
-   again; set going (and its speed set) by setFlow while there is flow. It shows flow, so it runs even with reduced motion. */
-.fsw-flow { animation: fswFlow 1.4s linear infinite; animation-play-state: paused; }
-@keyframes fswFlow { from { transform: translateX(0); } to { transform: translateX(100px); } }
