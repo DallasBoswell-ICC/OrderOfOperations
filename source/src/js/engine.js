@@ -76,9 +76,9 @@ function startRun() {
   INLEAD = new Map();
   for (const d of DIRS) if (d.e.kind === 'part') { const p = d.e.part; if (!INLEAD.has(d.from)) INLEAD.set(d.from, []); INLEAD.get(d.from).push([p, d.from === p._a ? 'A' : 'B']); }
   findPaths(); findNoway(); findReach();
-  checkShort(); if (shortNow) blowSoon(shortFuses(), 0);
+  checkShort(); const fz0 = shortNow ? shortFuses() : []; if (shortNow) blowSoon(fz0, 0); SUPPLY_CUT = shortNow && !fz0.length;
   ALLOW = allowNow();
-  for (const [id, v] of NET.feedV) if (v === 1) setRec(id, shortNow ? null : EGG(), 0);
+  for (const [id, v] of NET.feedV) if (v === 1) setRec(id, SUPPLY_CUT ? null : EGG(), 0);
   phaseWays(); phasesNow(0);
   updateCoils(0);
 }
@@ -481,7 +481,7 @@ function shortReach(sw) {
     for (const i of NET.adj[u] || []) { const e = NET.edges[i]; if (!conducts(e)) continue; const w = e.a === u ? e.b : e.a, nd = d + (e.w || 0); if (!dist.has(w) || nd < dist.get(w)) { dist.set(w, nd); q.push([nd, w]); } } }
   return 0;
 }
-let SHORT_GO = false;   // (while a short a switch made is reaching L2: see switched)
+let SHORT_GO = false, SUPPLY_CUT = false;   // (SUPPLY_CUT: the supply cut off by a short nothing will clear)   // (while a short a switch made is reaching L2: see switched)
 function switched(sw, t) {
   COMP = null; LV = null;
   const was = shortNow;
@@ -490,8 +490,14 @@ function switched(sw, t) {
   // current coming through the short has got back to L2, not the moment the switch closes; till then the current
   // is shown going on its way (the short only taken up then, if it is still there)
   if (shortNow && !was && !SHORT_GO && sw.length) { const dl = shortReach(sw); if (dl > 1e-6) { shortNow = false; schedule(t + dl, () => { SHORT_GO = true; try { switched([], evT); } finally { SHORT_GO = false; } }); } }
-  if (shortNow) blowSoon(shortFuses(), t);
-  if (was !== shortNow) for (const [id, fv] of NET.feedV) if (fv === 1) setRec(id, shortNow ? null : EGG(), t);
+  // (a short a fuse will clear: the fuse blows, and the current past it runs out behind it; the supply itself is left
+  // as it is, or cutting it and putting it back would send a pulse out of the transformer (Dallas, 15 Nov 2026). With
+  // nothing to clear it, the supply is cut while the short lasts.)
+  const fz = shortNow ? shortFuses() : [];
+  if (shortNow) blowSoon(fz, t);
+  if (was !== shortNow) { const cut = shortNow && !fz.length;
+    if (cut || SUPPLY_CUT) for (const [id, fv] of NET.feedV) if (fv === 1) setRec(id, cut ? null : EGG(), t);
+    SUPPLY_CUT = cut; }
   for (const d of DIRS) if (d.e.kind === 'part' && sw.includes(d.e.part)) {
     const r = REC.get(d.from) || null;
     // a switch on the return side (past a coil) that opens stops the coil, and the return current already past the

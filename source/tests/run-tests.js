@@ -2064,6 +2064,8 @@ const DEF_CIRCUIT = `
     if (!live) out.push('MCR coil shorted: no power reaching the RESET button');
     await page.waitForFunction(() => { const lamp = parts.find(q => q.t === 'lamp' && q.y > parts.find(z => z.label === 'MCR').y); return !!coilOn[lamp.id]; }, null, { timeout: 6000 }).catch(() => out.push('the pilot light never came on'));
     await page.evaluate(() => { const lamp = parts.find(q => q.t === 'lamp' && q.y > parts.find(z => z.label === 'MCR').y); window.__lampOut = DIRS.find(x => x.e.part === lamp); press('D', true); });
+    // (the supply is never cut while a fuse clears the short: no pulse out of the transformer, Dallas 15 Nov 2026)
+    await page.evaluate(() => { window.__cut = false; const f = () => { for (const [id, v] of NET.feedV) if (v === 1 && !REC.get(id)) window.__cut = true; if (!Object.keys(BLOWN).length || window.__n++ < 30) requestAnimationFrame(f); }; window.__n = 0; f(); });
     // (the fuse blows as the current reaches the shorted coil, not the moment RESET is pressed)
     await page.waitForTimeout(100); const early = await page.evaluate(() => Object.keys(BLOWN).length);
     if (early) out.push('the fuse blew the moment RESET was pressed');
@@ -2072,6 +2074,7 @@ const DEF_CIRCUIT = `
     // (just after: the pilot light still lit, its current not yet run out; no short-circuit notice, the fuse cleared it)
     const after = await page.evaluate(() => [!!coilOn[window.__lampOut.e.part.id], document.getElementById('fault').hidden].join());
     if (after !== 'true,true') out.push('just after the fuse blew (pilot light still lit, no notice): ' + after);
+    if (await page.evaluate(() => window.__cut)) out.push('the supply was cut off and put back while the fuse cleared the short (a pulse out of the transformer)');
     await page.waitForTimeout(300);
     const leak = await page.evaluate(() => { const d = window.__lampOut, r = d && REC.get(d.to); return !!(r && !r.ret); });
     if (leak) out.push('after the fuse blew, L1 had passed through the pilot light onto its return side');
