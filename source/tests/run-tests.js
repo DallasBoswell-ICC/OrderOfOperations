@@ -2063,11 +2063,14 @@ const DEF_CIRCUIT = `
     const live = await page.waitForFunction(() => { const r = parts.find(q => q.t === 'btn' && q.label === 'RESET'), d = DIRS.find(x => x.e.part === r); return !!(d && REC.get(d.from)); }, null, { timeout: 6000 }).then(() => true, () => false);
     if (!live) out.push('MCR coil shorted: no power reaching the RESET button');
     await page.evaluate(() => { const lamp = parts.find(q => q.t === 'lamp' && q.y > parts.find(z => z.label === 'MCR').y); window.__lampOut = DIRS.find(x => x.e.part === lamp); press('D', true); });
-    await page.waitForTimeout(40);
-    const leak = await page.evaluate(() => { const d = window.__lampOut, r = d && REC.get(d.to); return shortNow + ' ' + !!(r && !r.ret); });
-    if (leak === 'true true') out.push('in the short, L1 passed through the pilot light onto its return side');
-    await page.waitForTimeout(400); const blown = await page.evaluate(() => Object.keys(BLOWN).length);
-    if (blown < 1) out.push('pressing RESET with the MCR coil shorted did not blow the fuse');
+    // (the fuse blows once the current through the short has got back to X2, not the moment RESET is pressed)
+    await page.waitForTimeout(100); const early = await page.evaluate(() => Object.keys(BLOWN).length);
+    if (early) out.push('the fuse blew the moment RESET was pressed');
+    const blown = await page.waitForFunction(() => Object.keys(BLOWN).length > 0, null, { timeout: 6000 }).then(() => true, () => false);
+    if (!blown) out.push('pressing RESET with the MCR coil shorted did not blow the fuse');
+    await page.waitForTimeout(300);
+    const leak = await page.evaluate(() => { const d = window.__lampOut, r = d && REC.get(d.to); return !!(r && !r.ret); });
+    if (leak) out.push('after the fuse blew, L1 had passed through the pilot light onto its return side');
     await page.evaluate(() => { press('D', false); setSpeed(1); }); await page.click('#tab-edit');
     await page.selectOption('#preset', 'seal'); await page.waitForTimeout(80);
     await page.evaluate(() => { parts.push(P('con', 300, 420, { L: 'X' }), P('lamp', 700, 420, { L: '', color: '#00B050' })); wires.push(Wr(0, 420, 260, 420), Wr(340, 420, 640, 420), Wr(760, 420, W, 420)); normalize(); parts.find(q => q.t === 'coil').fault = 'short'; wires.find(w => w.y1 === 420 && w.x1 === 340).fault = 'open'; draw(); });
