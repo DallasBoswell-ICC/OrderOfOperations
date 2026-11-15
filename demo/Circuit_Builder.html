@@ -1786,7 +1786,7 @@ function startRun() {
   INLEAD = new Map();
   for (const d of DIRS) if (d.e.kind === 'part') { const p = d.e.part; if (!INLEAD.has(d.from)) INLEAD.set(d.from, []); INLEAD.get(d.from).push([p, d.from === p._a ? 'A' : 'B']); }
   findPaths(); findNoway(); findReach();
-  checkShort(); const fz0 = shortNow ? shortFuses() : []; if (shortNow) blowSoon(fz0, 0); SUPPLY_CUT = shortNow && !fz0.length;
+  SHORT_WAIT = false; checkShort(); const fz0 = shortNow ? shortFuses() : []; if (shortNow) blowSoon(fz0, 0); SUPPLY_CUT = shortNow && !fz0.length;
   ALLOW = allowNow();
   for (const [id, v] of NET.feedV) if (v === 1) setRec(id, SUPPLY_CUT ? null : EGG(), 0);
   phaseWays(); phasesNow(0);
@@ -1997,6 +1997,7 @@ function through(d, r) {
   if (isCon(d.e.part)) return along(r, d.e.len);   // a relay contact passes the current on as it is
   // through a coil that is in: the return side, fading to egg. Through a coil that cannot pick up: the colour
   // waiting at it, on up to whatever is open past it
+  if (faultOf(d.e.part) === 'short') { if (SHORT_WAIT && !r.ret) { SHORT_WAIT = false; schedule(evT + d.delay + .02, shortTakeUp); } return along(r, d.e.len); }   // (a coil or light with a short planted on it: a piece of wire, passing on whatever reaches it, the current running out behind a blown fuse too)
   if (COND[d.e.part.id]) return { ret: true, base: r.ret ? r.base : colourOf(r), along: 0, l0: lv(d.e.part)[0], l1: lv(d.e.part)[1] };
   if (r.ret) return null;
   // (only when something past it really is open: never in a short circuit, nor when its far side goes straight on to
@@ -2182,17 +2183,32 @@ function moveContact(c, t) {
 // some pushbuttons or contacts have just opened or closed
 // how long the current takes, once switches sw have closed, to reach the short (along the shortest way that passes
 // current, at the current's speed V), in seconds of the circuit's time: a load with a short planted on it (Dallas: it
-// trips as the current reaches the shorted relay), a wire shorted to L2, or else L2 itself
+// trips as the current reaches the shorted relay, and goes through it), a wire shorted to L2, or else L2 itself
 function shortReach(sw) {
-  const dist = new Map(), q = [], at = new Set();
-  for (const p of parts) if (faultOf(p) === 'short' && FAULT_LOADS.includes(p.t)) for (const n of [p._a, p._b]) if (n !== undefined) at.add(n);
-  for (const [id, v] of NET.feedV) if (v === 0) at.add(id);
+  const dist = new Map(), q = [];
   for (const k of sw) for (const n of [k._a, k._b]) if (n !== undefined && !dist.has(n)) { dist.set(n, 0); q.push([0, n]); }
-  while (q.length) { q.sort((a, b) => a[0] - b[0]); const [d, u] = q.shift(); if (d > dist.get(u)) continue; if (u === NET.L2 || at.has(u)) return d / V;
+  while (q.length) { q.sort((a, b) => a[0] - b[0]); const [d, u] = q.shift(); if (d > dist.get(u)) continue;
     for (const i of NET.adj[u] || []) { const e = NET.edges[i]; if (!conducts(e)) continue; const w = e.a === u ? e.b : e.a, nd = d + (e.w || 0); if (!dist.has(w) || nd < dist.get(w)) { dist.set(w, nd); q.push([nd, w]); } } }
-  return 0;
+  // (a shorted load: once the current has come out of its far side, a little way on, so it is seen going through it)
+  let best = Infinity;
+  for (const p of parts) if (faultOf(p) === 'short' && FAULT_LOADS.includes(p.t) && dist.has(p._a) && dist.has(p._b)) best = Math.min(best, Math.max(dist.get(p._a), dist.get(p._b)) + 20);
+  for (const [id, v] of NET.feedV) if (v === 0 && dist.has(id)) best = Math.min(best, dist.get(id));
+  if (!isFinite(best) && dist.has(NET.L2)) best = dist.get(NET.L2);
+  return isFinite(best) ? best / V : 0;
 }
-let SHORT_GO = false, SUPPLY_CUT = false;   // (SUPPLY_CUT: the supply cut off by a short nothing will clear)   // (while a short a switch made is reaching L2: see switched)
+let SHORT_GO = false, SUPPLY_CUT = false, SHORT_WAIT = false;   // (SHORT_WAIT: a short through a shorted load, waiting for the current to come through it)
+function shortTakeUp() {
+  SHORT_WAIT = false;
+  // (the current already through a shorted load runs on to L2 as the circuit dies: every way from it on toward L2
+  // that is carrying current now goes on letting it through, as the wiring behind a blown fuse does)
+  const st = [], seen = new Set();
+  for (const p of parts) if (faultOf(p) === 'short' && FAULT_LOADS.includes(p.t)) { const d = DIRS.find(x => x.e.part === p); if (d && !seen.has(d.to)) { seen.add(d.to); st.push(d.to); } }
+  while (st.length) { const u = st.pop();
+    for (const d of OUTS.get(u) || []) { const A = ALLOW.get(d); if (!A || !A.size) continue;
+      d.drain = d.drain || {}; for (const x of A) d.drain[x] = Math.max(d.drain[x] || 0, evT + 60);
+      if (!seen.has(d.to)) { seen.add(d.to); st.push(d.to); } } }
+  SHORT_GO = true; try { switched([], evT); } finally { SHORT_GO = false; }
+}   // (SUPPLY_CUT: the supply cut off by a short nothing will clear)   // (while a short a switch made is reaching L2: see switched)
 function switched(sw, t) {
   COMP = null; LV = null;
   const was = shortNow;
@@ -2200,7 +2216,10 @@ function switched(sw, t) {
   // a short made by a switch closing (Dallas, 15 Nov 2026): the fuse blows, and the circuit goes dead, once the
   // current coming through the short has got back to L2, not the moment the switch closes; till then the current
   // is shown going on its way (the short only taken up then, if it is still there)
-  if (shortNow && !was && !SHORT_GO && sw.length) { const dl = shortReach(sw); if (dl > 1e-6) { shortNow = false; schedule(t + dl, () => { SHORT_GO = true; try { switched([], evT); } finally { SHORT_GO = false; } }); } }
+  // (through a load with a short planted on it: taken up as the current comes out of the load's far side (see through),
+  // or, should it never get there, a while after it would have)
+  if (shortNow && !was && !SHORT_GO && sw.length) { const dl = shortReach(sw); if (dl > 1e-6) { shortNow = false;
+    const viaLoad = parts.some(p => faultOf(p) === 'short' && FAULT_LOADS.includes(p.t)); SHORT_WAIT = viaLoad; schedule(t + (viaLoad ? dl * 3 + 1 : dl), shortTakeUp); } }
   // (a short a fuse will clear: the fuse blows, and the current past it runs out behind it; the supply itself is left
   // as it is, or cutting it and putting it back would send a pulse out of the transformer (Dallas, 15 Nov 2026). With
   // nothing to clear it, the supply is cut while the short lasts.)
@@ -2229,7 +2248,7 @@ function refreshAllow(t) {
   const old = ALLOW; ALLOW = allowNow();
   for (const d of DIRS) if (filtered(d)) {
     const a = old.get(d), b = ALLOW.get(d);
-    if (a) for (const x of a) if (!b || !b.has(x)) (d.drain || (d.drain = {}))[x] = t + ((REACH.get(d) || {})[x] || 0) + 0.3;
+    if (a) for (const x of a) if (!b || !b.has(x)) { const dr = d.drain || (d.drain = {}); dr[x] = Math.max(dr[x] || 0, t + ((REACH.get(d) || {})[x] || 0) + 0.3); }   // (never shortened: see shortTakeUp)
     if (b && [...b].some(x => !a || !a.has(x))) send(d, REC.get(d.from) || null, t);
   }
 }

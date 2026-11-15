@@ -2083,6 +2083,10 @@ const DEF_CIRCUIT = `
     const after = await page.evaluate(() => [!!coilOn[window.__lampOut.e.part.id], document.getElementById('fault').hidden].join());
     if (after !== 'true,true') out.push('just after the fuse blew (pilot light still lit, no notice): ' + after);
     if (await page.evaluate(() => window.__cut)) out.push('the supply was cut off and put back while the fuse cleared the short (a pulse out of the transformer)');
+    // (the current goes on through the shorted coil, out along the wire past it, as the circuit dies)
+    const through = await page.waitForFunction(() => { const m = parts.find(z => z.label === 'MCR'), d = DIRS.find(x => x.e.part === m), o = (OUTS.get(d.to) || []).find(x => x.e.kind === 'seg' && ALLOW.has(x) || x.drain);
+      return !!REC.get(d.to) && !!(o && REC.get(o.to)); }, null, { timeout: 4000 }).then(() => true, () => false);
+    if (!through) out.push('the current did not go on through the shorted MCR coil');
     await page.waitForTimeout(300);
     const leak = await page.evaluate(() => { const d = window.__lampOut, r = d && REC.get(d.to); return !!(r && !r.ret); });
     if (leak) out.push('after the fuse blew, L1 had passed through the pilot light onto its return side');
