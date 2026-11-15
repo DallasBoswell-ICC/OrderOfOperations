@@ -2049,6 +2049,29 @@ const DEF_CIRCUIT = `
     await page.click('#rt-faults'); await page.fill('#fz-wo', 'Nothing happens when START is pressed.');
     const back = await page.evaluate(() => { const d = JSON.parse(JSON.stringify(circuitData())), c = readCircuit(d); return [d.fl.length, c.parts.filter(p => p.fault).map(p => p.t + ':' + p.fault).join(), c.wires.filter(w => w.fault).map(w => w.fault).join(), c.wo].join(' | '); });
     if (back !== '1 | coil:short | open | Nothing happens when START is pressed.') out.push('read back: ' + back);
+    // the work order box takes its own keys: Backspace and Delete edit the text, never the circuit (Dallas, 15 Nov 2026)
+    await page.evaluate(() => { sel = selOne('p', parts.find(q => q.t === 'lamp').id); draw(); });
+    await page.click('#fz-wo'); await page.keyboard.press('End'); for (let i = 0; i < 9; i++) await page.keyboard.press('Backspace');
+    const wo = await page.evaluate(() => [WORK_ORDER, parts.some(q => q.t === 'lamp')].join(' | '));
+    if (wo !== 'Nothing happens when START is | true') out.push('typing Backspace in the work order: ' + wo);
+    await page.evaluate(() => { sel = null; draw(); });
+    // a shorted coil: the wiring up to it still lights (the rung's buttons live, as with a healthy coil), and in the short
+    // the current does not pass through the other loads onto their return side (Dallas, 15 Nov 2026)
+    const d = require('fs').readFileSync(require('path').join(__dirname, 'fixtures', 'fwdrev_mcr.json'), 'utf8');
+    await page.evaluate(d => { useCircuit(readCircuit(JSON.parse(d)), 'x'); parts.find(q => q.t === 'coil' && q.label === 'MCR').fault = 'short'; FAULTS_ON = true; draw(); }, d);
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(5));
+    const live = await page.waitForFunction(() => { const r = parts.find(q => q.t === 'btn' && q.label === 'RESET'), d = DIRS.find(x => x.e.part === r); return !!(d && REC.get(d.from)); }, null, { timeout: 6000 }).then(() => true, () => false);
+    if (!live) out.push('MCR coil shorted: no power reaching the RESET button');
+    await page.evaluate(() => { const lamp = parts.find(q => q.t === 'lamp' && q.y > parts.find(z => z.label === 'MCR').y); window.__lampOut = DIRS.find(x => x.e.part === lamp); press('D', true); });
+    await page.waitForTimeout(40);
+    const leak = await page.evaluate(() => { const d = window.__lampOut, r = d && REC.get(d.to); return shortNow + ' ' + !!(r && !r.ret); });
+    if (leak === 'true true') out.push('in the short, L1 passed through the pilot light onto its return side');
+    await page.waitForTimeout(400); const blown = await page.evaluate(() => Object.keys(BLOWN).length);
+    if (blown < 1) out.push('pressing RESET with the MCR coil shorted did not blow the fuse');
+    await page.evaluate(() => { press('D', false); setSpeed(1); }); await page.click('#tab-edit');
+    await page.selectOption('#preset', 'seal'); await page.waitForTimeout(80);
+    await page.evaluate(() => { parts.push(P('con', 300, 420, { L: 'X' }), P('lamp', 700, 420, { L: '', color: '#00B050' })); wires.push(Wr(0, 420, 260, 420), Wr(340, 420, 640, 420), Wr(760, 420, W, 420)); normalize(); parts.find(q => q.t === 'coil').fault = 'short'; wires.find(w => w.y1 === 420 && w.x1 === 340).fault = 'open'; draw(); });
+    await page.click('#rt-faults');
     // random and Clear All; undo brings them back
     await page.click('#fz-clear'); let n = await page.evaluate(() => faulted().length); if (n !== 0) out.push('after Clear All: ' + n);
     await page.evaluate(() => undo()); n = await page.evaluate(() => faulted().length); if (n !== 2) out.push('after undoing Clear All: ' + n);

@@ -1275,10 +1275,12 @@ function network() {
     if (isBox(p) || isPwr3(p) || p.t === 'mtr') continue;   // (supply boxes are not a way through: their connection points are L1 or L2, below; continuations: further down)
     const [[ax, ay], [bx, by]] = terms(p);
     p._a = node(ax, ay, key(ax, ay)); p._b = node(bx, by, key(bx, by));
-    // (a fault planted on a load, while running: open, no way through it; shorted, its ends joined straight through)
+    // (a fault planted on a load, while running: open, no way through it; shorted, its ends joined straight through
+    // electrically (a dead short: what conducts, the voltages, the fuse that blows), though the current is still shown
+    // reaching it and going on past it as it would through a load, so the wiring up to it lights as before)
     const f = FAULT_LOADS.includes(p.t) ? faultOf(p) : null;
     if (f === 'open') continue;
-    if (f === 'short') { edges.push({ a: p._a, b: p._b, w: 1, kind: 'w' }); jedges.push({ kind: 'seg', a: p._a, b: p._b, len: 2 * TERM(p), chain: [p._a, p._b] }); continue; }
+    if (f === 'short') { edges.push({ a: p._a, b: p._b, w: 1, kind: 'w' }); jedges.push({ kind: 'part', a: p._a, b: p._b, len: 2 * TERM(p), part: p }); continue; }
     edges.push({ a: p._a, b: p._b, w: 2 * TERM(p), kind: 'part', part: p });
     jedges.push({ kind: 'part', a: p._a, b: p._b, len: 2 * TERM(p), part: p });
   }
@@ -1758,13 +1760,17 @@ function startRun() {
   DSC = {}; BLOWN = {}; FU1T = {}; OLTRIP = {}; MOT = {}; DSC_T = {}; OLRESET = {};   // every coil starts off
   tl = NET.nodes.map(() => [[-1e9, null]]);
   for (const p of parts) { delete p._chg; delete p._lead; delete p._sh; delete p._lv; delete p._ph; }
-  // which way each button and coil is passed through (as if every button were passing current)
+  // which way each button and coil is passed through (as if every button were passing current); worked out on the
+  // circuit as it should be when faults are planted (a dead short would upset the voltages these come from, and turn
+  // parts round: the junctions are the same, as a fault only takes ways through away or adds them)
+  const NETF = NET; if (faultsLive() && (parts.some(p => p.fault) || wires.some(w => w.fault))) { FAULTS_ON = false; NET = network(); FAULTS_ON = true; }
   findButtonDirections();
   const h = solveV(true).V, dist = new Map(), q = []; VOLT = h;
   for (const [id, v] of NET.feedV) if (v === 1) { dist.set(id, 0); q.push([0, id]); }
   while (q.length) { q.sort((a, b) => a[0] - b[0]); const [d, u] = q.shift(); if (d > dist.get(u)) continue;
     if (NET.feedV.get(u) === 0) continue;
     for (const e of NET.jadj.get(u) || []) { if (!viaL1(e)) continue; const w = e.a === u ? e.b : e.a, nd = d + e.len; if (!dist.has(w) || nd < dist.get(w)) { dist.set(w, nd); q.push([nd, w]); } } }
+  NET = NETF;
   DIRS = []; OUTS = new Map(); INS = new Map(); REC = new Map();
   stretchTimes();
   for (const e of NET.jedges) {
@@ -1952,6 +1958,9 @@ function allowNow() {
       if (d.e.kind === 'part') {
         if (isSw(d.e.part)) { if (!closed(d.e.part)) break; if (isOp(d.e.part)) label = opLabel(d.e.part, label); else { if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label); } }   // a contact passes on the colour it is given
         else if (COND[d.e.part.id]) label = 'ret';   // past a coil with current through it: the return side, back to L2
+        // (in a short circuit, a load passes nothing on: its far side is joined to L2, not live, and the current takes the
+        // short instead; a load with a short planted on it is the short itself, so the current goes on through it)
+        else if (shortNow && faultOf(d.e.part) !== 'short') break;
         // (a coil that cannot pick up, because something past it is open, carries no current: the wire past it is as
         // live as the wire before it, so the colour waiting at the coil carries on up to whatever is open)
         continue;
@@ -5923,7 +5932,7 @@ document.getElementById('redo').addEventListener('click', redo);
 document.getElementById('p-del').addEventListener('click', del);
 document.getElementById('clear').addEventListener('click', () => { snapshot(); parts = []; wires = []; W_USER = null; sel = null; circuitName = ''; forgetFile(); draw(); });
 document.addEventListener('keydown', e => {
-  if (!editing || /SELECT|INPUT/.test(document.activeElement.tagName)) return;
+  if (!editing || /SELECT|INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;   // (typing in a box, such as the Faults tab's work order: its keys are its own)
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); del(); }
   else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || e.shiftKey && e.key.toLowerCase() === 'z')) { e.preventDefault(); redo(); }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }

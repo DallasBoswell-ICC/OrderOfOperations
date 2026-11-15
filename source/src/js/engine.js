@@ -50,13 +50,17 @@ function startRun() {
   DSC = {}; BLOWN = {}; FU1T = {}; OLTRIP = {}; MOT = {}; DSC_T = {}; OLRESET = {};   // every coil starts off
   tl = NET.nodes.map(() => [[-1e9, null]]);
   for (const p of parts) { delete p._chg; delete p._lead; delete p._sh; delete p._lv; delete p._ph; }
-  // which way each button and coil is passed through (as if every button were passing current)
+  // which way each button and coil is passed through (as if every button were passing current); worked out on the
+  // circuit as it should be when faults are planted (a dead short would upset the voltages these come from, and turn
+  // parts round: the junctions are the same, as a fault only takes ways through away or adds them)
+  const NETF = NET; if (faultsLive() && (parts.some(p => p.fault) || wires.some(w => w.fault))) { FAULTS_ON = false; NET = network(); FAULTS_ON = true; }
   findButtonDirections();
   const h = solveV(true).V, dist = new Map(), q = []; VOLT = h;
   for (const [id, v] of NET.feedV) if (v === 1) { dist.set(id, 0); q.push([0, id]); }
   while (q.length) { q.sort((a, b) => a[0] - b[0]); const [d, u] = q.shift(); if (d > dist.get(u)) continue;
     if (NET.feedV.get(u) === 0) continue;
     for (const e of NET.jadj.get(u) || []) { if (!viaL1(e)) continue; const w = e.a === u ? e.b : e.a, nd = d + e.len; if (!dist.has(w) || nd < dist.get(w)) { dist.set(w, nd); q.push([nd, w]); } } }
+  NET = NETF;
   DIRS = []; OUTS = new Map(); INS = new Map(); REC = new Map();
   stretchTimes();
   for (const e of NET.jedges) {
@@ -244,6 +248,9 @@ function allowNow() {
       if (d.e.kind === 'part') {
         if (isSw(d.e.part)) { if (!closed(d.e.part)) break; if (isOp(d.e.part)) label = opLabel(d.e.part, label); else { if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label); } }   // a contact passes on the colour it is given
         else if (COND[d.e.part.id]) label = 'ret';   // past a coil with current through it: the return side, back to L2
+        // (in a short circuit, a load passes nothing on: its far side is joined to L2, not live, and the current takes the
+        // short instead; a load with a short planted on it is the short itself, so the current goes on through it)
+        else if (shortNow && faultOf(d.e.part) !== 'short') break;
         // (a coil that cannot pick up, because something past it is open, carries no current: the wire past it is as
         // live as the wire before it, so the colour waiting at the coil carries on up to whatever is open)
         continue;
