@@ -958,8 +958,8 @@ const PSW_COL = '#FF9C37', PSW_UP = 116;   // (its colour; how far its gauge rea
 /* A flow switch (fsw, Dallas's design, 15 Nov 2026): numbered (FLS1, FLS2...), the limit switch's body with, on a neck
    and two supports on top, a length of pipe with flanged ends; up into the pipe from its bottom wall, a flexible strip
    with a rectangular paddle on its end, which the water bends over downstream. Under the blade, fixed to it (as the
-   temperature switch's stem is), the NEMA flow switch's stem and flag. The pipe is dark with no flow; water fills it,
-   streaming left to right, while there is flow. Worked by hand as a limit switch is, or by a Flow value; its own key
+   temperature switch's stem is), the NEMA flow switch's stem and flag. The pipe is always full of water; streaks drift
+   through it, gathering speed, while it flows. Worked by hand as a limit switch is, or by a Flow value; its own key
    ('W' and its number). NO or NC. */
 const FSW_COL = '#9B6BFF', FSW_UP = 96;   // (its colour, violet; how far its pipe reaches above the wire)
 const isLim = p => p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw' || p.t === 'fsw', opKey = p => p.t === 'tsw' ? 'T' + p.L : p.t === 'psw' ? 'P' + p.L : p.t === 'fsw' ? 'W' + p.L : p.L;
@@ -3136,34 +3136,28 @@ function setPress(v, p, pos, cl) {
 /* A flow switch (Dallas's design, 15 Nov 2026): the limit switch's body and contact; on a neck and two supports on top,
    a length of pipe with flanged ends. Up into the pipe from its bottom wall (its round foot set down in the wall), a
    flexible strip with a rectangular paddle on its end: upright with no flow, bent over downstream (right, and down) as
-   the water pushes it. The pipe is dark with no flow; while there is flow water fills it, its streaks drifting left to
-   right (faster with more flow, when a Flow value works it). Under the blade, fixed to it as the temperature switch's
+   the water pushes it. The pipe is always full of water; while it flows, streaks drift through it left to right
+   (faster with more flow, when a Flow value works it). Under the blade, fixed to it as the temperature switch's
    stem is (hanging straight down at rest), the NEMA flow switch's stem with its flag. Its number and NO or NC in the
    body's bottom corners. The pipe, neck and paddle are drawn in Dallas's units (his body 190 wide), scaled by FSW_K. */
-const FSW_K = 110 / 190, FSW_PAD = 22, FSW_BEND = 100;   // (the strip's length, in his units; how far it bends over, in degrees)
-/* The water in a flow switch's pipe (Dallas, 15 Nov 2026: not empty to full at once; smooth streaks whose speed follows
-   the flow). Moved on every frame by the clock (real time), in Dallas's units: the pipe's inside runs FSW_X0 to FSW_X1.
-   While there is flow its front advances from the left end to the right, and once there is none its tail follows it
-   out the right end. The streaks drift at FSW_V units a second at full flow, in proportion to the flow (by hand, FSW_HAND
-   of full flow); the front never fills slower than FSW_FILL. Each switch's water is kept in FLOW (all views share it). */
-const FSW_X0 = 62.5, FSW_X1 = 260.5, FSW_V = 200, FSW_HAND = .6, FSW_FILL = 90, FSW_FAST = 330, FLOW = {};   // (by hand: the water in and out at FSW_FAST, reaching the paddle as the switch finishes working)
+const FSW_K = 110 / 190, FSW_PAD = 16, FSW_BEND = 85;   // (the strip's length, in his units, short enough that the paddle clears the pipe's top; how far it bends over, in degrees)
+/* The water in a flow switch's pipe (Dallas, 15 Nov 2026): the pipe is always full; the flow is shown by its streaks,
+   which appear as the water starts to move and gather speed slowly (easing towards their speed over about FSW_TAU s),
+   then slow down and fade away once the flow stops. Their speed is in proportion to the flow: FSW_V units a second (in
+   Dallas's units) at full flow; by hand, FSW_HAND of full flow. Moved on every frame by the clock (real time); each
+   switch's water is kept in FLOW (all views share it). */
+const FSW_X0 = 62.5, FSW_V = 200, FSW_HAND = .6, FSW_TAU = 1.2, FSW_SEEN = 40, FLOW = {};   // (FSW_SEEN: the speed by which the streaks are fully shown)
 let FSW_N = 0;   // (each pipe's clip its own id, in every view)
 const fswRate = p => { const f = pvFrac(p); return f === null ? (lswAct(p) ? FSW_HAND : 0) : f > .001 ? f : 0; };
 function flowTick(dt) {
   for (const p of parts) if (p.t === 'fsw') {
-    const w = FLOW[p.id] || (FLOW[p.id] = { front: FSW_X0, tail: FSW_X0, ph: 0, k: '' }), r = editing ? 0 : fswRate(p), v0 = FSW_V * r;
-    if (editing) { w.front = w.tail = FSW_X0; w.ph = 0; }
-    else if (r > 0) { const m = (pvFrac(p) === null ? FSW_FAST : Math.max(v0, FSW_FILL)) * dt; w.front = Math.min(FSW_X1, w.front + m); w.tail = Math.max(FSW_X0, w.tail - m); }
-    const out = pvFrac(p) === null ? FSW_FAST : Math.max(FSW_V * FSW_HAND, FSW_FILL);   // (draining: the last of the water runs out at this speed, its streaks with it)
-    if (r <= 0 && w.front > FSW_X0) { w.tail = Math.min(w.front, w.tail + out * dt); if (w.tail >= FSW_X1 - .01) w.front = w.tail = FSW_X0; }
-    if (w.front > w.tail) w.ph = (w.ph + (r > 0 ? v0 : out) * dt) % 100;
-    const k = w.front.toFixed(1) + '/' + w.tail.toFixed(1) + '/' + w.ph.toFixed(1);
+    const w = FLOW[p.id] || (FLOW[p.id] = { sp: 0, ph: 0, k: '' }), to = editing ? 0 : FSW_V * fswRate(p);
+    w.sp += (to - w.sp) * Math.min(1, dt / FSW_TAU); if (!to && w.sp < 3) w.sp = 0;   // (all but stopped: stopped)
+    w.ph = (w.ph + w.sp * dt) % 100;
+    const op = clamp01(w.sp / FSW_SEEN), k = w.ph.toFixed(1) + '/' + op.toFixed(2);
     if (k === w.k) continue; w.k = k;   // (nothing moving: nothing touched)
-    const reach = w.front > w.tail ? clamp01((w.front - 135) / 45) : 0;   // (how far the water's front has got past the paddle)
-    for (const V of VIEWS) { const v = V.parts.get(p.id); if (!v || !v.wclip) continue;
-      v.reach = reach; fswPaddle(v);
-      v.wclip.setAttribute('x', w.tail.toFixed(2)); v.wclip.setAttribute('width', Math.max(0, w.front - w.tail).toFixed(2));
-      v.streaks.setAttribute('transform', `translate(${w.ph.toFixed(2)} 0)`); }
+    for (const V of VIEWS) { const v = V.parts.get(p.id); if (!v || !v.streaks) continue;
+      v.streaks.setAttribute('transform', `translate(${w.ph.toFixed(2)} 0)`); v.streaks.setAttribute('opacity', op.toFixed(3)); }
   }
 }
 function drawFlow(p, g, x, y, v) {
@@ -3175,20 +3169,20 @@ function drawFlow(p, g, x, y, v) {
   el('path', { d: 'M135 136L139 106.7H181L185 136', fill: 'none', stroke: col, 'stroke-width': 2.6 }, t);
   el('rect', { x: 61.5, y: 61.5, width: 200, height: 52, rx: 7.8, fill: 'url(#gPipe)', stroke: '#111', 'stroke-width': 1.4, filter: 'url(#fShadow)' }, t);
   el('rect', { x: 61.5, y: 71.5, width: 200, height: 32, rx: 4.8, fill: '#242424', stroke: '#111', 'stroke-width': 1.4 }, t);
-  // the water: a blue fill, and streaks drifting through it (a band longer than the pipe, slid along one period and over
-  // again), shown between the water's tail and its front (flowTick moves them, by the frame clock)
+  // the water, always there: a blue fill, and streaks drifting through it while it flows (a band longer than the pipe,
+  // slid along one period and over again; flowTick moves them, by the frame clock, and fades them in and out)
   const cid = 'fswc' + (++FSW_N), cp = el('clipPath', { id: cid }, t);
-  v.wclip = el('rect', { x: FSW_X0, y: 72.5, width: 0, height: 30 }, cp);
+  el('rect', { x: FSW_X0, y: 72.5, width: 198, height: 30, rx: 4 }, cp);
   v.water = el('g', { 'clip-path': `url(#${cid})` }, t);
   el('rect', { x: 61.5, y: 71.5, width: 200, height: 32, fill: 'url(#gWater)' }, v.water);
-  v.streaks = el('g', {}, v.water);
+  v.streaks = el('g', { opacity: 0 }, v.water);
   for (let o = -100; o < 300; o += 100) for (const [sx, sy2] of [[8, 79], [38, 87], [18, 95], [62, 83], [80, 92]])
     el('line', { x1: 61.5 + o + sx, y1: sy2, x2: 61.5 + o + sx + 22, y2: sy2, stroke: '#cfe6ff', 'stroke-width': 2.2, 'stroke-linecap': 'round', opacity: .75 }, v.streaks);
   // the paddle: its strip (an arc of FSW_PAD, bent pos of the way over) and the rectangle on its end
   v.pad = el('g', {}, t);
   v.padSh = el('path', { fill: 'none', stroke: '#111', 'stroke-width': 7.5, 'stroke-linecap': 'round' }, v.pad);
   v.padStrip = el('path', { fill: 'none', stroke: '#c9ced4', 'stroke-width': 5, 'stroke-linecap': 'round' }, v.pad);
-  v.padEnd = el('rect', { width: 15, height: 12, rx: 1.5, fill: '#c9ced4', stroke: '#111', 'stroke-width': 1.3 }, v.pad);
+  v.padEnd = el('rect', { width: 12, height: 10, rx: 1.5, fill: '#c9ced4', stroke: '#111', 'stroke-width': 1.3 }, v.pad);
   el('circle', { cx: 160, cy: 107, r: 4, fill: '#5d636a', stroke: '#111', 'stroke-width': 1 }, t);
   // the pipe's bottom wall laid again over the strip's foot, so the foot sits down in the wall; then the flanges over the ends
   el('rect', { x: 61.5, y: 103.5, width: 200, height: 10, fill: 'url(#gPipeLow)' }, t);
@@ -3220,16 +3214,15 @@ function drawFlow(p, g, x, y, v) {
 // a flow switch pos of the way from at rest (0) to worked (1): the paddle bent over, the blade turned as the limit
 // switch's (its stem and flag with it), the water in the pipe (by hand: fading in as it is worked; linked to a Flow
 // value: there whenever the value is above nothing, its streaks quicker the more flow); lit in its colour while closed
-// the paddle bent over as far as the switch has been worked, but only once the water has reached it (v.reach, from
-// flowTick: 0 until the water's front gets to the paddle, 1 once it is past)
+// the paddle bent over as far as the switch has been worked
 function fswPaddle(v) {
-  const b = Math.min(v.pos || 0, v.reach ?? 0), kk = b.toFixed(3); if (v.bk === kk) return; v.bk = kk;
+  const b = v.pos || 0, kk = b.toFixed(3); if (v.bk === kk) return; v.bk = kk;
   // the strip: an arc of FSW_PAD from its foot (160, 107), bent b of FSW_BEND over to the right; the paddle on along its end
   const ph = FSW_BEND * b * Math.PI / 180, L = FSW_PAD, R = ph > 1e-3 ? L / ph : 0;
   const ex = 160 + (R ? R - R * Math.cos(ph) : 0), ey = 107 - (R ? R * Math.sin(ph) : L);
   const d = R ? `M160 107A${R.toFixed(2)} ${R.toFixed(2)} 0 0 1 ${ex.toFixed(2)} ${ey.toFixed(2)}` : `M160 107V${ey}`;
   v.padSh.setAttribute('d', d); v.padStrip.setAttribute('d', d);
-  v.padEnd.setAttribute('x', (ex - 1).toFixed(2)); v.padEnd.setAttribute('y', (ey - 6).toFixed(2));
+  v.padEnd.setAttribute('x', (ex - 1).toFixed(2)); v.padEnd.setAttribute('y', (ey - 5).toFixed(2));
   v.padEnd.setAttribute('transform', `rotate(${(ph * 180 / Math.PI - 90).toFixed(2)} ${ex.toFixed(2)} ${ey.toFixed(2)})`);
 }
 function setFlow(v, p, pos, cl) {

@@ -91,8 +91,8 @@ const PSW_COL = '#FF9C37', PSW_UP = 116;   // (its colour; how far its gauge rea
 /* A flow switch (fsw, Dallas's design, 15 Nov 2026): numbered (FLS1, FLS2...), the limit switch's body with, on a neck
    and two supports on top, a length of pipe with flanged ends; up into the pipe from its bottom wall, a flexible strip
    with a rectangular paddle on its end, which the water bends over downstream. Under the blade, fixed to it (as the
-   temperature switch's stem is), the NEMA flow switch's stem and flag. The pipe is dark with no flow; water fills it,
-   streaming left to right, while there is flow. Worked by hand as a limit switch is, or by a Flow value; its own key
+   temperature switch's stem is), the NEMA flow switch's stem and flag. The pipe is always full of water; streaks drift
+   through it, gathering speed, while it flows. Worked by hand as a limit switch is, or by a Flow value; its own key
    ('W' and its number). NO or NC. */
 const FSW_COL = '#9B6BFF', FSW_UP = 96;   // (its colour, violet; how far its pipe reaches above the wire)
 const isLim = p => p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw' || p.t === 'fsw', opKey = p => p.t === 'tsw' ? 'T' + p.L : p.t === 'psw' ? 'P' + p.L : p.t === 'fsw' ? 'W' + p.L : p.L;

@@ -1946,7 +1946,7 @@ const DEF_CIRCUIT = `
     if (pasted !== '1,2,3') out.push('after pasting PS1: ' + pasted);
     return out;
   });
-  await check('Flow switches: NO and NC at rest and with water flowing (blade, stem and flag together, the water filling the pipe from the left and draining out the right, the paddle bent over once it reaches it, streaks at a speed in proportion to the flow), apart from pressure switches of the same number, worked by a Flow value, saved, renumbered when pasted, printed', async page => {
+  await check('Flow switches: NO and NC at rest and with water flowing (blade, stem and flag together; the pipe always full; streaks appearing and gathering speed slowly, in proportion to the flow, then slowing and fading; the paddle bent over, clear of the pipe\'s top), apart from pressure switches of the same number, worked by a Flow value, saved, renumbered when pasted, printed', async page => {
     const out = [];
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
     const iss = await page.evaluate(() => { W = 760; W_USER = 760;
@@ -1955,22 +1955,22 @@ const DEF_CIRCUIT = `
     if (iss) out.push('wiring issues: ' + iss);
     const tags = await page.evaluate(() => parts.filter(p => p.t === 'fsw').map(p => captionOf(p) + '/' + p.color).join());
     if (tags !== 'FLS1 Flow Switch (NO)/#9B6BFF,FLS2 Flow Switch (NC)/#9B6BFF') out.push('placed as: ' + tags);
-    const st = () => page.evaluate(() => { const v = view.parts.get(parts.find(p => p.t === 'fsw').id);
-      return [parts.filter(p => p.t === 'lamp').map(p => +!!coilOn[p.id]).join(''), (+v.wclip.getAttribute('width')).toFixed(0), v.padStrip.getAttribute('d').includes('A') ? 'bent' : 'up', v.stem.getAttribute('fill'), v.flag.getAttribute('fill'), v.stem.parentNode.parentNode === v.blade].join('|'); });
+    // (the paddle's top, upright, clear of the pipe's top inside wall, 71.5 in Dallas's units)
+    const clear = await page.evaluate(() => { const v = view.parts.get(parts.find(p => p.t === 'fsw').id); return +v.padEnd.getAttribute('y'); });
+    if (!(clear > 74)) out.push('the paddle reaches up to ' + clear + ' (the pipe\'s top inside is at 71.5)');
+    const st = () => page.evaluate(() => { const v = view.parts.get(parts.find(p => p.t === 'fsw').id), w = FLOW[v.p ? v.p.id : parts.find(p => p.t === 'fsw').id];
+      return [parts.filter(p => p.t === 'lamp').map(p => +!!coilOn[p.id]).join(''), v.water.getAttribute('opacity') === null ? 'full' : 'not', (+(v.streaks.getAttribute('opacity') || 0)).toFixed(2), v.padStrip.getAttribute('d').includes('A') ? 'bent' : 'up', v.stem.getAttribute('fill'), v.flag.getAttribute('fill'), v.stem.parentNode.parentNode === v.blade].join('|'); });
     await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
-    let s = await st(); if (s !== '010|0|up|#a6a6a6|#a6a6a6|true') out.push('at rest: ' + s);
-    await page.evaluate(() => { press('W1', true); press('W2', true); }); await page.waitForTimeout(110);
-    const part = await page.evaluate(() => { const v = view.parts.get(parts.find(p => p.t === 'fsw').id), w = +v.wclip.getAttribute('width'); return w > 5 && w < 150 && !v.padStrip.getAttribute('d').includes('A'); });
-    if (!part) out.push('just after working it: not part way along the pipe, paddle still upright');
-    await page.waitForTimeout(1000);
-    s = await st(); if (s !== '100|198|bent|#9B6BFF|#9B6BFF|true') out.push('water flowing (FLS1 and FLS2 worked): ' + s);
-    const mv = await page.evaluate(async () => { const v = view.parts.get(parts.find(p => p.t === 'fsw').id), a = v.streaks.getAttribute('transform'); await new Promise(r => setTimeout(r, 120)); return a !== v.streaks.getAttribute('transform'); });
-    if (!mv) out.push('the streaks are not moving');
-    await page.evaluate(() => { press('W1', false); press('W2', false); }); await page.waitForTimeout(250);
-    const dr = await page.evaluate(() => { const v = view.parts.get(parts.find(p => p.t === 'fsw').id); return [Math.round(+v.wclip.getAttribute('x')) > 70, Math.round(+v.wclip.getAttribute('x') + +v.wclip.getAttribute('width'))].join(); });
-    if (dr !== 'true,261') out.push('just after letting go: not draining out the right end (tail moved, front): ' + dr);
-    await page.waitForTimeout(800);
-    s = await st(); if (!s.startsWith('010|0|up')) out.push('drained: ' + s);
+    let s = await st(); if (s !== '010|full|0.00|up|#a6a6a6|#a6a6a6|true') out.push('at rest: ' + s);
+    const sp = () => page.evaluate(() => FLOW[parts.find(p => p.t === 'fsw').id].sp);
+    await page.evaluate(() => { press('W1', true); press('W2', true); }); await page.waitForTimeout(350);
+    const s1 = await sp(); await page.waitForTimeout(900); const s2 = await sp(); await page.waitForTimeout(3000); const s3 = await sp();
+    if (!(s1 > 5 && s1 < s2 && s2 < s3 && Math.abs(s3 - 120) < 6)) out.push(`streak speed while working it: ${s1.toFixed(0)}, ${s2.toFixed(0)}, ${s3.toFixed(0)} (want rising slowly to 120)`);
+    s = await st(); if (s !== '100|full|1.00|bent|#9B6BFF|#9B6BFF|true') out.push('water flowing (FLS1 and FLS2 worked): ' + s);
+    await page.evaluate(() => { press('W1', false); press('W2', false); }); await page.waitForTimeout(400);
+    const d1 = await sp(); if (!(d1 > 10 && d1 < 115)) out.push('just after letting go, the streaks at ' + d1.toFixed(0) + ' (want slowing)');
+    await page.waitForTimeout(6000);
+    s = await st(); if (!s.startsWith('010|full|0.00|up')) out.push('stopped: ' + s);
     await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
     const back = await page.evaluate(() => readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.filter(p => p.t === 'fsw').map(p => p.L + (p.nc ? 'nc' : 'no') + p.color).join());
     if (back !== '1no#9B6BFF,2nc#9B6BFF') out.push('read back: ' + back);
@@ -1979,11 +1979,11 @@ const DEF_CIRCUIT = `
       const f = parts.find(p => p.t === 'fsw' && p.L === '1'); Object.assign(f, { pv: 'w', sp: 20, rs: 10 }); draw(); return PV_FOR.fsw; });
     if (pv !== 'flow') out.push('worked by a ' + pv + ' value');
     await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(300);
-    const at = async x => { await page.evaluate(x => pvSet("w", x), x); await page.waitForTimeout(350); return page.evaluate(() => { const p = parts.find(p => p.t === 'fsw' && p.L === '1'), v = view.parts.get(p.id); return (lswClosed(p) ? 'C' : 'o') + (+v.wclip.getAttribute('width') > 0 ? 'w' : '-'); }); };
+    const at = async x => { await page.evaluate(x => pvSet("w", x), x); await page.waitForTimeout(350); return page.evaluate(() => { const p = parts.find(p => p.t === 'fsw' && p.L === '1'), v = view.parts.get(p.id); return lswClosed(p) ? 'C' : 'o'; }); };
     const seq = [await at(0), await at(5), await at(25), await at(15), await at(5)].join(' ');
-    if (seq !== 'o- ow Cw Cw ow') out.push('Flow value 0, 5, 25, 15, 5 gpm (closed, water): ' + seq);
+    if (seq !== 'o o C C o') out.push('Flow value 0, 5, 25, 15, 5 gpm (closed): ' + seq);
     // the streaks' speed in proportion to the flow: 12.5 and 50 gpm (a quarter, and all, of the range)
-    const rate = async x => { await page.evaluate(x => pvSet('w', x), x); await page.waitForTimeout(1500);
+    const rate = async x => { await page.evaluate(x => pvSet('w', x), x); await page.waitForTimeout(6000);
       return page.evaluate(async () => { const q = FLOW[parts.find(p => p.t === 'fsw' && p.L === '1').id], a = q.ph, t = performance.now(); await new Promise(r => setTimeout(r, 300)); return ((q.ph - a + 100) % 100) / ((performance.now() - t) / 1000); }); };
     const r1 = await rate(12.5), r4 = await rate(50);
     if (!(r1 > 35 && r1 < 65 && r4 / r1 > 3.4 && r4 / r1 < 4.6)) out.push(`streaks at 12.5 and 50 gpm: ${r1.toFixed(0)} and ${r4.toFixed(0)} units a second (want about 50 and 200)`);
