@@ -38,11 +38,11 @@ function network() {
     if (isBox(p) || isPwr3(p) || p.t === 'mtr') continue;   // (supply boxes are not a way through: their connection points are L1 or L2, below; continuations: further down)
     const [[ax, ay], [bx, by]] = terms(p);
     p._a = node(ax, ay, key(ax, ay)); p._b = node(bx, by, key(bx, by));
-    // (a fault planted on a load, while running: open, no way through it; shorted, its ends joined straight through
+    // (a fault planted on a load, while running: open, no way through it electrically; shorted, its ends joined straight through
     // electrically (a dead short: what conducts, the voltages, the fuse that blows), though the current is still shown
     // reaching it and going on past it as it would through a load, so the wiring up to it lights as before)
     const f = FAULT_LOADS.includes(p.t) ? faultOf(p) : null;
-    if (f === 'open') continue;
+    if (f === 'open') { jedges.push({ kind: 'part', a: p._a, b: p._b, len: 2 * TERM(p), part: p }); continue; }   // (open: no current through it; still a load for the current's display, so the wiring up to it lights and the current goes up to it and stops)
     if (f === 'short') { edges.push({ a: p._a, b: p._b, w: 1, kind: 'w' }); jedges.push({ kind: 'part', a: p._a, b: p._b, len: 2 * TERM(p), part: p }); continue; }
     edges.push({ a: p._a, b: p._b, w: 2 * TERM(p), kind: 'part', part: p });
     jedges.push({ kind: 'part', a: p._a, b: p._b, len: 2 * TERM(p), part: p });

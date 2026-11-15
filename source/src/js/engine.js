@@ -405,6 +405,7 @@ function updateCoils(t) {
     // return current doesn't drop away before the current feeding it)
     if (!cond && !!r && COND[p.id] && faultOf(p) !== 'short' && (shortNow || onToL2(p, d.to))) { cond = true; sh = p._sh ?? 1; }
     else if (cond) { p._sh = sh; p._lv = [levelAt(d.from), levelAt(d.to)]; }
+    if (faultOf(p) === 'open') cond = false;   // (an open coil or light: no current through it, whatever reaches it)
     const pf = p.t === 'xfm' && phFedAt(p, t);
     if (pf) { cond = true; sh = 1; }
     const pull = p.t === 'lamp' || p.t === 'xfm' || sh >= PULL_IN * ratedShare(p) - 1e-9;   // (a light lights, and a transformer works, on whatever it gets)

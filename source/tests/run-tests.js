@@ -2019,6 +2019,14 @@ const DEF_CIRCUIT = `
       await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit'); return r + held;
     };
     const s0 = await state(true); if (s0 !== 'XL-') out.push('no faults, START pressed: ' + s0);
+    // an open coil: the wiring up to it still lights, and pressed, the current goes up to it and stops there (Dallas, 15 Nov 2026)
+    await page.evaluate(() => { parts.find(q => q.t === 'coil').fault = 'open'; draw(); });
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(250);
+    const upTo = async () => page.evaluate(() => { const A = parts.find(q => q.L === 'A' && q.t === 'btn'), X = parts.find(q => q.t === 'coil'), dA = DIRS.find(x => x.e.part === A), dX = DIRS.find(x => x.e.part === X);
+      return [!!(dA && REC.get(dA.from)), !!(dX && REC.get(dX.from)), !!coilOn[X.id]].map(Number).join(''); });
+    const o1 = await upTo(); await page.evaluate(() => press('A', true)); await page.waitForTimeout(250); const o2 = await upTo(); await page.evaluate(() => press('A', false));
+    if (o1 + ' ' + o2 !== '100 110') out.push(`X coil open (START live, current at the coil, X on), before and with START pressed: ${o1} ${o2}`);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit'); await page.evaluate(() => { delete parts.find(q => q.t === 'coil').fault; draw(); });
     // planted from the Faults tab: the coil picked on the panel, then Open
     await page.click('#rt-faults');
     const id = await page.evaluate(() => parts.find(q => q.t === 'coil').id), bx = await page.locator(`#svg [data-part="${id}"]`).boundingBox();
