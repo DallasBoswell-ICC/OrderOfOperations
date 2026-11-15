@@ -30,6 +30,10 @@ const DEFS = `
   <linearGradient id="gTerm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d4d4d4"/><stop offset=".5" stop-color="#a3a3a3"/><stop offset="1" stop-color="#6e6e6e"/></linearGradient>
   <radialGradient id="gChrome" cx=".38" cy=".3" r=".85"><stop offset="0" stop-color="#fafafa"/><stop offset=".5" stop-color="#bdbdbd"/><stop offset="1" stop-color="#6a6a6a"/></radialGradient>
   <radialGradient id="gKnob" cx=".4" cy=".35" r=".75"><stop offset="0" stop-color="#5a5a5a"/><stop offset="1" stop-color="#262626"/></radialGradient>
+  <linearGradient id="gPipe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9dde2"/><stop offset="1" stop-color="#626870"/></linearGradient>
+  <linearGradient id="gPipeLow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#767c84"/><stop offset="1" stop-color="#626870"/></linearGradient>
+  <linearGradient id="gFlange" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d4d8dd"/><stop offset="1" stop-color="#6b7179"/></linearGradient>
+  <linearGradient id="gWater" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5fb0ff"/><stop offset=".55" stop-color="#1f7fe6"/><stop offset="1" stop-color="#0f4f9e"/></linearGradient>
   <radialGradient id="gStud" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#e8e8e8"/><stop offset=".6" stop-color="#9a9a9a"/><stop offset="1" stop-color="#5a5a5a"/></radialGradient>`;
 // a square screw terminal (a little wider than the wire's channel, and than the bar it sits on), centred at x, y.
 // The screw has a combination head: a slot right across it for a flat screwdriver, and a cross for a Phillips
@@ -87,7 +91,7 @@ function drawEstop(p, v, x, y, g) {
     el('path', { d: `M ${P1[0] + tx * L} ${P1[1] + ty * L} L ${P1[0] + nx * w} ${P1[1] + ny * w} L ${P1[0] - nx * w} ${P1[1] - ny * w} Z`, fill: ESTOP_PLATE }, v.twist);
   }
 }
-const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -116,7 +120,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -223,6 +227,8 @@ function drawPart(p, g, x, y, chan, onStation) {
     drawTemp(p, g, x, y, v);
   } else if (p.t === 'psw') {
     drawPress(p, g, x, y, v);
+  } else if (p.t === 'fsw') {
+    drawFlow(p, g, x, y, v);
   } else if (p.t === 'xfm') {
     drawXfm(p, g, x, y, v, chan);
   } else if (p.t === 'fu1') {
@@ -813,6 +819,83 @@ function setPress(v, p, pos, cl) {
   const c = cl ? p.color : BLADE_GREY;
   v.bladeShape.setAttribute('fill', c); v.stem.setAttribute('stroke', c); v.dome.setAttribute('fill', c); v.posts.setAttribute('fill', cl ? p.color : GREY);
   const [gx, gy] = v.gc; v.needle.setAttribute('transform', `rotate(${(f === null ? lerp(135, 340, pos) : 135 + 270 * f).toFixed(2)} ${gx} ${gy})`);   // (linked: the value, round its whole scale)
+}
+/* A flow switch (Dallas's design, 15 Nov 2026): the limit switch's body and contact; on a neck and two supports on top,
+   a length of pipe with flanged ends. Up into the pipe from its bottom wall (its round foot set down in the wall), a
+   flexible strip with a rectangular paddle on its end: upright with no flow, bent over downstream (right, and down) as
+   the water pushes it. The pipe is dark with no flow; while there is flow water fills it, its streaks drifting left to
+   right (faster with more flow, when a Flow value works it). Under the blade, fixed to it as the temperature switch's
+   stem is (hanging straight down at rest), the NEMA flow switch's stem with its flag. Its number and NO or NC in the
+   body's bottom corners. The pipe, neck and paddle are drawn in Dallas's units (his body 190 wide), scaled by FSW_K. */
+const FSW_K = 110 / 190, FSW_PAD = 22, FSW_BEND = 100;   // (the strip's length, in his units; how far it bends over, in degrees)
+function drawFlow(p, g, x, y, v) {
+  const k = FSW_K, col = p.color, r = BOX * .105, sy = BOX * .045, hw = LSW_W / 2, top = y - LSW_TOP, bot = y + LSW_BOT, px1 = x - 30, px2 = x + 30;
+  // the pipe and what holds it, in Dallas's units (his wire at 208.6, his body's middle at 161)
+  const t = el('g', { transform: `translate(${(x - 161 * k).toFixed(2)} ${(y - 208.6 * k).toFixed(2)}) scale(${k})` }, g);
+  for (const sx of [105.5, 195.5]) { el('rect', { x: sx, y: 107, width: 20, height: 32, fill: 'url(#gFlange)', stroke: '#111', 'stroke-width': 1.4 }, t); }
+  el('path', { d: 'M130 140L135 102H185L190 140Z', fill: '#242424' }, t);
+  el('path', { d: 'M135 136L139 106.7H181L185 136', fill: 'none', stroke: col, 'stroke-width': 2.6 }, t);
+  el('rect', { x: 61.5, y: 61.5, width: 200, height: 52, rx: 7.8, fill: 'url(#gPipe)', stroke: '#111', 'stroke-width': 1.4, filter: 'url(#fShadow)' }, t);
+  el('rect', { x: 61.5, y: 71.5, width: 200, height: 32, rx: 4.8, fill: '#242424', stroke: '#111', 'stroke-width': 1.4 }, t);
+  // the water: a blue fill, and streaks drifting through it (a band twice the pipe's length, slid along one period and over again)
+  const cid = 'fswc' + p.id, cp = el('clipPath', { id: cid }, t); el('rect', { x: 62.5, y: 72.5, width: 198, height: 30, rx: 4 }, cp);
+  v.water = el('g', { 'clip-path': `url(#${cid})`, opacity: 0 }, t);
+  el('rect', { x: 61.5, y: 71.5, width: 200, height: 32, fill: 'url(#gWater)' }, v.water);
+  v.streaks = el('g', { class: 'fsw-flow' }, v.water);
+  for (let o = -100; o < 300; o += 100) for (const [sx, sy2] of [[8, 79], [38, 87], [18, 95], [62, 83], [80, 92]])
+    el('line', { x1: 61.5 + o + sx, y1: sy2, x2: 61.5 + o + sx + 22, y2: sy2, stroke: '#cfe6ff', 'stroke-width': 2.2, 'stroke-linecap': 'round', opacity: .75 }, v.streaks);
+  // the paddle: its strip (an arc of FSW_PAD, bent pos of the way over) and the rectangle on its end
+  v.pad = el('g', {}, t);
+  v.padSh = el('path', { fill: 'none', stroke: '#111', 'stroke-width': 7.5, 'stroke-linecap': 'round' }, v.pad);
+  v.padStrip = el('path', { fill: 'none', stroke: '#c9ced4', 'stroke-width': 5, 'stroke-linecap': 'round' }, v.pad);
+  v.padEnd = el('rect', { width: 15, height: 12, rx: 1.5, fill: '#c9ced4', stroke: '#111', 'stroke-width': 1.3 }, v.pad);
+  el('circle', { cx: 160, cy: 107, r: 4, fill: '#5d636a', stroke: '#111', 'stroke-width': 1 }, t);
+  // the pipe's bottom wall laid again over the strip's foot, so the foot sits down in the wall; then the flanges over the ends
+  el('rect', { x: 61.5, y: 103.5, width: 200, height: 10, fill: 'url(#gPipeLow)' }, t);
+  el('path', { d: 'M61.5 103.5H261.5M61.5 113.5H261.5', stroke: '#111', 'stroke-width': 1.4 }, t);
+  for (const fx of [58.5, 250.5]) { el('rect', { x: fx, y: 52.5, width: 14, height: 70, rx: 2.1, fill: 'url(#gFlange)', stroke: '#111', 'stroke-width': 1.4 }, t); el('rect', { x: fx, y: 52.5, width: 14, height: 70, rx: 2.1, fill: 'url(#gGloss)', opacity: .6 }, t); }
+  // the body
+  framed('rect', { x: x - hw, y: top, width: LSW_W, height: LSW_TOP + LSW_BOT, rx: 15, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
+  // the blade, hinged on the left post, with the stem and its flag fixed to it (hanging straight down while it is at rest)
+  v.blade = el('g', {}, g); const len = 60 + r * .6, sx0 = px1 + 57.5 * k, a0 = lswAngles(p)[0];
+  const sf = el('g', { transform: `rotate(${(-a0).toFixed(2)} ${sx0.toFixed(2)} ${y})` }, v.blade), sw = 12 * k, sl = 70 * k;
+  el('rect', { x: sx0 - sw / 2 - 1, y: y, width: sw + 2, height: sl + 1, fill: '#111', filter: 'url(#fShadow)' }, sf);
+  v.stem = el('rect', { x: sx0 - sw / 2, y: y, width: sw, height: sl, fill: BLADE_GREY }, sf);
+  el('rect', { x: sx0 - sw / 2, y: y, width: sw, height: sl, fill: '#000', opacity: .2 }, sf);
+  v.flag = el('path', { d: `M${sx0 + sw / 2} ${y + sl}V${y + 30 * k}L${sx0 + sw / 2 + 30 * k} ${y + sl}Z`, fill: BLADE_GREY }, sf);
+  v.bladeShape = el('rect', { x: px1, y: y - 3.5, width: len, height: 7, rx: 3.5, fill: BLADE_GREY, stroke: 'rgba(0,0,0,.35)', 'stroke-width': .6 }, v.blade);
+  el('rect', { x: px1, y: y - 3.5, width: len, height: 7, rx: 3.5, fill: 'url(#gGloss)' }, v.blade);
+  v.hinge = [px1, y];
+  v.posts = el('g', { fill: GREY }, g);
+  el('rect', { x: x - hw + 4.5, y: y - sy, width: px1 - (x - hw + 4.5), height: 2 * sy }, v.posts); el('circle', { cx: px1, cy: y, r }, v.posts);
+  el('rect', { x: px2, y: y - sy, width: x + hw - 4.5 - px2, height: 2 * sy }, v.posts); el('circle', { cx: px2, cy: y, r }, v.posts);
+  for (const cx of [px1, px2]) el('circle', { cx, cy: y, r, fill: 'url(#gDome)' }, g);
+  el('rect', { x: x - hw + 7, y: bot - 25, width: 38, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('text', { x: x - hw + 26, y: bot - 11.8, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = 'FLS' + p.L;
+  el('rect', { x: x + hw - 37, y: bot - 25, width: 30, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('text', { x: x + hw - 22, y: bot - 11.8, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = p.nc ? 'NC' : 'NO';
+  setFlow(v, p, editing ? 0 : lswPos(p), editing ? !!p.nc : lswClosed(p));
+}
+// a flow switch pos of the way from at rest (0) to worked (1): the paddle bent over, the blade turned as the limit
+// switch's (its stem and flag with it), the water in the pipe (by hand: fading in as it is worked; linked to a Flow
+// value: there whenever the value is above nothing, its streaks quicker the more flow); lit in its colour while closed
+function setFlow(v, p, pos, cl) {
+  const f = pvFrac(p), k = pos.toFixed(3) + (cl ? 'c' : 'o') + (f === null ? '' : f.toFixed(3));
+  if (v.k === k) return; v.k = k;
+  const [hx, hy] = v.hinge, [a0, a1] = lswAngles(p), ba = lerp(a0, a1, pos);
+  v.blade.setAttribute('transform', `rotate(${ba.toFixed(2)} ${hx} ${hy})`);
+  // the strip: an arc of FSW_PAD from its foot (160, 107), bent ph degrees over to the right; the paddle on along its end
+  const ph = FSW_BEND * pos * Math.PI / 180, L = FSW_PAD, R = ph > 1e-3 ? L / ph : 0;
+  const ex = 160 + (R ? R - R * Math.cos(ph) : 0), ey = 107 - (R ? R * Math.sin(ph) : L);
+  const d = R ? `M160 107A${R.toFixed(2)} ${R.toFixed(2)} 0 0 1 ${ex.toFixed(2)} ${ey.toFixed(2)}` : `M160 107V${ey}`;
+  v.padSh.setAttribute('d', d); v.padStrip.setAttribute('d', d);
+  v.padEnd.setAttribute('x', (ex - 1).toFixed(2)); v.padEnd.setAttribute('y', (ey - 6).toFixed(2));
+  v.padEnd.setAttribute('transform', `rotate(${(ph * 180 / Math.PI - 90).toFixed(2)} ${ex.toFixed(2)} ${ey.toFixed(2)})`);
+  const wet = f === null ? pos : f > .001 ? 1 : 0, sp = f === null ? 1 : Math.max(f, .12);
+  v.water.setAttribute('opacity', wet.toFixed(3));
+  v.streaks.style.animationDuration = (1.4 / sp).toFixed(2) + 's'; v.streaks.style.animationPlayState = wet > .02 ? 'running' : 'paused';
+  const c = cl ? p.color : BLADE_GREY;
+  v.bladeShape.setAttribute('fill', c); v.stem.setAttribute('fill', c); v.flag.setAttribute('fill', c); v.posts.setAttribute('fill', cl ? p.color : GREY);
 }
 // a limit switch pos of the way from at rest (0) to worked (1): its lever down, the arrow on its roller (coming down,
 // fading in), its blade lifted; lit in its colour while closed

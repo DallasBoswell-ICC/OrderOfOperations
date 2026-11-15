@@ -1946,6 +1946,39 @@ const DEF_CIRCUIT = `
     if (pasted !== '1,2,3') out.push('after pasting PS1: ' + pasted);
     return out;
   });
+  await check('Flow switches: NO and NC at rest and with water flowing (blade, stem and flag together, paddle bent over, water streaming), apart from pressure switches of the same number, worked by a Flow value, saved, renumbered when pasted, printed', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    const iss = await page.evaluate(() => { W = 760; W_USER = 760;
+      ['fsw-no', 'fsw-nc', 'psw-no'].forEach((k, i) => { const y = 160 + i * 280, h = TERM({ t: kindOf(k) }); parts.push(newPart(k, 280, y), P('lamp', 560, y, { L: '', color: '#00B050' })); wires.push(Wr(0, y, 280 - h, y), Wr(280 + h, y, 500, y), Wr(620, y, W, y)); });
+      normalize(); draw(); return [...wiringIssues(network()).keys()].join(); });
+    if (iss) out.push('wiring issues: ' + iss);
+    const tags = await page.evaluate(() => parts.filter(p => p.t === 'fsw').map(p => captionOf(p) + '/' + p.color).join());
+    if (tags !== 'FLS1 Flow Switch (NO)/#9B6BFF,FLS2 Flow Switch (NC)/#9B6BFF') out.push('placed as: ' + tags);
+    const st = () => page.evaluate(() => { const v = view.parts.get(parts.find(p => p.t === 'fsw').id);
+      return [parts.filter(p => p.t === 'lamp').map(p => +!!coilOn[p.id]).join(''), v.water.getAttribute('opacity'), v.streaks.style.animationPlayState, v.padStrip.getAttribute('d').includes('A') ? 'bent' : 'up', v.stem.getAttribute('fill'), v.flag.getAttribute('fill'), v.stem.parentNode.parentNode === v.blade].join('|'); });
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    let s = await st(); if (s !== '010|0.000|paused|up|#a6a6a6|#a6a6a6|true') out.push('at rest: ' + s);
+    await page.evaluate(() => { press('W1', true); press('W2', true); }); await page.waitForTimeout(500);
+    s = await st(); if (s !== '100|1.000|running|bent|#9B6BFF|#9B6BFF|true') out.push('water flowing (FLS1 and FLS2 worked): ' + s);
+    await page.evaluate(() => { press('W1', false); press('W2', false); setSpeed(1); }); await page.click('#tab-edit');
+    const back = await page.evaluate(() => readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.filter(p => p.t === 'fsw').map(p => p.L + (p.nc ? 'nc' : 'no') + p.color).join());
+    if (back !== '1no#9B6BFF,2nc#9B6BFF') out.push('read back: ' + back);
+    // worked by a Flow value: water whenever there is flow, the switch acting at its set point and resetting at its reset point
+    const pv = await page.evaluate(() => { const v = { id: 'w', name: 'Coolant', kind: 'flow', unit: 'gpm', min: 0, max: 50, start: 0 }; PV.push(v);
+      const f = parts.find(p => p.t === 'fsw' && p.L === '1'); Object.assign(f, { pv: 'w', sp: 20, rs: 10 }); draw(); return PV_FOR.fsw; });
+    if (pv !== 'flow') out.push('worked by a ' + pv + ' value');
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(300);
+    const at = async x => { await page.evaluate(x => pvSet("w", x), x); await page.waitForTimeout(350); return page.evaluate(() => { const p = parts.find(p => p.t === 'fsw' && p.L === '1'), v = view.parts.get(p.id); return (lswClosed(p) ? 'C' : 'o') + v.water.getAttribute('opacity'); }); };
+    const seq = [await at(0), await at(5), await at(25), await at(15), await at(5)].join(' ');
+    if (seq !== 'o0.000 o1.000 C1.000 C1.000 o1.000') out.push('Flow value 0, 5, 25, 15, 5 gpm (closed, water): ' + seq);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    const pasted = await page.evaluate(() => { sel = { parts: new Set(parts.filter(p => p.t === 'fsw' && p.L === '1').map(p => p.id)), wires: new Set() }; copySel(); pasteClip(); return parts.filter(p => p.t === 'fsw').map(p => p.L).join(); });
+    if (pasted !== '1,2,3') out.push('after pasting FLS1: ' + pasted);
+    const pr = await page.evaluate(() => { const h = [].concat(printSheet('X')).map(x => typeof x === 'string' ? x : x.svg || x.outerHTML || JSON.stringify(x)).join(); return ['FLS1', 'FLS2', 'FLS3'].map(t => +h.includes('>' + t + '<')).join('') + (h.includes('undefined') ? ' undefined' : ''); });
+    if (pr !== '111') out.push('on the print (FLS1, FLS2, FLS3 tagged): ' + pr);
+    return out;
+  });
   await check('Process values: switches worked by a position, a pressure and a temperature (with their deadbands), the Process window, saved and undone', async page => {
     const out = [];
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
@@ -2366,7 +2399,7 @@ const DEF_CIRCUIT = `
   await check('Ribbon menus: Buttons, Switches, Outputs and Contacts open and place their parts (momentary or maintained, instantaneous or timing)', async page => {
     const out = [];
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
-    for (const [btn, kinds] of [['bt', ['btn-no-mom', 'btn-nc-mom', 'btn-no-mnt', 'btn-nc-mnt']], ['sw', ['sel', 'lsw-no', 'lsw-nch', 'tsw-no', 'tsw-nc', 'tsw-nol', 'tsw-ncl', 'psw-no', 'psw-nc']], ['out', ['coil', 'timer', 'timer-off', 'lamp', 'sol', 'htr']], ['ct', ['con-no-i', 'con-nc-i', 'con-no-t', 'con-nc-t']]]) {
+    for (const [btn, kinds] of [['bt', ['btn-no-mom', 'btn-nc-mom', 'btn-no-mnt', 'btn-nc-mnt']], ['sw', ['sel', 'lsw-no', 'lsw-nch', 'tsw-no', 'tsw-nc', 'tsw-nol', 'tsw-ncl', 'psw-no', 'psw-nc', 'fsw-no', 'fsw-nc']], ['out', ['coil', 'timer', 'timer-off', 'lamp', 'sol', 'htr']], ['ct', ['con-no-i', 'con-nc-i', 'con-no-t', 'con-nc-t']]]) {
       await page.click(`#${btn}-btn`);
       for (const k of kinds) if (!(await page.isVisible(`#${btn}-menu [data-part="${k}"]`))) out.push(`${k} not in the ${btn} menu`);
       await page.keyboard.press('Escape');
@@ -2779,7 +2812,7 @@ const DEF_CIRCUIT = `
     const out = [];
     for (const [name, mk, key, nc, w] of [['NC limit switch', `P('lsw', 640, 200, { L: '1', nc: true })`, '1', true, 60], ['NO limit switch', `P('lsw', 640, 200, { L: '1' })`, '1', false, 60],
         ['NC pushbutton', `P('btn', 640, 200, { L: 'B', nc: true })`, 'B', true, 40], ['NO pushbutton', `P('btn', 640, 200, { L: 'B' })`, 'B', false, 40],
-        ['NC temperature switch', `P('tsw', 640, 200, { L: '1', nc: true })`, 'T1', true, 60], ['NC pressure switch', `P('psw', 640, 200, { L: '1', nc: true })`, 'P1', true, 60]]) {
+        ['NC temperature switch', `P('tsw', 640, 200, { L: '1', nc: true })`, 'T1', true, 60], ['NC pressure switch', `P('psw', 640, 200, { L: '1', nc: true })`, 'P1', true, 60], ['NC flow switch', `P('fsw', 640, 200, { L: '1', nc: true })`, 'W1', true, 60]]) {
       if (await page.evaluate(() => !editing)) await page.click('#tab-edit');
       await loadCircuit(page, `parts = [P('btn', 140, 200, { L: 'A', maint: true }), C('X', 400, 200), ${mk}];
         wires = [Wr(0,200,100,200), Wr(180,200,340,200), Wr(460,200,${640 - w},200), Wr(${640 + w},200,880,200)]`);
