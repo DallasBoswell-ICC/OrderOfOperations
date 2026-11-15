@@ -29,7 +29,8 @@ function paint() {
   for (const V of VIEWS) paintView(V);
   paintStation(); overviewTick();
   const fl = document.getElementById('fault');
-  const msg = shortNow ? 'Short circuit! L1 is connected straight to L2 with no coil in between. In a real panel the fuse or breaker would open. Release the button or change the wiring to clear it.'
+  // (no notice for a short a fuse is about to clear: the blown fuse shows it)
+  const msg = shortNow && !shortFuses().length ? 'Short circuit! L1 is connected straight to L2 with no coil in between. In a real panel the fuse or breaker would open. Release the button or change the wiring to clear it.'
     : phFault ? phFault + ' In a real panel the fuses or breaker would open. Change the wiring to clear it.' : '';
   if (fl.hidden !== !msg || fl.textContent !== msg) { fl.hidden = !msg; fl.textContent = msg; }
 }

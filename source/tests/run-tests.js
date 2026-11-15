@@ -2062,12 +2062,16 @@ const DEF_CIRCUIT = `
     await page.click('#tab-run'); await page.evaluate(() => setSpeed(5));
     const live = await page.waitForFunction(() => { const r = parts.find(q => q.t === 'btn' && q.label === 'RESET'), d = DIRS.find(x => x.e.part === r); return !!(d && REC.get(d.from)); }, null, { timeout: 6000 }).then(() => true, () => false);
     if (!live) out.push('MCR coil shorted: no power reaching the RESET button');
+    await page.waitForFunction(() => { const lamp = parts.find(q => q.t === 'lamp' && q.y > parts.find(z => z.label === 'MCR').y); return !!coilOn[lamp.id]; }, null, { timeout: 6000 }).catch(() => out.push('the pilot light never came on'));
     await page.evaluate(() => { const lamp = parts.find(q => q.t === 'lamp' && q.y > parts.find(z => z.label === 'MCR').y); window.__lampOut = DIRS.find(x => x.e.part === lamp); press('D', true); });
-    // (the fuse blows once the current through the short has got back to X2, not the moment RESET is pressed)
+    // (the fuse blows as the current reaches the shorted coil, not the moment RESET is pressed)
     await page.waitForTimeout(100); const early = await page.evaluate(() => Object.keys(BLOWN).length);
     if (early) out.push('the fuse blew the moment RESET was pressed');
     const blown = await page.waitForFunction(() => Object.keys(BLOWN).length > 0, null, { timeout: 6000 }).then(() => true, () => false);
     if (!blown) out.push('pressing RESET with the MCR coil shorted did not blow the fuse');
+    // (just after: the pilot light still lit, its current not yet run out; no short-circuit notice, the fuse cleared it)
+    const after = await page.evaluate(() => [!!coilOn[window.__lampOut.e.part.id], document.getElementById('fault').hidden].join());
+    if (after !== 'true,true') out.push('just after the fuse blew (pilot light still lit, no notice): ' + after);
     await page.waitForTimeout(300);
     const leak = await page.evaluate(() => { const d = window.__lampOut, r = d && REC.get(d.to); return !!(r && !r.ret); });
     if (leak) out.push('after the fuse blew, L1 had passed through the pilot light onto its return side');

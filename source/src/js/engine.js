@@ -401,7 +401,9 @@ function updateCoils(t) {
     // and that it would cut off; a pilot light lights with whatever share it gets
     // (its supply cut off on the way to it: it carries on, as it was, until the last of its current has reached it)
     let sh = shareOf(p), cond = !shortNow && !!r && sh > 1e-9;
-    if (!cond && !shortNow && !!r && COND[p.id] && onToL2(p, d.to)) { cond = true; sh = p._sh ?? 1; }
+    // (in a short too, Dallas 15 Nov 2026: a light or coil goes out as the last of its current reaches it, so its
+    // return current doesn't drop away before the current feeding it)
+    if (!cond && !!r && COND[p.id] && faultOf(p) !== 'short' && (shortNow || onToL2(p, d.to))) { cond = true; sh = p._sh ?? 1; }
     else if (cond) { p._sh = sh; p._lv = [levelAt(d.from), levelAt(d.to)]; }
     const pf = p.t === 'xfm' && phFedAt(p, t);
     if (pf) { cond = true; sh = 1; }
@@ -467,12 +469,15 @@ function moveContact(c, t) {
   else if (s.shut) { CON[c.id].shut = false; switched(sw, t); }
 }
 // some pushbuttons or contacts have just opened or closed
-// how long the current takes, once switches sw have closed, to get from them through a short to L2 (along the
-// shortest way that passes current, at the current's speed V), in seconds of the circuit's time
+// how long the current takes, once switches sw have closed, to reach the short (along the shortest way that passes
+// current, at the current's speed V), in seconds of the circuit's time: a load with a short planted on it (Dallas: it
+// trips as the current reaches the shorted relay), a wire shorted to L2, or else L2 itself
 function shortReach(sw) {
-  const dist = new Map(), q = [];
+  const dist = new Map(), q = [], at = new Set();
+  for (const p of parts) if (faultOf(p) === 'short' && FAULT_LOADS.includes(p.t)) for (const n of [p._a, p._b]) if (n !== undefined) at.add(n);
+  for (const [id, v] of NET.feedV) if (v === 0) at.add(id);
   for (const k of sw) for (const n of [k._a, k._b]) if (n !== undefined && !dist.has(n)) { dist.set(n, 0); q.push([0, n]); }
-  while (q.length) { q.sort((a, b) => a[0] - b[0]); const [d, u] = q.shift(); if (d > dist.get(u)) continue; if (u === NET.L2) return d / V;
+  while (q.length) { q.sort((a, b) => a[0] - b[0]); const [d, u] = q.shift(); if (d > dist.get(u)) continue; if (u === NET.L2 || at.has(u)) return d / V;
     for (const i of NET.adj[u] || []) { const e = NET.edges[i]; if (!conducts(e)) continue; const w = e.a === u ? e.b : e.a, nd = d + (e.w || 0); if (!dist.has(w) || nd < dist.get(w)) { dist.set(w, nd); q.push([nd, w]); } } }
   return 0;
 }
