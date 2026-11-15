@@ -174,7 +174,8 @@ function renderProps() {
     document.getElementById('d-pic-group').hidden = !v;
     if (v) { const ps = document.getElementById('d-pic'); ps.options[0].text = v.pic ? 'Placed on the Panel' : 'Under It'; ps.value = p.nopic ? '0' : '1'; }
     if (v) {
-      const dir = document.getElementById('d-dir'); dir.options[0].text = p.t === 'mtr' ? 'Forward raises it' : 'Raises it'; dir.options[1].text = p.t === 'mtr' ? 'Forward lowers it' : 'Lowers it'; dir.value = p.dir === 'down' ? 'down' : 'up';
+      const dir = document.getElementById('d-dir'); const fl = p.t === 'mtr' && v.kind === 'flow';   // (a pump on a flow: either way it runs moves the water, reverse sending it back)
+      dir.options[0].text = fl ? 'Raises it (Reverse Sends It Back)' : p.t === 'mtr' ? 'Forward raises it' : 'Raises it'; dir.options[1].text = fl ? 'Lowers it' : p.t === 'mtr' ? 'Forward lowers it' : 'Lowers it'; dir.value = p.dir === 'down' ? 'down' : 'up';
       document.getElementById('d-rate-label').textContent = p.t === 'htr' ? 'Heats at' : p.t === 'mtr' ? 'While It Runs, at' : 'While Energized, at';
       document.getElementById('d-rate').value = pvFmt(v, +p.rate || 0); document.getElementById('d-cool').value = pvFmt(v, +p.cool || 0);
       document.getElementById('d-per').value = drvPer(p); document.getElementById('d-off').value = drvOff(p);

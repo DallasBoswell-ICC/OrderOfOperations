@@ -838,13 +838,17 @@ let FSW_N = 0;   // (each pipe's clip its own id, in every view)
 const fswRate = p => { const f = pvFrac(p); return f === null ? (lswAct(p) ? FSW_HAND : 0) : f > .001 ? f : 0; };
 function flowTick(dt) {
   for (const p of parts) if (p.t === 'fsw') {
-    const w = FLOW[p.id] || (FLOW[p.id] = { sp: 0, ph: 0, k: '' }), to = editing ? 0 : FSW_V * fswRate(p);
-    w.sp += (to - w.sp) * Math.min(1, dt / FSW_TAU); if (!to && w.sp < 3) w.sp = 0;   // (all but stopped: stopped)
-    w.ph = (w.ph + w.sp * dt) % 100;
-    const op = clamp01(w.sp / FSW_SEEN), k = w.ph.toFixed(1) + '/' + op.toFixed(2);
+    // (the speed signed: + left to right, - right to left, while the pump driving its Flow value runs in reverse; going
+    // from one to the other it slows, stops and gathers speed the other way)
+    const dir = pvOf(p) ? PVDIR[p.pv] || 1 : 1;
+    const w = FLOW[p.id] || (FLOW[p.id] = { sp: 0, ph: 0, k: '' }), to = editing ? 0 : FSW_V * fswRate(p) * dir;
+    w.sp += (to - w.sp) * Math.min(1, dt / FSW_TAU); if (!to && Math.abs(w.sp) < 3) w.sp = 0;   // (all but stopped: stopped)
+    w.ph = ((w.ph + w.sp * dt) % 100 + 100) % 100;
+    const fd = Math.max(-1, Math.min(1, w.sp / FSW_SEEN)), op = Math.abs(fd), k = w.ph.toFixed(1) + '/' + fd.toFixed(2);
     if (k === w.k) continue; w.k = k;   // (nothing moving: nothing touched)
     for (const V of VIEWS) { const v = V.parts.get(p.id); if (!v || !v.streaks) continue;
-      v.streaks.setAttribute('transform', `translate(${w.ph.toFixed(2)} 0)`); v.streaks.setAttribute('opacity', op.toFixed(3)); }
+      v.streaks.setAttribute('transform', `translate(${w.ph.toFixed(2)} 0)`); v.streaks.setAttribute('opacity', op.toFixed(3));
+      v.fd = fd; fswPaddle(v); }
   }
 }
 function drawFlow(p, g, x, y, v) {
@@ -901,16 +905,17 @@ function drawFlow(p, g, x, y, v) {
 // a flow switch pos of the way from at rest (0) to worked (1): the paddle bent over, the blade turned as the limit
 // switch's (its stem and flag with it), the water in the pipe (by hand: fading in as it is worked; linked to a Flow
 // value: there whenever the value is above nothing, its streaks quicker the more flow); lit in its colour while closed
-// the paddle bent over as far as the switch has been worked
+// the paddle bent over as far as the switch has been worked, downstream: as the water moves (v.fd, from flowTick: -1 to
+// 1, the streaks' speed; so it bends over as the water gets going, and the other way, upstream, when the pump reverses)
 function fswPaddle(v) {
-  const b = v.pos || 0, kk = b.toFixed(3); if (v.bk === kk) return; v.bk = kk;
-  // the strip: an arc of FSW_PAD from its foot (160, 107), bent b of FSW_BEND over to the right; the paddle on along its end
-  const ph = FSW_BEND * b * Math.PI / 180, L = FSW_PAD, R = ph > 1e-3 ? L / ph : 0;
-  const ex = 160 + (R ? R - R * Math.cos(ph) : 0), ey = 107 - (R ? R * Math.sin(ph) : L);
-  const d = R ? `M160 107A${R.toFixed(2)} ${R.toFixed(2)} 0 0 1 ${ex.toFixed(2)} ${ey.toFixed(2)}` : `M160 107V${ey}`;
+  const b = (v.pos || 0) * (v.fd ?? 0), kk = b.toFixed(3); if (v.bk === kk) return; v.bk = kk;
+  // the strip: an arc of FSW_PAD from its foot (160, 107), bent |b| of FSW_BEND over (right, or left); the paddle on along its end
+  const s = b < 0 ? -1 : 1, ph = FSW_BEND * Math.abs(b) * Math.PI / 180, L = FSW_PAD, R = ph > 1e-3 ? L / ph : 0;
+  const ex = 160 + s * (R ? R - R * Math.cos(ph) : 0), ey = 107 - (R ? R * Math.sin(ph) : L);
+  const d = R ? `M160 107A${R.toFixed(2)} ${R.toFixed(2)} 0 0 ${s > 0 ? 1 : 0} ${ex.toFixed(2)} ${ey.toFixed(2)}` : `M160 107V${ey}`;
   v.padSh.setAttribute('d', d); v.padStrip.setAttribute('d', d);
   v.padEnd.setAttribute('x', (ex - 1).toFixed(2)); v.padEnd.setAttribute('y', (ey - 5).toFixed(2));
-  v.padEnd.setAttribute('transform', `rotate(${(ph * 180 / Math.PI - 90).toFixed(2)} ${ex.toFixed(2)} ${ey.toFixed(2)})`);
+  v.padEnd.setAttribute('transform', `rotate(${(s * ph * 180 / Math.PI - 90).toFixed(2)} ${ex.toFixed(2)} ${ey.toFixed(2)})`);
 }
 function setFlow(v, p, pos, cl) {
   const f = pvFrac(p), k = pos.toFixed(3) + (cl ? 'c' : 'o') + (f === null ? '' : f.toFixed(3));

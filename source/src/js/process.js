@@ -13,7 +13,7 @@ const PV_KINDS = {
   level: ['Level', ['in', 'ft', 'gal', '%']], flow: ['Flow', ['gpm', 'cfm']], speed: ['Speed', ['rpm', 'ft/min']], other: ['Other', []],
 };
 const PV_FOR = { lsw: 'position', psw: 'pressure', fsw: 'flow', tsw: 'temperature' };   // (the kind of value each switch is worked by)
-let PV = [], PVV = {}, PVACT = {};   // the values (with the circuit); while running, each one's value now, and which switches they are working
+let PV = [], PVV = {}, PVACT = {}, PVDIR = {};   // (PVDIR: a flow value's direction while running, 1 forward or -1 reverse)   // the values (with the circuit); while running, each one's value now, and which switches they are working
 const pvOf = p => p && p.pv ? PV.find(v => v.id === p.pv) || null : null;
 const pvLinked = p => isLim(p) && !!pvOf(p);
 // (a switch that acts as its value falls: a low temperature switch, or a limit switch set to act at or below its setting)
@@ -75,7 +75,10 @@ function pvTick(t0, t1, real) {
   const dt = pvReal ? real : t1 - t0; if (!(dt > 0) || !PV.length) return;
   for (const v of PV) {
     const ds = parts.filter(p => isDrv(p) && p.pv === v.id); if (!ds.length) continue;
-    const x = PVV[v.id] ?? v.start, lo = Math.min(v.min, v.max), hi = Math.max(v.min, v.max), work = ds.map(drvNow);
+    // (a flow: a pump running either way moves the water, so it builds the flow up (or down, set so) the same; which way
+    // it runs sets which way the water goes, forward or reverse (Dallas, 15 Nov 2026))
+    const fl = v.kind === 'flow', x = PVV[v.id] ?? v.start, lo = Math.min(v.min, v.max), hi = Math.max(v.min, v.max), work = ds.map(p => fl && p.t === 'mtr' ? Math.abs(drvNow(p)) * (p.dir === 'down' ? -1 : 1) : drvNow(p));
+    if (fl) { const d = ds.filter(p => p.t === 'mtr').reduce((a, p) => { const m = MOT[p.id]; return a + (m && m.st === 'run' && m.dir ? m.dir : 0); }, 0); if (d) PVDIR[v.id] = Math.sign(d); }
     let nx = x;
     if (work.some(r => r)) nx = Math.max(lo, Math.min(hi, x + work.reduce((a, r) => a + r, 0) * dt));
     else { const bk = ds.filter(p => drvOff(p) === 'back'); if (bk.length) { const c = Math.max(...bk.map(p => perSec(p, p.cool))) * dt, a = v.start; nx = x > a ? Math.max(a, x - c) : Math.min(a, x + c); } }
@@ -92,13 +95,13 @@ function drvDefaults(p, v) {
   p.dir = 'up';
 }
 const drvText = (p, v) => { const u = v.unit ? ' ' + v.unit : '', per = drvPer(p) === 'min' ? '/min' : '/s', tag = (p.t === 'htr' ? 'HTR' : p.t === 'mtr' ? 'MTR' : 'SOL') + p.L;
-  const how = p.t === 'mtr' ? (p.dir === 'down' ? 'forward −, reverse +' : 'forward +, reverse −') : (p.t !== 'htr' && p.dir === 'down' ? '−' : '+');
+  const how = p.t === 'mtr' ? (v.kind === 'flow' ? (p.dir === 'down' ? 'either way −' : 'either way +') : p.dir === 'down' ? 'forward −, reverse +' : 'forward +, reverse −') : (p.t !== 'htr' && p.dir === 'down' ? '−' : '+');
   return `${tag} (${p.t === 'mtr' ? how + ' ' : how}${pvFmt(v, +p.rate || 0)}${u}${per}${drvOff(p) === 'back' ? `, back ${pvFmt(v, +p.cool || 0)}${u}${per} when off` : ''})`; };
 // (a value being dragged in the Process window is left where the slider is, until it is let go)
 const pvHeld = id => { const r = procEl && procEl.querySelector(`[data-pv="${id}"]`); return !!r && (document.activeElement === r.querySelector('.pvval') || r.dataset.drag === '1'); };
 // at the start of a run (and on Reset): every value back to where it starts, and the switches it works with it
 function pvStartRun() {
-  PVV = {}; PVACT = {};
+  PVV = {}; PVACT = {}; PVDIR = {};
   for (const v of PV) PVV[v.id] = v.start;
   for (const p of parts) if (pvLinked(p)) PVACT[opKey(p)] = pvWorks(p, PVV[p.pv], false);
 }

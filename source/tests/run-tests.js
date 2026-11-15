@@ -1988,6 +1988,18 @@ const DEF_CIRCUIT = `
     const r1 = await rate(12.5), r4 = await rate(50);
     if (!(r1 > 35 && r1 < 65 && r4 / r1 > 3.4 && r4 / r1 < 4.6)) out.push(`streaks at 12.5 and 50 gpm: ${r1.toFixed(0)} and ${r4.toFixed(0)} units a second (want about 50 and 200)`);
     await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    // a pump (a motor driving the Flow value): running either way it builds the flow up; in reverse the water goes back
+    // (the streaks slow, stop and run right to left, the paddle bent the other way, upstream)
+    const how = await page.evaluate(() => { const m = newPart('mtr', 1400, 900); parts.push(m); m.pv = 'w'; drvDefaults(m, PV.find(v => v.id === 'w')); m.per = 's'; m.rate = 10; draw(); return drvText(m, PV.find(v => v.id === 'w')); });
+    if (!/either way \+/.test(how)) out.push('the pump described as: ' + how);
+    await page.click('#tab-run'); await page.waitForTimeout(200);
+    const pump = async d => { await page.evaluate(d => { const m = parts.find(p => p.t === 'mtr'); MOT[m.id] = { st: 'run', dir: d, t0: simT }; }, d); await page.waitForTimeout(4500);
+      return page.evaluate(() => { const f = parts.find(p => p.t === 'fsw' && p.L === '1'), v = view.parts.get(f.id); return [PVDIR.w, Math.round(PVV.w) > 30 ? 'up' : Math.round(PVV.w), Math.sign(Math.round(FLOW[f.id].sp)), lswClosed(f) ? 'C' : 'o', v.padStrip.getAttribute('d').includes(' 0 0 1 ') ? 'right' : v.padStrip.getAttribute('d').includes(' 0 0 0 ') ? 'left' : 'up'].join(); }); };
+    const fwd = await pump(1), rev = await pump(-1);
+    if (fwd !== '1,up,1,C,right') out.push('pump forward (direction, flow, streaks, switch, paddle): ' + fwd);
+    if (rev !== '-1,up,-1,C,left') out.push('pump in reverse (direction, flow, streaks, switch, paddle): ' + rev);
+    await page.evaluate(() => { const m = parts.find(p => p.t === 'mtr'); delete MOT[m.id]; }); await page.click('#tab-edit');
+    await page.evaluate(() => { parts = parts.filter(p => p.t !== 'mtr'); draw(); });
     const pasted = await page.evaluate(() => { sel = { parts: new Set(parts.filter(p => p.t === 'fsw' && p.L === '1').map(p => p.id)), wires: new Set() }; copySel(); pasteClip(); return parts.filter(p => p.t === 'fsw').map(p => p.L).join(); });
     if (pasted !== '1,2,3') out.push('after pasting FLS1: ' + pasted);
     const pr = await page.evaluate(() => { const h = [].concat(printSheet('X')).map(x => typeof x === 'string' ? x : x.svg || x.outerHTML || JSON.stringify(x)).join(); return ['FLS1', 'FLS2', 'FLS3'].map(t => +h.includes('>' + t + '<')).join('') + (h.includes('undefined') ? ' undefined' : ''); });
@@ -2856,6 +2868,7 @@ const DEF_CIRCUIT = `
     await page.setViewportSize({ width: 1470, height: 1000 }); await page.waitForTimeout(150);
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
     await page.evaluate(() => { const cyl = pvNew('position'); cyl.name = 'Position'; PV.push(cyl); const m = newPart('mtr', 600, 300); parts.push(m); m.pv = cyl.id; drvDefaults(m, cyl); normalize(); fit(true); draw(); });
+    await page.waitForTimeout(150);   // (the window was just resized: let the redraw that follows settle before finding the motor)
     const id = await page.evaluate(() => parts.find(q => q.t === 'mtr').id), bx = await page.locator(`#svg [data-part="${id}"]`).boundingBox();
     await page.mouse.click(bx.x + bx.width / 2, bx.y + bx.height / 2); await page.waitForTimeout(200);
     const groups = () => page.evaluate(() => [...document.querySelectorAll('#editpanel .tgroup')].filter(g => g.offsetParent).map(g => { const r = g.getBoundingClientRect(); return [g.querySelector('.label') ? g.querySelector('.label').textContent : '?', r.left, r.right]; }).sort((a, b) => a[1] - b[1]));
