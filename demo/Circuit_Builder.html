@@ -551,11 +551,25 @@ body.ts.ts-locked .stage::after { content: "LOCKED OUT"; position: absolute; lef
 .tsm-knob { transition: transform .15s ease; }
 .tsm-jacks { display: flex; justify-content: space-between; padding: 0 8px; }
 .jack { font-size: .64rem; font-weight: 800; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.jack::before { content: ""; width: 15px; height: 15px; border-radius: 50%; background: #111; border: 3px solid #b3201c; box-sizing: border-box; }
-.jack.black::before { border-color: #333; }
+.jack .sock { display: block; width: 15px; height: 15px; border-radius: 50%; background: #111; border: 3px solid #b3201c; box-sizing: border-box; }
+.jack.black .sock { border-color: #333; }
 .tsm-next { text-align: center; font-size: .7rem; margin-top: 4px; color: #4a3b0a; }
 .tsm-next b.red { color: #b3201c; } .tsm-next b.black { color: #111; }
 @media (max-width: 900px) { .ts-main { grid-template-columns: 1fr; } .ts-side { max-height: none; } }
+.ts-leads { z-index: 2; }
+.ts-plugs { z-index: 4; }
+.ts-plugs .ts-probe { pointer-events: all; cursor: grab; }
+.tsm-pick { display: flex; align-items: center; justify-content: center; gap: 4px; margin: 2px 0 4px; font-size: .68rem; font-weight: 700; color: #4a3b0a; }
+.tsm-pick span { margin-right: 2px; }
+.tsm-pick button { font: inherit; font-size: .7rem; padding: 2px 9px; border-radius: 6px; border: 1.5px solid #6b5310; background: #f7dc7a; color: #3a2e08; cursor: pointer; }
+.tsm-pick button[data-lead="red"][aria-pressed="true"] { background: #d42a2a; border-color: #7a1010; color: #fff; }
+.tsm-pick button[data-lead="black"][aria-pressed="true"] { background: #232323; border-color: #000; color: #fff; }
+.jack { flex-direction: column-reverse; }
+.stage.ts-pushing svg { cursor: pointer; }
+.tsm { padding-bottom: 12px; }
+.tsm-jacks { margin-top: 4px; }
+.jack { gap: 9px; }
+.tsm-next { margin: 2px 0 2px; }
 
 .demo-badge { font-style: normal; font-size: .7rem; font-weight: 800; letter-spacing: .08em; color: #1c1d1f; background: #9be03a; border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }
 </style>
@@ -966,7 +980,8 @@ const PAGE_HTML = (() => { try { return '<!doctype html>\n' + document.documentE
    the faults planted in a circuit (see troubleshooter.js and ts-meter.js). LOCKOUT: the circuit locked out (every
    disconnect open and the control supply off), as it must be before the ohmmeter or the continuity tester is used. */
 const TS_MODE = false;
-let LOCKOUT = false, TS_BLOWN = {};   // (TS_BLOWN: the fuses that have blown, by id: they stay blown till replaced)
+let LOCKOUT = false, TS_BLOWN = {}, TS_PUSHED = {};   // (TS_PUSHED: relays pushed in by hand while locked out, by letter)
+// (TS_BLOWN: the fuses that have blown, by id: they stay blown till replaced)
 const LOCKED = (() => { try { const s = document.getElementById('oo-locked'); return s ? JSON.parse(s.textContent) : null; } catch (_) { return null; } })();
 const W_MIN = 880;                   // narrowest the sheet gets (L1 is its left edge, x = 0; L2 its right edge, x = W: see geometry.js)
 const G = 20, SUB = 5;               // grid spacing; wires are traced in 5-unit steps for smooth flow
@@ -1626,7 +1641,7 @@ const solOn = n => parts.some(p => p.t === 'sol' && p.L === String(n) && !!coilO
 const coilOnL = L => parts.some(q => q.t === 'coil' && q.L === L && (isTimer(q) ? !!(TIMER[q.id] && TIMER[q.id].act) : !!coilOn[q.id]));
 // a timer's contacts are timed, or instantaneous (c.inst); is contact c's coil holding it changed over right now?
 const isTimed = c => c.t === 'con' && !c.inst && parts.some(q => isTimer(q) && q.L === c.L);
-const conActuated = c => parts.some(q => q.t === 'coil' && q.L === c.L && (!isTimer(q) || c.inst ? !!coilOn[q.id] : !!(TIMER[q.id] && TIMER[q.id].act)));
+const conActuated = c => !!TS_PUSHED[c.L] || parts.some(q => q.t === 'coil' && q.L === c.L && (!isTimer(q) || c.inst ? !!coilOn[q.id] : !!(TIMER[q.id] && TIMER[q.id].act)));
 // a timer's readout is lit while it is energized or counting
 const timerLit = p => !!coilOn[p.id] || !!running(p);
 // the time a timer shows: the whole seconds left (rounded up) while it counts; 0 once an on-delay timer has timed out
@@ -7582,7 +7597,7 @@ function tsSave() { try { localStorage.setItem(TS_KEY, JSON.stringify({ circuit:
 function tsUse(c, msg, fresh) {
   PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; WORK_ORDER = c.wo || ''; normalize();
   if (fresh) { TS.log = []; TS.steps = []; TS.t0 = Date.now(); TS_BLOWN = {}; }
-  LOCKOUT = false; TSM.red = TSM.black = null; TSM.next = 'red'; TSM.lastLog = ''; TSM.sig = '';
+  LOCKOUT = false; TS_PUSHED = {}; TSM.push = false; TSM.red = TSM.black = null; TSM.next = 'red'; TSM.lastLog = ''; TSM.sig = '';
   if (editing) { fit(true); fitView(); setMode(true); } else { fit(true); fitView(); NET = network(); draw(); startRun(); afterRunStart(); }
   tsShowAll(); if (msg) tsSay(msg);
   if (fresh) tsSave();
@@ -7613,7 +7628,9 @@ async function tsOpenText(text, name) {
 // ---- Lock Out: every disconnect open and the control supply off (the circuit starts again from dead); taking the lock
 // off starts it again from the top, as switching a machine back on does
 function tsLockOut(on) {
-  LOCKOUT = on; startRun(); buildProcess(); paint();
+  // (locking out or taking the lock off lets go of any relay pushed in by hand)
+  LOCKOUT = on; TS_PUSHED = {}; if (!on) TSM.push = false;
+  startRun(); buildProcess(); paint();
   if (!on && TSM.mode !== 'v' && TSM.mode !== 'off') tsMode('v', true);
   tsShowAll();
   tsSay(on ? 'Locked out: every disconnect is open and the control power is off. Check with the voltmeter that it is dead before you measure resistance.' : 'Lock removed: the circuit is powered again.');
@@ -7626,6 +7643,22 @@ function tsPushMode(m) {
   mode = m; autoRel = {};
   for (const b of document.querySelectorAll('#mode-group [data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === m));
   tsShowAll(); TSM.key = '';
+}
+// Push In (Dallas, 15 Nov 2026): with the machine locked out, a relay or starter can be pushed in by hand (its armature
+// pressed in with an insulated tool), so its contacts can be checked with the ohmmeter or continuity tester; only
+// while locked out. A click on its coil or any of its contacts pushes it in, another lets it go.
+const tsPushable = p => p && ((p.t === 'coil' && !isTimer(p)) || p.t === 'con' || p.t === 'mst') && parts.some(q => q.t === 'coil' && !isTimer(q) && q.L === p.L);
+function tsPush(L, on) {
+  if (on && !LOCKOUT) return;
+  if (on) TS_PUSHED[L] = true; else delete TS_PUSHED[L];
+  for (const c of parts) if ((c.t === 'con' || c.t === 'mst') && c.L === L) moveContact(c, simT);
+  needPaint = true; TSM.key = '';
+  tsSay(on ? `${L} pushed in by hand: its contacts have changed over. Click it again to let it go.` : `${L} let go.`);
+}
+function tsPushTool(on) {
+  if (on && !LOCKOUT) { tsSay('Lock out first: a relay is only ever pushed in by hand with the power off and locked out.'); return; }
+  TSM.push = on; tsShowAll();
+  if (on) tsSay('Push In: click a relay\u2019s coil or one of its contacts to push it in by hand (and again to let it go).');
 }
 // ---- the meter
 function tsMode(m, quiet) {
@@ -7647,7 +7680,8 @@ function tsPick(cx, cy) {
   return best;
 }
 function tsPlace(q) {
-  const lead = TSM.next; TSM[lead] = { ...q }; TSM.next = lead === 'red' ? 'black' : 'red'; TSM.sig = ''; TSM.key = '';
+  // (the lead picked on the meter goes there; while the other is not on yet, it is picked next)
+  const lead = TSM.next, other = lead === 'red' ? 'black' : 'red'; TSM[lead] = { ...q }; if (!TSM[other]) TSM.next = other; TSM.sig = ''; TSM.key = '';
   tsShowMeter();
 }
 let tsAudio = null, tsTone = null;
@@ -7699,29 +7733,52 @@ function tsLog(rd) {
 }
 
 // ---- drawing the meter's leads: from the jacks, in a curve, to the probes on their terminals
+// a small tag over a part (HELD DOWN, PUSHED IN), at a point in pixels
+const tsTag = (s, t, k = 1) => `<g transform="translate(${s[0]} ${s[1]}) scale(${k})">` + tsTag1(t) + '</g>';
+const tsTag1 = t => `<g><rect x="-${t.length * 4 + 10}" y="-11" width="${t.length * 8 + 20}" height="20" rx="5" fill="#1c1d1f" stroke="#FF6F59" stroke-width="1.6"/><text y="4" text-anchor="middle" font-size="11" font-weight="800" fill="#fff" letter-spacing=".04em">${t}</text></g>`;
 function tsLeads() {
   const ov = document.getElementById('ts-leads'), m = document.getElementById('ts-meter'); if (!ov || !m) return;
   const st = document.getElementById('stage').getBoundingClientRect(), mr = m.getBoundingClientRect();
-  const jack = c => { const j = m.querySelector('.jack.' + c).getBoundingClientRect(); return [j.left + j.width / 2 - st.left, j.top + j.height / 2 - st.top]; };
-  const tips = ['red', 'black'].map(c => TSM[c] ? tsScreen(TSM[c].x, TSM[c].y) : null);
+  // (where each plug goes: the middle of the socket itself)
+  const jack = c => { const j = m.querySelector('.jack.' + c + ' .sock').getBoundingClientRect(); return [j.left + j.width / 2 - st.left, j.top + j.height / 2 - st.top]; };
+  const D = TSM.drag, tips = ['red', 'black'].map(c => D && D.c === c && D.moved ? [D.x, D.y] : TSM[c] ? tsScreen(TSM[c].x, TSM[c].y) : null);
   const held = mode === 'latch' ? parts.filter(p => p.t === 'btn' && !p.maint && !p.estop && down[p.L]) : [];
   const hs = held.map(p => tsScreen(p.x, p.y - BOX / 2 - 50));
-  const key = [mr.left, mr.top, st.width, st.height, ...tips.flat(), ...hs.flat(), TSM.hover && TSM.hover.x, TSM.hover && TSM.hover.y, TSM.next, TSM.mode].map(v => v == null ? '' : Math.round(v)).join(',');
+  const key = [mr.left, mr.top, st.width, st.height, ...tips.flat(), ...hs.flat(), TSM.hover && TSM.hover.x, TSM.hover && TSM.hover.y, TSM.next, TSM.mode, D && D.c].map(v => v == null ? '' : typeof v === 'number' ? Math.round(v) : v).join(',') + Object.keys(TS_PUSHED).join('');
   if (key === TSM.key) return; TSM.key = key;
-  let h = '';
-  for (const s of hs) if (s) h += `<g transform="translate(${s[0]} ${s[1]})"><rect x="-44" y="-11" width="88" height="20" rx="5" fill="#1c1d1f" stroke="#FF6F59" stroke-width="1.6"/><text y="4" text-anchor="middle" font-size="11" font-weight="800" fill="#fff" letter-spacing=".04em">HELD DOWN</text></g>`;
+  let h = '', cab = '', probes = '', plugs = '';
+  for (const s of hs) if (s) h += tsTag(s, 'HELD DOWN');
+  for (const p of parts) if (TS_PUSHED[p.L] && (p.t === 'coil' || p.t === 'con' || p.t === 'mst')) {   // (a relay pushed in by hand: tagged on its coil and contacts)
+    const q = tsScreen(p.x, p.t === 'mst' ? p.y - PWR_H / 2 - 22 : p.t === 'coil' ? p.y - BOX / 2 - 50 : p.y + BOX / 2 + 12);
+    if (q) h += tsTag(q, 'PUSHED IN', p.t === 'con' ? .8 : 1);   // (on a coil, above its name; on a contact, just below it)
+  }
+  // the leads: each plugged into its jack, its cable hanging from there to the probe (on its terminal, or resting
+  // beside the meter while it is not on one)
   ['red', 'black'].forEach((c, i) => {
-    const t = tips[i]; if (!t || TSM.mode === 'off') return;
-    const [jx, jy] = jack(c), s = c === 'red' ? -1 : 1, ang = s * 28 * Math.PI / 180;
-    const bx = t[0] + Math.sin(ang) * 44, by = t[1] - Math.cos(ang) * 44;   // (the probe's back end, where the cable goes in)
-    const col = c === 'red' ? '#d62b2b' : '#1b1b1b', cab = c === 'red' ? '#c42424' : '#111';
-    const sag = Math.max(60, Math.abs(jy - by) * .5);
-    h += `<path d="M${jx} ${jy} C${jx} ${jy + sag} ${bx + s * 30} ${by - 40} ${bx} ${by}" fill="none" stroke="${cab}" stroke-width="4" stroke-linecap="round"/>`;
-    h += `<g transform="translate(${t[0]} ${t[1]}) rotate(${s * 28})"><path d="M-1.6 -12 L0 0 L1.6 -12Z" fill="#d9dde1"/><rect x="-5" y="-46" width="10" height="34" rx="3" fill="${col}" stroke="#000" stroke-width="1"/><rect x="-6.5" y="-16" width="13" height="4" rx="1.5" fill="${col}" stroke="#000" stroke-width=".8"/></g>`;
-    h += `<circle cx="${t[0]}" cy="${t[1]}" r="9" fill="none" stroke="${c === 'red' ? '#ff6b6b' : '#e6e9ec'}" stroke-width="2"/>`;
+    const [jx, jy] = jack(c), s = c === 'red' ? -1 : 1;
+    let t = tips[i], ang = s * 26;
+    if (!t) { t = [mr.left - st.left - (c === 'red' ? 62 : 28), mr.bottom - st.top - 4]; ang = c === 'red' ? -14 : -4; }
+    const a = ang * Math.PI / 180, L = 84, bx = t[0] + Math.sin(a) * L, by = t[1] - Math.cos(a) * L;   // (the probe's back end, where the cable goes in)
+    const col = c === 'red' ? '#d42a2a' : '#232323', dk = c === 'red' ? '#7a1010' : '#000', hi = c === 'red' ? '#ff7a6e' : '#5a5a5a';
+    const px = jx, py = jy + 22, sag = Math.max(50, Math.abs(py - by) * .55);
+    const d = `M${px} ${py} C${px} ${py + sag} ${bx + Math.sin(a) * 60} ${by - Math.cos(a) * 60} ${bx} ${by}`;
+    cab += `<path d="${d}" fill="none" stroke="${dk}" stroke-width="7" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${col}" stroke-width="4.6" stroke-linecap="round"/>`;
+    // the plug in the jack: its body hanging below it
+    plugs += `<rect x="${jx - 6}" y="${jy + 2}" width="12" height="21" rx="3" fill="${col}" stroke="${dk}" stroke-width="1.2"/><path d="M${jx - 3.5} ${jy + 9}h7M${jx - 3.5} ${jy + 13}h7M${jx - 3.5} ${jy + 17}h7" stroke="${dk}" stroke-width="1"/><circle cx="${jx}" cy="${jy}" r="7.5" fill="${col}" stroke="${dk}" stroke-width="1.4"/><circle cx="${jx - 2.4}" cy="${jy - 2.6}" r="2.6" fill="${hi}" opacity=".8"/>`;
+    // the probe: a steel tip, the finger guard, a ridged grip, the boot the cable goes into
+    probes += `<g transform="translate(${t[0]} ${t[1]}) rotate(${ang})">
+      <path d="M-2.6 -22 L-2.2 -5 L0 0 L2.2 -5 L2.6 -22Z" fill="#e9edf0" stroke="#1a1a1a" stroke-width="1.1"/><path d="M-.6 -21 L-.5 -6" stroke="#fff" stroke-width="1"/>
+      <rect x="-11" y="-28" width="22" height="7" rx="3" fill="${col}" stroke="${dk}" stroke-width="1.3"/>
+      <rect x="-7.5" y="-70" width="15" height="43" rx="5" fill="${col}" stroke="${dk}" stroke-width="1.3"/>
+      <path d="M-7 -60h14M-7 -55h14M-7 -50h14M-7 -45h14" stroke="${dk}" stroke-width="1.1" opacity=".55"/><rect x="-5" y="-68" width="3" height="38" rx="1.5" fill="#fff" opacity=".16"/>
+      <path d="M-7 -70 L-4.5 -84 H4.5 L7 -70Z" fill="${col}" stroke="${dk}" stroke-width="1.2"/></g>`;
+    probes += `<g class="ts-probe" data-lead="${c}" transform="translate(${t[0]} ${t[1]}) rotate(${ang})"><rect x="-14" y="-90" width="28" height="92" rx="8" fill="transparent"/></g>`;   // (where a probe is picked up)
+    if (tips[i] && !(D && D.c === c && D.moved)) probes += `<circle cx="${t[0]}" cy="${t[1]}" r="5" fill="none" stroke="#fff" stroke-width="2"/><circle cx="${t[0]}" cy="${t[1]}" r="2" fill="#fff"/>`;
   });
-  if (TSM.hover && TSM.mode !== 'off') { const s = tsScreen(TSM.hover.x, TSM.hover.y); if (s) h += `<circle cx="${s[0]}" cy="${s[1]}" r="13" fill="${TSM.next === 'red' ? 'rgba(255,90,90,.25)' : 'rgba(230,233,236,.22)'}" stroke="${TSM.next === 'red' ? '#ff6b6b' : '#e6e9ec'}" stroke-width="2.2"/>`; }
-  ov.innerHTML = h;
+  const hc = D ? D.c : TSM.next, hv = D ? D.over : TSM.mode !== 'off' && TSM.hover;
+  if (hv) { const s = tsScreen(hv.x, hv.y); if (s) h += `<circle cx="${s[0]}" cy="${s[1]}" r="13" fill="${hc === 'red' ? 'rgba(255,90,90,.25)' : 'rgba(230,233,236,.22)'}" stroke="${hc === 'red' ? '#ff6b6b' : '#e6e9ec'}" stroke-width="2.2"/>`; }
+  // (the tags and the aim under the meter; the leads, cables, plugs and probes, over it: they lie across its front)
+  ov.innerHTML = h; document.getElementById('ts-plugs').innerHTML = cab + plugs + probes;
 }
 
 // ---- the page's pieces, shown as they are now
@@ -7734,7 +7791,7 @@ function tsShowMeter() {
   m.querySelector('.tsm-lcd').classList.toggle('off', TSM.mode === 'off');
   m.querySelector('.tsm-knob').setAttribute('transform', `rotate(${TSM_ANG[TSM.mode]} 60 60)`);
   for (const b of m.querySelectorAll('[data-dial]')) b.classList.toggle('on', b.dataset.dial === TSM.mode);
-  m.querySelector('.tsm-next').innerHTML = TSM.mode === 'off' ? 'Turn the dial to measure' : `Next click: <b class="${TSM.next}">${TSM.next} lead</b>`;
+  for (const b of m.querySelectorAll('.tsm-pick [data-lead]')) b.setAttribute('aria-pressed', String(b.dataset.lead === TSM.next));
 }
 function tsShowLog(scroll) {
   const L = document.getElementById('ts-log'); if (!L) return;
@@ -7755,6 +7812,8 @@ function tsShowAll() {
   const sb = document.getElementById('ts-steps-btn'); sb.setAttribute('aria-pressed', String(TS.showSteps)); sb.querySelector('span').textContent = `Six Steps: ${TS.showSteps ? 'On' : 'Off'}`;
   const lk = document.getElementById('ts-lock'); lk.setAttribute('aria-pressed', String(LOCKOUT)); lk.querySelector('span').textContent = LOCKOUT ? 'Remove Lock' : 'Lock Out';
   document.body.classList.toggle('ts-locked', LOCKOUT);
+  const pb = document.getElementById('ts-push'); pb.setAttribute('aria-pressed', String(!!TSM.push)); pb.classList.toggle('needs-lock', !LOCKOUT); pb.dataset.tip = LOCKOUT ? pb.dataset.tip0 : 'Lock out first: a relay is only ever pushed in by hand with the power off and locked out';
+  document.getElementById('stage').classList.toggle('ts-pushing', !!TSM.push);
   for (const b of document.querySelectorAll('#tsbar [data-meter]')) {
     const m = b.dataset.meter, need = (m === 'ohm' || m === 'cont') && !LOCKOUT;
     b.setAttribute('aria-pressed', String(TSM.mode === m)); b.classList.toggle('needs-lock', need);
@@ -7771,6 +7830,7 @@ const TS_ICON = {
   cont: '<svg viewBox="0 0 30 26"><rect x="5" y="2" width="20" height="22" rx="3" fill="#f2c230" stroke="#6b5310" stroke-width="1.2"/><rect x="8" y="5" width="14" height="6" rx="1" fill="#c9d6b3"/><path d="M12.5 6.5q1.6 1.5 0 3M15 5.5q2.6 2.5 0 5M17.5 4.7q3.5 3.3 0 6.6" fill="none" stroke="#333" stroke-width="1"/><circle cx="15" cy="17.5" r="4" fill="#2b2b2b"/></svg>',
   leads: '<svg viewBox="0 0 30 26"><path d="M6 22L13 6M24 22L17 6" stroke-width="4" stroke-linecap="round" fill="none" stroke="#c42424"/><path d="M24 22L17 6" stroke-width="4" stroke-linecap="round" fill="none" stroke="#111"/><path d="M5 23l4-4M25 23l-4-4" stroke="#bbb" stroke-width="1.6"/></svg>',
   lock: '<svg viewBox="0 0 30 26"><rect x="7" y="11" width="16" height="13" rx="2.5" fill="#d62b2b" stroke="#6e1111" stroke-width="1.2"/><path d="M10.5 11V7.5a4.5 4.5 0 0 1 9 0V11" fill="none" stroke="#c9ced4" stroke-width="2.4"/><circle cx="15" cy="16.5" r="1.8" fill="#300"/><path d="M15 17v3" stroke="#300" stroke-width="1.6"/></svg>',
+  push: '<svg viewBox="0 0 30 26"><rect x="4" y="13" width="22" height="10" rx="2" fill="#3a3d42" stroke="#8a96a3" stroke-width="1.1"/><rect x="10" y="9" width="10" height="6" rx="1.5" fill="#c9ced4"/><path d="M15 1v6" stroke="#f2c230" stroke-width="2.4" stroke-linecap="round"/><path d="M11.5 4.5L15 8l3.5-3.5" fill="none" stroke="#f2c230" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   steps: '<svg viewBox="0 0 30 26"><rect x="6" y="2" width="18" height="22" rx="2.5" fill="#2b2f34" stroke="#8a96a3" stroke-width="1.2"/><path d="M9 7.5l1.5 1.5 2.5-3M9 13.5l1.5 1.5 2.5-3" fill="none" stroke="#5ee08a" stroke-width="1.5"/><path d="M15 8h6M15 14h6M9 19.5h12" stroke="#c9ced4" stroke-width="1.4"/></svg>',
   open: '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M3 5h5l2 2h7v9H3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
   print: '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M6 7V3h8v4M6 14H4V8h12v6h-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M6 11h8v6H6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
@@ -7800,7 +7860,7 @@ function tsInit() {
       ${mb('ohm', 'Ohmmeter', 'Ohmmeter: the resistance between the two terminals (locked out only)')}
       ${mb('cont', 'Continuity', 'Continuity: beeps when there is a way through between the two terminals (locked out only)')}
       <button type="button" class="tool big" id="ts-leads-off" data-tip="Take both leads off the circuit">${TS_ICON.leads}<span>Remove Leads</span></button></div>
-    <div class="tgroup"><span class="label">Power</span><button type="button" class="tool big ts-lockbtn" id="ts-lock" aria-pressed="false" data-tip="Lock out the machine: every disconnect open and the control power off, as it must be before measuring resistance. Press again to take the lock off and power it up.">${TS_ICON.lock}<span>Lock Out</span></button></div>
+    <div class="tgroup"><span class="label">Power</span><button type="button" class="tool big ts-lockbtn" id="ts-lock" aria-pressed="false" data-tip="Lock out the machine: every disconnect open and the control power off, as it must be before measuring resistance. Press again to take the lock off and power it up.">${TS_ICON.lock}<span>Lock Out</span></button><button type="button" class="tool big" id="ts-push" aria-pressed="false" data-tip="Push In: with the machine locked out, push a relay or starter in by hand, to check its contacts with the ohmmeter or continuity tester. Click its coil or a contact (again to let it go)." data-tip0="Push In: with the machine locked out, push a relay or starter in by hand, to check its contacts with the ohmmeter or continuity tester. Click its coil or a contact (again to let it go).">${TS_ICON.push}<span>Push In</span><small class="ts-needs">Lock out first</small></button></div>
     <div class="tgroup"><span class="label">Record</span><button type="button" class="tool big" id="ts-steps-btn" aria-pressed="true" data-tip="Show or hide the six troubleshooting steps">${TS_ICON.steps}<span>Six Steps: On</span></button></div>
     <div class="row"><span class="label">Pushbuttons</span><div class="seg" role="group" aria-label="Pushbutton mode">
       <button type="button" data-tsmode="click" data-tip="One click presses a momentary button; it lets go once the circuit settles">Click</button><button type="button" data-tsmode="hold" data-tip="A momentary button stays down only while you hold the mouse button down on it">Press and Hold</button><button type="button" data-tsmode="latch" data-tip="Click to Hold: a click holds a momentary button down (marked HELD DOWN) till you click it again, so you can take readings with it held">Click to Hold</button></div></div>
@@ -7816,13 +7876,14 @@ function tsInit() {
   main.appendChild(side);
   // the meter, over the panel, and its leads
   const ov = document.createElementNS(NS, 'svg'); ov.id = 'ts-leads'; ov.setAttribute('class', 'ts-leads'); stage.appendChild(ov);
+  const pl = document.createElementNS(NS, 'svg'); pl.id = 'ts-plugs'; pl.setAttribute('class', 'ts-leads ts-plugs'); stage.appendChild(pl);
   const m = document.createElement('div'); m.id = 'ts-meter'; m.className = 'tsm';
   const lab = (k, txt, a, r) => { const x = 60 + r * Math.cos(a * Math.PI / 180), y = 60 + r * Math.sin(a * Math.PI / 180); return `<text data-dial="${k}" x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle">${txt}</text>`; };
   m.innerHTML = `<div class="tsm-lcd"><span class="tsm-unit"></span><span class="tsm-val"></span></div>
     <svg class="tsm-dial" viewBox="0 0 120 120"><circle cx="60" cy="60" r="27" fill="#1f1f1f" stroke="#0c0c0c" stroke-width="2"/><g class="tsm-knob"><circle cx="60" cy="60" r="19" fill="#3a3a3a"/><rect x="77" y="57.5" width="10" height="5" rx="2" fill="#f2c230" transform="translate(-8 0)"/></g>
       ${lab('off', 'OFF', -150, 46)}${lab('v', 'V~', -90, 46)}${lab('ohm', 'Ω', -30, 46)}${lab('cont', '•)))', 30, 46)}</svg>
-    <div class="tsm-jacks"><span class="jack red" title="VΩ: the red lead">VΩ</span><span class="jack black" title="COM: the black lead">COM</span></div>
-    <div class="tsm-next"></div>`;
+    <div class="tsm-pick" role="group" aria-label="Which lead a click on a terminal moves"><span>Lead</span><button type="button" data-lead="red" data-tip="A click on a terminal puts the red lead there (or drag either probe)">Red</button><button type="button" data-lead="black" data-tip="A click on a terminal puts the black lead there (or drag either probe)">Black</button></div>
+    <div class="tsm-jacks"><span class="jack red" title="VΩ: the red lead"><i class="sock"></i>VΩ</span><span class="jack black" title="COM: the black lead"><i class="sock"></i>COM</span></div>`;
   stage.appendChild(m);
 
   // ---- what everything does
@@ -7837,7 +7898,26 @@ function tsInit() {
   for (const b of bar.querySelectorAll('[data-meter]')) b.addEventListener('click', () => tsMode(TSM.mode === b.dataset.meter ? 'off' : b.dataset.meter));
   for (const b of m.querySelectorAll('[data-dial]')) b.addEventListener('click', () => tsMode(b.dataset.dial));
   document.getElementById('ts-leads-off').addEventListener('click', () => { TSM.red = TSM.black = null; TSM.next = 'red'; TSM.sig = ''; tsShowMeter(); });
+  for (const b of m.querySelectorAll('.tsm-pick [data-lead]')) b.addEventListener('click', () => { TSM.next = b.dataset.lead; TSM.key = ''; tsShowMeter(); });
+  // a probe can be picked up and dragged onto any terminal (dropped anywhere else, it goes back beside the meter);
+  // a click on it, without moving it, picks that lead for the next click on a terminal
+  document.getElementById('ts-plugs').addEventListener('pointerdown', e => {
+    const g = e.target.closest && e.target.closest('.ts-probe'); if (!g || e.button !== 0) return;
+    e.preventDefault(); e.stopPropagation();
+    const c = g.dataset.lead, sr = stage.getBoundingClientRect(), x0 = e.clientX, y0 = e.clientY;
+    TSM.drag = { c, x: x0 - sr.left, y: y0 - sr.top, moved: false, over: null };
+    const mv = ev => { const D = TSM.drag; if (!D) return; if (Math.hypot(ev.clientX - x0, ev.clientY - y0) > 4) D.moved = true;
+      D.x = ev.clientX - sr.left; D.y = ev.clientY - sr.top; D.over = tsPick(ev.clientX, ev.clientY); TSM.key = ''; };
+    const up = ev => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up);
+      const D = TSM.drag; TSM.drag = null; TSM.key = ''; if (!D) return;
+      if (!D.moved) { TSM.next = c; tsShowMeter(); return; }
+      const q = tsPick(ev.clientX, ev.clientY); TSM[c] = q ? { ...q } : null; TSM.sig = '';
+      if (q && !TSM[c === 'red' ? 'black' : 'red']) TSM.next = c === 'red' ? 'black' : 'red';
+      tsShowMeter(); };
+    addEventListener('pointermove', mv); addEventListener('pointerup', up);
+  });
   document.getElementById('ts-lock').addEventListener('click', () => tsLockOut(!LOCKOUT));
+  document.getElementById('ts-push').addEventListener('click', () => tsPushTool(!TSM.push));
   document.getElementById('ts-reset').addEventListener('click', () => { startRun(); buildProcess(); paint(); });
   const steps = on => { TS.showSteps = on; tsSave(); tsShowAll(); };
   document.getElementById('ts-steps-btn').addEventListener('click', () => steps(!TS.showSteps));
@@ -7846,8 +7926,15 @@ function tsInit() {
   for (const b of bar.querySelectorAll('[data-tsmode]')) b.addEventListener('click', () => tsPushMode(b.dataset.tsmode));
   // the leads: a click on a terminal puts the next lead there (red, then black, then red again...)
   stage.addEventListener('pointerdown', e => {
-    if (editing || TSM.mode === 'off' || e.button !== 0 || e.target.closest('#ts-meter')) return;
-    const q = tsPick(e.clientX, e.clientY); if (!q) return;
+    if (editing || e.button !== 0 || e.target.closest('#ts-meter, .ts-probe')) return;
+    const q = TSM.mode === 'off' ? null : tsPick(e.clientX, e.clientY);
+    if (!q && TSM.push) {   // (Push In: a click on a relay's coil or contact)
+      const g = e.target.closest && e.target.closest('[data-part]'), p = g && parts.find(x => String(x.id) === g.dataset.part);
+      e.preventDefault(); e.stopPropagation();
+      if (tsPushable(p)) tsPush(p.L, !TS_PUSHED[p.L]); else tsSay('Push In works on a relay or starter: click its coil or one of its contacts.');
+      return;
+    }
+    if (!q) return;
     e.preventDefault(); e.stopPropagation(); tsPlace(q);
     if (TSM.mode === 'cont') tsBeep(false);   // (the audio can start only from a click)
   }, true);
@@ -7855,7 +7942,7 @@ function tsInit() {
   stage.addEventListener('pointerleave', () => { TSM.hover = null; });
   // the meter can be dragged anywhere over the panel (by its case)
   m.addEventListener('pointerdown', e => {
-    if (e.target.closest('[data-dial]')) return;
+    if (e.target.closest('[data-dial], [data-lead]')) return;
     e.preventDefault(); e.stopPropagation();
     const r = m.getBoundingClientRect(), sr = stage.getBoundingClientRect(), ox = e.clientX - r.left, oy = e.clientY - r.top;
     const mv = ev => { m.style.left = Math.max(0, Math.min(sr.width - r.width, ev.clientX - sr.left - ox)) + 'px'; m.style.top = Math.max(0, Math.min(sr.height - r.height, ev.clientY - sr.top - oy)) + 'px'; m.style.right = m.style.bottom = 'auto'; };

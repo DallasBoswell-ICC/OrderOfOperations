@@ -528,8 +528,22 @@ body.ts.ts-locked .stage::after { content: "LOCKED OUT"; position: absolute; lef
 .tsm-knob { transition: transform .15s ease; }
 .tsm-jacks { display: flex; justify-content: space-between; padding: 0 8px; }
 .jack { font-size: .64rem; font-weight: 800; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.jack::before { content: ""; width: 15px; height: 15px; border-radius: 50%; background: #111; border: 3px solid #b3201c; box-sizing: border-box; }
-.jack.black::before { border-color: #333; }
+.jack .sock { display: block; width: 15px; height: 15px; border-radius: 50%; background: #111; border: 3px solid #b3201c; box-sizing: border-box; }
+.jack.black .sock { border-color: #333; }
 .tsm-next { text-align: center; font-size: .7rem; margin-top: 4px; color: #4a3b0a; }
 .tsm-next b.red { color: #b3201c; } .tsm-next b.black { color: #111; }
 @media (max-width: 900px) { .ts-main { grid-template-columns: 1fr; } .ts-side { max-height: none; } }
+.ts-leads { z-index: 2; }
+.ts-plugs { z-index: 4; }
+.ts-plugs .ts-probe { pointer-events: all; cursor: grab; }
+.tsm-pick { display: flex; align-items: center; justify-content: center; gap: 4px; margin: 2px 0 4px; font-size: .68rem; font-weight: 700; color: #4a3b0a; }
+.tsm-pick span { margin-right: 2px; }
+.tsm-pick button { font: inherit; font-size: .7rem; padding: 2px 9px; border-radius: 6px; border: 1.5px solid #6b5310; background: #f7dc7a; color: #3a2e08; cursor: pointer; }
+.tsm-pick button[data-lead="red"][aria-pressed="true"] { background: #d42a2a; border-color: #7a1010; color: #fff; }
+.tsm-pick button[data-lead="black"][aria-pressed="true"] { background: #232323; border-color: #000; color: #fff; }
+.jack { flex-direction: column-reverse; }
+.stage.ts-pushing svg { cursor: pointer; }
+.tsm { padding-bottom: 12px; }
+.tsm-jacks { margin-top: 4px; }
+.jack { gap: 9px; }
+.tsm-next { margin: 2px 0 2px; }

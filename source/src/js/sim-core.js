@@ -116,7 +116,7 @@ const solOn = n => parts.some(p => p.t === 'sol' && p.L === String(n) && !!coilO
 const coilOnL = L => parts.some(q => q.t === 'coil' && q.L === L && (isTimer(q) ? !!(TIMER[q.id] && TIMER[q.id].act) : !!coilOn[q.id]));
 // a timer's contacts are timed, or instantaneous (c.inst); is contact c's coil holding it changed over right now?
 const isTimed = c => c.t === 'con' && !c.inst && parts.some(q => isTimer(q) && q.L === c.L);
-const conActuated = c => parts.some(q => q.t === 'coil' && q.L === c.L && (!isTimer(q) || c.inst ? !!coilOn[q.id] : !!(TIMER[q.id] && TIMER[q.id].act)));
+const conActuated = c => !!TS_PUSHED[c.L] || parts.some(q => q.t === 'coil' && q.L === c.L && (!isTimer(q) || c.inst ? !!coilOn[q.id] : !!(TIMER[q.id] && TIMER[q.id].act)));
 // a timer's readout is lit while it is energized or counting
 const timerLit = p => !!coilOn[p.id] || !!running(p);
 // the time a timer shows: the whole seconds left (rounded up) while it counts; 0 once an on-delay timer has timed out

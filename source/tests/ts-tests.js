@@ -102,14 +102,29 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     return out;
   });
 
-  await check('Leads: a click on a terminal puts the red lead, then the black, then the red again; a click on a button still presses it; Click to Hold holds it', async page => {
+  await check('Leads: a click puts the picked lead on a terminal (red, then black; Red / Black on the meter pick one); probes can be dragged on and off; they lie over the meter; a click on a button still presses it; Click to Hold holds it', async page => {
     const out = [];
     await clickTerm(page, L1); await clickTerm(page, L2);
     let st = await page.evaluate(() => [TSM.red && TSM.red.label, TSM.black && TSM.black.label, TSM.next]);
-    if (st.join('|') !== `${L1}|${L2}|red`) out.push('after two clicks: ' + st);
-    await clickTerm(page, C1);
+    if (st.join('|') !== `${L1}|${L2}|black`) out.push('after two clicks: ' + st);
+    // with both on, the picked lead stays picked: the black moves again; Red on the meter, and the red moves
+    await clickTerm(page, C2);
     st = await page.evaluate(() => [TSM.red && TSM.red.label, TSM.black && TSM.black.label]);
-    if (st.join('|') !== `${C1}|${L2}`) out.push('third click: ' + st);
+    if (st.join('|') !== `${L1}|${C2}`) out.push('third click: ' + st);
+    await page.click('.tsm-pick [data-lead="red"]'); await clickTerm(page, C1);
+    st = await page.evaluate(() => [TSM.red && TSM.red.label, TSM.black && TSM.black.label]);
+    if (st.join('|') !== `${C1}|${C2}`) out.push('red picked, then a click: ' + st);
+    // a probe dragged onto a terminal goes there; dropped off any terminal, it goes back beside the meter
+    const probe = async c => { await page.waitForTimeout(100); const r = await page.locator(`#ts-plugs .ts-probe[data-lead="${c}"] rect`).boundingBox(); return [r.x + r.width / 2, r.y + r.height / 2]; };
+    const to = await page.evaluate(l => { const q = TS_POINTS.find(q => q.label === l); const r = document.getElementById('stage').getBoundingClientRect(), p = tsScreen(q.x, q.y); return [p[0] + r.left, p[1] + r.top]; }, L2);
+    let pb = await probe('black'); await page.mouse.move(...pb); await page.mouse.down(); await page.mouse.move(pb[0] + 40, pb[1] + 40, { steps: 3 }); await page.mouse.move(...to, { steps: 6 }); await page.mouse.up();
+    st = await page.evaluate(() => [TSM.red && TSM.red.label, TSM.black && TSM.black.label]);
+    if (st.join('|') !== `${C1}|${L2}`) out.push('black dragged to L2: ' + st);
+    pb = await probe('red'); await page.mouse.move(...pb); await page.mouse.down(); await page.mouse.move(pb[0] + 30, pb[1] + 90, { steps: 6 }); await page.mouse.up();
+    if (await page.evaluate(() => TSM.red)) out.push('red dropped off a terminal is still on one');
+    // the leads lie over the meter
+    const z = await page.evaluate(() => [getComputedStyle(document.getElementById('ts-plugs')).zIndex, getComputedStyle(document.getElementById('ts-meter')).zIndex].map(Number));
+    if (!(z[0] > z[1])) out.push('leads under the meter: ' + z);
     await page.evaluate(() => { document.querySelector('#tsbar [data-tsmode="hold"]').click(); });
     const b = await page.evaluate(() => { const p = parts.find(q => q.t === 'btn' && q.L === 'A'), r = document.getElementById('stage').getBoundingClientRect(), s = tsScreen(p.x, p.y); return [s[0] + r.left, s[1] + r.top]; });
     await page.mouse.move(...b); await page.mouse.down(); await page.waitForTimeout(150);
@@ -124,12 +139,13 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     if (await page.evaluate(() => !!down.A)) out.push('a second click did not let START go');
     await page.mouse.click(...b); await page.click('#tsbar [data-tsmode="click"]');
     if (await page.evaluate(() => !!down.A || mode !== 'click')) out.push('leaving Click to Hold kept START held');
+    if ((await page.evaluate(() => document.getElementById('ts-plugs').querySelectorAll('circle[r="7.5"]').length)) !== 2) out.push('the leads are not plugged into both jacks');
     await page.click('#ts-leads-off');
     if (await page.evaluate(() => TSM.red || TSM.black)) out.push('Remove Leads left a lead on');
     return out;
   });
 
-  await check('Lock Out: required for the ohmmeter and continuity; dead after; coil reads OL, light 1.2 kΩ, STOP beeps; taking it off powers up again', async page => {
+  await check('Lock Out: required for the ohmmeter, continuity and Push In; dead after; coil reads OL, light 1.2 kΩ; X pushed in closes its contact; STOP beeps; taking it off lets X go and powers up again', async page => {
     const out = [];
     await page.click('[data-meter="ohm"]');
     if (await page.evaluate(() => TSM.mode) !== 'v') out.push('ohmmeter allowed on a live circuit');
@@ -141,12 +157,27 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     if (await ohms(page, C1, C2) !== 'OL') out.push('across the open coil: ' + await ohms(page, C1, C2));
     if (await ohms(page, 'Pilot Light, left (rung 3)', 'Pilot Light, right (rung 3)') !== 1200) out.push('across the light: ' + await ohms(page, 'Pilot Light, left (rung 3)', 'Pilot Light, right (rung 3)'));
     if (await ohms(page, 'A Button (NO), left (rung 1)', 'A Button (NO), right (rung 1)') !== 'OL') out.push('across the open START: ' + await ohms(page, 'A Button (NO), left (rung 1)', 'A Button (NO), right (rung 1)'));
+    // Push In (only locked out): X pushed in by hand closes its NO contacts, so continuity across one beeps
+    const XC = ['X Contact (NO), left (rung 3)', 'X Contact (NO), right (rung 3)'];
+    if (await ohms(page, ...XC) !== 'OL') out.push('X contact before Push In: ' + await ohms(page, ...XC));
+    await page.click('#ts-push');
+    const xy = await page.evaluate(() => { const q = parts.find(q => q.t === 'coil'), r = document.getElementById('stage').getBoundingClientRect(), s = tsScreen(q.x, q.y); return [s[0] + r.left, s[1] + r.top]; });
+    await page.mouse.click(...xy); await page.waitForTimeout(400);
+    if (await ohms(page, ...XC) !== 0) out.push('X contact pushed in: ' + await ohms(page, ...XC));
+    if ((await page.evaluate(() => document.getElementById('ts-leads').innerHTML.split('PUSHED IN').length - 1)) !== 3) out.push('PUSHED IN tags on the coil and its two contacts');
+    await page.mouse.click(...xy); await page.waitForTimeout(400);
+    if (await ohms(page, ...XC) !== 'OL') out.push('X contact let go: ' + await ohms(page, ...XC));
+    await page.mouse.click(...xy); await page.click('#ts-push');
     await page.click('[data-meter="cont"]');
-    await clickTerm(page, 'D Button (NC), left (rung 1)'); await clickTerm(page, 'D Button (NC), right (rung 1)'); await page.waitForTimeout(400);
+    await page.click('.tsm-pick [data-lead="red"]'); await clickTerm(page, 'D Button (NC), left (rung 1)');
+    await page.click('.tsm-pick [data-lead="black"]'); await clickTerm(page, 'D Button (NC), right (rung 1)'); await page.waitForTimeout(400);
     const rd = await page.evaluate(() => TSM.rd);
     if (!rd || !rd.beep || rd.text !== '0.0') out.push('continuity across STOP: ' + JSON.stringify(rd));
     await page.click('#ts-lock'); await page.waitForTimeout(300);
     if (await page.evaluate(() => LOCKOUT || TSM.mode !== 'v')) out.push('after taking the lock off: ' + await page.evaluate(() => [LOCKOUT, TSM.mode]));
+    if (await page.evaluate(() => Object.keys(TS_PUSHED).length || parts.some(p => p.t === 'con' && closed(p)))) out.push('X still pushed in after taking the lock off');
+    await page.click('#ts-push');
+    if (await page.evaluate(() => TSM.push)) out.push('Push In allowed with the power on');
     if (await volts(page, L1, L2) !== 120) out.push('L1 to L2 after: ' + await volts(page, L1, L2));
     return out;
   });
