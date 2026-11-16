@@ -1768,26 +1768,63 @@ function solveOnce(allClosed, blocked) {
   const live = new Set(), stack = [];
   for (const [id, v] of net.feedV) if (v === 1) { live.add(id); stack.push(id); }
   while (stack.length) { const u = stack.pop(); for (const e of net.jadj.get(u) || []) { if (!(g(e) > 0)) continue; const w = e.a === u ? e.b : e.a; if (!live.has(w)) { live.add(w); stack.push(w); } } }
-  // node voltages (Gaussian elimination; a circuit has at most a few hundred junctions)
+  // node voltages (see netSolve: fast even for a whole machine's print, hundreds of junctions)
   const V = new Map(); for (const [id, v] of net.feedV) if (live.has(id)) V.set(id, v);
   const unk = [...live].filter(id => !net.feedV.has(id)), ix = new Map(unk.map((id, i) => [id, i])), n = unk.length;
-  const A = Array.from({ length: n }, () => new Float64Array(n + 1));
+  const links = [], diag = new Float64Array(n), rhs = new Float64Array(n);
   for (const e of J) {
     const ge = g(e); if (!(ge > 0) || !live.has(e.a) || !live.has(e.b)) continue;
-    for (const [u, w] of [[e.a, e.b], [e.b, e.a]]) {
-      if (!ix.has(u)) continue;
-      const r = A[ix.get(u)]; r[ix.get(u)] += ge;
-      if (ix.has(w)) r[ix.get(w)] -= ge; else r[n] += ge * V.get(w);
+    const a = ix.get(e.a), b = ix.get(e.b);
+    if (a !== undefined && b !== undefined) links.push([a, b, ge]);
+    else if (a !== undefined) { diag[a] += ge; rhs[a] += ge * V.get(e.b); }
+    else if (b !== undefined) { diag[b] += ge; rhs[b] += ge * V.get(e.a); }
+  }
+  const [x] = netSolve(n, links, diag, [rhs]);
+  unk.forEach((id, i) => V.set(id, x[i]));
+  return { V, live, g };
+}
+/* Solve a network of conductances for its junction voltages: n junctions of unknown voltage, links [i, j, g]
+   between two of them (g: conductance), diag[i] the conductance from junction i to junctions held at a voltage, and
+   each right-hand side rhs[i] the current those push in. Returns the voltages, one array per right-hand side.
+   A ladder links each junction only to its neighbours, so the junctions are put in an order that keeps linked ones
+   close together (reverse Cuthill-McKee), and the elimination only works within that band: a whole machine's print
+   (hundreds of junctions) solves in a few milliseconds where doing every junction against every other took seconds.
+   (The network is a set of conductances, so no pivoting is needed.) A junction with nothing to hold it: 1, as before. */
+function netSolve(n, links, diag, rhs) {
+  const adj = Array.from({ length: n }, () => []);
+  for (const [i, j] of links) if (i !== j) { adj[i].push(j); adj[j].push(i); }
+  const deg = i => adj[i].length, order = [], seen = new Uint8Array(n);
+  for (const s of [...Array(n).keys()].sort((a, b) => deg(a) - deg(b))) {
+    if (seen[s]) continue; seen[s] = 1; const q = [s];
+    for (let h = 0; h < q.length; h++) { const u = q[h]; order.push(u); for (const w of adj[u].filter(w => !seen[w]).sort((a, b) => deg(a) - deg(b))) if (!seen[w]) { seen[w] = 1; q.push(w); } }
+  }
+  order.reverse();
+  const pos = new Int32Array(n); order.forEach((u, k) => { pos[u] = k; });
+  let bw = 0; for (const [i, j] of links) bw = Math.max(bw, Math.abs(pos[i] - pos[j]));
+  const W = 2 * bw + 1, A = Array.from({ length: n }, () => new Float64Array(W));   // (A[r][q - r + bw]: row r, column q)
+  for (let i = 0; i < n; i++) A[pos[i]][bw] += diag[i];
+  for (const [i, j, gg] of links) { if (i === j) continue; const a = pos[i], b = pos[j]; A[a][bw] += gg; A[b][bw] += gg; A[a][b - a + bw] -= gg; A[b][a - b + bw] -= gg; }
+  const B = rhs.map(r => { const b = new Float64Array(n); for (let i = 0; i < n; i++) b[pos[i]] = r[i]; return b; });
+  for (let c = 0; c < n; c++) {
+    const Ac = A[c], d = Ac[bw]; if (Math.abs(d) < 1e-300) continue;
+    const end = Math.min(n - 1, c + bw);
+    for (let r = c + 1; r <= end; r++) {
+      const Ar = A[r], o = bw - r; if (!Ar[c + o]) continue;
+      const k = Ar[c + o] / d;
+      for (let q = c; q <= end; q++) Ar[q + o] -= k * Ac[q - c + bw];
+      for (const b of B) b[r] -= k * b[c];
     }
   }
-  for (let c = 0; c < n; c++) {
-    let pv = c; for (let r = c + 1; r < n; r++) if (Math.abs(A[r][c]) > Math.abs(A[pv][c])) pv = r;
-    [A[c], A[pv]] = [A[pv], A[c]];
-    const d = A[c][c]; if (Math.abs(d) < 1e-300) continue;
-    for (let r = 0; r < n; r++) if (r !== c && A[r][c] !== 0) { const k = A[r][c] / d; for (let q = c; q <= n; q++) A[r][q] -= k * A[c][q]; }
-  }
-  unk.forEach((id, i) => V.set(id, A[i][i] ? A[i][n] / A[i][i] : 1));
-  return { V, live, g };
+  return B.map(b => {
+    const x = new Float64Array(n);
+    for (let c = n - 1; c >= 0; c--) {
+      const Ac = A[c]; let s = b[c]; const end = Math.min(n - 1, c + bw);
+      for (let q = c + 1; q <= end; q++) s -= Ac[q - c + bw] * x[q];
+      x[c] = Ac[bw] ? s / Ac[bw] : 1;
+    }
+    const out = new Float64Array(n); for (let i = 0; i < n; i++) out[i] = x[pos[i]];
+    return out;
+  });
 }
 /* =====================================================================
    how the supply's voltage shares out among the loads
@@ -2029,7 +2066,7 @@ function findNoway() {
   for (const coilsIn of [false, true]) for (const path of PATHS) {
     let label = '';
     for (const d of path) {
-      if (d.e.kind === 'part') { if (isOp(d.e.part)) label = opLabel(d.e.part, label); else if (isCon(d.e.part)) add(d, label); else if (LOADT(d.e.part.t) && coilsIn) label = 'ret'; continue; }
+      if (d.e.kind === 'part') { if (isOp(d.e.part)) label = loopKey(d.e.part, label); else if (isCon(d.e.part)) add(d, label); else if (LOADT(d.e.part.t) && coilsIn) label = 'ret'; continue; }
       add(d, label);
     }
   }
@@ -2068,6 +2105,13 @@ function findNoway() {
 // the colour a lane carries past a pushbutton or a limit, temperature or pressure switch: the switch's own, except past a
 // coil (a switch on the coil's way back to L2), where it is still the return current
 const opLabel = (p, label) => label === 'ret' ? 'ret' : opKey(p);
+/* The same, for finding the loops a colour could go round (findNoway): a selector switch drawn in several rungs, closed
+   in a different position in each, gives each drawing its own key. Two drawings closed in different positions are never
+   closed together, so a way through one and a way through the other are never both live, and never make a loop (on a
+   machine's print a selector's AUTO drawing on one rung and its CYCLE drawing on another can feed the same wire from
+   either end: without this, the wire would only be let carry the colour one way, and the other position would never
+   get through). */
+const loopKey = (p, label) => label === 'ret' ? 'ret' : p.t === 'sel' ? opKey(p) + '@' + (p.closedIn || []).join('.') : opKey(p);
 const onward = (d, k) => !(NOWAY.get(d) && NOWAY.get(d).has(k));
 // which colours each lane may carry right now: along every path, from L1 up to the first button not passing current,
 // each lane carries the colour of the last button before it ('' for plain egg, 'ret' after a coil)
@@ -2077,11 +2121,11 @@ const onward = (d, k) => !(NOWAY.get(d) && NOWAY.get(d).has(k));
 function findReach() {
   REACH = new Map();
   for (const path of PATHS) {
-    let label = '', s = 0;   // (s: how long the current takes to get there, in seconds)
+    let label = '', key = '', s = 0;   // (s: how long the current takes to get there, in seconds; key: see loopKey)
     for (const d of path) {
       s += d.e.kind === 'seg' ? d.delay : d.e.len / V;
-      if (d.e.kind === 'part' && !isCon(d.e.part)) { if (isOp(d.e.part)) label = opLabel(d.e.part, label); else if (LOADT(d.e.part.t)) label = 'ret'; continue; }
-      if (!onward(d, label)) break;   // (the colour cannot go this way: this path carries none of it on from here)
+      if (d.e.kind === 'part' && !isCon(d.e.part)) { if (isOp(d.e.part)) { key = loopKey(d.e.part, label); label = opLabel(d.e.part, label); } else if (LOADT(d.e.part.t)) label = key = 'ret'; continue; }
+      if (!onward(d, key)) break;   // (the colour cannot go this way: this path carries none of it on from here)
       const m = REACH.get(d) || {}; m[label] = Math.max(m[label] || 0, s); REACH.set(d, m);
     }
   }
@@ -2090,21 +2134,21 @@ const filtered = d => d.e.kind === 'seg' || isCon(d.e.part);   // lanes that onl
 function allowNow() {
   const A = new Map();
   for (const path of PATHS) {
-    let label = '';
+    let label = '', key = '';   // (key: see loopKey)
     for (const d of path) {
       if (d.e.kind === 'part') {
         if (d.e.part.t === 'brk') break;   // (a wire broken by a fault: open, always)
-        if (isSw(d.e.part)) { if (!closed(d.e.part)) break; if (isOp(d.e.part)) label = opLabel(d.e.part, label); else { if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label); } }   // a contact passes on the colour it is given
-        else if (COND[d.e.part.id]) label = 'ret';   // past a coil with current through it: the return side, back to L2
+        if (isSw(d.e.part)) { if (!closed(d.e.part)) break; if (isOp(d.e.part)) { key = loopKey(d.e.part, label); label = opLabel(d.e.part, label); } else { if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label); } }   // a contact passes on the colour it is given
+        else if (COND[d.e.part.id]) label = key = 'ret';   // past a coil with current through it: the return side, back to L2
         // (in a short circuit, a load passes nothing on but its own return current: its far side is joined to L2, not
         // live, and the current takes the short instead; a load with a short planted on it is the short itself, so the
         // current goes on through it)
-        else if (shortNow && faultOf(d.e.part) !== 'short') label = 'ret';   // (its return current drains away to L2 as the circuit dies; nothing else gets past it)
+        else if (shortNow && faultOf(d.e.part) !== 'short') label = key = 'ret';   // (its return current drains away to L2 as the circuit dies; nothing else gets past it)
         // (a coil that cannot pick up, because something past it is open, carries no current: the wire past it is as
         // live as the wire before it, so the colour waiting at the coil carries on up to whatever is open)
         continue;
       }
-      if (!onward(d, label)) break;
+      if (!onward(d, key)) break;
       if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label);
     }
   }
@@ -2555,8 +2599,12 @@ function phaseWays() {
   const T = new Set();
   for (const p of parts) { if (p.t === 'mtr' && p._t) p._t.forEach(n => T.add(n)); if (p.t === 'xfm' && p._a !== undefined) { T.add(p._a); T.add(p._b); } }
   const can = (e, u) => passable(e) && !(isP(e) && PLINE.get(e.part) !== u);
+  // (only what the phases can reach at all: on a whole machine's print the control circuit, past the transformer, is
+  // most of the wiring, and looking for a way on to a motor from every piece of it took most of the time to start)
+  const Z = new Set(srcs), zs = [...srcs];
+  while (zs.length) { const x = zs.pop(); for (const e2 of J.get(x) || []) { if (!passable(e2)) continue; const y = e2.a === x ? e2.b : e2.a; if (!Z.has(y)) { Z.add(y); zs.push(y); } } }
   for (const e of NET.jedges) for (const u of [e.a, e.b]) {
-    if (!can(e, u)) continue;
+    if (!Z.has(u) || !can(e, u)) continue;
     const w = e.a === u ? e.b : e.a; let ok = T.has(w);
     if (!ok) { const seen = new Set([u, w]), st = [w];
       while (st.length && !ok) { const x = st.pop(); for (const e2 of J.get(x) || []) { if (!can(e2, x)) continue; const y = e2.a === x ? e2.b : e2.a; if (seen.has(y)) continue; if (T.has(y)) { ok = true; break; } seen.add(y); st.push(y); } } }
@@ -3612,7 +3660,10 @@ function renderInto(target, V, L) {
     // each wire is repainted as a few smooth runs, one per colour
     const byWire = new Map();
     for (const s of NET.subs) { if (!byWire.has(s.wire.id)) byWire.set(s.wire.id, []); byWire.get(s.wire.id).push(s); }
-    for (const [, subs] of byWire) V.runs.push({ subs, n: V.runs.length, g: el('g', {}, layer(subs[0].x1, subs[0].x2, wy(subs[0].wire))), last: '' });
+    for (const [, subs] of byWire) {
+      const xs = subs.flatMap(q => [q.x1, q.x2]), ys = subs.flatMap(q => [q.y1, q.y2]);   // (where it is, so the painting can skip it while it is out of view)
+      V.runs.push({ subs, n: V.runs.length, g: el('g', {}, layer(subs[0].x1, subs[0].x2, wy(subs[0].wire))), last: '', bb: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] });
+    }
   }
   // the L1 bar down the left edge and the L2 bar down the right: wires connect by running into them
   for (const bd of bands) for (const [x, t] of barsOn() ? [[0, 'L1'], [W - BAR, 'L2']] : []) {
@@ -3957,7 +4008,11 @@ function paint() {
 // one drawing of the circuit (the main view, or the second pane in split view): the wires and the parts
 function paintView(V) {
   if (!V.runs) return;
+  // only the wires in view are recoloured (a whole machine's print has hundreds; scrolling or zooming asks for a paint,
+  // so a wire coming into view catches up at once). In Columns view the wires are moved about, so every one is.
+  const R = LAYOUT ? null : V === view ? [cam.x, cam.y, viewW(), viewH()] : V === view2 && !pane2.hidden ? [cam2.x, cam2.y, viewW2(), viewH2()] : null, M = 60;
   if (!TS_MODE) for (const it of V.runs) {
+    if (R && it.bb && (it.bb[2] < R[0] - M || it.bb[0] > R[0] + R[2] + M || it.bb[3] < R[1] - M || it.bb[1] > R[1] + R[3] + M)) continue;
     const cols = it.subs.map(s => lit(s.a, simT) && lit(s.b, simT) ? showCol(s.b, simT) : null), k = cols.join('|');
     if (k === it.last) continue; it.last = k;
     // each lit stretch of the wire is one smooth stroke, shaded along its length with a gradient
@@ -5766,6 +5821,7 @@ function applyCam() {
   else if (cam.fit) cam.y = room ? 0 : (H - vh) / 2;
   else cam.y = room ? Math.max(Math.min(0, Hc - vh), cam.y) : clampTo(cam.y, H - vh, 0);
   svg.setAttribute('viewBox', `${cam.x} ${cam.y} ${vw} ${vh}`);
+  if (!editing) needPaint = true;   // (wires coming into view are painted: see paintView)
   // building, zoomed out past what was drawn: draw again, so the sheet and its grid fill the view (room to build in)
   if (editing && view.drawn && !needRedraw && (canvasH() > view.drawn[1] + 1 || workW() > view.drawn[0] + 1)) { needRedraw = true; requestAnimationFrame(() => { needRedraw = false; draw(); }); }
   const lab = document.getElementById('zoom-pct'); if (lab) lab.textContent = Math.round(cam.z * 100) + '%';
@@ -5881,6 +5937,7 @@ function applyCam2() {
   cam2.x = vw >= W2 ? (W2 - vw) / 2 - SHEET_M : Math.min(Math.max(-SHEET_M, cam2.x), W2 - vw - SHEET_M);
   cam2.y = vh >= H ? (H - vh) / 2 : Math.min(Math.max(0, cam2.y), H - vh);
   svg2.setAttribute('viewBox', `${cam2.x} ${cam2.y} ${vw} ${vh}`);
+  if (!editing) needPaint = true;
   document.getElementById('zoom-pct2').textContent = Math.round(cam2.z * 100) + '%';
 }
 const pt2 = e => { const q = svg2.createSVGPoint(); q.x = e.clientX; q.y = e.clientY; const m = svg2.getScreenCTM(); return m ? q.matrixTransform(m.inverse()) : { x: 0, y: 0 }; };
@@ -6979,7 +7036,7 @@ function readCircuit(d) {
   if (d.v > 1) throw new Error('That circuit was saved by a newer version of the Circuit Builder.');
   const num = v => { const n = Number(v); if (!Number.isFinite(n)) throw new Error('The circuit is damaged (a position is not a number).'); return snap(n); };
   const hex = c => /^[0-9a-f]{6}$/i.test(c || '') ? '#' + c.toUpperCase() : null;
-  const ps = d.parts.slice(0, 200).map(a => {
+  const ps = d.parts.slice(0, 1000).map(a => {
     const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'htr' ? 'htr' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw', 'fsw'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
     const p = P(t, snap(num(a[1])), snap(num(a[2])), {   // (on the grid: a part saved off it, by an older version, could never be wired)
       L: ['dsc', 'fus', 'fu1', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw', 'fsw'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1))) : t === 'sol' || t === 'htr' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'htr' ? HTR_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : t === 'lsw' ? LSW_COL : t === 'tsw' ? TSW_COL : t === 'psw' ? PSW_COL : t === 'fsw' ? FSW_COL : BTN_COL[L] || '#FF0032') });
@@ -7709,23 +7766,18 @@ function tsSolve(T, fix) {
   for (const [a, b] of T.loads) { (adj.get(a) || adj.set(a, []).get(a)).push(b); (adj.get(b) || adj.set(b, []).get(b)).push(a); }
   const st = [...fix.keys()]; for (const k of st) live.add(k);
   while (st.length) { const u = st.pop(); for (const w of adj.get(u) || []) if (!live.has(w)) { live.add(w); st.push(w); } }
-  // complex system as a real one twice the size: [Re; Im]
-  const m = 2 * n, A = Array.from({ length: m }, () => new Float64Array(m + 1));
-  for (let i = 0; i < n; i++) if (!live.has(unk[i])) { A[i][i] = 1; A[n + i][n + i] = 1; }   // (no supply in reach: 0)
-  for (const [a, b, c] of T.loads) for (const [u, w] of [[a, b], [b, a]]) {
-    if (!ix.has(u) || !live.has(u)) continue; const r = ix.get(u);
-    A[r][r] += c; A[n + r][n + r] += c;
-    if (ix.has(w)) { A[r][ix.get(w)] -= c; A[n + r][n + ix.get(w)] -= c; }
-    else { const v = fix.get(w); A[r][m] += c * v[0]; A[n + r][m] += c * v[1]; }
+  // the conductances are real, so the real and imaginary parts are the same network with two sets of supplies
+  // (solved together by netSolve, in solve.js); a piece with no supply in reach: 0
+  const lv = unk.filter(k => live.has(k)), li = new Map(lv.map((k, i) => [k, i])), m = lv.length;
+  const links = [], diag = new Float64Array(m), re = new Float64Array(m), im = new Float64Array(m);
+  for (const [a, b, c] of T.loads) {
+    const x = li.get(a), y = li.get(b);
+    if (x !== undefined && y !== undefined) links.push([x, y, c]);
+    else for (const [u, w] of [[x, b], [y, a]]) if (u !== undefined && fix.has(w)) { const v = fix.get(w); diag[u] += c; re[u] += c * v[0]; im[u] += c * v[1]; }
   }
-  for (let col = 0; col < m; col++) {
-    let pv = col; for (let r = col + 1; r < m; r++) if (Math.abs(A[r][col]) > Math.abs(A[pv][col])) pv = r;
-    [A[col], A[pv]] = [A[pv], A[col]];
-    const d = A[col][col]; if (Math.abs(d) < 1e-300) continue;
-    for (let r = 0; r < m; r++) { if (r === col) continue; const k = A[r][col] / d; if (!k) continue; const R = A[r], C = A[col]; for (let c = col; c <= m; c++) R[c] -= k * C[c]; }
-  }
+  const [xr, xi] = netSolve(m, links, diag, [re, im]);
   const V = new Map(fix);
-  unk.forEach((k, i) => { const re = A[i][i] ? A[i][m] / A[i][i] : 0, im = A[n + i][n + i] ? A[n + i][m] / A[n + i][n + i] : 0; V.set(k, [re, im]); });
+  unk.forEach(k => { const i = li.get(k); V.set(k, i === undefined ? [0, 0] : [xr[i], xi[i]]); });
   return { V, live };
 }
 // the voltage the meter reads (RMS) between junctions a and b: nothing unless both have a way back to a supply
@@ -7743,16 +7795,16 @@ function tsOhms(a, b) {
   // 1 A in at a, b held at 0 V: the voltage at a is the resistance
   const c0 = T.comp(a), ks = new Set(); for (const [x, y] of T.loads) if (T.comp(x) === c0) { ks.add(x); ks.add(y); }
   ks.delete(B0); const unk = [...ks], ix = new Map(unk.map((k, i) => [k, i])), n = unk.length;
-  const A = Array.from({ length: n }, () => new Float64Array(n + 1));
-  for (const [x, y, c] of T.loads) for (const [u, w] of [[x, y], [y, x]]) { if (!ix.has(u)) continue; const r = ix.get(u); A[r][r] += c; if (ix.has(w)) A[r][ix.get(w)] -= c; }
-  A[ix.get(A0)][n] = 1;
-  for (let col = 0; col < n; col++) {
-    let pv = col; for (let r = col + 1; r < n; r++) if (Math.abs(A[r][col]) > Math.abs(A[pv][col])) pv = r;
-    [A[col], A[pv]] = [A[pv], A[col]];
-    const d = A[col][col]; if (Math.abs(d) < 1e-300) continue;
-    for (let r = 0; r < n; r++) { if (r === col) continue; const k = A[r][col] / d; if (!k) continue; const R = A[r], C = A[col]; for (let c = col; c <= n; c++) R[c] -= k * C[c]; }
+  const links = [], diag = new Float64Array(n), rhs = new Float64Array(n);
+  for (const [x, y, c] of T.loads) {
+    const u = ix.get(x), w = ix.get(y);
+    if (u !== undefined && w !== undefined) links.push([u, w, c]);
+    else if (u !== undefined && y === B0) diag[u] += c;
+    else if (w !== undefined && x === B0) diag[w] += c;
   }
-  const i = ix.get(A0); return A[i][i] ? A[i][n] / A[i][i] : Infinity;
+  rhs[ix.get(A0)] = 1;
+  const [v] = netSolve(n, links, diag, [rhs]), r = v[ix.get(A0)];
+  return Number.isFinite(r) ? r : Infinity;
 }
 
 /* ---- js/troubleshooter.js ---- */

@@ -61,26 +61,63 @@ function solveOnce(allClosed, blocked) {
   const live = new Set(), stack = [];
   for (const [id, v] of net.feedV) if (v === 1) { live.add(id); stack.push(id); }
   while (stack.length) { const u = stack.pop(); for (const e of net.jadj.get(u) || []) { if (!(g(e) > 0)) continue; const w = e.a === u ? e.b : e.a; if (!live.has(w)) { live.add(w); stack.push(w); } } }
-  // node voltages (Gaussian elimination; a circuit has at most a few hundred junctions)
+  // node voltages (see netSolve: fast even for a whole machine's print, hundreds of junctions)
   const V = new Map(); for (const [id, v] of net.feedV) if (live.has(id)) V.set(id, v);
   const unk = [...live].filter(id => !net.feedV.has(id)), ix = new Map(unk.map((id, i) => [id, i])), n = unk.length;
-  const A = Array.from({ length: n }, () => new Float64Array(n + 1));
+  const links = [], diag = new Float64Array(n), rhs = new Float64Array(n);
   for (const e of J) {
     const ge = g(e); if (!(ge > 0) || !live.has(e.a) || !live.has(e.b)) continue;
-    for (const [u, w] of [[e.a, e.b], [e.b, e.a]]) {
-      if (!ix.has(u)) continue;
-      const r = A[ix.get(u)]; r[ix.get(u)] += ge;
-      if (ix.has(w)) r[ix.get(w)] -= ge; else r[n] += ge * V.get(w);
+    const a = ix.get(e.a), b = ix.get(e.b);
+    if (a !== undefined && b !== undefined) links.push([a, b, ge]);
+    else if (a !== undefined) { diag[a] += ge; rhs[a] += ge * V.get(e.b); }
+    else if (b !== undefined) { diag[b] += ge; rhs[b] += ge * V.get(e.a); }
+  }
+  const [x] = netSolve(n, links, diag, [rhs]);
+  unk.forEach((id, i) => V.set(id, x[i]));
+  return { V, live, g };
+}
+/* Solve a network of conductances for its junction voltages: n junctions of unknown voltage, links [i, j, g]
+   between two of them (g: conductance), diag[i] the conductance from junction i to junctions held at a voltage, and
+   each right-hand side rhs[i] the current those push in. Returns the voltages, one array per right-hand side.
+   A ladder links each junction only to its neighbours, so the junctions are put in an order that keeps linked ones
+   close together (reverse Cuthill-McKee), and the elimination only works within that band: a whole machine's print
+   (hundreds of junctions) solves in a few milliseconds where doing every junction against every other took seconds.
+   (The network is a set of conductances, so no pivoting is needed.) A junction with nothing to hold it: 1, as before. */
+function netSolve(n, links, diag, rhs) {
+  const adj = Array.from({ length: n }, () => []);
+  for (const [i, j] of links) if (i !== j) { adj[i].push(j); adj[j].push(i); }
+  const deg = i => adj[i].length, order = [], seen = new Uint8Array(n);
+  for (const s of [...Array(n).keys()].sort((a, b) => deg(a) - deg(b))) {
+    if (seen[s]) continue; seen[s] = 1; const q = [s];
+    for (let h = 0; h < q.length; h++) { const u = q[h]; order.push(u); for (const w of adj[u].filter(w => !seen[w]).sort((a, b) => deg(a) - deg(b))) if (!seen[w]) { seen[w] = 1; q.push(w); } }
+  }
+  order.reverse();
+  const pos = new Int32Array(n); order.forEach((u, k) => { pos[u] = k; });
+  let bw = 0; for (const [i, j] of links) bw = Math.max(bw, Math.abs(pos[i] - pos[j]));
+  const W = 2 * bw + 1, A = Array.from({ length: n }, () => new Float64Array(W));   // (A[r][q - r + bw]: row r, column q)
+  for (let i = 0; i < n; i++) A[pos[i]][bw] += diag[i];
+  for (const [i, j, gg] of links) { if (i === j) continue; const a = pos[i], b = pos[j]; A[a][bw] += gg; A[b][bw] += gg; A[a][b - a + bw] -= gg; A[b][a - b + bw] -= gg; }
+  const B = rhs.map(r => { const b = new Float64Array(n); for (let i = 0; i < n; i++) b[pos[i]] = r[i]; return b; });
+  for (let c = 0; c < n; c++) {
+    const Ac = A[c], d = Ac[bw]; if (Math.abs(d) < 1e-300) continue;
+    const end = Math.min(n - 1, c + bw);
+    for (let r = c + 1; r <= end; r++) {
+      const Ar = A[r], o = bw - r; if (!Ar[c + o]) continue;
+      const k = Ar[c + o] / d;
+      for (let q = c; q <= end; q++) Ar[q + o] -= k * Ac[q - c + bw];
+      for (const b of B) b[r] -= k * b[c];
     }
   }
-  for (let c = 0; c < n; c++) {
-    let pv = c; for (let r = c + 1; r < n; r++) if (Math.abs(A[r][c]) > Math.abs(A[pv][c])) pv = r;
-    [A[c], A[pv]] = [A[pv], A[c]];
-    const d = A[c][c]; if (Math.abs(d) < 1e-300) continue;
-    for (let r = 0; r < n; r++) if (r !== c && A[r][c] !== 0) { const k = A[r][c] / d; for (let q = c; q <= n; q++) A[r][q] -= k * A[c][q]; }
-  }
-  unk.forEach((id, i) => V.set(id, A[i][i] ? A[i][n] / A[i][i] : 1));
-  return { V, live, g };
+  return B.map(b => {
+    const x = new Float64Array(n);
+    for (let c = n - 1; c >= 0; c--) {
+      const Ac = A[c]; let s = b[c]; const end = Math.min(n - 1, c + bw);
+      for (let q = c + 1; q <= end; q++) s -= Ac[q - c + bw] * x[q];
+      x[c] = Ac[bw] ? s / Ac[bw] : 1;
+    }
+    const out = new Float64Array(n); for (let i = 0; i < n; i++) out[i] = x[pos[i]];
+    return out;
+  });
 }
 /* =====================================================================
    how the supply's voltage shares out among the loads

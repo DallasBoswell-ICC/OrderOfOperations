@@ -37,7 +37,11 @@ function paint() {
 // one drawing of the circuit (the main view, or the second pane in split view): the wires and the parts
 function paintView(V) {
   if (!V.runs) return;
+  // only the wires in view are recoloured (a whole machine's print has hundreds; scrolling or zooming asks for a paint,
+  // so a wire coming into view catches up at once). In Columns view the wires are moved about, so every one is.
+  const R = LAYOUT ? null : V === view ? [cam.x, cam.y, viewW(), viewH()] : V === view2 && !pane2.hidden ? [cam2.x, cam2.y, viewW2(), viewH2()] : null, M = 60;
   if (!TS_MODE) for (const it of V.runs) {
+    if (R && it.bb && (it.bb[2] < R[0] - M || it.bb[0] > R[0] + R[2] + M || it.bb[3] < R[1] - M || it.bb[1] > R[1] + R[3] + M)) continue;
     const cols = it.subs.map(s => lit(s.a, simT) && lit(s.b, simT) ? showCol(s.b, simT) : null), k = cols.join('|');
     if (k === it.last) continue; it.last = k;
     // each lit stretch of the wire is one smooth stroke, shaded along its length with a gradient

@@ -339,6 +339,15 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     return out;
   });
 
+  await check('A whole machine (the drill station, 375 parts): the meter reads volts and ohms at once', async page => {
+    const out = [], json = require('fs').readFileSync(require('path').join(__dirname, 'fixtures', 'drill-station.json'), 'utf8');
+    await page.evaluate(j => useCircuit(readCircuit(JSON.parse(j)), ''), json);
+    const r = await page.evaluate(() => { if (editing) setMode(true); const c = parts.find(p => p.label === 'CR1');
+      let t = performance.now(); const v = tsVolts(c._a, c._b); const tv = performance.now() - t; t = performance.now(); const o = tsOhms(c._a, c._b); return { v, tv, o, to: performance.now() - t }; });
+    if (r.tv > 500 || r.to > 500) out.push(`slow: volts ${Math.round(r.tv)} ms, ohms ${Math.round(r.to)} ms`);
+    if (!(r.o > 0 && r.o < 2500)) out.push('CR1 ohms ' + r.o + ' (its coil, with the other loads it is joined to)');
+    return out;
+  });
   await browser.close();
   const failed = results.filter(r => !r.ok);
   console.log(`\n${results.length - failed.length} of ${results.length} Fault Finder checks passed.`);

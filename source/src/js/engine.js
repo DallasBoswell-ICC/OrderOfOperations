@@ -189,7 +189,7 @@ function findNoway() {
   for (const coilsIn of [false, true]) for (const path of PATHS) {
     let label = '';
     for (const d of path) {
-      if (d.e.kind === 'part') { if (isOp(d.e.part)) label = opLabel(d.e.part, label); else if (isCon(d.e.part)) add(d, label); else if (LOADT(d.e.part.t) && coilsIn) label = 'ret'; continue; }
+      if (d.e.kind === 'part') { if (isOp(d.e.part)) label = loopKey(d.e.part, label); else if (isCon(d.e.part)) add(d, label); else if (LOADT(d.e.part.t) && coilsIn) label = 'ret'; continue; }
       add(d, label);
     }
   }
@@ -228,6 +228,13 @@ function findNoway() {
 // the colour a lane carries past a pushbutton or a limit, temperature or pressure switch: the switch's own, except past a
 // coil (a switch on the coil's way back to L2), where it is still the return current
 const opLabel = (p, label) => label === 'ret' ? 'ret' : opKey(p);
+/* The same, for finding the loops a colour could go round (findNoway): a selector switch drawn in several rungs, closed
+   in a different position in each, gives each drawing its own key. Two drawings closed in different positions are never
+   closed together, so a way through one and a way through the other are never both live, and never make a loop (on a
+   machine's print a selector's AUTO drawing on one rung and its CYCLE drawing on another can feed the same wire from
+   either end: without this, the wire would only be let carry the colour one way, and the other position would never
+   get through). */
+const loopKey = (p, label) => label === 'ret' ? 'ret' : p.t === 'sel' ? opKey(p) + '@' + (p.closedIn || []).join('.') : opKey(p);
 const onward = (d, k) => !(NOWAY.get(d) && NOWAY.get(d).has(k));
 // which colours each lane may carry right now: along every path, from L1 up to the first button not passing current,
 // each lane carries the colour of the last button before it ('' for plain egg, 'ret' after a coil)
@@ -237,11 +244,11 @@ const onward = (d, k) => !(NOWAY.get(d) && NOWAY.get(d).has(k));
 function findReach() {
   REACH = new Map();
   for (const path of PATHS) {
-    let label = '', s = 0;   // (s: how long the current takes to get there, in seconds)
+    let label = '', key = '', s = 0;   // (s: how long the current takes to get there, in seconds; key: see loopKey)
     for (const d of path) {
       s += d.e.kind === 'seg' ? d.delay : d.e.len / V;
-      if (d.e.kind === 'part' && !isCon(d.e.part)) { if (isOp(d.e.part)) label = opLabel(d.e.part, label); else if (LOADT(d.e.part.t)) label = 'ret'; continue; }
-      if (!onward(d, label)) break;   // (the colour cannot go this way: this path carries none of it on from here)
+      if (d.e.kind === 'part' && !isCon(d.e.part)) { if (isOp(d.e.part)) { key = loopKey(d.e.part, label); label = opLabel(d.e.part, label); } else if (LOADT(d.e.part.t)) label = key = 'ret'; continue; }
+      if (!onward(d, key)) break;   // (the colour cannot go this way: this path carries none of it on from here)
       const m = REACH.get(d) || {}; m[label] = Math.max(m[label] || 0, s); REACH.set(d, m);
     }
   }
@@ -250,21 +257,21 @@ const filtered = d => d.e.kind === 'seg' || isCon(d.e.part);   // lanes that onl
 function allowNow() {
   const A = new Map();
   for (const path of PATHS) {
-    let label = '';
+    let label = '', key = '';   // (key: see loopKey)
     for (const d of path) {
       if (d.e.kind === 'part') {
         if (d.e.part.t === 'brk') break;   // (a wire broken by a fault: open, always)
-        if (isSw(d.e.part)) { if (!closed(d.e.part)) break; if (isOp(d.e.part)) label = opLabel(d.e.part, label); else { if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label); } }   // a contact passes on the colour it is given
-        else if (COND[d.e.part.id]) label = 'ret';   // past a coil with current through it: the return side, back to L2
+        if (isSw(d.e.part)) { if (!closed(d.e.part)) break; if (isOp(d.e.part)) { key = loopKey(d.e.part, label); label = opLabel(d.e.part, label); } else { if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label); } }   // a contact passes on the colour it is given
+        else if (COND[d.e.part.id]) label = key = 'ret';   // past a coil with current through it: the return side, back to L2
         // (in a short circuit, a load passes nothing on but its own return current: its far side is joined to L2, not
         // live, and the current takes the short instead; a load with a short planted on it is the short itself, so the
         // current goes on through it)
-        else if (shortNow && faultOf(d.e.part) !== 'short') label = 'ret';   // (its return current drains away to L2 as the circuit dies; nothing else gets past it)
+        else if (shortNow && faultOf(d.e.part) !== 'short') label = key = 'ret';   // (its return current drains away to L2 as the circuit dies; nothing else gets past it)
         // (a coil that cannot pick up, because something past it is open, carries no current: the wire past it is as
         // live as the wire before it, so the colour waiting at the coil carries on up to whatever is open)
         continue;
       }
-      if (!onward(d, label)) break;
+      if (!onward(d, key)) break;
       if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label);
     }
   }
@@ -715,8 +722,12 @@ function phaseWays() {
   const T = new Set();
   for (const p of parts) { if (p.t === 'mtr' && p._t) p._t.forEach(n => T.add(n)); if (p.t === 'xfm' && p._a !== undefined) { T.add(p._a); T.add(p._b); } }
   const can = (e, u) => passable(e) && !(isP(e) && PLINE.get(e.part) !== u);
+  // (only what the phases can reach at all: on a whole machine's print the control circuit, past the transformer, is
+  // most of the wiring, and looking for a way on to a motor from every piece of it took most of the time to start)
+  const Z = new Set(srcs), zs = [...srcs];
+  while (zs.length) { const x = zs.pop(); for (const e2 of J.get(x) || []) { if (!passable(e2)) continue; const y = e2.a === x ? e2.b : e2.a; if (!Z.has(y)) { Z.add(y); zs.push(y); } } }
   for (const e of NET.jedges) for (const u of [e.a, e.b]) {
-    if (!can(e, u)) continue;
+    if (!Z.has(u) || !can(e, u)) continue;
     const w = e.a === u ? e.b : e.a; let ok = T.has(w);
     if (!ok) { const seen = new Set([u, w]), st = [w];
       while (st.length && !ok) { const x = st.pop(); for (const e2 of J.get(x) || []) { if (!can(e2, x)) continue; const y = e2.a === x ? e2.b : e2.a; if (seen.has(y)) continue; if (T.has(y)) { ok = true; break; } seen.add(y); st.push(y); } } }

@@ -1399,8 +1399,14 @@ const DEF_CIRCUIT = `
     // the current shows in both panes: press ON with the mouse in the first pane; the wire after it lights in both
     const on = await page.evaluate(() => { const p = mainBtn('B'); const r = view.parts.get(p.id).fill.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
     await page.mouse.click(...on); await page.evaluate(new Function(STEP + 'step(3); paint();'));
-    const lit = await page.evaluate(() => [view, view2].map(V => V.runs.filter(it => it.g.childElementCount).length));
-    if (!(lit[0] > 0 && lit[0] === lit[1])) out.push('lit wires in the two panes: ' + lit.join(' and '));
+    // (each pane paints only the wires in its own view: compare the wires both have in view, lit alike in each)
+    const lit = await page.evaluate(() => {
+      const R = [[cam.x, cam.y, viewW(), viewH()], [cam2.x, cam2.y, viewW2(), viewH2()]], inR = (b, r) => !(b[2] < r[0] || b[0] > r[0] + r[2] || b[3] < r[1] || b[1] > r[1] + r[3]);
+      const n = [view, view2].map((V, k) => V.runs.filter(it => inR(it.bb, R[k]) && it.g.childElementCount).length);
+      const both = view.runs.map((it, i) => [it, view2.runs[i]]).filter(([a, b]) => b && inR(a.bb, R[0]) && inR(b.bb, R[1]));
+      return { n, both: both.length, differ: both.filter(([a, b]) => !!a.g.childElementCount !== !!b.g.childElementCount).length };
+    });
+    if (!(lit.n[0] > 0 && lit.n[1] > 0) || lit.differ) out.push('lit wires in the two panes: ' + JSON.stringify(lit));
     // full screen
     await page.click('#fs-toggle'); await page.waitForTimeout(150);
     if (await page.isVisible('.titlebar') || await page.isVisible('#speed-slider')) out.push('full screen still shows the title bar or the open ribbon');
@@ -3149,6 +3155,77 @@ const DEF_CIRCUIT = `
     const r = await page.evaluate(() => ({ runs: view.runs.reduce((n, r) => n + r.g.childElementCount, 0), jackets: document.querySelectorAll('#svg path[stroke="#2f3236"]').length, blocks: document.querySelectorAll('#svg rect[fill="#5d636a"]').length }));
     if (!r.runs) out.push('no current shown');
     if (r.jackets || r.blocks) out.push('Troubleshooter look in the Builder: ' + JSON.stringify(r));
+    return out;
+  });
+
+  // ---- a whole machine's print (Dallas, 16 Nov 2026: the Amatrol drill station, 125 rungs, rebuilt from his print)
+  await check('A whole machine: the drill station (375 parts) opens complete, is wired with no warnings, and goes into Run quickly', async page => {
+    const out = [], json = require('fs').readFileSync(path.join(__dirname, 'fixtures', 'drill-station.json'), 'utf8');
+    await page.evaluate(j => useCircuit(readCircuit(JSON.parse(j)), ''), json);
+    const n = await page.evaluate(() => parts.length);
+    if (n !== JSON.parse(json).parts.length) out.push(`opened ${n} of ${JSON.parse(json).parts.length} parts (the old limit was 200)`);
+    const warn = await page.evaluate(() => { const m = wiringIssues(network()); return [...m.keys()].length; });
+    if (warn) out.push(warn + ' wiring warnings');
+    const ms = await page.evaluate(() => { const t = performance.now(); setMode(true); return performance.now() - t; });
+    if (ms > 4000) out.push(`going into Run took ${Math.round(ms)} ms`);
+    return out;
+  });
+  await check('The circuit solve (banded, for big prints) gives the same voltages as solving every junction against every other', async page => {
+    const r = await page.evaluate(() => {
+      let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      let worst = 0;
+      for (let t = 0; t < 20; t++) {
+        const n = 20 + Math.floor(rnd() * 60), links = [], diag = new Float64Array(n), rhs = new Float64Array(n);
+        for (let i = 1; i < n; i++) links.push([i, Math.floor(rnd() * i), 0.001 + rnd()]);           // (a tree: all joined)
+        for (let k = 0; k < n; k++) links.push([Math.floor(rnd() * n), Math.floor(rnd() * n), rnd()]);   // (and some loops)
+        for (let k = 0; k < 3; k++) { const i = Math.floor(rnd() * n), g = 0.01 + rnd(); diag[i] += g; rhs[i] += g * rnd(); }
+        const [x] = netSolve(n, links, diag, [rhs]);
+        // the same, every junction against every other
+        const A = Array.from({ length: n }, () => new Float64Array(n + 1));
+        for (let i = 0; i < n; i++) { A[i][i] += diag[i]; A[i][n] = rhs[i]; }
+        for (const [i, j, g] of links) if (i !== j) { A[i][i] += g; A[j][j] += g; A[i][j] -= g; A[j][i] -= g; }
+        for (let c = 0; c < n; c++) { const d = A[c][c]; for (let q = 0; q < n; q++) if (q !== c && A[q][c]) { const k = A[q][c] / d; for (let z = c; z <= n; z++) A[q][z] -= k * A[c][z]; } }
+        for (let i = 0; i < n; i++) worst = Math.max(worst, Math.abs(A[i][n] / A[i][i] - x[i]));
+      }
+      return worst;
+    });
+    return r < 1e-9 ? [] : ['largest difference ' + r];
+  });
+  await check('A selector drawn on two rungs, closed in a different position on each, feeding the same wire from either end: every position gets through', async page => {
+    const out = [];
+    const d = { app: 'order-of-operations-circuit-builder', v: 1, w: 1000,
+      parts: [['sel', 160, 200, 'S', 0, 1, '0070C0', 3, 4, null, 'A/B/C', 0], ['coil', 700, 200, 'X', 0, 1, 'FFDC00'],
+              ['sel', 160, 400, 'S', 0, 1, '0070C0', 3, 1, null, 'A/B/C', 0], ['coil', 700, 400, 'Y', 0, 1, 'EC008C']],
+      wires: [[0, 200, 100, 200], [220, 200, 640, 200], [760, 200, 1000, 200], [0, 400, 100, 400], [220, 400, 640, 400], [760, 400, 1000, 400], [400, 200, 400, 400]] };
+    await page.evaluate(j => useCircuit(readCircuit(JSON.parse(j)), ''), JSON.stringify(d));
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300));
+    const both = () => page.evaluate(() => parts.filter(p => p.t === 'coil').map(p => coilOn[p.id] ? 1 : 0).join(''));
+    for (const [pos, want] of [[0, '11'], [1, '00'], [2, '11'], [0, '11']]) {
+      await page.evaluate(k => turn('S', k), pos); await page.waitForTimeout(450);
+      const got = await both(); if (got !== want) out.push(`position ${'ABC'[pos]}: coils ${got}, should be ${want}`);
+    }
+    return out;
+  });
+  await check('The drill station runs: AUTO seals in, a two-hand MACHINE CYCLE starts the table and clamp, and drill 1 extends in AUTO', async page => {
+    const out = [], json = require('fs').readFileSync(path.join(__dirname, 'fixtures', 'drill-station.json'), 'utf8');
+    await page.evaluate(j => useCircuit(readCircuit(JSON.parse(j)), ''), json);
+    await page.evaluate(() => { setMode(true); setSpeed(10); setTimersReal(true); });
+    const settle = async () => { for (let i = 0; i < 300; i++) { await page.waitForTimeout(40); if (await page.evaluate(() => !busyQueue() && simT > busyUntil + .5 && !Object.keys(autoRel).length)) return; } };
+    const on = l => page.evaluate(l => { const p = parts.find(q => q.label === l); return !!coilOn[p.id]; }, l);
+    const click = async l => { await page.evaluate(l => { const k = parts.find(q => q.label === l).L; press(k, true); autoRel[k] = true; }, l); await settle(); };
+    await settle(); await click('AIR ON'); await click('AUTO');
+    if (!await on('CR1')) out.push('AUTO: CR1 did not seal in');
+    await page.evaluate(() => { for (const p of parts) if (p.t === 'sel' && p.names && p.names[2] === 'CYCLE') turn(p.L, 0); }); await settle();
+    const mc = await page.evaluate(() => parts.filter(p => p.label === 'MACH CYC' && !p.nc).map(p => p.L));
+    await page.evaluate(m => { press(m[0], true); press(m[1], true); }, mc);
+    for (let i = 0; i < 80 && !await on('CR5'); i++) await page.waitForTimeout(50);
+    if (!await on('CR5')) out.push('MACHINE CYCLE: CR5 did not pick up');
+    await page.evaluate(m => { press(m[0], false); press(m[1], false); }, mc); await settle();
+    if (!await on('CR1')) out.push('CR1 dropped out as the cycle started (TR6 handing over to rung 9)');
+    for (const k of ['11', '12', '5', '6']) { await page.evaluate(k => press(k, true), k); await settle(); }   // (table leaves home, reaches PRS2; clamp leaves LS5, reaches LS6)
+    for (let i = 0; i < 60 && !await on('CR26'); i++) await page.waitForTimeout(50);
+    if (!await on('CR22')) out.push('drill 1 cycle relay CR22 not in');
+    if (!await on('CR26')) out.push('drill 1 extend relay CR26 not in (its selector\'s AUTO drawing feeds wire 105 from below)');
     return out;
   });
 

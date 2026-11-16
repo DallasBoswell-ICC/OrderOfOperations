@@ -62,6 +62,7 @@ function applyCam2() {
   cam2.x = vw >= W2 ? (W2 - vw) / 2 - SHEET_M : Math.min(Math.max(-SHEET_M, cam2.x), W2 - vw - SHEET_M);
   cam2.y = vh >= H ? (H - vh) / 2 : Math.min(Math.max(0, cam2.y), H - vh);
   svg2.setAttribute('viewBox', `${cam2.x} ${cam2.y} ${vw} ${vh}`);
+  if (!editing) needPaint = true;
   document.getElementById('zoom-pct2').textContent = Math.round(cam2.z * 100) + '%';
 }
 const pt2 = e => { const q = svg2.createSVGPoint(); q.x = e.clientX; q.y = e.clientY; const m = svg2.getScreenCTM(); return m ? q.matrixTransform(m.inverse()) : { x: 0, y: 0 }; };

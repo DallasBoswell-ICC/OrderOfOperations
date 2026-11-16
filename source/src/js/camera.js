@@ -29,6 +29,7 @@ function applyCam() {
   else if (cam.fit) cam.y = room ? 0 : (H - vh) / 2;
   else cam.y = room ? Math.max(Math.min(0, Hc - vh), cam.y) : clampTo(cam.y, H - vh, 0);
   svg.setAttribute('viewBox', `${cam.x} ${cam.y} ${vw} ${vh}`);
+  if (!editing) needPaint = true;   // (wires coming into view are painted: see paintView)
   // building, zoomed out past what was drawn: draw again, so the sheet and its grid fill the view (room to build in)
   if (editing && view.drawn && !needRedraw && (canvasH() > view.drawn[1] + 1 || workW() > view.drawn[0] + 1)) { needRedraw = true; requestAnimationFrame(() => { needRedraw = false; draw(); }); }
   const lab = document.getElementById('zoom-pct'); if (lab) lab.textContent = Math.round(cam.z * 100) + '%';

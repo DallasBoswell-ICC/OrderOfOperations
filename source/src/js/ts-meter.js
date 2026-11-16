@@ -57,23 +57,18 @@ function tsSolve(T, fix) {
   for (const [a, b] of T.loads) { (adj.get(a) || adj.set(a, []).get(a)).push(b); (adj.get(b) || adj.set(b, []).get(b)).push(a); }
   const st = [...fix.keys()]; for (const k of st) live.add(k);
   while (st.length) { const u = st.pop(); for (const w of adj.get(u) || []) if (!live.has(w)) { live.add(w); st.push(w); } }
-  // complex system as a real one twice the size: [Re; Im]
-  const m = 2 * n, A = Array.from({ length: m }, () => new Float64Array(m + 1));
-  for (let i = 0; i < n; i++) if (!live.has(unk[i])) { A[i][i] = 1; A[n + i][n + i] = 1; }   // (no supply in reach: 0)
-  for (const [a, b, c] of T.loads) for (const [u, w] of [[a, b], [b, a]]) {
-    if (!ix.has(u) || !live.has(u)) continue; const r = ix.get(u);
-    A[r][r] += c; A[n + r][n + r] += c;
-    if (ix.has(w)) { A[r][ix.get(w)] -= c; A[n + r][n + ix.get(w)] -= c; }
-    else { const v = fix.get(w); A[r][m] += c * v[0]; A[n + r][m] += c * v[1]; }
+  // the conductances are real, so the real and imaginary parts are the same network with two sets of supplies
+  // (solved together by netSolve, in solve.js); a piece with no supply in reach: 0
+  const lv = unk.filter(k => live.has(k)), li = new Map(lv.map((k, i) => [k, i])), m = lv.length;
+  const links = [], diag = new Float64Array(m), re = new Float64Array(m), im = new Float64Array(m);
+  for (const [a, b, c] of T.loads) {
+    const x = li.get(a), y = li.get(b);
+    if (x !== undefined && y !== undefined) links.push([x, y, c]);
+    else for (const [u, w] of [[x, b], [y, a]]) if (u !== undefined && fix.has(w)) { const v = fix.get(w); diag[u] += c; re[u] += c * v[0]; im[u] += c * v[1]; }
   }
-  for (let col = 0; col < m; col++) {
-    let pv = col; for (let r = col + 1; r < m; r++) if (Math.abs(A[r][col]) > Math.abs(A[pv][col])) pv = r;
-    [A[col], A[pv]] = [A[pv], A[col]];
-    const d = A[col][col]; if (Math.abs(d) < 1e-300) continue;
-    for (let r = 0; r < m; r++) { if (r === col) continue; const k = A[r][col] / d; if (!k) continue; const R = A[r], C = A[col]; for (let c = col; c <= m; c++) R[c] -= k * C[c]; }
-  }
+  const [xr, xi] = netSolve(m, links, diag, [re, im]);
   const V = new Map(fix);
-  unk.forEach((k, i) => { const re = A[i][i] ? A[i][m] / A[i][i] : 0, im = A[n + i][n + i] ? A[n + i][m] / A[n + i][n + i] : 0; V.set(k, [re, im]); });
+  unk.forEach(k => { const i = li.get(k); V.set(k, i === undefined ? [0, 0] : [xr[i], xi[i]]); });
   return { V, live };
 }
 // the voltage the meter reads (RMS) between junctions a and b: nothing unless both have a way back to a supply
@@ -91,14 +86,14 @@ function tsOhms(a, b) {
   // 1 A in at a, b held at 0 V: the voltage at a is the resistance
   const c0 = T.comp(a), ks = new Set(); for (const [x, y] of T.loads) if (T.comp(x) === c0) { ks.add(x); ks.add(y); }
   ks.delete(B0); const unk = [...ks], ix = new Map(unk.map((k, i) => [k, i])), n = unk.length;
-  const A = Array.from({ length: n }, () => new Float64Array(n + 1));
-  for (const [x, y, c] of T.loads) for (const [u, w] of [[x, y], [y, x]]) { if (!ix.has(u)) continue; const r = ix.get(u); A[r][r] += c; if (ix.has(w)) A[r][ix.get(w)] -= c; }
-  A[ix.get(A0)][n] = 1;
-  for (let col = 0; col < n; col++) {
-    let pv = col; for (let r = col + 1; r < n; r++) if (Math.abs(A[r][col]) > Math.abs(A[pv][col])) pv = r;
-    [A[col], A[pv]] = [A[pv], A[col]];
-    const d = A[col][col]; if (Math.abs(d) < 1e-300) continue;
-    for (let r = 0; r < n; r++) { if (r === col) continue; const k = A[r][col] / d; if (!k) continue; const R = A[r], C = A[col]; for (let c = col; c <= n; c++) R[c] -= k * C[c]; }
+  const links = [], diag = new Float64Array(n), rhs = new Float64Array(n);
+  for (const [x, y, c] of T.loads) {
+    const u = ix.get(x), w = ix.get(y);
+    if (u !== undefined && w !== undefined) links.push([u, w, c]);
+    else if (u !== undefined && y === B0) diag[u] += c;
+    else if (w !== undefined && x === B0) diag[w] += c;
   }
-  const i = ix.get(A0); return A[i][i] ? A[i][n] / A[i][i] : Infinity;
+  rhs[ix.get(A0)] = 1;
+  const [v] = netSolve(n, links, diag, [rhs]), r = v[ix.get(A0)];
+  return Number.isFinite(r) ? r : Infinity;
 }

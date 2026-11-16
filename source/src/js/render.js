@@ -60,7 +60,10 @@ function renderInto(target, V, L) {
     // each wire is repainted as a few smooth runs, one per colour
     const byWire = new Map();
     for (const s of NET.subs) { if (!byWire.has(s.wire.id)) byWire.set(s.wire.id, []); byWire.get(s.wire.id).push(s); }
-    for (const [, subs] of byWire) V.runs.push({ subs, n: V.runs.length, g: el('g', {}, layer(subs[0].x1, subs[0].x2, wy(subs[0].wire))), last: '' });
+    for (const [, subs] of byWire) {
+      const xs = subs.flatMap(q => [q.x1, q.x2]), ys = subs.flatMap(q => [q.y1, q.y2]);   // (where it is, so the painting can skip it while it is out of view)
+      V.runs.push({ subs, n: V.runs.length, g: el('g', {}, layer(subs[0].x1, subs[0].x2, wy(subs[0].wire))), last: '', bb: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] });
+    }
   }
   // the L1 bar down the left edge and the L2 bar down the right: wires connect by running into them
   for (const bd of bands) for (const [x, t] of barsOn() ? [[0, 'L1'], [W - BAR, 'L2']] : []) {
