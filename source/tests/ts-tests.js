@@ -51,7 +51,7 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
 (async () => {
   browser = await chromium.launch();
 
-  await check('The page: Troubleshooter title, Run only (no Build, no parts, no Faults tab), faults live, no fault badges, its own storage', async page => {
+  await check('The page: Troubleshooter title, coral icons and app manifest (demo: DEMO corner), Run only (no Build, no parts, no Faults tab), faults live, no fault badges, its own storage', async page => {
     const out = [];
     const st = await page.evaluate(() => ({ h1: document.querySelector('h1').textContent, title: document.title, editing, ts: TS_MODE, faults: faultsLive(), badges: document.querySelectorAll('#svg .fault-badge, #svg [data-fault]').length,
       build: getComputedStyle(document.querySelector('.modeseg')).display, home: getComputedStyle(document.getElementById('rt-home')).display, faultsTab: getComputedStyle(document.getElementById('rt-faults')).display,
@@ -66,6 +66,16 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     const want = DEMO ? 'oo-troubleshooter-demo:' : 'oo-troubleshooter:';
     for (const k of st.keys) if (!k.startsWith(want)) out.push('storage key ' + k);
     if (!st.keys.length) out.push('nothing kept in the browser');
+    // its own icons (coral, FAULTS; the demo's with the green DEMO corner) and its own app manifest, next to the page
+    const dir = path.dirname(PAGE.replace('file://', '')), pre = DEMO ? 'tsd-' : 'ts-';
+    for (const f of ['icon-192.png', 'icon-512.png', 'maskable-512.png', 'apple-touch-icon.png', 'favicon-32.png', 'icon.svg']) if (!fs.existsSync(path.join(dir, 'icons', pre + f))) out.push('missing icon ' + pre + f);
+    let man = {}; try { man = JSON.parse(fs.readFileSync(path.join(dir, 'troubleshooter.webmanifest'), 'utf8')); } catch (e) { out.push('no manifest'); }
+    if (man.short_name !== (DEMO ? 'Troubleshooter Demo' : 'Troubleshooter') || !(man.icons || []).every(i => fs.existsSync(path.join(dir, i.src.split('?')[0])))) out.push('manifest: ' + JSON.stringify(man).slice(0, 200));
+    const svgI = fs.readFileSync(path.join(dir, 'icons', pre + 'icon.svg'), 'utf8');
+    if (!/#FF6F59/.test(svgI) || /#FFC000/.test(svgI) || DEMO !== /#9BE03A/.test(svgI)) out.push('icon colours');
+    const head = await page.evaluate(() => ({ man: document.querySelector('link[rel=manifest]').getAttribute('href'), apple: document.querySelector('link[rel=apple-touch-icon]').getAttribute('href'), fav: document.querySelector('link[rel=icon]').href, about: document.getElementById('about-title').textContent, logo: document.querySelector('.titlebar .logo').innerHTML }));
+    if (!/troubleshooter\.webmanifest/.test(head.man) || !head.apple.includes(pre + 'apple-touch-icon') || !/FF6F59/.test(decodeURIComponent(head.fav))) out.push('page head: ' + JSON.stringify({ ...head, fav: '', logo: '' }));
+    if (head.about !== 'Order of Operations: Troubleshooter' || !/FF6F59/.test(head.logo)) out.push('About title or title-bar logo');
     // pressing G (Build / Run) does nothing
     await page.keyboard.press('g'); await page.waitForTimeout(100);
     if (await page.evaluate(() => editing)) out.push('G switched to Build');

@@ -1,0 +1,37 @@
+{
+ "name": "Order of Operations: Troubleshooter (Demo)",
+ "short_name": "Troubleshooter Demo",
+ "id": "./index.html",
+ "start_url": "./index.html",
+ "scope": "./index.html",
+ "display": "standalone",
+ "background_color": "#1c1d1f",
+ "theme_color": "#9be03a",
+ "description": "Find and fix the faults planted in a circuit with a meter, as a technician would, for the Order of Operations troubleshooting class.",
+ "icons": [
+  {
+   "src": "icons/tsd-icon-192.png?v=1",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icons/tsd-icon-512.png?v=1",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icons/tsd-maskable-512.png?v=1",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  },
+  {
+   "src": "icons/tsd-icon.svg?v=1",
+   "sizes": "any",
+   "type": "image/svg+xml",
+   "purpose": "any"
+  }
+ ]
+}

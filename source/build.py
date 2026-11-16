@@ -24,7 +24,8 @@ SRC = ROOT / "src"
 DEMO = "--demo" in sys.argv[1:]
 TS = "--ts" in sys.argv[1:]   # the Troubleshooter: the same program, Run only, with the meter, the work order and the test log
 # the demo build carries its own icons (green, with a DEMO band) so the two builds cannot be confused
-ICONS = "icons-demo" if DEMO else "icons"
+ICONS = ("icons-ts-demo" if DEMO else "icons-ts") if TS else "icons-demo" if DEMO else "icons"
+IP = ("tsd-" if DEMO else "ts-") if TS else ""   # (the Troubleshooter's icon files are named ts-..., its demo's tsd-...)
 OUT = (ROOT / "dist" / "troubleshooter" / ("demo" if DEMO else "") / "index.html") if TS else (ROOT / "dist" / ("demo" if DEMO else "") / "Circuit_Builder.html")
 
 # The scripts run in this order (later files use things defined in earlier ones).
@@ -79,7 +80,7 @@ def build() -> Path:
         raise SystemExit("A script contains </script, which would end the page's <script> early: write it <\\/script")
     # the O³ icon, built into the page as a data URL
     from urllib.parse import quote
-    icon = "data:image/svg+xml," + quote(" ".join((SRC / ICONS / "favicon.svg").read_text(encoding="utf-8").split()), safe=" =:/'(),")
+    icon = "data:image/svg+xml," + quote(" ".join((SRC / ICONS / (IP + "favicon.svg")).read_text(encoding="utf-8").split()), safe=" =:/'(),")
     if TS:
         # the Troubleshooter: its own name and coral title, its own keys in the browser's storage, Run only
         if "const TS_MODE = false;" not in js:
@@ -87,7 +88,11 @@ def build() -> Path:
         js = js.replace("const TS_MODE = false;", "const TS_MODE = true;").replace("'oo-circuit-builder:", "'oo-troubleshooter:")
         page = page.replace("<title>Circuit Builder</title>", "<title>Troubleshooter</title>")
         page = page.replace("<h1>Order of Operations: <span>Circuit Builder</span></h1>", "<h1>Order of Operations: <span>Troubleshooter</span></h1>")
-        page = re.sub(r'<link rel="manifest"[^>]*>\n', "", page)
+        page = re.sub(r'<link rel="manifest"[^>]*>', '<link rel="manifest" href="troubleshooter.webmanifest?v=1">', page)
+        page = re.sub(r'<link rel="apple-touch-icon"[^>]*>', f'<link rel="apple-touch-icon" href="icons/{IP}apple-touch-icon.png?v=1">', page)
+        page = page.replace('<h2 id="about-title">Order of Operations: Circuit Builder</h2>', '<h2 id="about-title">Order of Operations: Troubleshooter</h2>')
+        # its O³ mark in the title bar and the About box, in coral
+        page = re.sub(r'<svg class="(?:logo|ab-logo)"[\s\S]*?</svg>', lambda m: m.group(0).replace("#FFC000", "#FF6F59"), page)
         if "<span>Troubleshooter</span>" not in page:
             raise SystemExit("The Troubleshooter build could not name itself (has the title changed?)")
     if DEMO:
@@ -105,8 +110,19 @@ def build() -> Path:
         page = page.replace(marker, text.rstrip("\n"))
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(page, encoding="utf-8")
-    if TS:
-        return OUT   # (no app install for the Troubleshooter yet)
+    if TS:   # (its icons and manifest, for installing it as an app of its own)
+        import shutil, json
+        shutil.copytree(SRC / ICONS, OUT.parent / "icons", dirs_exist_ok=True)
+        name = "Order of Operations: Troubleshooter" + (" (Demo)" if DEMO else "")
+        man = {"name": name, "short_name": "Troubleshooter Demo" if DEMO else "Troubleshooter", "id": "./index.html", "start_url": "./index.html", "scope": "./index.html",
+               "display": "standalone", "background_color": "#1c1d1f", "theme_color": "#9be03a" if DEMO else "#1c1d1f",
+               "description": "Find and fix the faults planted in a circuit with a meter, as a technician would, for the Order of Operations troubleshooting class.",
+               "icons": [{"src": f"icons/{IP}icon-192.png?v=1", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+                         {"src": f"icons/{IP}icon-512.png?v=1", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+                         {"src": f"icons/{IP}maskable-512.png?v=1", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+                         {"src": f"icons/{IP}icon.svg?v=1", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]}
+        (OUT.parent / "troubleshooter.webmanifest").write_text(json.dumps(man, indent=1), encoding="utf-8")
+        return OUT
     # the app icons and the web app manifest go next to it (for the website: installing it as an app)
     import shutil
     shutil.copytree(SRC / ICONS, OUT.parent / "icons", dirs_exist_ok=True)
