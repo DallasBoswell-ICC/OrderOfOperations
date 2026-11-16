@@ -4023,6 +4023,7 @@ function fuseSpan(v, S, L, a, b, c) { if (S === 'B') [a, b] = [1 - b, 1 - a]; L.
    crossing it from its line side as it arrives there (over the time it takes to cross the pole); blown, the load half
    going dark from the break; put back, on from the break */
 function paintPhaseFuse(q, k, cl) {
+  if (TS_MODE) return tsFuse(q, cl);
   const ln = PLINE.get(k) ?? k._a, S = ln === k._a ? 'A' : 'B', lc = showCol(ln, simT), at = PARR.get(ln);
   const T0 = FU1T[k.id], g = T0 === undefined ? 1 : clamp01((simT - T0) * V / (q.span / 2));
   const f = !lc ? 0 : at ? clamp01((simT - at.t) * V / 80) : 1;
@@ -4032,7 +4033,10 @@ function paintPhaseFuse(q, k, cl) {
   else { fuseSpan(q, S, q.cur, 0, f, lc); fuseSpan(q, S, q.old, f, 1, null); }
   q.mark.setAttribute('display', cl ? 'none' : '');
 }
+// (the Troubleshooter: no current through a fuse, only whether it has blown)
+function tsFuse(v, cl) { const k = 'ts' + cl; if (k === v.k) return; v.k = k; for (const L of [v.cur, v.old]) L.g.setAttribute('fill', 'transparent'); v.mark.setAttribute('display', cl ? 'none' : ''); }
 function paintFu1(p, v) {
+  if (TS_MODE) return tsFuse(v, closed(p));
   // (on a line of the three-phase supply, the phase reaching it: as a pole of the three-pole fuses)
   const pl = PLINE.get(p); if (pl !== undefined && [p._a, p._b].some(n => PARR.has(n) || PDARK.has(n))) return paintPhaseFuse(v, p, closed(p));
   const cl = closed(p), d = DIRS.find(x => x.e.part === p), S = d && d.from === p._b ? 'B' : 'A', outS = S === 'A' ? 'B' : 'A';
@@ -4066,6 +4070,7 @@ function paintFu1(p, v) {
    secondary fills from X1 in the source's colour (the supply it now is), and drains back toward X1 when it is not */
 function paintXfm(p, v) {
   for (const q of v.src || []) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
+  if (TS_MODE) return;   // (the Troubleshooter: no current shown in its windings)
   const S = p._inS || 'A', evs = p._lead && p._lead[S], body = 2 * TERM(p);
   let i = -1; if (evs) for (let k = 0; k < evs.length; k++) if (evs[k].t0 <= simT + 1e-9) i = k;
   const cur = i >= 0 ? evs[i] : null, f = cur ? clamp01((simT - cur.t0) * V / body) : 0;
@@ -7741,10 +7746,11 @@ function tsLeads() {
   const st = document.getElementById('stage').getBoundingClientRect(), mr = m.getBoundingClientRect();
   // (where each plug goes: the middle of the socket itself)
   const jack = c => { const j = m.querySelector('.jack.' + c + ' .sock').getBoundingClientRect(); return [j.left + j.width / 2 - st.left, j.top + j.height / 2 - st.top]; };
+  const cm = svg.getScreenCTM(), zk = Math.max(.35, Math.min(1, cm ? Math.hypot(cm.a, cm.b) : 1));   // (how far the panel is zoomed: the probes on it scale with it)
   const D = TSM.drag, tips = ['red', 'black'].map(c => D && D.c === c && D.moved ? [D.x, D.y] : TSM[c] ? tsScreen(TSM[c].x, TSM[c].y) : null);
   const held = mode === 'latch' ? parts.filter(p => p.t === 'btn' && !p.maint && !p.estop && down[p.L]) : [];
   const hs = held.map(p => tsScreen(p.x, p.y - BOX / 2 - 50));
-  const key = [mr.left, mr.top, st.width, st.height, ...tips.flat(), ...hs.flat(), TSM.hover && TSM.hover.x, TSM.hover && TSM.hover.y, TSM.next, TSM.mode, D && D.c].map(v => v == null ? '' : typeof v === 'number' ? Math.round(v) : v).join(',') + Object.keys(TS_PUSHED).join('');
+  const key = [mr.left, mr.top, st.width, st.height, ...tips.flat(), ...hs.flat(), TSM.hover && TSM.hover.x, TSM.hover && TSM.hover.y, TSM.next, TSM.mode, D && D.c, zk * 100].map(v => v == null ? '' : typeof v === 'number' ? Math.round(v) : v).join(',') + Object.keys(TS_PUSHED).join('');
   if (key === TSM.key) return; TSM.key = key;
   let h = '', cab = '', probes = '', plugs = '';
   for (const s of hs) if (s) h += tsTag(s, 'HELD DOWN');
@@ -7755,25 +7761,28 @@ function tsLeads() {
   // the leads: each plugged into its jack, its cable hanging from there to the probe (on its terminal, or resting
   // beside the meter while it is not on one)
   ['red', 'black'].forEach((c, i) => {
-    const [jx, jy] = jack(c), s = c === 'red' ? -1 : 1;
-    let t = tips[i], ang = s * 26;
-    if (!t) { t = [mr.left - st.left - (c === 'red' ? 62 : 28), mr.bottom - st.top - 4]; ang = c === 'red' ? -14 : -4; }
-    const a = ang * Math.PI / 180, L = 84, bx = t[0] + Math.sin(a) * L, by = t[1] - Math.cos(a) * L;   // (the probe's back end, where the cable goes in)
+    const [jx, jy] = jack(c);
+    // (on the circuit, a probe is drawn to the panel's scale, zoomed with it, and leans toward the meter, its cable's way)
+    let t = tips[i], k = zk, ang = t ? Math.max(-40, Math.min(40, Math.atan2(jx - t[0], t[1] - jy) * 180 / Math.PI)) : 0;
+    if (!t) { t = [mr.left - st.left - (c === 'red' ? 62 : 28), mr.bottom - st.top - 4]; ang = c === 'red' ? -14 : -4; k = 1; }
+    const a = ang * Math.PI / 180, L = 84 * k, bx = t[0] + Math.sin(a) * L, by = t[1] - Math.cos(a) * L;   // (the probe's back end, where the cable goes in)
     const col = c === 'red' ? '#d42a2a' : '#232323', dk = c === 'red' ? '#7a1010' : '#000', hi = c === 'red' ? '#ff7a6e' : '#5a5a5a';
-    const px = jx, py = jy + 22, sag = Math.max(50, Math.abs(py - by) * .55);
-    const d = `M${px} ${py} C${px} ${py + sag} ${bx + Math.sin(a) * 60} ${by - Math.cos(a) * 60} ${bx} ${by}`;
-    cab += `<path d="${d}" fill="none" stroke="${dk}" stroke-width="7" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${col}" stroke-width="4.6" stroke-linecap="round"/>`;
+    // (the cable leaves the plug straight down and goes into the probe straight along it, each end's pull in proportion
+    // to how far apart they are, so it sweeps round in one smooth curve with no kink where it meets the probe)
+    const px = jx, py = jy + 22, far = Math.hypot(px - bx, py - by), sag = Math.min(Math.max(50, far * .35), Math.max(12, (st.height - 6 - py) * 4 / 3)), pull = Math.max(30 * k, far * .3);
+    const d = `M${px} ${py} C${px} ${py + sag} ${bx + Math.sin(a) * pull} ${by - Math.cos(a) * pull} ${bx} ${by}`;
+    cab += `<path d="${d}" fill="none" stroke="${dk}" stroke-width="${(5 + 2 * k).toFixed(2)}" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${col}" stroke-width="${(3 + 1.6 * k).toFixed(2)}" stroke-linecap="round"/>`;
     // the plug in the jack: its body hanging below it
     plugs += `<rect x="${jx - 6}" y="${jy + 2}" width="12" height="21" rx="3" fill="${col}" stroke="${dk}" stroke-width="1.2"/><path d="M${jx - 3.5} ${jy + 9}h7M${jx - 3.5} ${jy + 13}h7M${jx - 3.5} ${jy + 17}h7" stroke="${dk}" stroke-width="1"/><circle cx="${jx}" cy="${jy}" r="7.5" fill="${col}" stroke="${dk}" stroke-width="1.4"/><circle cx="${jx - 2.4}" cy="${jy - 2.6}" r="2.6" fill="${hi}" opacity=".8"/>`;
     // the probe: a steel tip, the finger guard, a ridged grip, the boot the cable goes into
-    probes += `<g transform="translate(${t[0]} ${t[1]}) rotate(${ang})">
+    probes += `<g transform="translate(${t[0]} ${t[1]}) rotate(${ang}) scale(${k.toFixed(3)})">
       <path d="M-2.6 -22 L-2.2 -5 L0 0 L2.2 -5 L2.6 -22Z" fill="#e9edf0" stroke="#1a1a1a" stroke-width="1.1"/><path d="M-.6 -21 L-.5 -6" stroke="#fff" stroke-width="1"/>
       <rect x="-11" y="-28" width="22" height="7" rx="3" fill="${col}" stroke="${dk}" stroke-width="1.3"/>
       <rect x="-7.5" y="-70" width="15" height="43" rx="5" fill="${col}" stroke="${dk}" stroke-width="1.3"/>
       <path d="M-7 -60h14M-7 -55h14M-7 -50h14M-7 -45h14" stroke="${dk}" stroke-width="1.1" opacity=".55"/><rect x="-5" y="-68" width="3" height="38" rx="1.5" fill="#fff" opacity=".16"/>
       <path d="M-7 -70 L-4.5 -84 H4.5 L7 -70Z" fill="${col}" stroke="${dk}" stroke-width="1.2"/></g>`;
-    probes += `<g class="ts-probe" data-lead="${c}" transform="translate(${t[0]} ${t[1]}) rotate(${ang})"><rect x="-14" y="-90" width="28" height="92" rx="8" fill="transparent"/></g>`;   // (where a probe is picked up)
-    if (tips[i] && !(D && D.c === c && D.moved)) probes += `<circle cx="${t[0]}" cy="${t[1]}" r="5" fill="none" stroke="#fff" stroke-width="2"/><circle cx="${t[0]}" cy="${t[1]}" r="2" fill="#fff"/>`;
+    probes += `<g class="ts-probe" data-lead="${c}" transform="translate(${t[0]} ${t[1]}) rotate(${ang}) scale(${Math.max(k, .6).toFixed(3)})"><rect x="-14" y="-90" width="28" height="92" rx="8" fill="transparent"/></g>`;   // (where a probe is picked up)
+    if (tips[i] && !(D && D.c === c && D.moved)) probes += `<circle cx="${t[0]}" cy="${t[1]}" r="${(5 * k).toFixed(2)}" fill="none" stroke="#fff" stroke-width="${(2 * k).toFixed(2)}"/><circle cx="${t[0]}" cy="${t[1]}" r="${(2 * k).toFixed(2)}" fill="#fff"/>`;
   });
   const hc = D ? D.c : TSM.next, hv = D ? D.over : TSM.mode !== 'off' && TSM.hover;
   if (hv) { const s = tsScreen(hv.x, hv.y); if (s) h += `<circle cx="${s[0]}" cy="${s[1]}" r="13" fill="${hc === 'red' ? 'rgba(255,90,90,.25)' : 'rgba(230,233,236,.22)'}" stroke="${hc === 'red' ? '#ff6b6b' : '#e6e9ec'}" stroke-width="2.2"/>`; }

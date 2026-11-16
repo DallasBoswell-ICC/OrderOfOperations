@@ -163,6 +163,7 @@ function fuseSpan(v, S, L, a, b, c) { if (S === 'B') [a, b] = [1 - b, 1 - a]; L.
    crossing it from its line side as it arrives there (over the time it takes to cross the pole); blown, the load half
    going dark from the break; put back, on from the break */
 function paintPhaseFuse(q, k, cl) {
+  if (TS_MODE) return tsFuse(q, cl);
   const ln = PLINE.get(k) ?? k._a, S = ln === k._a ? 'A' : 'B', lc = showCol(ln, simT), at = PARR.get(ln);
   const T0 = FU1T[k.id], g = T0 === undefined ? 1 : clamp01((simT - T0) * V / (q.span / 2));
   const f = !lc ? 0 : at ? clamp01((simT - at.t) * V / 80) : 1;
@@ -172,7 +173,10 @@ function paintPhaseFuse(q, k, cl) {
   else { fuseSpan(q, S, q.cur, 0, f, lc); fuseSpan(q, S, q.old, f, 1, null); }
   q.mark.setAttribute('display', cl ? 'none' : '');
 }
+// (the Troubleshooter: no current through a fuse, only whether it has blown)
+function tsFuse(v, cl) { const k = 'ts' + cl; if (k === v.k) return; v.k = k; for (const L of [v.cur, v.old]) L.g.setAttribute('fill', 'transparent'); v.mark.setAttribute('display', cl ? 'none' : ''); }
 function paintFu1(p, v) {
+  if (TS_MODE) return tsFuse(v, closed(p));
   // (on a line of the three-phase supply, the phase reaching it: as a pole of the three-pole fuses)
   const pl = PLINE.get(p); if (pl !== undefined && [p._a, p._b].some(n => PARR.has(n) || PDARK.has(n))) return paintPhaseFuse(v, p, closed(p));
   const cl = closed(p), d = DIRS.find(x => x.e.part === p), S = d && d.from === p._b ? 'B' : 'A', outS = S === 'A' ? 'B' : 'A';
@@ -206,6 +210,7 @@ function paintFu1(p, v) {
    secondary fills from X1 in the source's colour (the supply it now is), and drains back toward X1 when it is not */
 function paintXfm(p, v) {
   for (const q of v.src || []) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
+  if (TS_MODE) return;   // (the Troubleshooter: no current shown in its windings)
   const S = p._inS || 'A', evs = p._lead && p._lead[S], body = 2 * TERM(p);
   let i = -1; if (evs) for (let k = 0; k < evs.length; k++) if (evs[k].t0 <= simT + 1e-9) i = k;
   const cur = i >= 0 ? evs[i] : null, f = cur ? clamp01((simT - cur.t0) * V / body) : 0;

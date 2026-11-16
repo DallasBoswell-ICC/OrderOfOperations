@@ -162,7 +162,7 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     if (await ohms(page, ...XC) !== 'OL') out.push('X contact before Push In: ' + await ohms(page, ...XC));
     await page.click('#ts-push');
     const xy = await page.evaluate(() => { const q = parts.find(q => q.t === 'coil'), r = document.getElementById('stage').getBoundingClientRect(), s = tsScreen(q.x, q.y); return [s[0] + r.left, s[1] + r.top]; });
-    await page.mouse.click(...xy); await page.waitForTimeout(400);
+    await page.evaluate(() => setSpeed(300)); await page.mouse.click(...xy); await page.waitForTimeout(500);
     if (await ohms(page, ...XC) !== 0) out.push('X contact pushed in: ' + await ohms(page, ...XC));
     if ((await page.evaluate(() => document.getElementById('ts-leads').innerHTML.split('PUSHED IN').length - 1)) !== 3) out.push('PUSHED IN tags on the coil and its two contacts');
     await page.mouse.click(...xy); await page.waitForTimeout(400);
@@ -236,6 +236,13 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     if (await volts(page, A, B) !== 480) out.push('line side: ' + await volts(page, A, B));
     if (await volts(page, a, c) !== 480) out.push('load side: ' + await volts(page, a, c));
     if (await volts(page, 'T1 Control Transformer, X1', 'T1 Control Transformer, X2') !== 120) out.push('X1 to X2: ' + await volts(page, 'T1 Control Transformer, X1', 'T1 Control Transformer, X2'));
+    // no current shown through the transformer's windings or the fuses either
+    const shownCur = await page.evaluate(() => { const out = [];
+      for (const p of parts) { const v = view.parts.get(p.id); if (!v) continue;
+        if (p.t === 'xfm') for (const W of [v.pri, v.sec]) for (const ln of [W.cur, W.old]) { const c = ln.getAttribute('stroke'); if (c && c !== 'transparent') out.push('T1 winding ' + c); }
+        if (p.t === 'fu1') for (const L of [v.cur, v.old]) { const c = L.g.getAttribute('fill'); if (c && c !== 'transparent') out.push('fuse ' + c); } }
+      return out; });
+    if (shownCur.length) out.push('current shown: ' + shownCur.join(', '));
     await page.click('#ts-lock'); await page.waitForTimeout(300);
     if (!(await page.evaluate(() => parts.filter(p => p.t === 'dsc').every(p => DSC[p.id])))) out.push('a disconnect left closed');
     if (await volts(page, A, B) !== 480) out.push('line side, locked out: ' + await volts(page, A, B));
