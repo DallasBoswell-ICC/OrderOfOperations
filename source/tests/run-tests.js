@@ -3091,6 +3091,22 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('A broken neutral (Dallas, 15 Nov 2026: FWDREV_OvrTrvl, the return wire under rung 7 open): the hot side still lights up to every open button and contact; REV held, the current goes through the R coil (which stays out) and on up to the break, and stops there', async page => {
+    const out = [];
+    const d = require('fs').readFileSync(path.join(__dirname, 'fixtures', 'fwdrev_ovrtrvl.json'), 'utf8');
+    await page.evaluate(d => { const c = readCircuit(JSON.parse(d)); useCircuit(c, ''); wires.find(q => q.x1 === 1900 && q.y1 === 1200 && q.y2 === 1600).fault = 'open'; draw(); }, d);
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(900);
+    const lit1 = await page.evaluate(() => { const b = L => parts.find(q => q.t === 'btn' && q.L === L), r = parts.find(q => q.t === 'con' && q.L === 'R' && !q.nc);
+      return [lit(b('C')._a, simT) || lit(b('C')._b, simT), lit(r._a, simT) || lit(r._b, simT)]; });
+    if (lit1.join() !== 'true,true') out.push('REV / R contact branch dark with the neutral broken: ' + lit1);
+    await page.evaluate(() => press('C', true)); await page.waitForTimeout(900);
+    const r = await page.evaluate(() => { const R = parts.find(q => q.t === 'coil' && q.L === 'R'), w = wires.find(q => q.x1 === 1900 && q.y1 === 1200), at = (x, y) => NET.nodes.findIndex(n => n.x === x && n.y === y && (n.k === key(x, y) || n.k.endsWith('#' + w.id)));
+      return { on: !!coilOn[R.id], past: lit(R._b, simT), below: lit(at(1900, 1500), simT), above: lit(at(1900, 1300), simT), top: lit(at(1900, 1200), simT) }; });
+    if (r.on || !r.past || !r.below || r.above || r.top) out.push('REV held: ' + JSON.stringify(r));
+    await page.evaluate(() => { press('C', false); setSpeed(1); }); await page.click('#tab-edit');
+    return out;
+  });
+
   await check('The Troubleshooter\'s pieces stay out of the Circuit Builder (no Troubleshoot tab, meter or side panel; current still shown; wires uninsulated)', async page => {
     const out = [];
     const st = await page.evaluate(() => ({ ts: TS_MODE, bar: !!document.getElementById('tsbar'), meter: !!document.getElementById('ts-meter'), side: !!document.getElementById('ts-side'), cls: document.body.classList.contains('ts') }));

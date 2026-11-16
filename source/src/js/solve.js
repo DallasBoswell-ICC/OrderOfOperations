@@ -56,7 +56,7 @@ function solveV(allClosed) {
 }
 function solveOnce(allClosed, blocked) {
   const net = NET, J = net.jedges;
-  const g = e => e.kind === 'seg' ? 1 / Math.max(e.len, 1) : isSw(e.part) ? ((closed(e.part) || allClosed) && !blocked.has(e.part) ? 1 / (2 * TERM(e.part)) : 0) : 1 / 4000;
+  const g = e => e.kind === 'seg' ? 1 / Math.max(e.len, 1) : e.part.t === 'brk' ? 0 : isSw(e.part) ? ((closed(e.part) || allClosed) && !blocked.has(e.part) ? 1 / (2 * TERM(e.part)) : 0) : 1 / 4000;
   // everything L1 reaches through things that conduct
   const live = new Set(), stack = [];
   for (const [id, v] of net.feedV) if (v === 1) { live.add(id); stack.push(id); }

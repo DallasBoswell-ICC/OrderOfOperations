@@ -24,6 +24,11 @@ function network() {
       if (prev && i === brk && wf === 'open') {   // the break: drawn, but no way across it
         subs.push({ a: prev.id, b: id, x1: prev.x, y1: prev.y, x2: x, y2: y, wire: w });
         if (chain.length > 1) jedges.push({ kind: 'seg', a: chain[0], b: prev.id, len: (chain.length - 1) * len / n, chain });
+        // (for the current's display, the break is a switch that never closes (w._brk, t 'brk'): the ways through it
+        // still count as ways from L1 to L2, so the current reaches the break from either side and stops there, as it
+        // does at an open button, rather than the wiring that leads to it going dark (Dallas, 15 Nov 2026: a broken
+        // neutral). It conducts nothing: there is no electrical edge across it.)
+        jedges.push({ kind: 'part', a: prev.id, b: id, len: len / n, part: w._brk || (w._brk = { t: 'brk', id: 'brk' + w.id, w }) });
         chain = [id]; prev = { id, x, y }; continue;
       }
       if (prev) { edges.push({ a: prev.id, b: id, w: len / n, kind: 'w' }); subs.push({ a: prev.id, b: id, x1: prev.x, y1: prev.y, x2: x, y2: y, wire: w }); }

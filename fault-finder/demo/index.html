@@ -1346,6 +1346,11 @@ function network() {
       if (prev && i === brk && wf === 'open') {   // the break: drawn, but no way across it
         subs.push({ a: prev.id, b: id, x1: prev.x, y1: prev.y, x2: x, y2: y, wire: w });
         if (chain.length > 1) jedges.push({ kind: 'seg', a: chain[0], b: prev.id, len: (chain.length - 1) * len / n, chain });
+        // (for the current's display, the break is a switch that never closes (w._brk, t 'brk'): the ways through it
+        // still count as ways from L1 to L2, so the current reaches the break from either side and stops there, as it
+        // does at an open button, rather than the wiring that leads to it going dark (Dallas, 15 Nov 2026: a broken
+        // neutral). It conducts nothing: there is no electrical edge across it.)
+        jedges.push({ kind: 'part', a: prev.id, b: id, len: len / n, part: w._brk || (w._brk = { t: 'brk', id: 'brk' + w.id, w }) });
         chain = [id]; prev = { id, x, y }; continue;
       }
       if (prev) { edges.push({ a: prev.id, b: id, w: len / n, kind: 'w' }); subs.push({ a: prev.id, b: id, x1: prev.x, y1: prev.y, x2: x, y2: y, wire: w }); }
@@ -1731,7 +1736,7 @@ function solveV(allClosed) {
 }
 function solveOnce(allClosed, blocked) {
   const net = NET, J = net.jedges;
-  const g = e => e.kind === 'seg' ? 1 / Math.max(e.len, 1) : isSw(e.part) ? ((closed(e.part) || allClosed) && !blocked.has(e.part) ? 1 / (2 * TERM(e.part)) : 0) : 1 / 4000;
+  const g = e => e.kind === 'seg' ? 1 / Math.max(e.len, 1) : e.part.t === 'brk' ? 0 : isSw(e.part) ? ((closed(e.part) || allClosed) && !blocked.has(e.part) ? 1 / (2 * TERM(e.part)) : 0) : 1 / 4000;
   // everything L1 reaches through things that conduct
   const live = new Set(), stack = [];
   for (const [id, v] of net.feedV) if (v === 1) { live.add(id); stack.push(id); }
@@ -1876,6 +1881,11 @@ function startRun() {
   for (const e of NET.jedges) {
     if (e.kind === 'seg') { addLane(e, e.a); addLane(e, e.b); continue; }
     let from;
+    if (e.part.t === 'brk') {   // (a broken wire: the way the current would go along that wire, from its end at the higher voltage)
+      const w = e.part.w, at = (x, y) => NET.nodes.findIndex(n => n.k === key(x, y)), va = h.get(at(w.x1, w.y1)), vb = h.get(at(w.x2, w.y2));
+      from = va !== undefined && vb !== undefined && Math.abs(va - vb) > 1e-12 ? (va > vb ? e.a : e.b) : (dist.get(e.a) ?? 1e9) <= (dist.get(e.b) ?? 1e9) ? e.a : e.b;
+      addLane(e, from); continue;
+    }
     if (isSw(e.part)) from = btnIn(e.part);
     else if (h.has(e.a) && h.has(e.b) && Math.abs(h.get(e.a) - h.get(e.b)) > 1e-9) from = h.get(e.a) > h.get(e.b) ? e.a : e.b;
     else from = (dist.get(e.a) ?? 1e9) <= (dist.get(e.b) ?? 1e9) ? e.a : e.b;
@@ -2056,6 +2066,7 @@ function allowNow() {
     let label = '';
     for (const d of path) {
       if (d.e.kind === 'part') {
+        if (d.e.part.t === 'brk') break;   // (a wire broken by a fault: open, always)
         if (isSw(d.e.part)) { if (!closed(d.e.part)) break; if (isOp(d.e.part)) label = opLabel(d.e.part, label); else { if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label); } }   // a contact passes on the colour it is given
         else if (COND[d.e.part.id]) label = 'ret';   // past a coil with current through it: the return side, back to L2
         // (in a short circuit, a load passes nothing on but its own return current: its far side is joined to L2, not
@@ -2086,11 +2097,12 @@ function filt(d, r, t) {
   const s = [...r.set].filter(x => A.has(x));
   return !s.length ? null : s.length === r.set.size ? r : { set: new Set(s), from: r.from, rd: r.rd };
 }
-const active = d => d.e.kind === 'seg' ? ALLOW.has(d) : isSw(d.e.part) ? closed(d.e.part) || !!d.draining : true;   // (a coil always passes something on, or nothing: see through)
+const active = d => d.e.kind === 'seg' ? ALLOW.has(d) : d.e.part.t === 'brk' ? false : isSw(d.e.part) ? closed(d.e.part) || !!d.draining : true;   // (a coil always passes something on, or nothing: see through)
 // what a run hands on at its far end, given what entered it
 function through(d, r) {
   if (!r) return null;
   if (d.e.kind === 'seg') return along(r, d.e.len);
+  if (d.e.part.t === 'brk') return null;   // (a broken wire: nothing gets across)
   // a switch past a coil (on its way back to L2) carries the return current through as it is, as a contact does: only
   // current still on its way from L1 takes on a button's colour
   if (isOp(d.e.part)) return r.ret ? along(r, d.e.len) : { set: new Set([opKey(d.e.part)]), from: colourOf(r), rd: 0 };
