@@ -487,7 +487,7 @@ body.ts .rtab[aria-pressed="true"] { box-shadow: inset 0 -3px 0 var(--coral); }
 body.ts .tool.big[aria-pressed="true"] { background: #4a2f2a; border-color: var(--coral); }
 .ts-hdr { display: flex; gap: 8px; margin-left: auto; }
 .ts-main { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 10px; align-items: stretch; }
-.ts-side { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: auto; }
+.ts-side { display: flex; flex-direction: column; gap: 10px; height: 0; min-height: 100%; overflow: auto; }   /* (exactly as tall as the panel beside it, however long the test log grows: it scrolls instead of making the page taller, which would shrink the panel) */
 .ts-box { background: #26272a; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px 12px; }
 .ts-box h3 { margin: 0 0 6px; font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; justify-content: space-between; }
 .ts-name { margin: 0 0 4px; font-weight: 700; font-size: .92rem; }
@@ -532,7 +532,7 @@ body.ts.ts-locked .stage::after { content: "LOCKED OUT"; position: absolute; lef
 .jack.black .sock { border-color: #333; }
 .tsm-next { text-align: center; font-size: .7rem; margin-top: 4px; color: #4a3b0a; }
 .tsm-next b.red { color: #b3201c; } .tsm-next b.black { color: #111; }
-@media (max-width: 900px) { .ts-main { grid-template-columns: 1fr; } .ts-side { max-height: none; } }
+@media (max-width: 900px) { .ts-main { grid-template-columns: 1fr; } .ts-side { height: auto; min-height: 0; } }
 .ts-leads { z-index: 2; }
 .ts-plugs { z-index: 4; }
 .ts-plugs .ts-probe { pointer-events: all; cursor: grab; }

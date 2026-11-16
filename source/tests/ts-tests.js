@@ -70,6 +70,7 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     const dir = path.dirname(PAGE.replace('file://', '')), pre = DEMO ? 'tsd-' : 'ts-';
     for (const f of ['icon-192.png', 'icon-512.png', 'maskable-512.png', 'apple-touch-icon.png', 'favicon-32.png', 'icon.svg']) if (!fs.existsSync(path.join(dir, 'icons', pre + f))) out.push('missing icon ' + pre + f);
     let man = {}; try { man = JSON.parse(fs.readFileSync(path.join(dir, 'troubleshooter.webmanifest'), 'utf8')); } catch (e) { out.push('no manifest'); }
+    if (man.start_url !== './' || man.scope !== './' || man.id !== './?app=troubleshooter' + (DEMO ? '-demo' : '')) out.push('install address: ' + [man.id, man.start_url, man.scope]);
     if (man.short_name !== (DEMO ? 'Troubleshooter Demo' : 'Troubleshooter') || !(man.icons || []).every(i => fs.existsSync(path.join(dir, i.src.split('?')[0])))) out.push('manifest: ' + JSON.stringify(man).slice(0, 200));
     const svgI = fs.readFileSync(path.join(dir, 'icons', pre + 'icon.svg'), 'utf8');
     if (!/#FF6F59/.test(svgI) || /#FFC000/.test(svgI) || DEMO !== /#9BE03A/.test(svgI)) out.push('icon colours');
@@ -200,6 +201,14 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     if (log.length !== 1 || log[0].v !== '120.0 V AC' || log[0].c !== 'A held' || log[0].a !== C1 || log[0].b !== L2) out.push('log: ' + JSON.stringify(log));
     await page.waitForTimeout(900);
     if (await page.evaluate(() => TS.log.length) !== 1) out.push('logged again with nothing changed');
+    // a long test log scrolls in its box: the panel keeps its height (filling the window), the page never grows
+    const h0 = await page.evaluate(() => document.getElementById('stage').offsetHeight);
+    await page.evaluate(() => { for (let i = 0; i < 60; i++) TS.log.push({ ...TS.log[0] }); tsShowLog(true); fit(false); });
+    await page.waitForTimeout(200);
+    const lay = await page.evaluate(() => ({ h: document.getElementById('stage').offsetHeight, side: document.getElementById('ts-side').offsetHeight, over: document.documentElement.scrollHeight - document.documentElement.clientHeight }));
+    if (lay.h < h0 - 2 || lay.over > 0 || Math.abs(lay.side - lay.h) > 2) out.push('long log: ' + JSON.stringify({ ...lay, h0 }));
+    if (h0 < 600) out.push('panel only ' + h0 + ' px tall in a 950 px window');
+    await page.evaluate(() => { TS.log.length = 1; tsShowLog(); });
     if (!/Readings: 1/.test(await page.evaluate(() => document.getElementById('ts-foot').textContent))) out.push('footer');
     await page.click('[data-step="0"]'); await page.click('[data-step="1"]');
     await page.reload(); await page.waitForTimeout(600);

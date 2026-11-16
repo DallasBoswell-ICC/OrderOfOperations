@@ -88,7 +88,7 @@ def build() -> Path:
         js = js.replace("const TS_MODE = false;", "const TS_MODE = true;").replace("'oo-circuit-builder:", "'oo-troubleshooter:")
         page = page.replace("<title>Circuit Builder</title>", "<title>Troubleshooter</title>")
         page = page.replace("<h1>Order of Operations: <span>Circuit Builder</span></h1>", "<h1>Order of Operations: <span>Troubleshooter</span></h1>")
-        page = re.sub(r'<link rel="manifest"[^>]*>', '<link rel="manifest" href="troubleshooter.webmanifest?v=1">', page)
+        page = re.sub(r'<link rel="manifest"[^>]*>', '<link rel="manifest" href="troubleshooter.webmanifest?v=2">', page)
         page = re.sub(r'<link rel="apple-touch-icon"[^>]*>', f'<link rel="apple-touch-icon" href="icons/{IP}apple-touch-icon.png?v=1">', page)
         page = page.replace('<h2 id="about-title">Order of Operations: Circuit Builder</h2>', '<h2 id="about-title">Order of Operations: Troubleshooter</h2>')
         # its O³ mark in the title bar and the About box, in coral
@@ -114,7 +114,8 @@ def build() -> Path:
         import shutil, json
         shutil.copytree(SRC / ICONS, OUT.parent / "icons", dirs_exist_ok=True)
         name = "Order of Operations: Troubleshooter" + (" (Demo)" if DEMO else "")
-        man = {"name": name, "short_name": "Troubleshooter Demo" if DEMO else "Troubleshooter", "id": "./index.html", "start_url": "./index.html", "scope": "./index.html",
+        man = {"name": name, "short_name": "Troubleshooter Demo" if DEMO else "Troubleshooter", "id": "./?app=troubleshooter" + ("-demo" if DEMO else ""), "start_url": "./", "scope": "./",   # (as Print Builder: installs from the folder's own address, with or without index.html)
+              
                "display": "standalone", "background_color": "#1c1d1f", "theme_color": "#9be03a" if DEMO else "#1c1d1f",
                "description": "Find and fix the faults planted in a circuit with a meter, as a technician would, for the Order of Operations troubleshooting class.",
                "icons": [{"src": f"icons/{IP}icon-192.png?v=1", "sizes": "192x192", "type": "image/png", "purpose": "any"},
