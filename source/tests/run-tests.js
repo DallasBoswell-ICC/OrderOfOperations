@@ -3107,6 +3107,40 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Scenarios (Dallas, 16 Nov 2026): several sets of faults on one circuit, each with its own work order; one in force at a time (Run uses it); saved and opened again; undo; Delete renumbers', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'seal'); await page.waitForTimeout(80); await page.click('#rt-faults');
+    await page.evaluate(() => { setFault(parts.find(q => q.t === 'coil'), false, 'open'); WORK_ORDER = 'one'; });
+    await page.click('#fz-scen-new'); await page.evaluate(() => { setFault(parts.find(q => q.t === 'btn' && !q.nc), false, 'open'); WORK_ORDER = 'two'; });
+    await page.click('#fz-scen-new'); await page.evaluate(() => { setFault(wires.find(q => q.x1 === 340 && q.y1 === 200), true, 'open'); WORK_ORDER = 'three'; });
+    const now = () => page.evaluate(() => [SCEN + 1, WORK_ORDER, faulted().map(([x, w]) => (w ? 'wire' : x.t) + ':' + x.fault).join()].join(' '));
+    if (await page.evaluate(() => document.getElementById('rt-faults').textContent) !== 'Faults (3 Scenarios)') out.push('tab name');
+    await page.click('#fz-scen [data-sc="0"]'); if (await now() !== '1 one coil:open') out.push('scenario 1: ' + await now());
+    await page.click('#fz-scen [data-sc="1"]'); if (await now() !== '2 two btn:open') out.push('scenario 2: ' + await now());
+    // Run works the scenario in force: in scenario 1 X never pulls in; in 2 (START open) neither; in 3 nor (wire open); faults off, it does
+    await page.click('#fz-scen [data-sc="0"]'); await page.click('#tab-run'); await page.evaluate(() => { setSpeed(300); press('A', true); }); await page.waitForTimeout(400);
+    if (await page.evaluate(() => !!coilOn[parts.find(q => q.t === 'coil').id])) out.push('scenario 1 in Run: X pulled in');
+    await page.evaluate(() => press('A', false)); await page.click('#tab-edit'); await page.click('#rt-faults');
+    // saved and opened again
+    const d = await page.evaluate(() => JSON.stringify(circuitData()));
+    await page.evaluate(d => { useCircuit(readCircuit(JSON.parse(d)), ''); }, d);
+    const back = await page.evaluate(() => [SCEN_N, SCEN, SCEN_WO.join('/'), wires.filter(w => w.fz).length, parts.filter(p => p.fz).length].join(' '));
+    if (back !== '3 0 one/two/three 1 2') out.push('opened again: ' + back);
+    // undo a new scenario
+    await page.click('#fz-scen-new'); if (await page.evaluate(() => SCEN_N) !== 4) out.push('no fourth');
+    await page.keyboard.press('Control+z'); await page.waitForTimeout(80);
+    if (await page.evaluate(() => [SCEN_N, SCEN].join()) !== '3,0') out.push('undo: ' + await page.evaluate(() => [SCEN_N, SCEN].join()));
+    // delete scenario 2: 3 becomes 2
+    await page.click('#fz-scen [data-sc="1"]'); await page.click('#fz-scen-del');
+    if (await page.evaluate(() => SCEN_N) !== 2) out.push('delete');
+    await page.click('#fz-scen [data-sc="1"]'); if (await now() !== '2 three wire:open') out.push('after delete, scenario 2: ' + await now());
+    // what the Fault Finder offers: one can be turned off, never both
+    await page.click('#fz-off-r'); await page.click('#fz-off-n');
+    const off = await page.evaluate(() => [FF_OFFER.r, FF_OFFER.n, JSON.stringify(circuitData().ffo)].join());
+    if (off !== 'false,true,[0,1]') out.push('offers: ' + off);
+    return out;
+  });
+
   await check('The Troubleshooter\'s pieces stay out of the Circuit Builder (no Troubleshoot tab, meter or side panel; current still shown; wires uninsulated)', async page => {
     const out = [];
     const st = await page.evaluate(() => ({ ts: TS_MODE, bar: !!document.getElementById('tsbar'), meter: !!document.getElementById('ts-meter'), side: !!document.getElementById('ts-side'), cls: document.body.classList.contains('ts') }));

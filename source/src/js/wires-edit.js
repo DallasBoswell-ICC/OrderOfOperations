@@ -18,7 +18,7 @@ function normalize() {
   const merge = (list, horiz, at) => { list.sort((a, b) => a[0] - b[0]); const out = []; for (const iv of list) { const l = out[out.length - 1]; if (l && (iv[0] < l[1] || iv[0] === l[1] && !across(horiz, at, l[1]))) { l[1] = Math.max(l[1], iv[1]); l[2] = l[2].concat(iv[2]); } else out.push([iv[0], iv[1], [...iv[2]]]); } return out; };
   const out = [], used = new Set(), keep = (x1, y1, x2, y2, ids) => {
     const id = [...ids].sort((u, v) => u - v).find(i => !used.has(i));   // the oldest wire's id
-    if (id !== undefined) { used.add(id); const f = (wires.find(w => w.id === id) || {}).fault; out.push({ id, x1, y1, x2, y2, ...(f ? { fault: f } : {}) }); } else out.push(Wr(x1, y1, x2, y2));   // (a wire keeps a fault planted on it)
+    if (id !== undefined) { used.add(id); const o = wires.find(w => w.id === id) || {}, f = o.fault; out.push({ id, x1, y1, x2, y2, ...(f ? { fault: f } : {}), ...(o.fz ? { fz: { ...o.fz } } : {}) }); } else out.push(Wr(x1, y1, x2, y2));   // (a wire keeps a fault planted on it)
   };
   for (const [y, list] of Hs) {
     let ivs = merge(list, true, y);

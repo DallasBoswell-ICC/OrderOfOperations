@@ -556,3 +556,18 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
 .rpanel .ts-g[hidden] { display: none; }
 /* the Home tab's groups: their buttons centred across and down the group too */
 .rgrp .gbody { align-items: center; justify-content: center; }
+/* scenarios: the Faults tab's Scenario and Fault Finder Offers groups; the Fault Finder's box asking which scenario */
+.fz-scengrp .gbody { gap: 6px; }
+.fz-scengrp .seg button { padding: 4px 11px; }
+.fz-chk { display: flex; align-items: center; gap: 7px; font-size: .8rem; white-space: nowrap; cursor: pointer; padding: 2px 4px; }
+.fz-offer.dim .fz-chk { opacity: .45; cursor: default; }
+.ts-scen-dlg { width: min(520px, calc(100vw - 32px)); }
+.ts-scen-dlg .dlg { padding: 20px 24px; }
+.ts-scen-dlg h2 { margin: 0 0 4px; font-size: 1.2rem; }
+.ts-scen-dlg .hint { margin: 0 0 16px; color: var(--muted); }
+.ts-scen-dlg .dlg button.ts-sc-rand { width: 100%; padding: 12px; font-size: 1rem; background: #4a2f2a; border-color: #FF6F59; color: #fff; }
+.ts-scen-dlg .ts-sc-note { margin: 6px 0 16px; font-size: .8rem; color: var(--faint); }
+.ts-scen-dlg .ts-sc-num { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.ts-scen-dlg .ts-sc-num input { width: 64px; text-align: center; font: inherit; font-size: 1rem; background: #1c1d1f; border: 1px solid var(--line); color: var(--ink); border-radius: 8px; padding: 7px; }
+.ts-scen-dlg .ts-sc-msg { min-height: 1.2em; margin: 8px 0 0; color: #ff9a8a; font-size: .85rem; }
+.ts-scen-dlg [hidden] { display: none !important; }

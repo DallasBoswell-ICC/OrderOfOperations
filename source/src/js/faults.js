@@ -3,6 +3,19 @@
    shorted to L2), or plant one at random; the planted faults listed (click one to pick it, ✕ to take it off); Faults
    On in Run (off: Run works the circuit as it should be); red badges on the faulted parts and wires; and the work
    order the student is given. A part's own tab has its Fault too. See constants.js for what each fault does. */
+// ---- scenarios
+const scenAll = () => [...parts, ...wires];
+function scenSync() {   // (the faults in force kept with their scenario)
+  for (const x of scenAll()) { if (x.fault) (x.fz || (x.fz = {}))[SCEN] = x.fault; else if (x.fz) delete x.fz[SCEN]; if (x.fz && !Object.keys(x.fz).length) delete x.fz; }
+  SCEN_WO[SCEN] = WORK_ORDER;
+}
+function scenUse(n) {   // (scenario n in force: its faults and its work order)
+  for (const x of scenAll()) { const f = x.fz && x.fz[n]; if (f) x.fault = f; else delete x.fault; }
+  SCEN = n; WORK_ORDER = SCEN_WO[n] || '';
+}
+// the scenarios of a circuit just read (readCircuit's sn, si, swo, ffo), or one scenario
+function scenFrom(c) { SCEN_N = c.sn || 1; SCEN = Math.min(c.si || 0, SCEN_N - 1); SCEN_WO = c.swo ? [...c.swo] : [c.wo || '']; FF_OFFER = c.ffo ? { ...c.ffo } : { r: true, n: true }; WORK_ORDER = SCEN_WO[SCEN] || ''; }
+function scenGo(n) { if (n === SCEN || n < 0 || n >= SCEN_N) return; scenSync(); scenUse(n); say(`Scenario ${n + 1}: its faults are in force (Run uses them)`); draw(); }
 const faultName = (x, isW) => (isW ? WIRE_FAULTS : PART_FAULTS)[x.fault] || '';
 // where a fault is, in words: a part by its caption, a wire by its rung number when it has one (or where it runs)
 function faultWhere(x, isW) {
@@ -56,7 +69,12 @@ function showFaults() {
   document.getElementById('fz-on').setAttribute('aria-pressed', String(FAULTS_ON));
   document.getElementById('fz-badges').setAttribute('aria-pressed', String(FAULT_BADGES));
   const wo = document.getElementById('fz-wo'); if (document.activeElement !== wo) wo.value = WORK_ORDER;
-  const n = L.length; document.getElementById('rt-faults').textContent = n ? `Faults (${n})` : 'Faults';
+  const n = L.length; document.getElementById('rt-faults').textContent = SCEN_N > 1 ? `Faults (${SCEN_N} Scenarios)` : n ? `Faults (${n})` : 'Faults';
+  document.getElementById('fz-scen').innerHTML = [...Array(SCEN_N).keys()].map(i => `<button type="button" data-sc="${i}" aria-pressed="${i === SCEN}" data-tip="Scenario ${i + 1}: show its faults and work order">${i + 1}</button>`).join('');
+  document.getElementById('fz-scen-del').disabled = SCEN_N < 2;
+  document.getElementById('fz-off-r').checked = FF_OFFER.r; document.getElementById('fz-off-n').checked = FF_OFFER.n;
+  for (const id of ['fz-off-r', 'fz-off-n']) document.getElementById(id).disabled = SCEN_N < 2;
+  document.querySelector('.fz-offer').classList.toggle('dim', SCEN_N < 2);
 }
 // the Fault on a part's own tab (one part picked, or several of one kind)
 function showPartFault(G) {
@@ -87,6 +105,22 @@ document.getElementById('fz-random').addEventListener('click', () => {
 document.getElementById('fz-clear').addEventListener('click', () => { const L = faulted(); if (!L.length) return; snapshot(); for (const [x] of L) delete x.fault; say(`${L.length} fault${L.length > 1 ? 's' : ''} taken off`); draw(); });
 document.getElementById('fz-on').addEventListener('click', () => { FAULTS_ON = !FAULTS_ON; showFaults(); say(FAULTS_ON ? 'Faults on: Run works the circuit with its faults' : 'Faults off: Run works the circuit as it should be'); });
 document.getElementById('fz-badges').addEventListener('click', () => { FAULT_BADGES = !FAULT_BADGES; showFaults(); draw(); });
+document.getElementById('fz-scen').addEventListener('click', e => { const b = e.target.closest('[data-sc]'); if (b) scenGo(+b.dataset.sc); });
+document.getElementById('fz-scen-new').addEventListener('click', () => {
+  if (SCEN_N >= 20) return say('Twenty scenarios is the most one circuit can have');
+  snapshot(); scenSync(); SCEN_N++; SCEN_WO[SCEN_N - 1] = ''; scenUse(SCEN_N - 1);
+  say(`Scenario ${SCEN_N}: a new one, with no faults yet. Plant its faults and write its work order.`); draw();
+});
+document.getElementById('fz-scen-del').addEventListener('click', () => {
+  if (SCEN_N < 2) return; snapshot(); scenSync(); const k = SCEN;
+  for (const x of scenAll()) if (x.fz) { const o = {}; for (const s in x.fz) { const i = +s; if (i < k) o[i] = x.fz[s]; else if (i > k) o[i - 1] = x.fz[s]; } if (Object.keys(o).length) x.fz = o; else delete x.fz; }
+  SCEN_WO.splice(k, 1); SCEN_N--; scenUse(Math.min(k, SCEN_N - 1));
+  say(`Scenario ${k + 1} deleted: the others are numbered 1 to ${SCEN_N}`); draw();
+});
+for (const [id, k] of [['fz-off-r', 'r'], ['fz-off-n', 'n']]) document.getElementById(id).addEventListener('change', e => {
+  FF_OFFER[k] = e.target.checked; if (!FF_OFFER.r && !FF_OFFER.n) { FF_OFFER[k] = true; say('The Fault Finder has to offer at least one of the two'); }
+  showFaults(); if (typeof showFileLabel === 'function') showFileLabel();
+});
 document.getElementById('fz-wo').addEventListener('input', e => { WORK_ORDER = e.target.value.slice(0, 400); if (typeof showFileLabel === 'function') showFileLabel(); });
 // a red badge with a wrench, on a part (its top right) or a wire (its middle) with a fault planted on it
 function faultBadge(x, y, g, tip) {

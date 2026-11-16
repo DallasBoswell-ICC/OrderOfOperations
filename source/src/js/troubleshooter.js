@@ -11,7 +11,7 @@ const TS_KEY = 'oo-circuit-builder:ts-state';
 const TS_STEPS = ['Symptoms', 'Possible causes', 'Find the faulty area', 'Find the faulty part', 'Repair', 'Test and document'];
 let tsTab = 'ts';
 const TSM = { mode: 'v', red: null, black: null, next: 'red', key: '', val: '', sig: '', due: 0, pend: null, lastLog: '' };
-let TS = { log: [], steps: [], t0: Date.now(), showSteps: true };
+let TS = { log: [], steps: [], t0: Date.now(), showSteps: true, scen: null };   // (scen: the scenario this student got, { n: from 0, of, hidden })
 
 function tsSay(t) { say(t); }
 // the Troubleshooter's ribbon: its own tab (Troubleshoot) and the Simulation tab
@@ -25,10 +25,10 @@ function tsShowRibbon() {
 }
 
 // ---- what is kept between visits (in this browser): the assignment, the test log, the steps ticked off
-function tsSave() { try { localStorage.setItem(TS_KEY, JSON.stringify({ circuit: circuitData(), log: TS.log, steps: TS.steps, t0: TS.t0, showSteps: TS.showSteps, blown: TS_BLOWN })); } catch (_) {} }
+function tsSave() { try { localStorage.setItem(TS_KEY, JSON.stringify({ circuit: circuitData(), log: TS.log, steps: TS.steps, t0: TS.t0, showSteps: TS.showSteps, blown: TS_BLOWN, scen: TS.scen })); } catch (_) {} }
 function tsUse(c, msg, fresh) {
-  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; WORK_ORDER = c.wo || ''; normalize();
-  if (fresh) { TS.log = []; TS.steps = []; TS.t0 = Date.now(); TS_BLOWN = {}; }
+  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; scenFrom(c); normalize();
+  if (fresh) { TS.log = []; TS.steps = []; TS.t0 = Date.now(); TS_BLOWN = {}; TS.scen = c.pick || null; }
   LOCKOUT = false; TS_PUSHED = {}; TSM.push = false; TSM.red = TSM.black = null; TSM.next = 'red'; TSM.lastLog = ''; TSM.sig = '';
   if (editing) { fit(true); fitView(); setMode(true); } else { fit(true); fitView(); NET = network(); draw(); startRun(); afterRunStart(); }
   tsShowAll(); if (msg) tsSay(msg);
@@ -53,8 +53,32 @@ async function tsOpenText(text, name) {
   else if (/^\s*\{/.test(text)) c = readCircuit(JSON.parse(text));
   else c = await decodeCircuit(text);
   if (!c.name && name) c.name = name.replace(/\.(json|html?|txt)$/i, '');
+  // (several scenarios: the student is given one, at random or the one their instructor names)
+  if (c.sn > 1) { const pick = await tsChooseScenario(c); if (!pick) return; tsScenario(c, pick.n); c.pick = { n: pick.n, of: c.sn, hidden: pick.hidden }; }
   const n = c.parts.filter(p => p.fault).length + c.wires.filter(w => w.fault).length;
   tsUse(c, n ? `Opened ${c.name || 'the assignment'}. Read the work order, then start troubleshooting.` : `Opened ${c.name || 'the circuit'}: it has no faults planted in it (plant them on the Circuit Builder's Faults tab).`, true);
+}
+
+/* Scenarios (Dallas, 16 Nov 2026): an assignment with several asks which one, as the Circuit Builder allows: a random one
+   (its number kept from the student: written in the test log they keep, for the instructor) or the one their instructor
+   gives them (its number shown). */
+function tsScenario(c, n) { for (const x of [...c.parts, ...c.wires]) { const f = x.fz && x.fz[n]; if (f) x.fault = f; else delete x.fault; } c.si = n; c.wo = c.swo ? c.swo[n] || '' : c.wo; }
+function tsChooseScenario(c) {
+  const d = document.getElementById('ts-scen-dlg'), off = c.ffo || { r: true, n: true };
+  d.querySelector('h2').textContent = c.name || 'Assignment';
+  d.querySelector('.ts-sc-n').textContent = c.sn;
+  d.querySelector('.ts-sc-rand-wrap').hidden = !off.r; d.querySelector('.ts-sc-num').hidden = !off.n;
+  d.querySelector('.ts-sc-or').textContent = off.r ? 'Or the scenario my instructor gives me:' : 'The scenario my instructor gives me:';
+  const box = d.querySelector('input'), msg = d.querySelector('.ts-sc-msg'); box.value = ''; box.max = c.sn; msg.textContent = '';
+  return new Promise(res => {
+    const done = v => { d.close(); res(v); };
+    d.querySelector('.ts-sc-rand').onclick = () => done({ n: Math.floor(Math.random() * c.sn), hidden: true });
+    const go = () => { const k = Math.round(Number(box.value)); if (!(k >= 1 && k <= c.sn)) { msg.textContent = `Type a number from 1 to ${c.sn}.`; box.focus(); return; } done({ n: k - 1, hidden: false }); };
+    d.querySelector('.ts-sc-go').onclick = go; box.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); go(); } };
+    d.querySelector('.ts-sc-cancel').onclick = () => done(null);
+    d.oncancel = () => res(null);
+    d.showModal(); if (off.n && !off.r) box.focus();
+  });
 }
 
 // ---- Lock Out: every disconnect open and the control supply off (the circuit starts again from dead); taking the lock
@@ -243,7 +267,7 @@ function tsShowFoot() { const f = document.getElementById('ts-foot'); if (f) f.t
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 function tsShowAll() {
   document.getElementById('ts-wo').innerHTML = WORK_ORDER ? `“${esc(WORK_ORDER)}”` : '<span class="ts-empty">No work order came with this circuit.</span>';
-  document.getElementById('ts-name').textContent = circuitName || 'Untitled circuit';
+  document.getElementById('ts-name').textContent = (circuitName || 'Untitled circuit') + (TS.scen ? ` · Scenario ${TS.scen.hidden ? 'hidden' : TS.scen.n + 1}` : '');
   const cur = TS_STEPS.findIndex((_, i) => !TS.steps[i]);
   document.getElementById('ts-steps').innerHTML = TS_STEPS.map((s, i) => `<li><button type="button" data-step="${i}" class="${TS.steps[i] ? 'done' : i === cur ? 'cur' : ''}" aria-pressed="${!!TS.steps[i]}"><span class="ts-n">${TS.steps[i] ? '✓' : i + 1}</span>${s}</button></li>`).join('');
   document.getElementById('ts-steps-box').hidden = !TS.showSteps;
@@ -326,6 +350,13 @@ function tsInit() {
     <div class="tsm-pick" role="group" aria-label="Which lead a click on a terminal moves"><span>Lead</span><button type="button" data-lead="red" data-tip="A click on a terminal puts the red lead there (or drag either probe)">Red</button><button type="button" data-lead="black" data-tip="A click on a terminal puts the black lead there (or drag either probe)">Black</button></div>
     <div class="tsm-jacks"><span class="jack red" title="VΩ: the red lead"><i class="sock"></i>VΩ</span><span class="jack black" title="COM: the black lead"><i class="sock"></i>COM</span></div>`;
   stage.appendChild(m);
+  // the box that asks which scenario, for an assignment with several
+  const sd = document.createElement('dialog'); sd.id = 'ts-scen-dlg'; sd.className = 'ts-scen-dlg';
+  sd.innerHTML = `<div class="dlg"><h2></h2><p class="hint">This assignment has <span class="ts-sc-n"></span> scenarios, each with its own fault. Which one do you want?</p>
+    <div class="ts-sc-rand-wrap"><button type="button" class="primary ts-sc-rand">A Random Scenario</button><p class="ts-sc-note">Its number stays hidden: it is kept with your test log for your instructor.</p></div>
+    <div class="ts-sc-num"><span class="ts-sc-or"></span><input type="number" min="1" step="1" inputmode="numeric" aria-label="Scenario number" placeholder="#"><button type="button" class="ts-sc-go">Open</button></div>
+    <p class="ts-sc-msg" role="status"></p><div class="dlg-end"><button type="button" class="ts-sc-cancel">Cancel</button></div></div>`;
+  document.body.appendChild(sd);
 
   // ---- what everything does
   document.getElementById('ts-open').addEventListener('click', () => document.getElementById('ts-file').click());
@@ -397,7 +428,7 @@ function tsInit() {
   let st = null; try { st = JSON.parse(localStorage.getItem(TS_KEY) || 'null'); } catch (_) {}
   let c = null; if (st && st.circuit) try { c = readCircuit(st.circuit); } catch (_) {}
   if (c) {
-    TS = { log: Array.isArray(st.log) ? st.log : [], steps: Array.isArray(st.steps) ? st.steps : [], t0: +st.t0 || Date.now(), showSteps: st.showSteps !== false };
+    TS = { log: Array.isArray(st.log) ? st.log : [], steps: Array.isArray(st.steps) ? st.steps : [], t0: +st.t0 || Date.now(), showSteps: st.showSteps !== false, scen: st.scen && typeof st.scen === 'object' ? st.scen : null };
     TS_BLOWN = st.blown && typeof st.blown === 'object' ? st.blown : {};
     tsUse(c, '', false);
   } else tsUse(tsSample(), '', true);

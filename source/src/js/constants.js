@@ -148,5 +148,10 @@ let FAULTS_ON = true, FAULT_BADGES = true, WORK_ORDER = '';
 const FAULT_LOADS = ['coil', 'lamp', 'sol', 'htr'];
 const canFault = p => !!p && (FAULT_LOADS.includes(p.t) || ['btn', 'con', 'sel', 'lsw', 'tsw', 'psw', 'fsw', 'olc', 'fu1'].includes(p.t));
 const PART_FAULTS = { open: 'Open', short: 'Shorted' }, WIRE_FAULTS = { open: 'Open (Broken)', l2: 'Shorted to L2' };
+/* Scenarios (Dallas, 16 Nov 2026): one circuit, several sets of faults, each with its own work order; one is in force at
+   a time (SCEN, from 0). The faults in force are the parts' and wires' own .fault; each one's faults in every scenario
+   are kept in its .fz ({ scenario: fault }), brought up to date from .fault by scenSync (faults.js). FF_OFFER: what the
+   Fault Finder offers a student when the circuit has more than one: a random scenario (r), a number they are given (n). */
+let SCEN = 0, SCEN_N = 1, SCEN_WO = [''], FF_OFFER = { r: true, n: true };
 const faultsLive = () => !editing && FAULTS_ON;
 const faultOf = x => faultsLive() && x && x.fault ? x.fault : null;

@@ -14,6 +14,7 @@ const APP_ID = 'order-of-operations-circuit-builder', AUTOSAVE_KEY = 'oo-circuit
 let circuitName = '';
 
 function circuitData() {
+  if (typeof scenSync === 'function') scenSync();
   const w = W_USER ? W : contentRight(), x = v => barsOn() && v === W ? w : v;   // (a length set by moving the bars is kept)
   return {
     app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}), ...(barsOn() ? {} : { pw: 'boxes' }), ...(SRC_COL !== SRC_DEFAULT ? { sc: SRC_COL } : {}), ...(PH_COL.join() !== PH_DEFAULT.join() ? { pc: PH_COL.map(c => c.slice(1)) } : {}),
@@ -24,6 +25,10 @@ function circuitData() {
     wires: wires.map(q => { const a = [x(q.x1), q.y1, x(q.x2), q.y2]; if (WIRE_FAULTS[q.fault]) a.push(q.fault); return a; }),   // (a fault planted on a wire: its 5th)
     // (faults planted on parts: [part, fault]; the work order for the student)
     ...(parts.some(p => PART_FAULTS[p.fault] && canFault(p)) ? { fl: parts.map((p, i) => PART_FAULTS[p.fault] && canFault(p) ? [i, p.fault] : null).filter(Boolean) } : {}), ...(WORK_ORDER.trim() ? { wo: WORK_ORDER } : {}),
+    // (scenarios, when there are several: each one's faults on parts [part, fault] and wires [wire, fault] and its work
+    // order (sn), the one in force (si), and what the Fault Finder offers (ffo: random, a number given); the fields above are the one in force)
+    ...(SCEN_N > 1 ? { sn: [...Array(SCEN_N).keys()].map(s => ({ fl: parts.map((p, i) => p.fz && PART_FAULTS[p.fz[s]] && canFault(p) ? [i, p.fz[s]] : null).filter(Boolean), wl: wires.map((q, i) => q.fz && WIRE_FAULTS[q.fz[s]] ? [i, q.fz[s]] : null).filter(Boolean), ...((SCEN_WO[s] || '').trim() ? { wo: SCEN_WO[s] } : {}) })), si: SCEN } : {}),
+    ...(!FF_OFFER.r || !FF_OFFER.n ? { ffo: [FF_OFFER.r ? 1 : 0, FF_OFFER.n ? 1 : 0] } : {}),
     // (its process values: id, name, kind, unit, lowest, highest, start; and the switches they work: part, value, setting, reset, side)
     ...(PV.length ? { pv: PV.map(v => [v.id, v.name, v.kind, v.unit, v.min, v.max, v.start]), pd: parts.map((p, i) => isDrv(p) && pvOf(p) ? [i, p.pv, +p.rate || 0, +p.cool || 0, drvPer(p), p.dir === 'down' ? 'down' : 'up', drvOff(p)] : null).filter(Boolean), pl: parts.map((p, i) => pvLinked(p) ? [i, p.pv, +p.sp, +(p.rs ?? p.sp), p.side === 'lo' ? 'lo' : 'hi'] : null).filter(Boolean),
       ...(PV.some(v => v.pic) ? { pp: PV.filter(v => v.pic).map(v => [v.id, v.pic.x, v.pic.y]) } : {}), ...(parts.some(p => p.nopic) ? { pn: parts.map((p, i) => p.nopic ? i : -1).filter(i => i >= 0) } : {}) } : {}),
@@ -73,15 +78,28 @@ function readCircuit(d) {
   for (const a of Array.isArray(d.pp) ? d.pp : []) { const v = Array.isArray(a) && pv.find(q => q.id === a[0]); if (v) v.pic = { x: snap(Math.max(0, Math.min(20000, fin(a[1], 0)))), y: snap(Math.max(0, Math.min(20000, fin(a[2], 0)))) }; }
   for (const i of Array.isArray(d.pn) ? d.pn : []) { const p = ps[i]; if (p && isDrv(p)) p.nopic = true; }
   const w = Math.max(d.fw ? BAR_MIN : W_MIN, Math.min(20000, d.w === undefined ? W_MIN : num(d.w)));
-  const ws = d.wires.slice(0, 2000).map(a => [num(a[0]), num(a[1]), num(a[2]), num(a[3]), WIRE_FAULTS[a[4]] ? a[4] : null])
+  const wAt = new Map();   // (each wire by its place in the file, for the scenarios' faults)
+  const ws = d.wires.slice(0, 2000).map((a, i) => [num(a[0]), num(a[1]), num(a[2]), num(a[3]), WIRE_FAULTS[a[4]] ? a[4] : null, i])
     .filter(([x1, y1, x2, y2]) => (x1 === x2 || y1 === y2) && (x1 !== x2 || y1 !== y2))
-    .map(([x1, y1, x2, y2, f]) => { const q = Wr(Math.min(w, Math.max(0, x1)), Math.max(0, y1), Math.min(w, Math.max(0, x2)), Math.max(0, y2)); if (f) q.fault = f; return q; });
+    .map(([x1, y1, x2, y2, f, i]) => { const q = Wr(Math.min(w, Math.max(0, x1)), Math.max(0, y1), Math.min(w, Math.max(0, x2)), Math.max(0, y2)); if (f) q.fault = f; wAt.set(i, q); return q; });
   for (const a of Array.isArray(d.fl) ? d.fl : []) { const p = Array.isArray(a) && ps[a[0]]; if (p && canFault(p) && PART_FAULTS[a[1]]) p.fault = a[1]; }   // (faults planted on parts)
-  return { wo: typeof d.wo === 'string' ? d.wo.slice(0, 400) : '', w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', src: SRC_PAL.some(([, h]) => h === d.sc) ? d.sc : SRC_DEFAULT, ph: Array.isArray(d.pc) && d.pc.length === 3 && d.pc.every(hex) ? d.pc.map(hex) : [...PH_DEFAULT], pv, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
+  // (scenarios: every one's faults kept on its parts and wires (fz); the one in force, as their faults)
+  let sn = 1, si = 0, swo = null;
+  if (Array.isArray(d.sn) && d.sn.length > 1) {
+    const S = d.sn.slice(0, 20); sn = S.length; si = Math.max(0, Math.min(sn - 1, Math.round(Number(d.si)) || 0));
+    for (const x of [...ps, ...ws]) { delete x.fault; delete x.fz; }
+    S.forEach((s, k) => { if (!s || typeof s !== 'object') return;
+      for (const a of Array.isArray(s.fl) ? s.fl : []) { const p = Array.isArray(a) && ps[a[0]]; if (p && canFault(p) && PART_FAULTS[a[1]]) (p.fz || (p.fz = {}))[k] = a[1]; }
+      for (const a of Array.isArray(s.wl) ? s.wl : []) { const q = Array.isArray(a) && wAt.get(a[0]); if (q && WIRE_FAULTS[a[1]]) (q.fz || (q.fz = {}))[k] = a[1]; } });
+    for (const x of [...ps, ...ws]) if (x.fz && x.fz[si]) x.fault = x.fz[si];
+    swo = S.map(s => s && typeof s.wo === 'string' ? s.wo.slice(0, 400) : '');
+  }
+  const ffo = Array.isArray(d.ffo) && (d.ffo[0] || d.ffo[1]) ? { r: !!d.ffo[0], n: !!d.ffo[1] } : null;
+  return { sn, si, swo, ffo, wo: swo ? swo[si] : typeof d.wo === 'string' ? d.wo.slice(0, 400) : '', w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', src: SRC_PAL.some(([, h]) => h === d.sc) ? d.sc : SRC_DEFAULT, ph: Array.isArray(d.pc) && d.pc.length === 3 && d.pc.every(hex) ? d.pc.map(hex) : [...PH_DEFAULT], pv, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
 }
 function useCircuit(c, how) {
   snapshot();
-  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; WORK_ORDER = c.wo || ''; normalize(); sel = null;
+  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; scenFrom(c); normalize(); sel = null;
   fitView(); fit(true);
   say(how);
   if (editing) draw(); else { NET = network(); draw(); startRun(); afterRunStart(); }
@@ -189,7 +207,7 @@ function scheduleAutosave() {
   autosaveTimer = setTimeout(() => { try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(circuitData())); } catch (_) {} }, 400);
 }
 function restoreAutosave() {
-  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; WORK_ORDER = c.wo || ''; normalize(); return true; }
+  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; scenFrom(c); normalize(); return true; }
   catch (_) { return false; }
 }
 

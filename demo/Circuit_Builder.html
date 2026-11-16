@@ -579,6 +579,21 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
 .rpanel .ts-g[hidden] { display: none; }
 /* the Home tab's groups: their buttons centred across and down the group too */
 .rgrp .gbody { align-items: center; justify-content: center; }
+/* scenarios: the Faults tab's Scenario and Fault Finder Offers groups; the Fault Finder's box asking which scenario */
+.fz-scengrp .gbody { gap: 6px; }
+.fz-scengrp .seg button { padding: 4px 11px; }
+.fz-chk { display: flex; align-items: center; gap: 7px; font-size: .8rem; white-space: nowrap; cursor: pointer; padding: 2px 4px; }
+.fz-offer.dim .fz-chk { opacity: .45; cursor: default; }
+.ts-scen-dlg { width: min(520px, calc(100vw - 32px)); }
+.ts-scen-dlg .dlg { padding: 20px 24px; }
+.ts-scen-dlg h2 { margin: 0 0 4px; font-size: 1.2rem; }
+.ts-scen-dlg .hint { margin: 0 0 16px; color: var(--muted); }
+.ts-scen-dlg .dlg button.ts-sc-rand { width: 100%; padding: 12px; font-size: 1rem; background: #4a2f2a; border-color: #FF6F59; color: #fff; }
+.ts-scen-dlg .ts-sc-note { margin: 6px 0 16px; font-size: .8rem; color: var(--faint); }
+.ts-scen-dlg .ts-sc-num { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.ts-scen-dlg .ts-sc-num input { width: 64px; text-align: center; font: inherit; font-size: 1rem; background: #1c1d1f; border: 1px solid var(--line); color: var(--ink); border-radius: 8px; padding: 7px; }
+.ts-scen-dlg .ts-sc-msg { min-height: 1.2em; margin: 8px 0 0; color: #ff9a8a; font-size: .85rem; }
+.ts-scen-dlg [hidden] { display: none !important; }
 
 .demo-badge { font-style: normal; font-size: .7rem; font-weight: 800; letter-spacing: .08em; color: #1c1d1f; background: #9be03a; border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }
 </style>
@@ -673,13 +688,16 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
       <div class="rgrp" id="pv-group"><div class="gbody"><button type="button" class="tool big" id="pv-btn" data-tip="Process values: numbers the simulation keeps in the background (positions, pressures, temperatures...). Set them up here, then link limit, pressure and temperature switches to them on each switch's tab. While running, set them in the Process window."><svg viewBox="0 0 30 26"><rect x="3" y="3" width="24" height="20" rx="3" fill="#14161a" stroke="#8a96a3" stroke-width="1.3"/><g stroke-linecap="round"><path d="M7 9h11" stroke="#5ee08a" stroke-width="2"/><path d="M7 15h7" stroke="#5ee08a" stroke-width="2"/><path d="M18 9h5M14 15h9" stroke="#3a414a" stroke-width="2"/></g><circle cx="18" cy="9" r="2.2" fill="#e8e8e8"/><circle cx="14" cy="15" r="2.2" fill="#e8e8e8"/><path d="M7 19.5h5" stroke="#8a96a3" stroke-width="1.2"/></svg><span>Process<br>Values</span></button></div><div class="gname">Process</div></div>
     </div>
     <div class="rpanel" id="faultbar" role="toolbar" aria-label="Faults" hidden>
+      <div class="rgrp fz-scengrp"><div class="gbody"><span class="seg" role="group" id="fz-scen" aria-label="Scenario"></span>
+        <button type="button" class="tool small" id="fz-scen-new" data-tip="A new scenario: its own faults and work order, on the same circuit">+ New</button>
+        <button type="button" class="tool small danger" id="fz-scen-del" data-tip="Delete this scenario (its faults and work order)">Delete</button></div><div class="gname">Scenario (Each With Its Own Faults and Work Order)</div></div>
       <div class="rgrp fz-plant"><div class="gbody"><div class="fz-col">
         <div class="fz-what" id="fz-what">Pick a part or wire on the panel</div>
         <div class="seg" role="group" id="fz-kinds" aria-label="The fault to plant on it"></div>
       </div></div><div class="gname">Plant a Fault</div></div>
       <div class="rgrp"><div class="gbody">
         <button type="button" class="tool big" id="fz-random" data-tip="Plant a fault on a part or wire picked at random (open or shorted)"><svg viewBox="0 0 30 26"><rect x="6" y="4" width="18" height="18" rx="4" fill="none" stroke="#cfcfcf" stroke-width="1.8"/><circle cx="11" cy="9" r="1.7" fill="#cfcfcf"/><circle cx="19" cy="17" r="1.7" fill="#cfcfcf"/><circle cx="15" cy="13" r="1.7" fill="#cfcfcf"/></svg><span>Random<br>Fault</span></button>
-        <button type="button" class="tool big" id="fz-clear" data-tip="Take every planted fault off the circuit"><svg viewBox="0 0 30 26"><path d="M8 7l14 14M22 7L8 21" stroke="#cfcfcf" stroke-width="2.2" stroke-linecap="round"/></svg><span>Clear<br>All</span></button>
+        <button type="button" class="tool big" id="fz-clear" data-tip="Take every planted fault off (in this scenario)"><svg viewBox="0 0 30 26"><path d="M8 7l14 14M22 7L8 21" stroke="#cfcfcf" stroke-width="2.2" stroke-linecap="round"/></svg><span>Clear<br>All</span></button>
       </div><div class="gname">Faults</div></div>
       <div class="rgrp fz-listgrp"><div class="gbody"><div class="fz-list" id="fz-list"></div></div><div class="gname">Planted Faults</div></div>
       <div class="rgrp"><div class="gbody"><div class="stack">
@@ -687,6 +705,10 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
         <button type="button" class="tool small" id="fz-badges" aria-pressed="true" data-tip="Show a small red badge on each part and wire with a fault planted on it"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L3.6 17.2a1.6 1.6 0 0 0 2.3 2.3l5.7-5.7a4 4 0 0 0 5.2-5.4l-2.4 2.4-2.1-.4-.4-2.1z"/></svg><span>Show Fault Badges</span></button>
       </div></div><div class="gname">View</div></div>
       <div class="rgrp fz-wogrp"><div class="gbody"><textarea id="fz-wo" rows="3" maxlength="400" aria-label="Work order" placeholder="What the student is told, such as: The machine won't start. When you press START, nothing happens."></textarea></div><div class="gname">Work Order</div></div>
+      <div class="rgrp fz-offer"><div class="gbody"><div class="stack">
+        <label class="fz-chk" data-tip="The Fault Finder can give each student a scenario picked at random (its number kept hidden)"><input type="checkbox" id="fz-off-r" checked> Random Scenario</label>
+        <label class="fz-chk" data-tip="Students can type the number of a scenario you give them"><input type="checkbox" id="fz-off-n" checked> Scenario Number I Give</label>
+      </div></div><div class="gname">Fault Finder Offers</div></div>
     </div>
     <div class="rpanel" id="editpanel" aria-label="Settings of the selected part" hidden>
       <div class="props">
@@ -1128,6 +1150,11 @@ let FAULTS_ON = true, FAULT_BADGES = true, WORK_ORDER = '';
 const FAULT_LOADS = ['coil', 'lamp', 'sol', 'htr'];
 const canFault = p => !!p && (FAULT_LOADS.includes(p.t) || ['btn', 'con', 'sel', 'lsw', 'tsw', 'psw', 'fsw', 'olc', 'fu1'].includes(p.t));
 const PART_FAULTS = { open: 'Open', short: 'Shorted' }, WIRE_FAULTS = { open: 'Open (Broken)', l2: 'Shorted to L2' };
+/* Scenarios (Dallas, 16 Nov 2026): one circuit, several sets of faults, each with its own work order; one is in force at
+   a time (SCEN, from 0). The faults in force are the parts' and wires' own .fault; each one's faults in every scenario
+   are kept in its .fz ({ scenario: fault }), brought up to date from .fault by scenSync (faults.js). FF_OFFER: what the
+   Fault Finder offers a student when the circuit has more than one: a random scenario (r), a number they are given (n). */
+let SCEN = 0, SCEN_N = 1, SCEN_WO = [''], FF_OFFER = { r: true, n: true };
 const faultsLive = () => !editing && FAULTS_ON;
 const faultOf = x => faultsLive() && x && x.fault ? x.fault : null;
 
@@ -1246,7 +1273,7 @@ PRESETS.traffic = () => { const c = readCircuit(TRAFFIC); return [c.parts, c.wir
 const FWDREV_TEMPLATE = {"app":"order-of-operations-circuit-builder","v":1,"name":"FWD/REV Template","w":2180,"pw":"boxes","pc":["E8413C","00FF64","3F7FFF"],"parts":[["ph",100,120,"1",0,1,"",3],["ph",100,240,"2",0,1,"",3],["ph",100,360,"3",0,1,"",3],["dsc",280,240,"1",0,1,""],["fus",440,240,"1",0,1,""],["xfm",640,700,"1",0,1,""],["fu1",580,500,"2",0,1,"",3],["fu1",700,500,"2",0,1,"",3],["mst",1160,240,"X",0,1,""],["olh",1700,240,"1",0,1,""],["mtr",1980,240,"1",0,1,""],["mst",1160,620,"Y",0,1,""],["fu1",420,1000,"3",0,1,""]],"wires":[[140,120,240,120],[320,120,400,120],[480,120,580,120],[580,120,1020,120],[1020,120,1120,120],[1200,120,1500,120],[1500,120,1660,120],[1740,120,1820,120],[140,240,240,240],[320,240,400,240],[480,240,940,240],[940,240,1120,240],[1200,240,1400,240],[1400,240,1660,240],[1740,240,1820,240],[140,360,240,360],[320,360,400,360],[480,360,700,360],[700,360,860,360],[860,360,1120,360],[1200,360,1300,360],[1300,360,1660,360],[1740,360,1820,360],[1020,500,1120,500],[1200,500,1300,500],[940,620,1120,620],[1200,620,1400,620],[860,740,1120,740],[1200,740,1500,740],[460,1000,580,1000],[700,360,700,460],[700,540,700,620],[700,780,700,900],[580,120,580,460],[580,540,580,620],[580,780,580,1000],[1020,120,1020,500],[940,240,940,620],[860,360,860,740],[1300,360,1300,500],[1400,240,1400,620],[1500,120,1500,740]],"pv":[["vapcfat","Pressure 1","pressure","psi",0,100,0],["voh3xcn","Temperature","temperature","°F",32,600,70]],"pd":[],"pl":[]};
 PRESETS.fwdrev = () => { const c = readCircuit(FWDREV_TEMPLATE); return [c.parts, c.wires, c.w, c.fixed, c]; };
 // (a preset saved from the builder brings its own power, colours and process values with it)
-function loadPreset(k) { W = W_MIN; W_USER = null; POWER = 'bars'; PV = []; WORK_ORDER = ''; SRC_COL = SRC_DEFAULT; PH_COL = [...PH_DEFAULT]; const r = PRESETS[k](); [parts, wires] = r; if (r[2]) W = r[2]; if (r[3]) W_USER = W;
+function loadPreset(k) { W = W_MIN; W_USER = null; POWER = 'bars'; PV = []; WORK_ORDER = ''; SCEN = 0; SCEN_N = 1; SCEN_WO = ['']; FF_OFFER = { r: true, n: true }; SRC_COL = SRC_DEFAULT; PH_COL = [...PH_DEFAULT]; const r = PRESETS[k](); [parts, wires] = r; if (r[2]) W = r[2]; if (r[3]) W_USER = W;
   if (r[4]) { POWER = r[4].power; SRC_COL = r[4].src; PH_COL = r[4].ph; PV = r[4].pv; }
   normalize(); }
 
@@ -5409,8 +5436,8 @@ function movedGroup1(partIds, wireIds, dx, dy, termIds) {
   return { wires: wires.filter(w => !used.has(w)).concat(add.map(q => q.id ? { id: q.id, x1: q[0], y1: q[1], x2: q[2], y2: q[3] } : Wr(...q))), hits };
 }
 function movedWires(p, nx, ny) { return movedGroup(new Set([p.id]), new Set(), nx - p.x, ny - p.y); }
-const stateOf = () => JSON.stringify({ parts, wires, W, WU: W_USER, PW: POWER, SC: SRC_COL, PC: PH_COL, PV }, (k, v) => k.startsWith('_') ? undefined : v);
-function restore(st) { const o = JSON.parse(st); parts = o.parts; wires = o.wires; if (o.W) W = o.W; W_USER = o.WU ?? null; POWER = o.PW || 'bars'; SRC_COL = o.SC || SRC_DEFAULT; PH_COL = o.PC || [...PH_DEFAULT]; PV = o.PV || []; }
+const stateOf = () => JSON.stringify({ parts, wires, W, WU: W_USER, PW: POWER, SC: SRC_COL, PC: PH_COL, PV, SN: [SCEN, SCEN_N, SCEN_WO, WORK_ORDER] }, (k, v) => k.startsWith('_') ? undefined : v);
+function restore(st) { const o = JSON.parse(st); parts = o.parts; wires = o.wires; if (o.SN) [SCEN, SCEN_N, SCEN_WO, WORK_ORDER] = o.SN; if (o.W) W = o.W; W_USER = o.WU ?? null; POWER = o.PW || 'bars'; SRC_COL = o.SC || SRC_DEFAULT; PH_COL = o.PC || [...PH_DEFAULT]; PV = o.PV || []; }
 
 // a wire running across a part's body (other than the run it sits in, along its own line): a part can't go there, as
 // the wire would be hidden under it and cut
@@ -5446,7 +5473,7 @@ function normalize() {
   const merge = (list, horiz, at) => { list.sort((a, b) => a[0] - b[0]); const out = []; for (const iv of list) { const l = out[out.length - 1]; if (l && (iv[0] < l[1] || iv[0] === l[1] && !across(horiz, at, l[1]))) { l[1] = Math.max(l[1], iv[1]); l[2] = l[2].concat(iv[2]); } else out.push([iv[0], iv[1], [...iv[2]]]); } return out; };
   const out = [], used = new Set(), keep = (x1, y1, x2, y2, ids) => {
     const id = [...ids].sort((u, v) => u - v).find(i => !used.has(i));   // the oldest wire's id
-    if (id !== undefined) { used.add(id); const f = (wires.find(w => w.id === id) || {}).fault; out.push({ id, x1, y1, x2, y2, ...(f ? { fault: f } : {}) }); } else out.push(Wr(x1, y1, x2, y2));   // (a wire keeps a fault planted on it)
+    if (id !== undefined) { used.add(id); const o = wires.find(w => w.id === id) || {}, f = o.fault; out.push({ id, x1, y1, x2, y2, ...(f ? { fault: f } : {}), ...(o.fz ? { fz: { ...o.fz } } : {}) }); } else out.push(Wr(x1, y1, x2, y2));   // (a wire keeps a fault planted on it)
   };
   for (const [y, list] of Hs) {
     let ivs = merge(list, true, y);
@@ -6780,6 +6807,19 @@ document.getElementById('ls-kind').addEventListener('change', e => { const k = e
    shorted to L2), or plant one at random; the planted faults listed (click one to pick it, ✕ to take it off); Faults
    On in Run (off: Run works the circuit as it should be); red badges on the faulted parts and wires; and the work
    order the student is given. A part's own tab has its Fault too. See constants.js for what each fault does. */
+// ---- scenarios
+const scenAll = () => [...parts, ...wires];
+function scenSync() {   // (the faults in force kept with their scenario)
+  for (const x of scenAll()) { if (x.fault) (x.fz || (x.fz = {}))[SCEN] = x.fault; else if (x.fz) delete x.fz[SCEN]; if (x.fz && !Object.keys(x.fz).length) delete x.fz; }
+  SCEN_WO[SCEN] = WORK_ORDER;
+}
+function scenUse(n) {   // (scenario n in force: its faults and its work order)
+  for (const x of scenAll()) { const f = x.fz && x.fz[n]; if (f) x.fault = f; else delete x.fault; }
+  SCEN = n; WORK_ORDER = SCEN_WO[n] || '';
+}
+// the scenarios of a circuit just read (readCircuit's sn, si, swo, ffo), or one scenario
+function scenFrom(c) { SCEN_N = c.sn || 1; SCEN = Math.min(c.si || 0, SCEN_N - 1); SCEN_WO = c.swo ? [...c.swo] : [c.wo || '']; FF_OFFER = c.ffo ? { ...c.ffo } : { r: true, n: true }; WORK_ORDER = SCEN_WO[SCEN] || ''; }
+function scenGo(n) { if (n === SCEN || n < 0 || n >= SCEN_N) return; scenSync(); scenUse(n); say(`Scenario ${n + 1}: its faults are in force (Run uses them)`); draw(); }
 const faultName = (x, isW) => (isW ? WIRE_FAULTS : PART_FAULTS)[x.fault] || '';
 // where a fault is, in words: a part by its caption, a wire by its rung number when it has one (or where it runs)
 function faultWhere(x, isW) {
@@ -6833,7 +6873,12 @@ function showFaults() {
   document.getElementById('fz-on').setAttribute('aria-pressed', String(FAULTS_ON));
   document.getElementById('fz-badges').setAttribute('aria-pressed', String(FAULT_BADGES));
   const wo = document.getElementById('fz-wo'); if (document.activeElement !== wo) wo.value = WORK_ORDER;
-  const n = L.length; document.getElementById('rt-faults').textContent = n ? `Faults (${n})` : 'Faults';
+  const n = L.length; document.getElementById('rt-faults').textContent = SCEN_N > 1 ? `Faults (${SCEN_N} Scenarios)` : n ? `Faults (${n})` : 'Faults';
+  document.getElementById('fz-scen').innerHTML = [...Array(SCEN_N).keys()].map(i => `<button type="button" data-sc="${i}" aria-pressed="${i === SCEN}" data-tip="Scenario ${i + 1}: show its faults and work order">${i + 1}</button>`).join('');
+  document.getElementById('fz-scen-del').disabled = SCEN_N < 2;
+  document.getElementById('fz-off-r').checked = FF_OFFER.r; document.getElementById('fz-off-n').checked = FF_OFFER.n;
+  for (const id of ['fz-off-r', 'fz-off-n']) document.getElementById(id).disabled = SCEN_N < 2;
+  document.querySelector('.fz-offer').classList.toggle('dim', SCEN_N < 2);
 }
 // the Fault on a part's own tab (one part picked, or several of one kind)
 function showPartFault(G) {
@@ -6864,6 +6909,22 @@ document.getElementById('fz-random').addEventListener('click', () => {
 document.getElementById('fz-clear').addEventListener('click', () => { const L = faulted(); if (!L.length) return; snapshot(); for (const [x] of L) delete x.fault; say(`${L.length} fault${L.length > 1 ? 's' : ''} taken off`); draw(); });
 document.getElementById('fz-on').addEventListener('click', () => { FAULTS_ON = !FAULTS_ON; showFaults(); say(FAULTS_ON ? 'Faults on: Run works the circuit with its faults' : 'Faults off: Run works the circuit as it should be'); });
 document.getElementById('fz-badges').addEventListener('click', () => { FAULT_BADGES = !FAULT_BADGES; showFaults(); draw(); });
+document.getElementById('fz-scen').addEventListener('click', e => { const b = e.target.closest('[data-sc]'); if (b) scenGo(+b.dataset.sc); });
+document.getElementById('fz-scen-new').addEventListener('click', () => {
+  if (SCEN_N >= 20) return say('Twenty scenarios is the most one circuit can have');
+  snapshot(); scenSync(); SCEN_N++; SCEN_WO[SCEN_N - 1] = ''; scenUse(SCEN_N - 1);
+  say(`Scenario ${SCEN_N}: a new one, with no faults yet. Plant its faults and write its work order.`); draw();
+});
+document.getElementById('fz-scen-del').addEventListener('click', () => {
+  if (SCEN_N < 2) return; snapshot(); scenSync(); const k = SCEN;
+  for (const x of scenAll()) if (x.fz) { const o = {}; for (const s in x.fz) { const i = +s; if (i < k) o[i] = x.fz[s]; else if (i > k) o[i - 1] = x.fz[s]; } if (Object.keys(o).length) x.fz = o; else delete x.fz; }
+  SCEN_WO.splice(k, 1); SCEN_N--; scenUse(Math.min(k, SCEN_N - 1));
+  say(`Scenario ${k + 1} deleted: the others are numbered 1 to ${SCEN_N}`); draw();
+});
+for (const [id, k] of [['fz-off-r', 'r'], ['fz-off-n', 'n']]) document.getElementById(id).addEventListener('change', e => {
+  FF_OFFER[k] = e.target.checked; if (!FF_OFFER.r && !FF_OFFER.n) { FF_OFFER[k] = true; say('The Fault Finder has to offer at least one of the two'); }
+  showFaults(); if (typeof showFileLabel === 'function') showFileLabel();
+});
 document.getElementById('fz-wo').addEventListener('input', e => { WORK_ORDER = e.target.value.slice(0, 400); if (typeof showFileLabel === 'function') showFileLabel(); });
 // a red badge with a wrench, on a part (its top right) or a wire (its middle) with a fault planted on it
 function faultBadge(x, y, g, tip) {
@@ -6891,6 +6952,7 @@ const APP_ID = 'order-of-operations-circuit-builder', AUTOSAVE_KEY = 'oo-circuit
 let circuitName = '';
 
 function circuitData() {
+  if (typeof scenSync === 'function') scenSync();
   const w = W_USER ? W : contentRight(), x = v => barsOn() && v === W ? w : v;   // (a length set by moving the bars is kept)
   return {
     app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}), ...(barsOn() ? {} : { pw: 'boxes' }), ...(SRC_COL !== SRC_DEFAULT ? { sc: SRC_COL } : {}), ...(PH_COL.join() !== PH_DEFAULT.join() ? { pc: PH_COL.map(c => c.slice(1)) } : {}),
@@ -6901,6 +6963,10 @@ function circuitData() {
     wires: wires.map(q => { const a = [x(q.x1), q.y1, x(q.x2), q.y2]; if (WIRE_FAULTS[q.fault]) a.push(q.fault); return a; }),   // (a fault planted on a wire: its 5th)
     // (faults planted on parts: [part, fault]; the work order for the student)
     ...(parts.some(p => PART_FAULTS[p.fault] && canFault(p)) ? { fl: parts.map((p, i) => PART_FAULTS[p.fault] && canFault(p) ? [i, p.fault] : null).filter(Boolean) } : {}), ...(WORK_ORDER.trim() ? { wo: WORK_ORDER } : {}),
+    // (scenarios, when there are several: each one's faults on parts [part, fault] and wires [wire, fault] and its work
+    // order (sn), the one in force (si), and what the Fault Finder offers (ffo: random, a number given); the fields above are the one in force)
+    ...(SCEN_N > 1 ? { sn: [...Array(SCEN_N).keys()].map(s => ({ fl: parts.map((p, i) => p.fz && PART_FAULTS[p.fz[s]] && canFault(p) ? [i, p.fz[s]] : null).filter(Boolean), wl: wires.map((q, i) => q.fz && WIRE_FAULTS[q.fz[s]] ? [i, q.fz[s]] : null).filter(Boolean), ...((SCEN_WO[s] || '').trim() ? { wo: SCEN_WO[s] } : {}) })), si: SCEN } : {}),
+    ...(!FF_OFFER.r || !FF_OFFER.n ? { ffo: [FF_OFFER.r ? 1 : 0, FF_OFFER.n ? 1 : 0] } : {}),
     // (its process values: id, name, kind, unit, lowest, highest, start; and the switches they work: part, value, setting, reset, side)
     ...(PV.length ? { pv: PV.map(v => [v.id, v.name, v.kind, v.unit, v.min, v.max, v.start]), pd: parts.map((p, i) => isDrv(p) && pvOf(p) ? [i, p.pv, +p.rate || 0, +p.cool || 0, drvPer(p), p.dir === 'down' ? 'down' : 'up', drvOff(p)] : null).filter(Boolean), pl: parts.map((p, i) => pvLinked(p) ? [i, p.pv, +p.sp, +(p.rs ?? p.sp), p.side === 'lo' ? 'lo' : 'hi'] : null).filter(Boolean),
       ...(PV.some(v => v.pic) ? { pp: PV.filter(v => v.pic).map(v => [v.id, v.pic.x, v.pic.y]) } : {}), ...(parts.some(p => p.nopic) ? { pn: parts.map((p, i) => p.nopic ? i : -1).filter(i => i >= 0) } : {}) } : {}),
@@ -6950,15 +7016,28 @@ function readCircuit(d) {
   for (const a of Array.isArray(d.pp) ? d.pp : []) { const v = Array.isArray(a) && pv.find(q => q.id === a[0]); if (v) v.pic = { x: snap(Math.max(0, Math.min(20000, fin(a[1], 0)))), y: snap(Math.max(0, Math.min(20000, fin(a[2], 0)))) }; }
   for (const i of Array.isArray(d.pn) ? d.pn : []) { const p = ps[i]; if (p && isDrv(p)) p.nopic = true; }
   const w = Math.max(d.fw ? BAR_MIN : W_MIN, Math.min(20000, d.w === undefined ? W_MIN : num(d.w)));
-  const ws = d.wires.slice(0, 2000).map(a => [num(a[0]), num(a[1]), num(a[2]), num(a[3]), WIRE_FAULTS[a[4]] ? a[4] : null])
+  const wAt = new Map();   // (each wire by its place in the file, for the scenarios' faults)
+  const ws = d.wires.slice(0, 2000).map((a, i) => [num(a[0]), num(a[1]), num(a[2]), num(a[3]), WIRE_FAULTS[a[4]] ? a[4] : null, i])
     .filter(([x1, y1, x2, y2]) => (x1 === x2 || y1 === y2) && (x1 !== x2 || y1 !== y2))
-    .map(([x1, y1, x2, y2, f]) => { const q = Wr(Math.min(w, Math.max(0, x1)), Math.max(0, y1), Math.min(w, Math.max(0, x2)), Math.max(0, y2)); if (f) q.fault = f; return q; });
+    .map(([x1, y1, x2, y2, f, i]) => { const q = Wr(Math.min(w, Math.max(0, x1)), Math.max(0, y1), Math.min(w, Math.max(0, x2)), Math.max(0, y2)); if (f) q.fault = f; wAt.set(i, q); return q; });
   for (const a of Array.isArray(d.fl) ? d.fl : []) { const p = Array.isArray(a) && ps[a[0]]; if (p && canFault(p) && PART_FAULTS[a[1]]) p.fault = a[1]; }   // (faults planted on parts)
-  return { wo: typeof d.wo === 'string' ? d.wo.slice(0, 400) : '', w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', src: SRC_PAL.some(([, h]) => h === d.sc) ? d.sc : SRC_DEFAULT, ph: Array.isArray(d.pc) && d.pc.length === 3 && d.pc.every(hex) ? d.pc.map(hex) : [...PH_DEFAULT], pv, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
+  // (scenarios: every one's faults kept on its parts and wires (fz); the one in force, as their faults)
+  let sn = 1, si = 0, swo = null;
+  if (Array.isArray(d.sn) && d.sn.length > 1) {
+    const S = d.sn.slice(0, 20); sn = S.length; si = Math.max(0, Math.min(sn - 1, Math.round(Number(d.si)) || 0));
+    for (const x of [...ps, ...ws]) { delete x.fault; delete x.fz; }
+    S.forEach((s, k) => { if (!s || typeof s !== 'object') return;
+      for (const a of Array.isArray(s.fl) ? s.fl : []) { const p = Array.isArray(a) && ps[a[0]]; if (p && canFault(p) && PART_FAULTS[a[1]]) (p.fz || (p.fz = {}))[k] = a[1]; }
+      for (const a of Array.isArray(s.wl) ? s.wl : []) { const q = Array.isArray(a) && wAt.get(a[0]); if (q && WIRE_FAULTS[a[1]]) (q.fz || (q.fz = {}))[k] = a[1]; } });
+    for (const x of [...ps, ...ws]) if (x.fz && x.fz[si]) x.fault = x.fz[si];
+    swo = S.map(s => s && typeof s.wo === 'string' ? s.wo.slice(0, 400) : '');
+  }
+  const ffo = Array.isArray(d.ffo) && (d.ffo[0] || d.ffo[1]) ? { r: !!d.ffo[0], n: !!d.ffo[1] } : null;
+  return { sn, si, swo, ffo, wo: swo ? swo[si] : typeof d.wo === 'string' ? d.wo.slice(0, 400) : '', w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', src: SRC_PAL.some(([, h]) => h === d.sc) ? d.sc : SRC_DEFAULT, ph: Array.isArray(d.pc) && d.pc.length === 3 && d.pc.every(hex) ? d.pc.map(hex) : [...PH_DEFAULT], pv, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
 }
 function useCircuit(c, how) {
   snapshot();
-  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; WORK_ORDER = c.wo || ''; normalize(); sel = null;
+  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; scenFrom(c); normalize(); sel = null;
   fitView(); fit(true);
   say(how);
   if (editing) draw(); else { NET = network(); draw(); startRun(); afterRunStart(); }
@@ -7066,7 +7145,7 @@ function scheduleAutosave() {
   autosaveTimer = setTimeout(() => { try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(circuitData())); } catch (_) {} }, 400);
 }
 function restoreAutosave() {
-  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; WORK_ORDER = c.wo || ''; normalize(); return true; }
+  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; scenFrom(c); normalize(); return true; }
   catch (_) { return false; }
 }
 
@@ -7284,7 +7363,7 @@ window.addEventListener('resize', () => { if (fit(editing && !dragging())) { if 
 
 if (LOCKED) {
   // a locked simulator: its own circuit, straight into Run mode, with its name as the title
-  try { const c = readCircuit(LOCKED.circuit); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; WORK_ORDER = c.wo || ''; normalize(); }
+  try { const c = readCircuit(LOCKED.circuit); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; scenFrom(c); normalize(); }
   catch (_) { loadPreset('blank'); }
   document.body.classList.add('locked');
   document.querySelector('h1 span').textContent = circuitName || 'Circuit';
@@ -7690,7 +7769,7 @@ const TS_KEY = 'oo-circuit-builder-demo:ts-state';
 const TS_STEPS = ['Symptoms', 'Possible causes', 'Find the faulty area', 'Find the faulty part', 'Repair', 'Test and document'];
 let tsTab = 'ts';
 const TSM = { mode: 'v', red: null, black: null, next: 'red', key: '', val: '', sig: '', due: 0, pend: null, lastLog: '' };
-let TS = { log: [], steps: [], t0: Date.now(), showSteps: true };
+let TS = { log: [], steps: [], t0: Date.now(), showSteps: true, scen: null };   // (scen: the scenario this student got, { n: from 0, of, hidden })
 
 function tsSay(t) { say(t); }
 // the Troubleshooter's ribbon: its own tab (Troubleshoot) and the Simulation tab
@@ -7704,10 +7783,10 @@ function tsShowRibbon() {
 }
 
 // ---- what is kept between visits (in this browser): the assignment, the test log, the steps ticked off
-function tsSave() { try { localStorage.setItem(TS_KEY, JSON.stringify({ circuit: circuitData(), log: TS.log, steps: TS.steps, t0: TS.t0, showSteps: TS.showSteps, blown: TS_BLOWN })); } catch (_) {} }
+function tsSave() { try { localStorage.setItem(TS_KEY, JSON.stringify({ circuit: circuitData(), log: TS.log, steps: TS.steps, t0: TS.t0, showSteps: TS.showSteps, blown: TS_BLOWN, scen: TS.scen })); } catch (_) {} }
 function tsUse(c, msg, fresh) {
-  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; WORK_ORDER = c.wo || ''; normalize();
-  if (fresh) { TS.log = []; TS.steps = []; TS.t0 = Date.now(); TS_BLOWN = {}; }
+  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; scenFrom(c); normalize();
+  if (fresh) { TS.log = []; TS.steps = []; TS.t0 = Date.now(); TS_BLOWN = {}; TS.scen = c.pick || null; }
   LOCKOUT = false; TS_PUSHED = {}; TSM.push = false; TSM.red = TSM.black = null; TSM.next = 'red'; TSM.lastLog = ''; TSM.sig = '';
   if (editing) { fit(true); fitView(); setMode(true); } else { fit(true); fitView(); NET = network(); draw(); startRun(); afterRunStart(); }
   tsShowAll(); if (msg) tsSay(msg);
@@ -7732,8 +7811,32 @@ async function tsOpenText(text, name) {
   else if (/^\s*\{/.test(text)) c = readCircuit(JSON.parse(text));
   else c = await decodeCircuit(text);
   if (!c.name && name) c.name = name.replace(/\.(json|html?|txt)$/i, '');
+  // (several scenarios: the student is given one, at random or the one their instructor names)
+  if (c.sn > 1) { const pick = await tsChooseScenario(c); if (!pick) return; tsScenario(c, pick.n); c.pick = { n: pick.n, of: c.sn, hidden: pick.hidden }; }
   const n = c.parts.filter(p => p.fault).length + c.wires.filter(w => w.fault).length;
   tsUse(c, n ? `Opened ${c.name || 'the assignment'}. Read the work order, then start troubleshooting.` : `Opened ${c.name || 'the circuit'}: it has no faults planted in it (plant them on the Circuit Builder's Faults tab).`, true);
+}
+
+/* Scenarios (Dallas, 16 Nov 2026): an assignment with several asks which one, as the Circuit Builder allows: a random one
+   (its number kept from the student: written in the test log they keep, for the instructor) or the one their instructor
+   gives them (its number shown). */
+function tsScenario(c, n) { for (const x of [...c.parts, ...c.wires]) { const f = x.fz && x.fz[n]; if (f) x.fault = f; else delete x.fault; } c.si = n; c.wo = c.swo ? c.swo[n] || '' : c.wo; }
+function tsChooseScenario(c) {
+  const d = document.getElementById('ts-scen-dlg'), off = c.ffo || { r: true, n: true };
+  d.querySelector('h2').textContent = c.name || 'Assignment';
+  d.querySelector('.ts-sc-n').textContent = c.sn;
+  d.querySelector('.ts-sc-rand-wrap').hidden = !off.r; d.querySelector('.ts-sc-num').hidden = !off.n;
+  d.querySelector('.ts-sc-or').textContent = off.r ? 'Or the scenario my instructor gives me:' : 'The scenario my instructor gives me:';
+  const box = d.querySelector('input'), msg = d.querySelector('.ts-sc-msg'); box.value = ''; box.max = c.sn; msg.textContent = '';
+  return new Promise(res => {
+    const done = v => { d.close(); res(v); };
+    d.querySelector('.ts-sc-rand').onclick = () => done({ n: Math.floor(Math.random() * c.sn), hidden: true });
+    const go = () => { const k = Math.round(Number(box.value)); if (!(k >= 1 && k <= c.sn)) { msg.textContent = `Type a number from 1 to ${c.sn}.`; box.focus(); return; } done({ n: k - 1, hidden: false }); };
+    d.querySelector('.ts-sc-go').onclick = go; box.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); go(); } };
+    d.querySelector('.ts-sc-cancel').onclick = () => done(null);
+    d.oncancel = () => res(null);
+    d.showModal(); if (off.n && !off.r) box.focus();
+  });
 }
 
 // ---- Lock Out: every disconnect open and the control supply off (the circuit starts again from dead); taking the lock
@@ -7922,7 +8025,7 @@ function tsShowFoot() { const f = document.getElementById('ts-foot'); if (f) f.t
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 function tsShowAll() {
   document.getElementById('ts-wo').innerHTML = WORK_ORDER ? `“${esc(WORK_ORDER)}”` : '<span class="ts-empty">No work order came with this circuit.</span>';
-  document.getElementById('ts-name').textContent = circuitName || 'Untitled circuit';
+  document.getElementById('ts-name').textContent = (circuitName || 'Untitled circuit') + (TS.scen ? ` · Scenario ${TS.scen.hidden ? 'hidden' : TS.scen.n + 1}` : '');
   const cur = TS_STEPS.findIndex((_, i) => !TS.steps[i]);
   document.getElementById('ts-steps').innerHTML = TS_STEPS.map((s, i) => `<li><button type="button" data-step="${i}" class="${TS.steps[i] ? 'done' : i === cur ? 'cur' : ''}" aria-pressed="${!!TS.steps[i]}"><span class="ts-n">${TS.steps[i] ? '✓' : i + 1}</span>${s}</button></li>`).join('');
   document.getElementById('ts-steps-box').hidden = !TS.showSteps;
@@ -8005,6 +8108,13 @@ function tsInit() {
     <div class="tsm-pick" role="group" aria-label="Which lead a click on a terminal moves"><span>Lead</span><button type="button" data-lead="red" data-tip="A click on a terminal puts the red lead there (or drag either probe)">Red</button><button type="button" data-lead="black" data-tip="A click on a terminal puts the black lead there (or drag either probe)">Black</button></div>
     <div class="tsm-jacks"><span class="jack red" title="VΩ: the red lead"><i class="sock"></i>VΩ</span><span class="jack black" title="COM: the black lead"><i class="sock"></i>COM</span></div>`;
   stage.appendChild(m);
+  // the box that asks which scenario, for an assignment with several
+  const sd = document.createElement('dialog'); sd.id = 'ts-scen-dlg'; sd.className = 'ts-scen-dlg';
+  sd.innerHTML = `<div class="dlg"><h2></h2><p class="hint">This assignment has <span class="ts-sc-n"></span> scenarios, each with its own fault. Which one do you want?</p>
+    <div class="ts-sc-rand-wrap"><button type="button" class="primary ts-sc-rand">A Random Scenario</button><p class="ts-sc-note">Its number stays hidden: it is kept with your test log for your instructor.</p></div>
+    <div class="ts-sc-num"><span class="ts-sc-or"></span><input type="number" min="1" step="1" inputmode="numeric" aria-label="Scenario number" placeholder="#"><button type="button" class="ts-sc-go">Open</button></div>
+    <p class="ts-sc-msg" role="status"></p><div class="dlg-end"><button type="button" class="ts-sc-cancel">Cancel</button></div></div>`;
+  document.body.appendChild(sd);
 
   // ---- what everything does
   document.getElementById('ts-open').addEventListener('click', () => document.getElementById('ts-file').click());
@@ -8076,7 +8186,7 @@ function tsInit() {
   let st = null; try { st = JSON.parse(localStorage.getItem(TS_KEY) || 'null'); } catch (_) {}
   let c = null; if (st && st.circuit) try { c = readCircuit(st.circuit); } catch (_) {}
   if (c) {
-    TS = { log: Array.isArray(st.log) ? st.log : [], steps: Array.isArray(st.steps) ? st.steps : [], t0: +st.t0 || Date.now(), showSteps: st.showSteps !== false };
+    TS = { log: Array.isArray(st.log) ? st.log : [], steps: Array.isArray(st.steps) ? st.steps : [], t0: +st.t0 || Date.now(), showSteps: st.showSteps !== false, scen: st.scen && typeof st.scen === 'object' ? st.scen : null };
     TS_BLOWN = st.blown && typeof st.blown === 'object' ? st.blown : {};
     tsUse(c, '', false);
   } else tsUse(tsSample(), '', true);

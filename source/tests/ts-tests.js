@@ -316,6 +316,29 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     return out;
   });
 
+  await check('Scenarios: an assignment with several asks which; a random one keeps its number hidden (kept in the saved state); a number given shows; only what the Circuit Builder offers is offered', async page => {
+    const out = [];
+    const data = await page.evaluate(() => { loadPreset('seal'); parts.find(q => q.t === 'coil').fz = { 0: 'open' }; parts.find(q => q.t === 'btn' && !q.nc).fz = { 1: 'open' };
+      SCEN_N = 2; SCEN_WO = ['one', 'two']; scenUse(0); return JSON.stringify(circuitData()); });
+    const f = path.join(os.tmpdir(), 'ts-scen-' + Date.now() + '.json'); fs.writeFileSync(f, data);
+    await page.setInputFiles('#ts-file', f); await page.waitForTimeout(300);
+    if (!(await page.locator('#ts-scen-dlg').isVisible())) out.push('no scenario box');
+    await page.fill('#ts-scen-dlg input', '9'); await page.click('.ts-sc-go');
+    if (!/1 to 2/.test(await page.evaluate(() => document.querySelector('.ts-sc-msg').textContent))) out.push('no message for 9');
+    await page.fill('#ts-scen-dlg input', '2'); await page.click('.ts-sc-go'); await page.waitForTimeout(400);
+    let st = await page.evaluate(() => [document.getElementById('ts-name').textContent, WORK_ORDER, parts.filter(q => q.fault).map(q => q.t).join(), JSON.stringify(TS.scen)].join(' | '));
+    if (!/Scenario 2 \| two \| btn \| \{"n":1,"of":2,"hidden":false\}/.test(st)) out.push('number 2: ' + st);
+    await page.setInputFiles('#ts-file', f); await page.waitForTimeout(300); await page.click('.ts-sc-rand'); await page.waitForTimeout(400);
+    st = await page.evaluate(() => [document.getElementById('ts-name').textContent, JSON.stringify(TS.scen), JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => /ts-state/.test(k)))).scen.hidden].join(' | '));
+    if (!/Scenario hidden \| \{"n":[01],"of":2,"hidden":true\} \| true/.test(st)) out.push('random: ' + st);
+    // only a number offered
+    const d2 = JSON.parse(data); d2.ffo = [0, 1]; fs.writeFileSync(f, JSON.stringify(d2));
+    await page.setInputFiles('#ts-file', f); await page.waitForTimeout(300);
+    if (await page.locator('.ts-sc-rand').isVisible()) out.push('random offered though turned off');
+    await page.click('.ts-sc-cancel'); fs.unlinkSync(f);
+    return out;
+  });
+
   await browser.close();
   const failed = results.filter(r => !r.ok);
   console.log(`\n${results.length - failed.length} of ${results.length} Fault Finder checks passed.`);

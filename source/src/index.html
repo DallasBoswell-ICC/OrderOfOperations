@@ -114,13 +114,16 @@
       <div class="rgrp" id="pv-group"><div class="gbody"><button type="button" class="tool big" id="pv-btn" data-tip="Process values: numbers the simulation keeps in the background (positions, pressures, temperatures...). Set them up here, then link limit, pressure and temperature switches to them on each switch's tab. While running, set them in the Process window."><svg viewBox="0 0 30 26"><rect x="3" y="3" width="24" height="20" rx="3" fill="#14161a" stroke="#8a96a3" stroke-width="1.3"/><g stroke-linecap="round"><path d="M7 9h11" stroke="#5ee08a" stroke-width="2"/><path d="M7 15h7" stroke="#5ee08a" stroke-width="2"/><path d="M18 9h5M14 15h9" stroke="#3a414a" stroke-width="2"/></g><circle cx="18" cy="9" r="2.2" fill="#e8e8e8"/><circle cx="14" cy="15" r="2.2" fill="#e8e8e8"/><path d="M7 19.5h5" stroke="#8a96a3" stroke-width="1.2"/></svg><span>Process<br>Values</span></button></div><div class="gname">Process</div></div>
     </div>
     <div class="rpanel" id="faultbar" role="toolbar" aria-label="Faults" hidden>
+      <div class="rgrp fz-scengrp"><div class="gbody"><span class="seg" role="group" id="fz-scen" aria-label="Scenario"></span>
+        <button type="button" class="tool small" id="fz-scen-new" data-tip="A new scenario: its own faults and work order, on the same circuit">+ New</button>
+        <button type="button" class="tool small danger" id="fz-scen-del" data-tip="Delete this scenario (its faults and work order)">Delete</button></div><div class="gname">Scenario (Each With Its Own Faults and Work Order)</div></div>
       <div class="rgrp fz-plant"><div class="gbody"><div class="fz-col">
         <div class="fz-what" id="fz-what">Pick a part or wire on the panel</div>
         <div class="seg" role="group" id="fz-kinds" aria-label="The fault to plant on it"></div>
       </div></div><div class="gname">Plant a Fault</div></div>
       <div class="rgrp"><div class="gbody">
         <button type="button" class="tool big" id="fz-random" data-tip="Plant a fault on a part or wire picked at random (open or shorted)"><svg viewBox="0 0 30 26"><rect x="6" y="4" width="18" height="18" rx="4" fill="none" stroke="#cfcfcf" stroke-width="1.8"/><circle cx="11" cy="9" r="1.7" fill="#cfcfcf"/><circle cx="19" cy="17" r="1.7" fill="#cfcfcf"/><circle cx="15" cy="13" r="1.7" fill="#cfcfcf"/></svg><span>Random<br>Fault</span></button>
-        <button type="button" class="tool big" id="fz-clear" data-tip="Take every planted fault off the circuit"><svg viewBox="0 0 30 26"><path d="M8 7l14 14M22 7L8 21" stroke="#cfcfcf" stroke-width="2.2" stroke-linecap="round"/></svg><span>Clear<br>All</span></button>
+        <button type="button" class="tool big" id="fz-clear" data-tip="Take every planted fault off (in this scenario)"><svg viewBox="0 0 30 26"><path d="M8 7l14 14M22 7L8 21" stroke="#cfcfcf" stroke-width="2.2" stroke-linecap="round"/></svg><span>Clear<br>All</span></button>
       </div><div class="gname">Faults</div></div>
       <div class="rgrp fz-listgrp"><div class="gbody"><div class="fz-list" id="fz-list"></div></div><div class="gname">Planted Faults</div></div>
       <div class="rgrp"><div class="gbody"><div class="stack">
@@ -128,6 +131,10 @@
         <button type="button" class="tool small" id="fz-badges" aria-pressed="true" data-tip="Show a small red badge on each part and wire with a fault planted on it"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L3.6 17.2a1.6 1.6 0 0 0 2.3 2.3l5.7-5.7a4 4 0 0 0 5.2-5.4l-2.4 2.4-2.1-.4-.4-2.1z"/></svg><span>Show Fault Badges</span></button>
       </div></div><div class="gname">View</div></div>
       <div class="rgrp fz-wogrp"><div class="gbody"><textarea id="fz-wo" rows="3" maxlength="400" aria-label="Work order" placeholder="What the student is told, such as: The machine won't start. When you press START, nothing happens."></textarea></div><div class="gname">Work Order</div></div>
+      <div class="rgrp fz-offer"><div class="gbody"><div class="stack">
+        <label class="fz-chk" data-tip="The Fault Finder can give each student a scenario picked at random (its number kept hidden)"><input type="checkbox" id="fz-off-r" checked> Random Scenario</label>
+        <label class="fz-chk" data-tip="Students can type the number of a scenario you give them"><input type="checkbox" id="fz-off-n" checked> Scenario Number I Give</label>
+      </div></div><div class="gname">Fault Finder Offers</div></div>
     </div>
     <div class="rpanel" id="editpanel" aria-label="Settings of the selected part" hidden>
       <div class="props">
