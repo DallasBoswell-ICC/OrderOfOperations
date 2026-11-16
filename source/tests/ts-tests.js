@@ -312,7 +312,7 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     await page.keyboard.press('F1'); await page.waitForTimeout(200);
     const list = await page.evaluate(() => document.getElementById('kb-lists').textContent);
     for (const w of ['Voltmeter', 'Ohmmeter', 'Red lead', 'Lock Out', 'Push In', 'Click to Hold', 'Open Assignment']) if (!list.includes(w)) out.push('F1 list has no ' + w);
-    if (/Place another|Nudge|Wire\b/.test(list)) out.push('F1 still lists the builder\'s keys');
+    if (/Place another|Nudge|Wire\b/.test(list.replace(/Repair Wire/g, ''))) out.push('F1 still lists the builder\'s keys');
     return out;
   });
 
@@ -339,6 +339,38 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     return out;
   });
 
+  await check('Repairs: Replace Part and Repair Wire only while locked out, each asks first, clears the fault, and is logged (whether it was needed kept for the report); Test the Repair signs off; all kept after a reload', async page => {
+    const out = [];
+    await page.evaluate(() => { localStorage.clear(); }); await page.reload(); await page.waitForTimeout(900);
+    await page.click('#ts-rep');
+    if (await page.evaluate(() => TSM.repair)) out.push('Replace Part picked with the power on');
+    await page.click('#ts-lock'); await page.waitForTimeout(300); await page.click('#ts-rep');
+    const c = await page.evaluate(() => { const p = parts.find(q => q.t === 'coil'); const r = document.querySelector('#svg [data-part="' + p.id + '"]').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
+    await page.mouse.click(...c); await page.waitForTimeout(150);
+    if (!await page.$('#ts-card')) out.push('no card asking before replacing');
+    else { await page.click('.ts-card-no'); if (await page.evaluate(() => !parts.find(q => q.t === 'coil').fault)) out.push('Cancel replaced it anyway'); await page.mouse.click(...c); await page.click('.ts-card-go'); }
+    await page.waitForTimeout(200);
+    if (await page.evaluate(() => !!parts.find(q => q.t === 'coil').fault)) out.push('the coil is still faulty after replacing it');
+    await page.click('#ts-wire'); const w = await page.evaluate(() => { const m = svg.getScreenCTM(); return [m.a * 560 + m.e, m.d * 420 + m.f]; });
+    await page.mouse.click(...w); await page.click('.ts-card-go'); await page.waitForTimeout(200);
+    const r = await page.evaluate(() => ({ rep: TS.repairs.map(x => [x.k, x.needed]), log: TS.log.map(e => e.v), tags: document.getElementById('ts-leads').innerHTML }));
+    if (JSON.stringify(r.rep) !== '[["part",true],["wire",false]]') out.push('repairs kept: ' + JSON.stringify(r.rep));
+    if (!r.log.includes('New Part') || !r.log.includes('Spliced')) out.push('log: ' + r.log.join(', '));
+    if (!r.tags.includes('>NEW<') || !r.tags.includes('>SPLICED<')) out.push('no NEW tag or spliced sleeve');
+    if (await page.evaluate(() => /needed/i.test(document.getElementById('ts-side').textContent))) out.push('the student is told whether a repair was needed');
+    await page.click('#ts-lock'); await page.waitForTimeout(300);
+    await page.click('#ts-test');
+    if (!await page.evaluate(() => document.querySelector('.ts-sg-go').disabled)) out.push('Sign Off allowed before ticking and writing');
+    for (const b of await page.$$('#ts-sign-dlg input[type=checkbox]')) await b.check();
+    await page.fill('#ts-sign-dlg textarea', 'START runs it; STOP stops it.'); await page.click('.ts-sg-go');
+    const so = await page.evaluate(() => TS.signoff);
+    if (!so || so.fixed !== true) out.push('sign-off: ' + JSON.stringify(so));
+    await page.reload(); await page.waitForTimeout(1200);
+    const k = await page.evaluate(() => ({ n: TS.repairs.length, so: !!TS.signoff, f: parts.some(p => p.fault) }));
+    if (k.n !== 2 || !k.so || k.f) out.push('after a reload: ' + JSON.stringify(k));
+    await page.evaluate(() => { localStorage.clear(); });
+    return out;
+  });
   await check('A whole machine (the drill station, 375 parts): the meter reads volts and ohms at once', async page => {
     const out = [], json = require('fs').readFileSync(require('path').join(__dirname, 'fixtures', 'drill-station.json'), 'utf8');
     await page.evaluate(j => useCircuit(readCircuit(JSON.parse(j)), ''), json);

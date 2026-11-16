@@ -6,7 +6,7 @@
 /* The Fault Finder's own shortcuts (Dallas, 15 Nov 2026: they reflect its controls): the meter's dial, the leads, Lock
    Out and Push In, the pushbutton modes and the six steps (all of them work in Run, the only mode it has). */
 const KB_TS = {
-  groups: [{ id: 'meter', name: 'Meter', c: '#FF6F59' }, { id: 'leads', name: 'Leads', c: '#ff8a7a' }, { id: 'power', name: 'Power', c: '#e5484d' }, { id: 'buttons', name: 'Pushbuttons and Steps', c: '#ffc000' }, { id: 'view', name: 'View', c: '#46c46a' }, { id: 'file', name: 'Assignment', c: '#b58cff' }],
+  groups: [{ id: 'meter', name: 'Meter', c: '#FF6F59' }, { id: 'leads', name: 'Leads', c: '#ff8a7a' }, { id: 'power', name: 'Power', c: '#e5484d' }, { id: 'repair', name: 'Repair', c: '#3fbf6a' }, { id: 'buttons', name: 'Pushbuttons and Steps', c: '#ffc000' }, { id: 'view', name: 'View', c: '#46c46a' }, { id: 'file', name: 'Assignment', c: '#b58cff' }],
   items: [
     { g: 'meter', id: 'ts-v', keys: ['1'], label: 'Voltmeter (the dial to V~)', short: 'Volts', inRun: true, run: () => tsMode('v') },
     { g: 'meter', id: 'ts-ohm', keys: ['2'], label: 'Ohmmeter (locked out only)', short: 'Ohms', inRun: true, run: () => tsMode('ohm') },
@@ -18,6 +18,9 @@ const KB_TS = {
     { g: 'leads', show: 'Drag a probe', label: 'Move that lead to another terminal' },
     { g: 'power', id: 'ts-lock', keys: ['t'], label: 'Lock Out, or take the lock off (lock out, tag out)', short: 'Lock Out', inRun: true, run: () => document.getElementById('ts-lock').click() },
     { g: 'power', id: 'ts-push', keys: ['a'], label: 'Push In a relay by hand (locked out only)', short: 'Push In', inRun: true, run: () => document.getElementById('ts-push').click() },
+    { g: 'repair', id: 'ts-rep', keys: ['q'], label: 'Replace Part (locked out only)', short: 'Replace Part', inRun: true, run: () => tsRepairTool('part') },
+    { g: 'repair', id: 'ts-wire', keys: ['e'], label: 'Repair Wire (locked out only)', short: 'Repair Wire', inRun: true, run: () => tsRepairTool('wire') },
+    { g: 'repair', id: 'ts-test', keys: ['d'], label: 'Test the Repair: sign off', short: 'Test Repair', inRun: true, run: () => tsTestRepair() },
     { g: 'buttons', id: 'ts-click', keys: ['4'], label: 'Pushbuttons: Click', short: 'Click', inRun: true, run: () => tsPushMode('click') },
     { g: 'buttons', id: 'ts-latch', keys: ['5'], label: 'Pushbuttons: Click to Hold', short: 'Click to Hold', inRun: true, run: () => tsPushMode('latch') },
     { g: 'buttons', id: 'ts-hold', keys: ['w'], label: 'Pushbuttons: Press and Hold', short: 'Press & Hold', inRun: true, run: () => tsPushMode('hold') },

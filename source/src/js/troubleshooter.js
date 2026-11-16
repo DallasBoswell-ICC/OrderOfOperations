@@ -11,7 +11,7 @@ const TS_KEY = 'oo-circuit-builder:ts-state';
 const TS_STEPS = ['Symptoms', 'Possible causes', 'Find the faulty area', 'Find the faulty part', 'Repair', 'Test and document'];
 let tsTab = 'ts';
 const TSM = { mode: 'v', red: null, black: null, next: 'red', key: '', val: '', sig: '', due: 0, pend: null, lastLog: '' };
-let TS = { log: [], steps: [], t0: Date.now(), showSteps: true, scen: null };   // (scen: the scenario this student got, { n: from 0, of, hidden })
+let TS = { log: [], steps: [], t0: Date.now(), showSteps: true, scen: null, repairs: [], signoff: null };   // (scen: the scenario this student got, { n: from 0, of, hidden }; repairs and signoff: see tsRepair)
 
 function tsSay(t) { say(t); }
 // the Troubleshooter's ribbon: its own tab (Troubleshoot) and the Simulation tab
@@ -25,11 +25,11 @@ function tsShowRibbon() {
 }
 
 // ---- what is kept between visits (in this browser): the assignment, the test log, the steps ticked off
-function tsSave() { try { localStorage.setItem(TS_KEY, JSON.stringify({ circuit: circuitData(), log: TS.log, steps: TS.steps, t0: TS.t0, showSteps: TS.showSteps, blown: TS_BLOWN, scen: TS.scen })); } catch (_) {} }
+function tsSave() { try { localStorage.setItem(TS_KEY, JSON.stringify({ circuit: circuitData(), log: TS.log, steps: TS.steps, t0: TS.t0, showSteps: TS.showSteps, blown: TS_BLOWN, scen: TS.scen, repairs: TS.repairs, signoff: TS.signoff })); } catch (_) {} }
 function tsUse(c, msg, fresh) {
   PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; scenFrom(c); normalize();
-  if (fresh) { TS.log = []; TS.steps = []; TS.t0 = Date.now(); TS_BLOWN = {}; TS.scen = c.pick || null; }
-  LOCKOUT = false; TS_PUSHED = {}; TSM.push = false; TSM.red = TSM.black = null; TSM.next = 'red'; TSM.lastLog = ''; TSM.sig = '';
+  if (fresh) { TS.log = []; TS.steps = []; TS.t0 = Date.now(); TS_BLOWN = {}; TS.scen = c.pick || null; TS.repairs = []; TS.signoff = null; }
+  LOCKOUT = false; TS_PUSHED = {}; TSM.push = false; TSM.repair = null; tsCardOff(); TSM.red = TSM.black = null; TSM.next = 'red'; TSM.lastLog = ''; TSM.sig = '';
   if (editing) { fit(true); fitView(); setMode(true); } else { fit(true); fitView(); NET = network(); draw(); startRun(); afterRunStart(); }
   tsShowAll(); if (msg) tsSay(msg);
   if (fresh) tsSave();
@@ -85,7 +85,7 @@ function tsChooseScenario(c) {
 // off starts it again from the top, as switching a machine back on does
 function tsLockOut(on) {
   // (locking out or taking the lock off lets go of any relay pushed in by hand)
-  LOCKOUT = on; TS_PUSHED = {}; if (!on) TSM.push = false;
+  LOCKOUT = on; TS_PUSHED = {}; if (!on) { TSM.push = false; TSM.repair = null; tsCardOff(); }
   startRun(); buildProcess(); paint();
   if (!on && TSM.mode !== 'v' && TSM.mode !== 'off') tsMode('v', true);
   tsShowAll();
@@ -113,11 +113,98 @@ function tsPush(L, on) {
 }
 function tsPushTool(on) {
   if (on && !LOCKOUT) { tsSay('Lock out first: a relay is only ever pushed in by hand with the power off and locked out.'); return; }
-  TSM.push = on; tsShowAll();
+  TSM.push = on; if (on) { TSM.repair = null; tsCardOff(); } tsShowAll();
   if (on) tsSay('Push In: click a relay\u2019s coil or one of its contacts to push it in by hand (and again to let it go).');
 }
 // the lead the next click on a terminal moves (the meter's Red / Black, or R and B)
 function tsPick1(c) { TSM.next = c; TSM.key = ''; tsShowMeter(); tsSay(`${c === 'red' ? 'Red' : 'Black'} lead: click a terminal to put it there.`); }
+
+/* ---- Repair (Dallas, 16 Nov 2026): Replace Part and Repair Wire, only while locked out (as the meter's ohms are).
+   A click on a part (or a wire) asks first; the repair goes in the test log, and is kept with whether it was needed:
+   that is for the instructor's report only, never shown to the student. A new part wears a NEW tag; a repaired wire,
+   a spliced sleeve where it was cut in. Test the Repair: the student takes the lock off, runs the machine, and signs
+   off on what they checked; whether it really is fixed is kept for the report, not told to them. */
+const tsRepairable = p => p && !['l1', 'l2', 'ph', 'jmp'].includes(p.t);
+function tsRepairTool(k) {
+  if (k && !LOCKOUT) { tsSay(`Lock out first: a ${k === 'part' ? 'part is only ever replaced' : 'wire is only ever repaired'} with the power off and locked out.`); return; }
+  TSM.repair = TSM.repair === k ? null : k; if (TSM.repair) TSM.push = false;
+  tsCardOff(); tsShowAll();
+  if (TSM.repair) tsSay(TSM.repair === 'part' ? 'Replace Part: click the part to replace.' : 'Repair Wire: click the wire to repair, where you will splice it.');
+}
+// a wire's name in the log: what is at each of its ends
+function tsWireName(w) {
+  const at = (x, y) => { let q = null, bd = 30; for (const t of TS_POINTS) { const d = Math.hypot(t.x - x, t.y - y); if (d < bd) { bd = d; q = t; } } return q ? q.label : 'a junction'; };
+  const a = at(w.x1, w.y1), b = at(w.x2, w.y2);
+  return a === b ? 'the wire' : `the wire, ${a} to ${b}`;
+}
+// the wire nearest a point on the panel (within reach), and the point on it
+function tsWireAt(x, y) {
+  let best = null, bd = 14;
+  for (const w of wires) {
+    const dx = w.x2 - w.x1, dy = w.y2 - w.y1, L2 = dx * dx + dy * dy, k = L2 ? Math.max(0, Math.min(1, ((x - w.x1) * dx + (y - w.y1) * dy) / L2)) : 0;
+    const px = w.x1 + k * dx, py = w.y1 + k * dy, d = Math.hypot(x - px, y - py);
+    if (d < bd) { bd = d; best = { w, x: px, y: py, up: Math.abs(dy) > Math.abs(dx) }; }
+  }
+  return best;
+}
+function tsCardOff() { const c = document.getElementById('ts-card'); if (c) c.remove(); }
+// the card that asks first, beside what was picked (sx, sy: where, in pixels from the panel's top left)
+function tsAsk(sx, sy, title, text, go, ok) {
+  tsCardOff();
+  const st = document.getElementById('stage'), c = document.createElement('div'); c.id = 'ts-card'; c.className = 'ts-card';
+  c.innerHTML = `<h4>${esc(title)}</h4><p>${esc(text)}</p><div class="ts-card-end"><button type="button" class="ts-card-no">Cancel</button><button type="button" class="ts-card-go">${esc(go)}</button></div>`;
+  st.appendChild(c);
+  const r = st.getBoundingClientRect(), w = c.offsetWidth, h = c.offsetHeight;
+  c.style.left = Math.max(8, Math.min(r.width - w - 8, sx - w / 2)) + 'px';
+  c.style.top = (sy + h + 30 < r.height ? sy + 24 : Math.max(8, sy - h - 24)) + 'px';
+  c.querySelector('.ts-card-no').onclick = () => tsCardOff();
+  c.querySelector('.ts-card-go').onclick = () => { tsCardOff(); ok(); };
+  c.querySelector('.ts-card-go').focus();
+}
+function tsRepair(kind, it, at) {
+  const needed = kind === 'part' ? !!(it.fault || TS_BLOWN[it.id] || BLOWN[it.id]) : !!it.fault;
+  const i = (kind === 'part' ? parts : wires).indexOf(it);
+  if (kind === 'part') { delete it.fault; delete TS_BLOWN[it.id]; delete BLOWN[it.id]; } else delete it.fault;
+  const name = kind === 'part' ? `the ${captionOf(it)}` : tsWireName(it);
+  TS.repairs.push({ k: kind, i, needed, t: Date.now() - TS.t0, ...(at ? { x: at.x, y: at.y, up: at.up } : {}) });
+  TS.log.push({ r: kind, a: kind === 'part' ? `Replaced ${name}` : `Repaired ${name}`, v: kind === 'part' ? 'New Part' : 'Spliced', c: tsConditions(), t: Date.now() - TS.t0 });
+  TS.signoff = null;   // (a repair after signing off: it needs testing again)
+  NET = network(); draw(); startRun(); buildProcess(); paint(); TSM.key = ''; TSM.sig = '';
+  tsSave(); tsShowLog(true);
+  tsSay(kind === 'part' ? `Replaced ${name}. Check it, then take the lock off and test the repair.` : `Repaired ${name}. Check it, then take the lock off and test the repair.`);
+}
+// a click on the panel with Replace Part or Repair Wire picked
+function tsRepairClick(e) {
+  if (!LOCKOUT) { TSM.repair = null; tsShowAll(); return; }
+  const st = document.getElementById('stage').getBoundingClientRect(), sx = e.clientX - st.left, sy = e.clientY - st.top;
+  if (TSM.repair === 'part') {
+    const g = e.target.closest && e.target.closest('[data-part]'), p = g && parts.find(x => String(x.id) === g.dataset.part);
+    if (!tsRepairable(p)) { tsSay('Replace Part: click a part (a button, contact, coil, light, switch, fuse...).'); return; }
+    tsAsk(sx, sy, `Replace the ${captionOf(p)}?`, 'The old one comes out and a new one goes in. It goes in your test log, and counts as a part used.', 'Replace', () => tsRepair('part', p));
+  } else {
+    const q = pt(e), hit = tsWireAt(q.x, q.y);
+    if (!hit) { tsSay('Repair Wire: click on a wire, where you will splice it.'); return; }
+    tsAsk(sx, sy, `Repair ${tsWireName(hit.w)}?`, 'It is cut and spliced with a new piece of wire. It goes in your test log.', 'Repair', () => tsRepair('wire', hit.w, hit));
+  }
+}
+// Test the Repair: the student signs off on what they checked (whether it is fixed is kept for the report)
+const tsFixed = () => !parts.some(p => p.fault) && !wires.some(w => w.fault) && !Object.keys(TS_BLOWN).length;
+function tsTestRepair() {
+  const d = document.getElementById('ts-sign-dlg'), go = d.querySelector('.ts-sg-go'), boxes = [...d.querySelectorAll('input[type=checkbox]')], note = d.querySelector('textarea');
+  for (const b of boxes) b.checked = false; note.value = '';
+  d.querySelector('.ts-sg-lock').hidden = !LOCKOUT;
+  const can = () => { go.disabled = LOCKOUT || !boxes.every(b => b.checked) || !note.value.trim(); };
+  for (const b of boxes) b.onchange = can; note.oninput = can; can();
+  go.onclick = () => {
+    TS.signoff = { t: Date.now() - TS.t0, note: note.value.trim().slice(0, 600), fixed: tsFixed() };
+    TS.log.push({ r: 'test', a: `Tested the repair and signed off: ${TS.signoff.note}`, v: 'Signed Off', c: tsConditions(), t: TS.signoff.t });
+    tsSave(); tsShowLog(true); d.close();
+    tsSay('Signed off. Your test log keeps it, for your instructor.');
+  };
+  d.querySelector('.ts-sg-no').onclick = () => d.close();
+  d.showModal();
+}
+
 // ---- the meter
 function tsMode(m, quiet) {
   if ((m === 'ohm' || m === 'cont') && !LOCKOUT) { tsSay('Lock out first: never measure resistance or continuity on a live circuit (Lock Out, on the Troubleshoot tab).'); return; }
@@ -203,10 +290,14 @@ function tsLeads() {
   const D = TSM.drag, tips = ['red', 'black'].map(c => D && D.c === c && D.moved ? [D.x, D.y] : TSM[c] ? tsScreen(TSM[c].x, TSM[c].y) : null);
   const held = mode === 'latch' ? parts.filter(p => p.t === 'btn' && !p.maint && !p.estop && down[p.L]) : [];
   const hs = held.map(p => tsScreen(p.x, p.y - BOX / 2 - 50));
-  const key = [mr.left, mr.top, st.width, st.height, ...tips.flat(), ...hs.flat(), TSM.hover && TSM.hover.x, TSM.hover && TSM.hover.y, TSM.next, TSM.mode, D && D.c, zk * 100].map(v => v == null ? '' : typeof v === 'number' ? Math.round(v) : v).join(',') + Object.keys(TS_PUSHED).join('');
+  const key = [mr.left, mr.top, st.width, st.height, ...tips.flat(), ...hs.flat(), TSM.hover && TSM.hover.x, TSM.hover && TSM.hover.y, TSM.next, TSM.mode, D && D.c, zk * 100, (TS.repairs || []).length].map(v => v == null ? '' : typeof v === 'number' ? Math.round(v) : v).join(',') + Object.keys(TS_PUSHED).join('');
   if (key === TSM.key) return; TSM.key = key;
   let h = '', cab = '', probes = '', plugs = '';
   for (const s of hs) if (s) h += tsTag(s, 'HELD DOWN');
+  for (const r of TS.repairs || []) {   // (what has been repaired: NEW on a new part, a sleeve where a wire was spliced)
+    if (r.k === 'part') { const p = parts[r.i]; const q = p && tsScreen(p.x + 30, p.y + 38); if (q) h += `<g transform="translate(${q[0]} ${q[1]}) scale(${zk.toFixed(3)})"><rect x="-21" y="-10" width="42" height="20" rx="10" fill="#1f6b3a" stroke="#3fbf6a" stroke-width="1.6"/><text y="4.2" text-anchor="middle" font-size="11.5" font-weight="800" fill="#e8ffe9" letter-spacing=".04em">NEW</text></g>`; }
+    else if (r.x != null) { const q = tsScreen(r.x, r.y); if (q) h += `<g transform="translate(${q[0]} ${q[1]}) rotate(${r.up ? 90 : 0}) scale(${zk.toFixed(3)})"><rect x="-18" y="-9" width="36" height="18" rx="5" fill="#FF6F59" stroke="#7a2a1e" stroke-width="1.3"/><rect x="-18" y="-9" width="36" height="6" rx="3" fill="#fff" opacity=".22"/><path d="M-9 -9v18M9 -9v18" stroke="#7a2a1e" stroke-width="1.5"/></g><g transform="translate(${q[0]} ${q[1]}) scale(${zk.toFixed(3)})"><g transform="translate(${r.up ? 50 : 46} ${r.up ? 0 : -22})"><rect x="-29" y="-9" width="58" height="18" rx="9" fill="#3a2c29" stroke="#FF6F59" stroke-width="1.2"/><text y="4" text-anchor="middle" font-size="10.5" font-weight="800" fill="#ffb3a6" letter-spacing=".04em">SPLICED</text></g></g>`; }
+  }
   for (const p of parts) if (TS_PUSHED[p.L] && (p.t === 'coil' || p.t === 'con' || p.t === 'mst')) {   // (a relay pushed in by hand: tagged on its coil and contacts)
     const q = tsScreen(p.x, p.t === 'mst' ? p.y - PWR_H / 2 - 22 : p.t === 'coil' ? p.y - BOX / 2 - 50 : p.y + BOX / 2 + 12);
     if (q) h += tsTag(q, 'PUSHED IN', p.t === 'con' ? .8 : 1);   // (on a coil, above its name; on a contact, just below it)
@@ -257,13 +348,13 @@ function tsShowMeter() {
 }
 function tsShowLog(scroll) {
   const L = document.getElementById('ts-log'); if (!L) return;
-  L.innerHTML = TS.log.length ? TS.log.map((e, i) => `<li><span class="ts-what">${i + 1}. ${esc(e.a)} to ${esc(e.b)}${e.c ? ` <i>(${esc(e.c)})</i>` : ''}</span><b>${esc(e.v)}</b></li>`).join('')
+  L.innerHTML = TS.log.length ? TS.log.map((e, i) => `<li${e.r ? ' class="ts-rep"' : ''}><span class="ts-what">${i + 1}. ${esc(e.a)}${e.r ? '' : ` to ${esc(e.b)}`}${e.c ? ` <i>(${esc(e.c)})</i>` : ''}</span><b>${esc(e.v)}</b></li>`).join('')
     : '<li class="ts-empty">Every reading you take is kept here automatically, with what was going on at the time.</li>';
   if (scroll) L.scrollTop = L.scrollHeight;
   tsShowFoot();
 }
 const tsClock = ms => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
-function tsShowFoot() { const f = document.getElementById('ts-foot'); if (f) f.textContent = `Readings: ${TS.log.length} · Time: ${tsClock(Date.now() - TS.t0)}`; }
+function tsShowFoot() { const f = document.getElementById('ts-foot'), n = (TS.repairs || []).length; if (f) f.textContent = `Readings: ${TS.log.filter(e => !e.r).length}${n ? ` · Repairs: ${n}` : ''} · Time: ${tsClock(Date.now() - TS.t0)}`; }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 function tsShowAll() {
   document.getElementById('ts-wo').innerHTML = WORK_ORDER ? `“${esc(WORK_ORDER)}”` : '<span class="ts-empty">No work order came with this circuit.</span>';
@@ -276,6 +367,11 @@ function tsShowAll() {
   document.body.classList.toggle('ts-locked', LOCKOUT);
   const pb = document.getElementById('ts-push'); pb.setAttribute('aria-pressed', String(!!TSM.push)); pb.classList.toggle('needs-lock', !LOCKOUT); pb.dataset.tip = LOCKOUT ? pb.dataset.tip0 : 'Lock out first: a relay is only ever pushed in by hand with the power off and locked out';
   document.getElementById('stage').classList.toggle('ts-pushing', !!TSM.push);
+  for (const [id, k, what] of [['ts-rep', 'part', 'a part is only ever replaced'], ['ts-wire', 'wire', 'a wire is only ever repaired']]) {
+    const b = document.getElementById(id); b.setAttribute('aria-pressed', String(TSM.repair === k)); b.classList.toggle('needs-lock', !LOCKOUT);
+    b.dataset.tip = LOCKOUT ? b.dataset.tip0 : `Lock out first: ${what} with the power off and locked out`;
+  }
+  document.getElementById('stage').classList.toggle('ts-repairing', !!TSM.repair);
   for (const b of document.querySelectorAll('#tsbar [data-meter]')) {
     const m = b.dataset.meter, need = (m === 'ohm' || m === 'cont') && !LOCKOUT;
     b.setAttribute('aria-pressed', String(TSM.mode === m)); b.classList.toggle('needs-lock', need);
@@ -293,6 +389,9 @@ const TS_ICON = {
   leads: '<svg viewBox="0 0 30 26" overflow="visible"><path d="M10 25.6C10.6 28 13.8 28.6 15 27.2" fill="none" stroke="#7a1010" stroke-width="1.9" stroke-linecap="round"/><path d="M10 25.6C10.6 28 13.8 28.6 15 27.2" fill="none" stroke="#d42a2a" stroke-width="1" stroke-linecap="round"/><path d="M20 25.6C19.4 28 16.2 28.6 15 27.2" fill="none" stroke="#000" stroke-width="1.9" stroke-linecap="round"/><path d="M20 25.6C19.4 28 16.2 28.6 15 27.2" fill="none" stroke="#3a3a3a" stroke-width="1" stroke-linecap="round"/><g transform="translate(7.4 12.5) rotate(-14) scale(1.35)"><path d="M-1.1 -8.6L-.9 -4.6H.9L1.1 -8.6L0 -11.4Z" fill="#eef1f3" stroke="#111" stroke-width=".5"/><rect x="-3.6" y="-4.9" width="7.2" height="2.1" rx="1" fill="#d42a2a" stroke="#7a1010" stroke-width=".55"/><rect x="-2.5" y="-3.2" width="5" height="10.4" rx="1.6" fill="#d42a2a" stroke="#7a1010" stroke-width=".55"/><path d="M-2.3 -.4h4.6M-2.3 1.6h4.6M-2.3 3.6h4.6" stroke="#7a1010" stroke-width=".45" opacity=".6"/><path d="M-2.3 7.1L-1.3 9.6H1.3L2.3 7.1Z" fill="#d42a2a" stroke="#7a1010" stroke-width=".5"/></g><g transform="translate(22.6 12.5) rotate(14) scale(1.35)"><path d="M-1.1 -8.6L-.9 -4.6H.9L1.1 -8.6L0 -11.4Z" fill="#eef1f3" stroke="#111" stroke-width=".5"/><rect x="-3.6" y="-4.9" width="7.2" height="2.1" rx="1" fill="#2a2a2a" stroke="#000" stroke-width=".55"/><rect x="-2.5" y="-3.2" width="5" height="10.4" rx="1.6" fill="#2a2a2a" stroke="#000" stroke-width=".55"/><path d="M-2.3 -.4h4.6M-2.3 1.6h4.6M-2.3 3.6h4.6" stroke="#000" stroke-width=".45" opacity=".6"/><path d="M-2.3 7.1L-1.3 9.6H1.3L2.3 7.1Z" fill="#2a2a2a" stroke="#000" stroke-width=".5"/></g></svg>',
   lock: '<svg viewBox="0 0 30 26"><rect x="7" y="11" width="16" height="13" rx="2.5" fill="#d62b2b" stroke="#6e1111" stroke-width="1.2"/><path d="M10.5 11V7.5a4.5 4.5 0 0 1 9 0V11" fill="none" stroke="#c9ced4" stroke-width="2.4"/><circle cx="15" cy="16.5" r="1.8" fill="#300"/><path d="M15 17v3" stroke="#300" stroke-width="1.6"/></svg>',
   push: '<svg viewBox="0 0 30 26"><rect x="4" y="13" width="22" height="10" rx="2" fill="#3a3d42" stroke="#8a96a3" stroke-width="1.1"/><rect x="10" y="9" width="10" height="6" rx="1.5" fill="#c9ced4"/><path d="M15 1v6" stroke="#f2c230" stroke-width="2.4" stroke-linecap="round"/><path d="M11.5 4.5L15 8l3.5-3.5" fill="none" stroke="#f2c230" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  replace: '<svg viewBox="0 0 30 26"><rect x="3" y="8" width="11" height="11" rx="2" fill="#3a3d42" stroke="#8a96a3" stroke-width="1.1"/><rect x="16" y="8" width="11" height="11" rx="2" fill="#3a3d42" stroke="#3fbf6a" stroke-width="1.6"/><path d="M7 6.5C9 2.5 19 2.5 21.5 6" fill="none" stroke="#FF6F59" stroke-width="2" stroke-linecap="round"/><path d="M19 3.6l2.8 2.6-3.6.9" fill="none" stroke="#FF6F59" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19.2 13.6l1.8 1.8 3.2-3.6" fill="none" stroke="#3fbf6a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  wire: '<svg viewBox="0 0 30 26"><path d="M2 13H28" stroke="#2b2b2b" stroke-width="5" stroke-linecap="round"/><path d="M2 13H28" stroke="#5b5f66" stroke-width="2.6" stroke-linecap="round"/><rect x="10" y="8.5" width="10" height="9" rx="2.5" fill="#FF6F59" stroke="#8a2d20" stroke-width="1"/><path d="M12.5 9v8M17.5 9v8" stroke="#8a2d20" stroke-width="1"/></svg>',
+  test: '<svg viewBox="0 0 30 26"><circle cx="15" cy="13" r="10" fill="#1f6b3a" stroke="#3fbf6a" stroke-width="1.6"/><path d="M10 13.5l3.4 3.4 7-7.4" fill="none" stroke="#e8ffe9" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   steps: '<svg viewBox="0 0 30 26"><rect x="6" y="2" width="18" height="22" rx="2.5" fill="#2b2f34" stroke="#8a96a3" stroke-width="1.2"/><path d="M9 7.5l1.5 1.5 2.5-3M9 13.5l1.5 1.5 2.5-3" fill="none" stroke="#5ee08a" stroke-width="1.5"/><path d="M15 8h6M15 14h6M9 19.5h12" stroke="#c9ced4" stroke-width="1.4"/></svg>',
   open: '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M3 5h5l2 2h7v9H3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
   print: '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M6 7V3h8v4M6 14H4V8h12v6h-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M6 11h8v6H6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
@@ -323,6 +422,7 @@ function tsInit() {
       ${mb('cont', 'Continuity', 'Continuity: beeps when there is a way through between the two terminals (locked out only)')}
       <button type="button" class="tool big" id="ts-leads-off" data-tip="Take both leads off the circuit">${TS_ICON.leads}<span>Remove Leads</span></button></div>
     <div class="tgroup"><span class="label">Power</span><button type="button" class="tool big ts-lockbtn" id="ts-lock" aria-pressed="false" data-tip="Lock out the machine: every disconnect open and the control power off, as it must be before measuring resistance. Press again to take the lock off and power it up.">${TS_ICON.lock}<span>Lock Out</span></button><button type="button" class="tool big" id="ts-push" aria-pressed="false" data-tip="Push In: with the machine locked out, push a relay or starter in by hand, to check its contacts with the ohmmeter or continuity tester. Click its coil or a contact (again to let it go)." data-tip0="Push In: with the machine locked out, push a relay or starter in by hand, to check its contacts with the ohmmeter or continuity tester. Click its coil or a contact (again to let it go).">${TS_ICON.push}<span>Push In</span><small class="ts-needs">Lock out first</small></button></div>
+    <div class="tgroup"><span class="label">Repair</span><button type="button" class="tool big" id="ts-rep" aria-pressed="false" data-tip="Replace Part: with the machine locked out, click a part to take it out and put in a new one" data-tip0="Replace Part: with the machine locked out, click a part to take it out and put in a new one">${TS_ICON.replace}<span>Replace Part</span><small class="ts-needs">Lock out first</small></button><button type="button" class="tool big" id="ts-wire" aria-pressed="false" data-tip="Repair Wire: with the machine locked out, click a wire where it is to be cut and spliced" data-tip0="Repair Wire: with the machine locked out, click a wire where it is to be cut and spliced">${TS_ICON.wire}<span>Repair Wire</span><small class="ts-needs">Lock out first</small></button><button type="button" class="tool big" id="ts-test" aria-pressed="false" data-tip="Test the Repair: with the lock off, run the machine as the work order says, then sign off on what you checked" data-tip0="Test the Repair: with the lock off, run the machine as the work order says, then sign off on what you checked">${TS_ICON.test}<span>Test the Repair</span></button></div>
     <div class="tgroup"><span class="label">Record</span><button type="button" class="tool big" id="ts-steps-btn" aria-pressed="true" data-tip="Show or hide the six troubleshooting steps">${TS_ICON.steps}<span>Six Steps: On</span></button></div>
     <div class="row"><span class="label">Pushbuttons</span><div class="seg" role="group" aria-label="Pushbutton mode">
       <button type="button" data-tsmode="click" data-tip="One click presses a momentary button; it lets go once the circuit settles">Click</button><button type="button" data-tsmode="hold" data-tip="A momentary button stays down only while you hold the mouse button down on it">Press and Hold</button><button type="button" data-tsmode="latch" data-tip="Click to Hold: a click holds a momentary button down (marked HELD DOWN) till you click it again, so you can take readings with it held">Click to Hold</button></div></div>
@@ -357,6 +457,17 @@ function tsInit() {
     <div class="ts-sc-num"><span class="ts-sc-or"></span><input type="number" min="1" step="1" inputmode="numeric" aria-label="Scenario number" placeholder="#"><button type="button" class="ts-sc-go">Open</button></div>
     <p class="ts-sc-msg" role="status"></p><div class="dlg-end"><button type="button" class="ts-sc-cancel">Cancel</button></div></div>`;
   document.body.appendChild(sd);
+  // the box for signing off a repair (Test the Repair)
+  const sg = document.createElement('dialog'); sg.id = 'ts-sign-dlg'; sg.className = 'ts-scen-dlg ts-sign-dlg';
+  sg.innerHTML = `<div class="dlg"><h2>Test the Repair</h2><p class="hint">Take the lock off, power the machine up and run it as the work order says. Then tell us what you checked.</p>
+    <p class="ts-sg-lock">The machine is still locked out: take the lock off (Remove Lock) and run it first.</p>
+    <label class="ts-sg-chk"><input type="checkbox"> I took the lock off and powered the machine up</label>
+    <label class="ts-sg-chk"><input type="checkbox"> I ran it the way the work order describes</label>
+    <label class="ts-sg-chk"><input type="checkbox"> It now does what it should</label>
+    <textarea maxlength="600" placeholder="What you did and what happened, e.g. Pressed START: X picked up and sealed in, RUN light on. Pressed STOP: it stopped."></textarea>
+    <p class="ts-sc-note">Whether it is really fixed shows only in your hand-in report, for your instructor.</p>
+    <div class="dlg-end"><button type="button" class="ts-sg-no">Not Yet</button><button type="button" class="primary ts-sg-go">It Works: Sign Off</button></div></div>`;
+  document.body.appendChild(sg);
 
   // ---- what everything does
   document.getElementById('ts-open').addEventListener('click', () => document.getElementById('ts-file').click());
@@ -390,6 +501,9 @@ function tsInit() {
   });
   document.getElementById('ts-lock').addEventListener('click', () => tsLockOut(!LOCKOUT));
   document.getElementById('ts-push').addEventListener('click', () => tsPushTool(!TSM.push));
+  document.getElementById('ts-rep').addEventListener('click', () => tsRepairTool('part'));
+  document.getElementById('ts-wire').addEventListener('click', () => tsRepairTool('wire'));
+  document.getElementById('ts-test').addEventListener('click', tsTestRepair);
   document.getElementById('ts-reset').addEventListener('click', () => { startRun(); buildProcess(); paint(); });
   const steps = on => { TS.showSteps = on; tsSave(); tsShowAll(); };
   document.getElementById('ts-steps-btn').addEventListener('click', () => steps(!TS.showSteps));
@@ -398,7 +512,8 @@ function tsInit() {
   for (const b of bar.querySelectorAll('[data-tsmode]')) b.addEventListener('click', () => tsPushMode(b.dataset.tsmode));
   // the leads: a click on a terminal puts the next lead there (red, then black, then red again...)
   stage.addEventListener('pointerdown', e => {
-    if (editing || e.button !== 0 || e.target.closest('#ts-meter, .ts-probe')) return;
+    if (editing || e.button !== 0 || e.target.closest('#ts-meter, .ts-probe, #ts-card')) return;
+    if (TSM.repair) { e.preventDefault(); e.stopPropagation(); tsRepairClick(e); return; }   // (Replace Part or Repair Wire picked)
     const q = TSM.mode === 'off' ? null : tsPick(e.clientX, e.clientY);
     if (!q && TSM.push) {   // (Push In: a click on a relay's coil or contact)
       const g = e.target.closest && e.target.closest('[data-part]'), p = g && parts.find(x => String(x.id) === g.dataset.part);
@@ -422,18 +537,18 @@ function tsInit() {
     addEventListener('pointermove', mv); addEventListener('pointerup', up);
   });
   setInterval(tsShowFoot, 1000);
-  document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'o') { e.preventDefault(); if (!document.querySelector('dialog[open]')) document.getElementById('ts-file').click(); } });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && (document.getElementById('ts-card') || TSM.repair)) { if (document.getElementById('ts-card')) tsCardOff(); else { TSM.repair = null; tsShowAll(); } return; } if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'o') { e.preventDefault(); if (!document.querySelector('dialog[open]')) document.getElementById('ts-file').click(); } });
 
   // ---- start: the assignment from last time, or the sample
   let st = null; try { st = JSON.parse(localStorage.getItem(TS_KEY) || 'null'); } catch (_) {}
   let c = null; if (st && st.circuit) try { c = readCircuit(st.circuit); } catch (_) {}
   if (c) {
-    TS = { log: Array.isArray(st.log) ? st.log : [], steps: Array.isArray(st.steps) ? st.steps : [], t0: +st.t0 || Date.now(), showSteps: st.showSteps !== false, scen: st.scen && typeof st.scen === 'object' ? st.scen : null };
+    TS = { log: Array.isArray(st.log) ? st.log : [], steps: Array.isArray(st.steps) ? st.steps : [], t0: +st.t0 || Date.now(), showSteps: st.showSteps !== false, scen: st.scen && typeof st.scen === 'object' ? st.scen : null, repairs: Array.isArray(st.repairs) ? st.repairs : [], signoff: st.signoff && typeof st.signoff === 'object' ? st.signoff : null };
     TS_BLOWN = st.blown && typeof st.blown === 'object' ? st.blown : {};
     tsUse(c, '', false);
   } else tsUse(tsSample(), '', true);
   // the keys on the buttons' tips (F1 lists them all)
-  for (const [sel, id] of [['[data-meter="v"]', 'ts-v'], ['[data-meter="ohm"]', 'ts-ohm'], ['[data-meter="cont"]', 'ts-cont'], ['#ts-leads-off', 'ts-leads'], ['#ts-lock', 'ts-lock'], ['#ts-push', 'ts-push'],
+  for (const [sel, id] of [['[data-meter="v"]', 'ts-v'], ['[data-meter="ohm"]', 'ts-ohm'], ['[data-meter="cont"]', 'ts-cont'], ['#ts-leads-off', 'ts-leads'], ['#ts-lock', 'ts-lock'], ['#ts-push', 'ts-push'], ['#ts-rep', 'ts-rep'], ['#ts-wire', 'ts-wire'], ['#ts-test', 'ts-test'],
     ['[data-tsmode="click"]', 'ts-click'], ['[data-tsmode="latch"]', 'ts-latch'], ['[data-tsmode="hold"]', 'ts-hold'], ['#ts-steps-btn', 'ts-steps'], ['#ts-reset', 'ts-reset'], ['[data-lead="red"]', 'ts-red'], ['[data-lead="black"]', 'ts-black']]) {
     const b = document.querySelector(sel); if (!b) continue;
     for (const k of ['tip', 'tip0']) if (b.dataset[k]) b.dataset[k] = b.dataset[k] + ` (${kn(id)})`;
