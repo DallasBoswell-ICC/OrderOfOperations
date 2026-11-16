@@ -9,7 +9,7 @@ const PAGE_HTML = (() => { try { return '<!doctype html>\n' + document.documentE
    the faults planted in a circuit (see troubleshooter.js and ts-meter.js). LOCKOUT: the circuit locked out (every
    disconnect open and the control supply off), as it must be before the ohmmeter or the continuity tester is used. */
 const TS_MODE = false;
-let LOCKOUT = false, TS_BLOWN = {}, TS_PUSHED = {};   // (TS_PUSHED: relays pushed in by hand while locked out, by letter)
+let LOCKOUT = false, TS_BLOWN = {}, TS_PUSHED = {};   // (TS_PUSHED: what is forced on by hand while locked out: relays by letter, switches by 's:' and their key)
 // (TS_BLOWN: the fuses that have blown, by id: they stay blown till replaced)
 const LOCKED = (() => { try { const s = document.getElementById('oo-locked'); return s ? JSON.parse(s.textContent) : null; } catch (_) { return null; } })();
 const W_MIN = 880;                   // narrowest the sheet gets (L1 is its left edge, x = 0; L2 its right edge, x = W: see geometry.js)

@@ -184,7 +184,7 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     const xy = await page.evaluate(() => { const q = parts.find(q => q.t === 'coil'), r = document.getElementById('stage').getBoundingClientRect(), s = tsScreen(q.x, q.y); return [s[0] + r.left, s[1] + r.top]; });
     await page.evaluate(() => setSpeed(300)); await page.mouse.click(...xy); await page.waitForTimeout(500);
     if (await ohms(page, ...XC) !== 0) out.push('X contact pushed in: ' + await ohms(page, ...XC));
-    if ((await page.evaluate(() => document.getElementById('ts-leads').innerHTML.split('PUSHED IN').length - 1)) !== 3) out.push('PUSHED IN tags on the coil and its two contacts');
+    if ((await page.evaluate(() => document.getElementById('ts-leads').innerHTML.split('FORCED ON').length - 1)) !== 3) out.push('PUSHED IN tags on the coil and its two contacts');
     await page.mouse.click(...xy); await page.waitForTimeout(400);
     if (await ohms(page, ...XC) !== 'OL') out.push('X contact let go: ' + await ohms(page, ...XC));
     await page.mouse.click(...xy); await page.click('#ts-push');
@@ -311,7 +311,7 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     for (const [k, want] of seq) { await page.keyboard.press(k); await page.waitForTimeout(80); const got = await st(); if (got !== want) { out.push(`after ${k}: ${got} (wanted ${want})`); break; } }
     await page.keyboard.press('F1'); await page.waitForTimeout(200);
     const list = await page.evaluate(() => document.getElementById('kb-lists').textContent);
-    for (const w of ['Voltmeter', 'Ohmmeter', 'Red lead', 'Lock Out', 'Push In', 'Click to Hold', 'Open Assignment']) if (!list.includes(w)) out.push('F1 list has no ' + w);
+    for (const w of ['Voltmeter', 'Ohmmeter', 'Red lead', 'Lock Out', 'Force On', 'Click to Hold', 'Open Assignment']) if (!list.includes(w)) out.push('F1 list has no ' + w);
     if (/Place another|Nudge|Wire\b/.test(list.replace(/Repair Wire/g, ''))) out.push('F1 still lists the builder\'s keys');
     return out;
   });
@@ -339,6 +339,28 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     return out;
   });
 
+  await check('Force On (was Push In): with the machine locked out, a pressure switch worked by its process value can be forced on by hand, and let go; tagged FORCED ON; not with the power on', async page => {
+    const out = [];
+    const d = { app: 'order-of-operations-circuit-builder', v: 1, w: 1000, name: 'PS test',
+      parts: [['psw', 300, 200, '1', 0, 1, 'FF9C37'], ['coil', 700, 200, 'X', 0, 1, 'FFDC00']],
+      wires: [[0, 200, 240, 200], [360, 200, 640, 200], [760, 200, 1000, 200]],
+      pv: [['p1', 'Pressure', 'pressure', 'psi', 0, 150, 0]], pl: [[0, 'p1', 80, 75, 'hi']] };
+    await page.evaluate(j => tsUse(readCircuit(JSON.parse(j)), '', true), JSON.stringify(d)); await page.waitForTimeout(300);
+    const ps = () => page.evaluate(() => closed(parts.find(p => p.t === 'psw')));
+    await page.click('#ts-push');
+    if (await page.evaluate(() => TSM.push)) out.push('Force On allowed with the power on');
+    await page.click('#ts-lock'); await page.waitForTimeout(200); await page.click('#ts-push');
+    if (await ps()) out.push('the pressure switch is closed before forcing it');
+    const at = await page.evaluate(() => { const p = parts.find(q => q.t === 'psw'); const r = document.querySelector('#svg [data-part="' + p.id + '"]').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height * .75]; });
+    await page.mouse.click(...at); await page.waitForTimeout(400);
+    if (!await ps()) out.push('forced on, the pressure switch is still open');
+    if (!(await page.evaluate(() => document.getElementById('ts-leads').innerHTML.includes('FORCED ON')))) out.push('no FORCED ON tag');
+    await page.mouse.click(...at); await page.waitForTimeout(400);
+    if (await ps()) out.push('let go, the pressure switch is still closed');
+    await page.click('#ts-lock'); await page.waitForTimeout(200);
+    if (await page.evaluate(() => Object.keys(TS_PUSHED).length)) out.push('taking the lock off left it forced');
+    return out;
+  });
   await check('Repairs: Replace Part and Repair Wire only while locked out, each asks first, clears the fault, and is logged (whether it was needed kept for the report); Test the Repair signs off; all kept after a reload', async page => {
     const out = [];
     await page.evaluate(() => { localStorage.clear(); }); await page.reload(); await page.waitForTimeout(900);

@@ -100,21 +100,33 @@ function tsPushMode(m) {
   for (const b of document.querySelectorAll('#mode-group [data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === m));
   tsShowAll(); TSM.key = '';
 }
-// Push In (Dallas, 15 Nov 2026): with the machine locked out, a relay or starter can be pushed in by hand (its armature
-// pressed in with an insulated tool), so its contacts can be checked with the ohmmeter or continuity tester; only
-// while locked out. A click on its coil or any of its contacts pushes it in, another lets it go.
+// Force On (Dallas: Push In, 15 Nov 2026; renamed and widened to switches 16 Nov 2026): with the machine locked out, a
+// relay or starter can be pushed in by hand (its armature pressed in with an insulated tool), and a limit, pressure,
+// temperature or flow switch worked by hand (its actuator moved, whatever its pressure, temperature or flow), so its
+// contacts can be checked with the ohmmeter or continuity tester; only while locked out. A click on a relay's coil or
+// any of its contacts forces it on, or on a switch; another lets it go.
+const tsForceSw = p => p && isLim(p);
 const tsPushable = p => p && ((p.t === 'coil' && !isTimer(p)) || p.t === 'con' || p.t === 'mst') && parts.some(q => q.t === 'coil' && !isTimer(q) && q.L === p.L);
 function tsPush(L, on) {
   if (on && !LOCKOUT) return;
   if (on) TS_PUSHED[L] = true; else delete TS_PUSHED[L];
   for (const c of parts) if ((c.t === 'con' || c.t === 'mst') && c.L === L) moveContact(c, simT);
   needPaint = true; TSM.key = '';
-  tsSay(on ? `${L} pushed in by hand: its contacts have changed over. Click it again to let it go.` : `${L} let go.`);
+  tsSay(on ? `${L} forced on by hand: its contacts have changed over. Click it again to let it go.` : `${L} let go.`);
+}
+function tsForceSwitch(p, on) {
+  if (on && !LOCKOUT) return;
+  const K = 's:' + opKey(p);
+  if (on) TS_PUSHED[K] = true; else delete TS_PUSHED[K];
+  LSW_T[opKey(p)] = simT; if (simT + LSW_MOVE > busyUntil) busyUntil = simT + LSW_MOVE;   // (it moves over a moment, as when worked)
+  needPaint = true; TSM.key = ''; TSM.sig = '';
+  const n = captionOf(p).replace(/ \(.*\)$/, '');
+  tsSay(on ? `${n} forced on by hand: worked, whatever its process. Click it again to let it go.` : `${n} let go.`);
 }
 function tsPushTool(on) {
-  if (on && !LOCKOUT) { tsSay('Lock out first: a relay is only ever pushed in by hand with the power off and locked out.'); return; }
+  if (on && !LOCKOUT) { tsSay('Lock out first: a relay or switch is only ever forced on by hand with the power off and locked out.'); return; }
   TSM.push = on; if (on) { TSM.repair = null; tsCardOff(); } tsShowAll();
-  if (on) tsSay('Push In: click a relay\u2019s coil or one of its contacts to push it in by hand (and again to let it go).');
+  if (on) tsSay('Force On: click a relay\u2019s coil or contact, or a limit, pressure, temperature or flow switch, to force it on by hand (and again to let it go).');
 }
 // the lead the next click on a terminal moves (the meter's Red / Black, or R and B)
 function tsPick1(c) { TSM.next = c; TSM.key = ''; tsShowMeter(); tsSay(`${c === 'red' ? 'Red' : 'Black'} lead: click a terminal to put it there.`); }
@@ -285,7 +297,7 @@ function tsLog(rd) {
 }
 
 // ---- drawing the meter's leads: from the jacks, in a curve, to the probes on their terminals
-// a small tag over a part (HELD DOWN, PUSHED IN), at a point in pixels
+// a small tag over a part (HELD DOWN, FORCED ON), at a point in pixels
 const tsTag = (s, t, k = 1) => `<g transform="translate(${s[0]} ${s[1]}) scale(${k})">` + tsTag1(t) + '</g>';
 const tsTag1 = t => `<g><rect x="-${t.length * 4 + 10}" y="-11" width="${t.length * 8 + 20}" height="20" rx="5" fill="#1c1d1f" stroke="#FF6F59" stroke-width="1.6"/><text y="4" text-anchor="middle" font-size="11" font-weight="800" fill="#fff" letter-spacing=".04em">${t}</text></g>`;
 function tsLeads() {
@@ -307,8 +319,9 @@ function tsLeads() {
   }
   for (const p of parts) if (TS_PUSHED[p.L] && (p.t === 'coil' || p.t === 'con' || p.t === 'mst')) {   // (a relay pushed in by hand: tagged on its coil and contacts)
     const q = tsScreen(p.x, p.t === 'mst' ? p.y - PWR_H / 2 - 22 : p.t === 'coil' ? p.y - BOX / 2 - 50 : p.y + BOX / 2 + 12);
-    if (q) h += tsTag(q, 'PUSHED IN', p.t === 'con' ? .8 : 1);   // (on a coil, above its name; on a contact, just below it)
+    if (q) h += tsTag(q, 'FORCED ON', p.t === 'con' ? .8 : 1);   // (on a coil, above its name; on a contact, just below it)
   }
+  for (const p of parts) if (isLim(p) && TS_PUSHED['s:' + opKey(p)]) { const q = tsScreen(p.x, p.y + 100); if (q) h += tsTag(q, 'FORCED ON', .8); }   // (a switch forced on: just below it)
   // the leads: each plugged into its jack, its cable hanging from there to the probe (on its terminal, or resting
   // beside the meter while it is not on one)
   ['red', 'black'].forEach((c, i) => {
@@ -372,7 +385,7 @@ function tsShowAll() {
   const sb = document.getElementById('ts-steps-btn'); sb.setAttribute('aria-pressed', String(TS.showSteps)); sb.querySelector('span').textContent = `Six Steps: ${TS.showSteps ? 'On' : 'Off'}`;
   const lk = document.getElementById('ts-lock'); lk.setAttribute('aria-pressed', String(LOCKOUT)); lk.querySelector('span').textContent = LOCKOUT ? 'Remove Lock' : 'Lock Out';
   document.body.classList.toggle('ts-locked', LOCKOUT);
-  const pb = document.getElementById('ts-push'); pb.setAttribute('aria-pressed', String(!!TSM.push)); pb.classList.toggle('needs-lock', !LOCKOUT); pb.dataset.tip = LOCKOUT ? pb.dataset.tip0 : 'Lock out first: a relay is only ever pushed in by hand with the power off and locked out';
+  const pb = document.getElementById('ts-push'); pb.setAttribute('aria-pressed', String(!!TSM.push)); pb.classList.toggle('needs-lock', !LOCKOUT); pb.dataset.tip = LOCKOUT ? pb.dataset.tip0 : 'Lock out first: a relay or switch is only ever forced on by hand with the power off and locked out';
   document.getElementById('stage').classList.toggle('ts-pushing', !!TSM.push);
   for (const [id, k, what] of [['ts-rep', 'part', 'a part is only ever replaced'], ['ts-wire', 'wire', 'a wire is only ever repaired']]) {
     const b = document.getElementById(id); b.setAttribute('aria-pressed', String(TSM.repair === k)); b.classList.toggle('needs-lock', !LOCKOUT);
@@ -428,7 +441,7 @@ function tsInit() {
       ${mb('ohm', 'Ohmmeter', 'Ohmmeter: the resistance between the two terminals (locked out only)')}
       ${mb('cont', 'Continuity', 'Continuity: beeps when there is a way through between the two terminals (locked out only)')}
       <button type="button" class="tool big" id="ts-leads-off" data-tip="Take both leads off the circuit">${TS_ICON.leads}<span>Remove Leads</span></button></div>
-    <div class="tgroup"><span class="label">Power</span><button type="button" class="tool big ts-lockbtn" id="ts-lock" aria-pressed="false" data-tip="Lock out the machine: every disconnect open and the control power off, as it must be before measuring resistance. Press again to take the lock off and power it up.">${TS_ICON.lock}<span>Lock Out</span></button><button type="button" class="tool big" id="ts-push" aria-pressed="false" data-tip="Push In: with the machine locked out, push a relay or starter in by hand, to check its contacts with the ohmmeter or continuity tester. Click its coil or a contact (again to let it go)." data-tip0="Push In: with the machine locked out, push a relay or starter in by hand, to check its contacts with the ohmmeter or continuity tester. Click its coil or a contact (again to let it go).">${TS_ICON.push}<span>Push In</span><small class="ts-needs">Lock out first</small></button></div>
+    <div class="tgroup"><span class="label">Power</span><button type="button" class="tool big ts-lockbtn" id="ts-lock" aria-pressed="false" data-tip="Lock out the machine: every disconnect open and the control power off, as it must be before measuring resistance. Press again to take the lock off and power it up.">${TS_ICON.lock}<span>Lock Out</span></button><button type="button" class="tool big" id="ts-push" aria-pressed="false" data-tip="Force On: with the machine locked out, force a relay (click its coil or a contact) or a limit, pressure, temperature or flow switch into its worked position by hand, to check its contacts with the ohmmeter or continuity tester (click again to let it go)." data-tip0="Force On: with the machine locked out, force a relay (click its coil or a contact) or a limit, pressure, temperature or flow switch into its worked position by hand, to check its contacts with the ohmmeter or continuity tester (click again to let it go).">${TS_ICON.push}<span>Force On</span><small class="ts-needs">Lock out first</small></button></div>
     <div class="tgroup"><span class="label">Repair</span><button type="button" class="tool big" id="ts-rep" aria-pressed="false" data-tip="Replace Part: with the machine locked out, click a part to take it out and put in a new one" data-tip0="Replace Part: with the machine locked out, click a part to take it out and put in a new one">${TS_ICON.replace}<span>Replace Part</span><small class="ts-needs">Lock out first</small></button><button type="button" class="tool big" id="ts-wire" aria-pressed="false" data-tip="Repair Wire: with the machine locked out, click a wire where it is to be cut and spliced" data-tip0="Repair Wire: with the machine locked out, click a wire where it is to be cut and spliced">${TS_ICON.wire}<span>Repair Wire</span><small class="ts-needs">Lock out first</small></button><button type="button" class="tool big" id="ts-test" aria-pressed="false" data-tip="Test the Repair: with the lock off, run the machine as the work order says, then sign off on what you checked" data-tip0="Test the Repair: with the lock off, run the machine as the work order says, then sign off on what you checked">${TS_ICON.test}<span>Test the Repair</span></button></div>
     <div class="tgroup"><span class="label">Record</span><button type="button" class="tool big" id="ts-steps-btn" aria-pressed="true" data-tip="Show or hide the six troubleshooting steps">${TS_ICON.steps}<span>Six Steps: On</span></button></div>
     <div class="row"><span class="label">Pushbuttons</span><div class="seg" role="group" aria-label="Pushbutton mode">
@@ -522,10 +535,10 @@ function tsInit() {
     if (editing || e.button !== 0 || e.target.closest('#ts-meter, .ts-probe, #ts-card')) return;
     if (TSM.repair) { e.preventDefault(); e.stopPropagation(); tsRepairClick(e); return; }   // (Replace Part or Repair Wire picked)
     const q = TSM.mode === 'off' ? null : tsPick(e.clientX, e.clientY);
-    if (!q && TSM.push) {   // (Push In: a click on a relay's coil or contact)
+    if (!q && TSM.push) {   // (Force On: a click on a relay's coil or contact, or on a switch)
       const g = e.target.closest && e.target.closest('[data-part]'), p = g && parts.find(x => String(x.id) === g.dataset.part);
       e.preventDefault(); e.stopPropagation();
-      if (tsPushable(p)) tsPush(p.L, !TS_PUSHED[p.L]); else tsSay('Push In works on a relay or starter: click its coil or one of its contacts.');
+      if (tsPushable(p)) tsPush(p.L, !TS_PUSHED[p.L]); else if (tsForceSw(p)) tsForceSwitch(p, !TS_PUSHED['s:' + opKey(p)]); else tsSay('Force On works on a relay or starter (its coil or a contact), or a limit, pressure, temperature or flow switch.');
       return;
     }
     if (!q) return;
