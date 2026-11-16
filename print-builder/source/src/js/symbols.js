@@ -10,7 +10,7 @@
              ol       an overload heater (power)              power    a disconnect, fuse block (power)
              starter  a starter's power contacts (its coil's tag)
              motor    a motor                                 xfmr     a control transformer
-             supply   a line coming in (L1, L2, L3)
+             supply   a line coming in (L1, L2, L3)          ground   a ground (one terminal, no tag)
    poles   pairs of its terminals that carry a line through it, line side first (power and fuses)
    passes  pairs of its terminals a switch can join (a switch with more than two ends: SPDT, DPST, DPDT, crossover)
    flip    the same device the other way (NO <-> NC)
@@ -71,6 +71,7 @@ const LIB = {
   src_l1:  { cat: 'Power', name: 'Source L1 (Control)', kind: 'source' },
   src_l2:  { cat: 'Power', name: 'Return L2 (Control)', kind: 'source' },
   xfmr:    { cat: 'Power', name: 'Transformer', sym: 'Control Transformer', pre: 'CPT', kind: 'xfmr' },
+  gnd:     { cat: 'Power', name: 'Ground', sym: 'Ground', kind: 'ground' },
   cnt_out: { cat: 'Continuation', name: 'Continues To (Out)', sym: 'Continuation Out', kind: 'cont', flip: 'cnt_in' },
   cnt_in:  { cat: 'Continuation', name: 'Continued From (In)', sym: 'Continuation In', kind: 'cont', flip: 'cnt_out' },
 };
@@ -113,7 +114,12 @@ PSYM['Continuation Out'] = { b: '<path d="M-40 0H-26" fill="none"/><path d="M-26
 PSYM['Continuation In'] = { b: '<path d="M26 0H40" fill="none"/><path d="M-36 -22H4L26 0L4 22H-36Z" fill="#fff"/>', t: [[40, 0]], y0: -22, y1: 22 };
 // the pilot light as big as a relay coil (80, terminal to terminal), its X reaching in to the ring
 PSYM['Pilot Light'] = { b: '<circle cx="0" cy="0" r="40" fill="#000" stroke="none"/><circle cx="0" cy="0" r="36" fill="#fff" stroke="none"/><path d="M-25.5 -25.5L25.5 25.5M25.5 -25.5L-25.5 25.5" fill="none" stroke="#000" stroke-width="2.8"/>', t: [[-40, 0], [40, 0]], y0: -40, y1: 40 };
-PSYM['Motor Leads'] = { b: PSYM.Motor.b + '<path d="M-140 -120H-120L-42.426 -42.426M-140 0H-60M-140 120H-120L-42.426 42.426" fill="none"/>', t: [[-140, -120], [-140, 0], [-140, 120]], y0: -124, y1: 124 };
+// Dallas's motor (Symbol Design, 15 Nov 2026): a circle as big as the leads are apart (his 40 at twice size: 80), the middle
+// lead straight in and the outer two bending in to it at 45°; the leads a line (120) apart like the other 3-phase parts
+PSYM['Motor Leads'] = { b: '<path d="M-140 -120H-120L-56.569 -56.569M-140 0H-80M-140 120H-120L-56.569 56.569" fill="none"/>' + PSYM.Motor.b, t: [[-140, -120], [-140, 0], [-140, 120]], y0: -124, y1: 124 };
+// Dallas's ground (Symbol Design, 15 Nov 2026), at twice size: its wire coming down to three bars, each shorter than the
+// last; its one terminal at the top of its lead, on the grid
+PSYM.Ground = { b: '<path d="M0 -40V-8M-30 -8H30M-20 8H20M-10 24H10" fill="none"/>', t: [[0, -40]], y0: -40, y1: 28 };
 // a coil's kinds: the start of its tag
 const COIL_PRE = [['CR', 'Control Relay'], ['M', 'Starter'], ['TR', 'Timer'], ['CON', 'Contactor']];
 // the line-in arrow: its one terminal at its middle, the arrow pointing into it from the left
@@ -129,7 +135,8 @@ function extentOf(t) {
   if (isArrowIn(t)) return { x0: -96, x1: 4, y0: -24, y1: 24 };
   const s = PSYM[LIB[t].sym], xs = s.t.map(p => p[0]);
   let x0 = Math.min(...xs), x1 = Math.max(...xs);
-  if (t === 'motor') { x0 = -140; x1 = 66; }
+  if (t === 'motor') { x0 = -140; x1 = 86; }
+  if (t === 'gnd') { x0 = -30; x1 = 30; }
   if (t === 'xfmr') { x0 = -64; x1 = 64; }
   if (t === 'cnt_out') { x0 = -40; x1 = 36; } if (t === 'cnt_in') { x0 = -36; x1 = 40; }   // (one terminal: the arrow's own width)
   return { x0, x1, y0: s.y0, y1: s.y1 };

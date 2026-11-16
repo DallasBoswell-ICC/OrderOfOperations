@@ -287,6 +287,7 @@ function defaultTag(t) {
     const outs = allParts().filter(q => q.p.t === 'cnt_out').map(q => q.p.tag), ins = new Set(allParts().filter(q => q.p.t === 'cnt_in').map(q => q.p.tag));
     if (t === 'cnt_in') { const open = outs.find(x => x && !ins.has(x)); if (open) return open; }
     const used = new Set([...outs, ...ins]); for (const c of 'ABCDEFGHJKLMNPQRSTUVWXYZ') if (!used.has(c)) return c; return 'A'; }
+  if (k === 'ground') return '';   // (a ground has no tag)
   if (t === 'src_l1') return 'L1'; if (t === 'src_l2') return 'L2';
   if (t === 'sup') { const used = new Set(allParts().filter(q => q.p.t === 'sup').map(q => q.p.tag)); return ['L1', 'L2', 'L3'].find(l => !used.has(l)) || 'L1'; }
   return nextTag(LIB[t].pre, LIB[t].kind === 'motor');

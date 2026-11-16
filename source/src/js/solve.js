@@ -87,11 +87,23 @@ function solveOnce(allClosed, blocked) {
    With whatever joins things up right now (f: wires and closed switches, each group one junction), every coil and
    pilot light is a resistance between two junctions, L1 at full voltage and L2 at none. A load across L1 and L2 gets
    all of it; two alike in series get half each. A coil picks up only with PULL_IN of the voltage it's made for or
-   more (so two coils in series just sit there), and a pilot light glows with its share. Every load is the same
-   resistance and made for the supply voltage for now: loadR and ratedShare are where parts rated otherwise would go.
+   more (so two coils in series just sit there), and a pilot light glows with its share. Each load has its own
+   resistance (LOAD_OHMS, below), so loads that differ share it in proportion, as Ohm's law has it; every one is made for
+   the supply voltage for now (ratedShare is where parts rated otherwise would go).
    ===================================================================== */
 const SUPPLY_V = 120, PULL_IN = 0.85;
-const loadR = p => 1;                                    // (each load's resistance, relative to the others)
+/* Each load's resistance in ohms (Dallas, 15 Nov 2026: reasonable values, and readings that obey Ohm's law). These are
+   the loads' working resistances at 120 V (so V = I R holds for what they draw), used here for how the voltage shares
+   out among loads in series, and by the Fault Finder's meter (ts-meter.js), so what the meter reads and what the
+   circuit does always agree:
+     relay coil (a control relay)        2.5 kΩ   48 mA at 120 V       timer           3 kΩ    40 mA
+     a starter's or contactor's coil     240 Ω    0.5 A (it pulls in a starter's poles, so it draws more)
+     pilot light                         2.4 kΩ   50 mA, 6 W (a 120 V, 6 W lamp)
+     solenoid (valve)                    1.2 kΩ   0.1 A, 12 W          heating element 9.6 Ω   12.5 A, 1500 W
+     control transformer: primary 12 Ω, secondary 0.5 Ω; a motor: 2 Ω a winding (ts-meter.js) */
+const LOAD_OHMS = p => p.t === 'coil' ? (isTimer(p) ? 3000 : parts.some(q => q.t === 'mst' && q.L === p.L) ? 240 : 2500)
+  : p.t === 'lamp' ? 2400 : p.t === 'sol' ? 1200 : p.t === 'htr' ? 9.6 : p.t === 'xfm' ? 12 : 1000;
+const loadR = p => LOAD_OHMS(p);                         // (each load's resistance)
 const ratedShare = p => (p.rv || SUPPLY_V) / SUPPLY_V;   // (the voltage it's made for, as a share of the supply)
 // V: junction group -> voltage (L1 1, L2 0); share: load id -> the share of the supply across it (0: no current)
 function loadShares(f, net = NET) {

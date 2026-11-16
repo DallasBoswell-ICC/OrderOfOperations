@@ -114,7 +114,7 @@ function drawSheet(s, k, A) {
       const y0 = r === 180 ? -sym.y1 : sym.y0, y1 = r === 180 ? -sym.y0 : sym.y1;
       if (p.t === 'fdsc3' && !r) tagsOf(p).slice(1).forEach((tg, i) => tagT(p.x + (p.fx ? -40 : 40), termPos(p, 2 * i)[1] - 24, tg, 26, 'middle', 'fu' + i));   // (a fused disconnect's fuses, each its number)
       if (p.t === 'fus3' && !r) tagsOf(p).forEach((tg, i) => tagT(p.x, termPos(p, 2 * i)[1] - 24, tg, 26, 'middle', 'fu' + i));   // (each fuse its own number)
-      else if (inside) text(p.x, p.y + (kind === 'motor' ? 11 : 10), p.tag, kind === 'motor' ? 30 : (p.tag || '').length > 3 ? 22 : 27); else tagT(p.x + (p.t === 'fdsc3' && !r ? (p.fx ? 40 : -40) : 0), p.y + y0 - 8, p.tag, 26);   // (a fused disconnect's name over its switch, clear of its fuse numbers)
+      else if (inside) text(p.x, p.y + (kind === 'motor' ? 13 : 10), p.tag, kind === 'motor' ? 38 : (p.tag || '').length > 3 ? 22 : 27); else tagT(p.x + (p.t === 'fdsc3' && !r ? (p.fx ? 40 : -40) : 0), p.y + y0 - 8, p.tag, 26);   // (a fused disconnect's name over its switch, clear of its fuse numbers)
       if (noteOf(p)) descT(p.x, p.y + y1 + 22, noteOf(p), 20);
     }
     if (p.t === 'xfmr') { const t = [0, 1, 2, 3].map(i => termPos(p, i)), nm = ['H1', 'H2', 'X1', 'X2'];

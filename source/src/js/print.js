@@ -191,7 +191,7 @@ function printSheet(drawnBy, fit = false) {
       case 'mtr': { // the circle level with T2, the leads in to it, T1 and T3 bending in
         const cy = q.terms[1][1], s = put('Motor', x, cy), bend = x - 130;
         q.terms.forEach(([ax, yy], i) => { const [ex, ey] = s.t[i]; if (i === 1) line(ax, yy, x + ex, cy); else { line(ax, yy, bend, yy); line(bend, yy, x + ex, cy + ey); } });
-        text(x, cy + 10, 'M' + q.L, 28); break; }
+        text(x, cy + 13, 'M' + q.L, 38); break; }
       case 'xfm': { const [H1, H2, X1, X2] = q.terms, cx = (H1[0] + H2[0]) / 2, cy = (H1[1] + X1[1]) / 2, s = put('Control Transformer', cx, cy);
         [H1, H2, X1, X2].forEach(([tx, ty], i) => line(tx, ty, cx + s.t[i][0], cy + s.t[i][1]));
         text(H1[0] - 12, H1[1] + 26, 'H1', 20, 'end', 600); text(H2[0] + 12, H2[1] + 26, 'H2', 20, 'start', 600); text(X1[0] - 12, X1[1] - 10, 'X1', 20, 'end', 600); text(X2[0] + 12, X2[1] - 10, 'X2', 20, 'start', 600);

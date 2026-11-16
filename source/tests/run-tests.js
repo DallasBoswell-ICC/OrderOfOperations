@@ -1528,7 +1528,7 @@ const DEF_CIRCUIT = `
     await page.click('#tab-edit'); await page.evaluate(() => setSpeed(1));
     return out;
   });
-  await check('Loads in series share the voltage: coils stay out, lights dim, the colour drops; the source colour is kept with the circuit', async page => {
+  await check('Loads in series share the voltage as Ohm\'s law has it (each load its own resistance): coils stay out, lights dim, the colour drops; the source colour is kept with the circuit', async page => {
     const out = [];
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
     await page.evaluate(() => {
@@ -1539,7 +1539,8 @@ const DEF_CIRCUIT = `
       normalize(); draw();
     });
     const notes = await page.evaluate(() => [...svg.querySelectorAll('text')].map(t => t.textContent).filter(s => /In series|Not wired/.test(s)));
-    if (notes.filter(s => s === 'In series: 60 V').length !== 2 || notes.filter(s => s === 'In series: 40 V').length !== 3 || notes.some(s => /Not wired/.test(s))) out.push('notes: ' + notes.join(', '));
+    // (Ohm's law, with each load's own resistance: a 2.5 kΩ relay coil and a 2.4 kΩ light take 61.2 V and 58.8 V of 120; three lights alike, 40 V each)
+    if (notes.filter(s => s === 'In series: 61.2 V').length !== 1 || notes.filter(s => s === 'In series: 58.8 V').length !== 1 || notes.filter(s => s === 'In series: 40 V').length !== 3 || notes.some(s => /Not wired/.test(s))) out.push('notes: ' + notes.join(', '));
     await page.click('#pw-btn'); await page.click('[data-src="#3FB8FF"]');
     const saved = await page.evaluate(() => JSON.stringify(circuitData()));
     if (!saved.includes('"sc":"#3FB8FF"')) out.push('the source colour is not saved');
@@ -1554,7 +1555,7 @@ const DEF_CIRCUIT = `
     if (!r1.between || r1.between === r1.src) out.push('the colour does not drop across the lights: ' + r1.between);
     await page.evaluate(() => press('A', true)); await page.waitForTimeout(800);
     const r2 = await page.evaluate(() => { const c = parts.find(p => p.L === 'CR'), l = parts.find(p => p.t === 'lamp'); return [!!coilOn[c.id], !!COND[c.id], !!coilOn[l.id], +l._sh.toFixed(3)]; });
-    if (JSON.stringify(r2) !== '[false,true,true,0.5]') out.push('coil and light in series (coil in, current through, light lit, its share): ' + JSON.stringify(r2));
+    if (JSON.stringify(r2) !== '[false,true,true,0.49]') out.push('coil and light in series (coil in, current through, light lit, its share): ' + JSON.stringify(r2));
     await page.evaluate(() => press('A', false)); await page.click('#tab-edit'); await page.evaluate(() => setSpeed(1));
     return out;
   });
@@ -2960,7 +2961,7 @@ const DEF_CIRCUIT = `
 
   await check('A part tab with more on it than fits (a motor in a narrow window): nothing overlaps; it scrolls sideways with the wheel, its cut-off end faded', async page => {
     const out = [];
-    await page.setViewportSize({ width: 1470, height: 1000 }); await page.waitForTimeout(150);
+    await page.setViewportSize({ width: 1250, height: 1000 }); await page.waitForTimeout(150);
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
     await page.evaluate(() => { const cyl = pvNew('position'); cyl.name = 'Position'; PV.push(cyl); const m = newPart('mtr', 600, 300); parts.push(m); m.pv = cyl.id; drvDefaults(m, cyl); normalize(); fit(true); draw(); });
     await page.waitForTimeout(150);   // (the window was just resized: let the redraw that follows settle before finding the motor)
@@ -2972,7 +2973,7 @@ const DEF_CIRCUIT = `
     if (!g.some(x => x[0] === 'Part') || !g.some(x => x[0] === 'Picture')) out.push('groups: ' + g.map(x => x[0]).join(', '));
     const more0 = await page.evaluate(() => document.getElementById('editpanel').dataset.more || '');
     if (more0 !== 'r') out.push('cut-off end not marked: ' + more0);
-    await page.mouse.move(700, 120); await page.mouse.wheel(0, 2000); await page.waitForTimeout(200);
+    const eb = await page.locator('#editpanel').boundingBox(); await page.mouse.move(eb.x + eb.width / 2, eb.y + eb.height / 2); await page.mouse.wheel(0, 2000); await page.waitForTimeout(200);
     const r = await page.evaluate(() => { const e = document.getElementById('editpanel'), d = document.getElementById('p-del').getBoundingClientRect(); return [e.scrollLeft, e.dataset.more || '', d.right <= e.getBoundingClientRect().right + 0.5, scrollY]; });
     if (!(r[0] > 0) || r[1] !== 'l' || !r[2] || r[3] !== 0) out.push('after the wheel: ' + JSON.stringify(r));
     return out;
@@ -3062,6 +3063,31 @@ const DEF_CIRCUIT = `
     await page.keyboard.press('Control+p'); await page.waitForTimeout(400);
     const dash = await page.evaluate(() => [...document.querySelectorAll('#pd-view line[stroke-dasharray]')].length);
     if (dash < 1) out.push('no dashed link on the print');
+    return out;
+  });
+
+  await check('Faults that would do nothing are not offered: no short to L2 on a wire already on L2 or in the three-phase power, no shorted fuse; Random Fault plants only ones that do something', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'seal'); await page.waitForTimeout(80);
+    const r = await page.evaluate(() => { const w = (x1, y1) => wires.find(q => q.x1 === x1 && q.y1 === y1);
+      return { l2side: faultWhy(w(760, 200), true, 'l2'), hot: faultWhy(w(340, 200), true, 'l2'), open: faultWhy(w(760, 200), true, 'open') }; });
+    if (!r.l2side || r.hot || r.open) out.push(JSON.stringify(r));
+    // on the Faults tab: Shorted to L2 greyed out for the wire into L2
+    await page.click('#rt-faults');
+    await page.evaluate(() => { sel = selOne('w', wires.find(q => q.x1 === 760 && q.y1 === 200).id); draw(); showFaults(); });
+    const dis = await page.evaluate(() => [...document.querySelectorAll('#fz-kinds [data-fz]')].map(b => b.dataset.fz + ':' + b.disabled).join());
+    if (dis !== ':false,open:false,l2:true') out.push('buttons: ' + dis);
+    await page.evaluate(() => setFault(wires.find(q => q.x1 === 760 && q.y1 === 200), true, 'l2'));
+    if (await page.evaluate(() => wires.some(q => q.fault))) out.push('planted a short to L2 on L2 anyway');
+    await page.selectOption('#preset', 'fwdrev'); await page.waitForTimeout(80);
+    const p3 = await page.evaluate(() => { const f = parts.find(q => q.t === 'fu1'); const pw = wires.filter(w => faultWhy(w, true, 'l2') && /power/.test(faultWhy(w, true, 'l2'))).length;
+      return [faultWhy(f, false, 'short') ? 'no' : 'yes', faultWhy(f, false, 'open') ? 'no' : 'yes', pw > 0]; });
+    if (p3.join() !== 'no,yes,true') out.push('fuse short / open / power wires: ' + p3);
+    for (let i = 0; i < 40; i++) {
+      const bad = await page.evaluate(() => { for (const q of [...parts, ...wires]) delete q.fault; document.getElementById('fz-random').click();
+        const L = faulted(); return L.length === 1 && faultWhy(L[0][0], L[0][1], L[0][0].fault) ? faultWhere(...L[0]) + ' ' + L[0][0].fault : ''; });
+      if (bad) { out.push('Random Fault planted: ' + bad); break; }
+    }
     return out;
   });
 

@@ -490,7 +490,7 @@ let passed = 0, failed = 0;
     await p.evaluate(() => { loadDoc(template('blank')); refresh(true); });
     const kinds = await p.evaluate(() => Object.fromEntries(CATS.map(c => [c, [...document.querySelector(`[data-menu="${c}"]`).nextElementSibling.querySelectorAll(':scope > button, :scope > .subwrap > .sub-row')].map(b => b.dataset.t ? LIB[b.dataset.t].name : [...b.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim()).join(';')])));
     const want = { Buttons: 'Pushbuttons;Maintained Pushbuttons;Emergency Stop', Outputs: 'Relay Coil;Timers;Pilot Light;Solenoid;Heating Element;Motor', Contacts: 'Relay Contacts;Timed Contacts;Starter;OL Contact',
-      Protection: 'Disconnects;Fuses;Circuit Breakers;Overloads', Power: 'Phase (L1, L2, L3);Control Source and Return;Transformer' };
+      Protection: 'Disconnects;Fuses;Circuit Breakers;Overloads', Power: 'Phase (L1, L2, L3);Control Source and Return;Transformer;Ground' };
     const out = []; for (const [c, w] of Object.entries(want)) if (kinds[c] !== w) out.push(c + ': ' + kinds[c]);
         // an SPDT with a wire on each end, flipped: its common moves to the right, its wires stay on the same ends; undo puts it back
     const r = await p.evaluate(() => { const a = addPart(S, 'spdt', 800, 600); addWire(S, [[600, 600], [760, 600]]); addWire(S, [[840, 560], [1000, 560]]); addWire(S, [[840, 640], [1000, 640]]);
@@ -842,6 +842,21 @@ let passed = 0, failed = 0;
     if (hd !== 'rgb(43, 47, 52),rgb(224, 108, 117)') out.push('Buttons header not grey with a red edge: ' + hd);
     const ic = await p.evaluate(() => { const i = document.querySelector('.rb[data-menu="Buttons"] .cat-ico'); return getComputedStyle(i).boxShadow + ' | ' + /#E06C75/i.test(i.innerHTML); });
     if (!/224, 108, 117/.test(ic) || / true$/.test(ic)) out.push('Buttons icon not grey with a red bar: ' + ic);
+    return out;
+  });
+
+  await check('Dallas\'s new symbols (15 Nov 2026): Ground (Power; one terminal at its top, no tag, wires to it) and his Motor (circle 80 across its leads, leads still a line apart at the same ends)', async p => {
+    const out = [];
+    const r = await p.evaluate(() => { loadDoc(template('blank')); refresh(true);
+      const r1 = S.parts.find(q => q.t === 'rail' && q.label === 'L1');
+      startPlacing('gnd'); putDown([r1.x + 400, r1.y0 + 400], false); const g = S.parts.at(-1);
+      addWire(S, [[r1.x, g.y - 40], [g.x, g.y - 40]]); refresh(true);
+      return { t: g.t, tag: g.tag, cat: LIB.gnd.cat, terms: termsOf('gnd'), sym: PSYM.Ground.b, inMenu: !!document.querySelector('#sym-menus [data-t="gnd"]'),
+        motor: [PSYM.Motor.b, JSON.stringify(PSYM['Motor Leads'].t)] }; });
+    if (r.t !== 'gnd' || r.tag !== '' || r.cat !== 'Power' || JSON.stringify(r.terms) !== '[[0,-40]]') out.push(JSON.stringify(r).slice(0, 200));
+    if (!/M0 -40V-8M-30 -8H30M-20 8H20M-10 24H10/.test(r.sym)) out.push('ground drawing: ' + r.sym);
+    if (!r.inMenu) out.push('Ground not in the Power menu');
+    if (!/r="80"/.test(r.motor[0]) || r.motor[1] !== '[[-140,-120],[-140,0],[-140,120]]') out.push('motor: ' + r.motor);
     return out;
   });
 

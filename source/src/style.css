@@ -548,9 +548,11 @@ body.ts.ts-locked .stage::after { content: "LOCKED OUT"; position: absolute; lef
 .jack { gap: 9px; }
 .tsm-next { margin: 2px 0 2px; }
 
-/* the Fault Finder's ribbon: each group's buttons centred across and down the group, its name along the bottom */
-body.ts .rpanel .ts-g { flex-flow: column nowrap; align-items: stretch; align-content: normal; }
-body.ts .rpanel .ts-g > .ts-ctl { flex: 1; display: flex; flex-wrap: wrap; align-items: center; align-content: center; justify-content: center; gap: 4px 8px; min-height: 0; min-width: 0; }
+/* every ribbon group (Faults, Simulation; the Fault Finder's Troubleshoot): its buttons centred across and down the group, its name along the bottom (centreGroups, toolbar.js) */
+.rpanel .ts-g { flex-flow: column nowrap; align-items: stretch; align-content: normal; }
+.rpanel .ts-g > .ts-ctl { flex: 1; display: flex; flex-wrap: wrap; align-items: center; align-content: center; justify-content: center; gap: 4px 8px; min-height: 0; min-width: 0; }
 body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are on the Troubleshoot tab, with Click to Hold) */
-body.ts .rpanel .ts-g > .label { order: 2; flex-basis: auto; }
-body.ts .rpanel .ts-g[hidden] { display: none; }
+.rpanel .ts-g > .label { order: 2; flex-basis: auto; }
+.rpanel .ts-g[hidden] { display: none; }
+/* the Home tab's groups: their buttons centred across and down the group too */
+.rgrp .gbody { align-items: center; justify-content: center; }

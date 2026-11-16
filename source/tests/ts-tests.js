@@ -165,7 +165,7 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     return out;
   });
 
-  await check('Lock Out: required for the ohmmeter, continuity and Push In; dead after; coil reads OL, light 1.2 kΩ; X pushed in closes its contact; STOP beeps; taking it off lets X go and powers up again', async page => {
+  await check('Lock Out: required for the ohmmeter, continuity and Push In; dead after; coil reads OL, light 2.4 kΩ; X pushed in closes its contact; STOP beeps; taking it off lets X go and powers up again', async page => {
     const out = [];
     await page.click('[data-meter="ohm"]');
     if (await page.evaluate(() => TSM.mode) !== 'v') out.push('ohmmeter allowed on a live circuit');
@@ -175,7 +175,7 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     await page.click('[data-meter="ohm"]');
     if (await page.evaluate(() => TSM.mode) !== 'ohm') out.push('ohmmeter not on once locked out');
     if (await ohms(page, C1, C2) !== 'OL') out.push('across the open coil: ' + await ohms(page, C1, C2));
-    if (await ohms(page, 'Pilot Light, left (rung 3)', 'Pilot Light, right (rung 3)') !== 1200) out.push('across the light: ' + await ohms(page, 'Pilot Light, left (rung 3)', 'Pilot Light, right (rung 3)'));
+    if (await ohms(page, 'Pilot Light, left (rung 3)', 'Pilot Light, right (rung 3)') !== 2400) out.push('across the light: ' + await ohms(page, 'Pilot Light, left (rung 3)', 'Pilot Light, right (rung 3)'));
     if (await ohms(page, 'A Button (NO), left (rung 1)', 'A Button (NO), right (rung 1)') !== 'OL') out.push('across the open START: ' + await ohms(page, 'A Button (NO), left (rung 1)', 'A Button (NO), right (rung 1)'));
     // Push In (only locked out): X pushed in by hand closes its NO contacts, so continuity across one beeps
     const XC = ['X Contact (NO), left (rung 3)', 'X Contact (NO), right (rung 3)'];
@@ -276,10 +276,43 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     if (await volts(page, A, B) !== 480) out.push('line side, locked out: ' + await volts(page, A, B));
     if (await volts(page, a, c) !== 0) out.push('load side, locked out: ' + await volts(page, a, c));
     if (await volts(page, 'T1 Control Transformer, X1', 'T1 Control Transformer, X2') !== 0) out.push('X1 to X2 locked out');
-    if (await ohms(page, 'T1 Control Transformer, X1', 'T1 Control Transformer, X2') !== 0.8) out.push('secondary winding: ' + await ohms(page, 'T1 Control Transformer, X1', 'T1 Control Transformer, X2'));
+    if (await ohms(page, 'T1 Control Transformer, X1', 'T1 Control Transformer, X2') !== 0.5) out.push('secondary winding: ' + await ohms(page, 'T1 Control Transformer, X1', 'T1 Control Transformer, X2'));
     // the disconnect cannot be closed while locked out
     await page.evaluate(() => workPower(parts.find(p => p.t === 'dsc')));
     if (!(await page.evaluate(() => parts.filter(p => p.t === 'dsc').every(p => DSC[p.id])))) out.push('the locked-out disconnect closed');
+    return out;
+  });
+
+  await check('Resistances are reasonable and the readings obey Ohm\'s law: relay coil 2.5 kΩ, starter coil 240 Ω, light 2.4 kΩ; a coil and a light in series share 120 V as their resistances do', async page => {
+    const out = [];
+    const r = await page.evaluate(() => { loadPreset('blank');
+      parts.push(P('btn', 200, 120, { L: 'A', maint: true, color: '#00B050' }), P('coil', 420, 120, { L: 'CR', color: '#FFDC00' }), P('lamp', 640, 120, {}));
+      wires.push(Wr(0, 120, 160, 120), Wr(240, 120, 360, 120), Wr(480, 120, 580, 120), Wr(700, 120, W, 120));
+      parts.push(P('coil', 420, 300, { L: 'M', color: '#FF0032' }), P('mst', 420, 600, { L: 'M' })); wires.push(Wr(0, 300, 360, 300), Wr(480, 300, W, 300));
+      normalize(); const c = readCircuit(JSON.parse(JSON.stringify(circuitData()))); tsUse(c, '', true); setSpeed(300);
+      const coil = parts.find(p => p.L === 'CR'), lamp = parts.find(p => p.t === 'lamp'), m = parts.find(p => p.t === 'coil' && p.L === 'M');
+      return [LOAD_OHMS(coil), LOAD_OHMS(lamp), LOAD_OHMS(m)]; });
+    if (r.join() !== '2500,2400,240') out.push('resistances: ' + r);
+    await page.evaluate(() => press('A', true)); await page.waitForTimeout(500);
+    const v = await page.evaluate(() => { const coil = parts.find(p => p.L === 'CR'), lamp = parts.find(p => p.t === 'lamp');
+      return [tsVolts(coil._a, coil._b), tsVolts(lamp._a, lamp._b), lamp._sh, !!coilOn[coil.id]]; });
+    // (I = 120 V / 4.9 kΩ = 24.5 mA: 61.2 V across the coil, 58.8 V across the light; too little to pull the coil in)
+    if (Math.abs(v[0] - 61.22) > .05 || Math.abs(v[1] - 58.78) > .05) out.push('series voltages: ' + v.slice(0, 2).map(x => x.toFixed(2)));
+    if (Math.abs(v[2] - v[1] / 120) > .005) out.push('the light glows with ' + v[2] + ' of the supply, the meter reads ' + v[1]);
+    if (v[3]) out.push('the coil pulled in on half its voltage');
+    return out;
+  });
+
+  await check('Shortcuts reflect the Fault Finder\'s controls (F1 lists them): 1/2/3 the meter, R/B the leads, T Lock Out, A Push In, 5 Click to Hold, S the six steps', async page => {
+    const out = [];
+    const st = () => page.evaluate(() => [TSM.mode, TSM.next, LOCKOUT, !!TSM.push, mode, TS.showSteps].join(' '));
+    const seq = [['2', 'v red false false click true'], ['t', 'v red true false click true'], ['2', 'ohm red true false click true'], ['b', 'ohm black true false click true'],
+      ['a', 'ohm black true true click true'], ['5', 'ohm black true true latch true'], ['s', 'ohm black true true latch false'], ['t', 'v black false false latch false'], ['1', 'v black false false latch false'], ['s', 'v black false false latch true'], ['4', 'v black false false click true']];
+    for (const [k, want] of seq) { await page.keyboard.press(k); await page.waitForTimeout(80); const got = await st(); if (got !== want) { out.push(`after ${k}: ${got} (wanted ${want})`); break; } }
+    await page.keyboard.press('F1'); await page.waitForTimeout(200);
+    const list = await page.evaluate(() => document.getElementById('kb-lists').textContent);
+    for (const w of ['Voltmeter', 'Ohmmeter', 'Red lead', 'Lock Out', 'Push In', 'Click to Hold', 'Open Assignment']) if (!list.includes(w)) out.push('F1 list has no ' + w);
+    if (/Place another|Nudge|Wire\b/.test(list)) out.push('F1 still lists the builder\'s keys');
     return out;
   });
 

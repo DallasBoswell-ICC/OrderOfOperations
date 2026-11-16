@@ -175,3 +175,17 @@ for (const rp of document.querySelectorAll('.rpanel')) {
   new MutationObserver(edges).observe(rp, { subtree: true, attributes: true, attributeFilter: ['hidden'] });
   edges();
 }
+
+/* Each ribbon group's buttons centred across and down the group, its name along the bottom (Dallas, 15 Nov 2026: first
+   in the Fault Finder, then here and in Print Builder): the group's controls go into one box (.ts-ctl) that fills the
+   room above its name. The Home tab's groups (.rgrp) are centred by their style alone. */
+function centreGroups(bar) {
+  for (const g of bar.querySelectorAll(':scope > .tgroup, :scope > .row')) {
+    if (g.classList.contains('ts-g')) continue;
+    const box = document.createElement('div'); box.className = 'ts-ctl';
+    for (const c of [...g.children]) if (!c.classList.contains('label')) box.appendChild(c);
+    g.insertBefore(box, g.firstChild); g.classList.add('ts-g');
+  }
+}
+for (const id of ['faultbar', 'runbar']) centreGroups(document.getElementById(id));
+for (const b of document.querySelectorAll('#editpanel .props')) centreGroups(b);   // (the part's own tab: each setting centred above its name)

@@ -3,6 +3,41 @@
    one is listed here; the ones with an id can be changed in the Keyboard Shortcuts box (F1 › Change Keys), kept in
    this browser (apart from Print Builder's). Delete, Esc and Ctrl+Z/Y are in toolbar.js; Ctrl+C/X/V in clipboard.js;
    Ctrl+S in storage.js; Ctrl+P in print.js; Space (pan) in camera.js; the key handler is at the end of this file. */
+/* The Fault Finder's own shortcuts (Dallas, 15 Nov 2026: they reflect its controls): the meter's dial, the leads, Lock
+   Out and Push In, the pushbutton modes and the six steps (all of them work in Run, the only mode it has). */
+const KB_TS = {
+  groups: [{ id: 'meter', name: 'Meter', c: '#FF6F59' }, { id: 'leads', name: 'Leads', c: '#ff8a7a' }, { id: 'power', name: 'Power', c: '#e5484d' }, { id: 'buttons', name: 'Pushbuttons and Steps', c: '#ffc000' }, { id: 'view', name: 'View', c: '#46c46a' }, { id: 'file', name: 'Assignment', c: '#b58cff' }],
+  items: [
+    { g: 'meter', id: 'ts-v', keys: ['1'], label: 'Voltmeter (the dial to V~)', short: 'Volts', inRun: true, run: () => tsMode('v') },
+    { g: 'meter', id: 'ts-ohm', keys: ['2'], label: 'Ohmmeter (locked out only)', short: 'Ohms', inRun: true, run: () => tsMode('ohm') },
+    { g: 'meter', id: 'ts-cont', keys: ['3'], label: 'Continuity (locked out only)', short: 'Continuity', inRun: true, run: () => tsMode('cont') },
+    { g: 'meter', id: 'ts-off', keys: ['`'], label: 'Meter off', short: 'Meter Off', inRun: true, run: () => tsMode('off') },
+    { g: 'leads', id: 'ts-red', keys: ['r'], label: 'Red lead: the next terminal clicked', short: 'Red Lead', inRun: true, run: () => tsPick1('red') },
+    { g: 'leads', id: 'ts-black', keys: ['b'], label: 'Black lead: the next terminal clicked', short: 'Black Lead', inRun: true, run: () => tsPick1('black') },
+    { g: 'leads', id: 'ts-leads', keys: ['x'], label: 'Remove Leads', short: 'Remove Leads', inRun: true, run: () => document.getElementById('ts-leads-off').click() },
+    { g: 'leads', show: 'Drag a probe', label: 'Move that lead to another terminal' },
+    { g: 'power', id: 'ts-lock', keys: ['t'], label: 'Lock Out, or take the lock off (lock out, tag out)', short: 'Lock Out', inRun: true, run: () => document.getElementById('ts-lock').click() },
+    { g: 'power', id: 'ts-push', keys: ['a'], label: 'Push In a relay by hand (locked out only)', short: 'Push In', inRun: true, run: () => document.getElementById('ts-push').click() },
+    { g: 'buttons', id: 'ts-click', keys: ['4'], label: 'Pushbuttons: Click', short: 'Click', inRun: true, run: () => tsPushMode('click') },
+    { g: 'buttons', id: 'ts-latch', keys: ['5'], label: 'Pushbuttons: Click to Hold', short: 'Click to Hold', inRun: true, run: () => tsPushMode('latch') },
+    { g: 'buttons', id: 'ts-hold', keys: ['w'], label: 'Pushbuttons: Press and Hold', short: 'Press & Hold', inRun: true, run: () => tsPushMode('hold') },
+    { g: 'buttons', show: 'Tab', label: 'Pick a button or switch on the panel' },
+    { g: 'buttons', show: 'Space or Enter', label: 'Press the picked button' },
+    { g: 'buttons', id: 'ts-steps', keys: ['s'], label: 'Six Steps: show or hide', short: 'Six Steps', inRun: true, run: () => document.getElementById('ts-steps-btn').click() },
+    { g: 'buttons', id: 'ts-reset', keys: ['shift+r'], label: 'Reset: start the machine again', short: 'Reset', inRun: true, run: () => document.getElementById('ts-reset').click() },
+    { g: 'view', id: 'fit', keys: ['z'], label: 'Fit the whole circuit', short: 'Fit', inRun: true, run: () => { fitView(); draw(); } },
+    { g: 'view', show: 'Space + drag', label: 'Pan' },
+    { g: 'view', show: 'Ctrl + wheel', label: 'Zoom at the pointer' },
+    { g: 'view', show: 'F1', label: 'This list' },
+    { g: 'file', show: 'Ctrl+O', label: 'Open Assignment' }, { g: 'file', show: 'Ctrl+P', label: 'View Print' },
+  ],
+  mapFixed: {
+    esc: { label: 'Esc', main: 'Close', c: '#46c46a' }, f1: { main: 'Shortcuts', c: '#46c46a' }, '`': { label: '`' },
+    tab: { label: 'Tab', main: 'Pick a Button', c: '#ffc000' }, caps: { label: 'Caps' }, alt: { label: 'Alt' },
+    shift: { label: 'Shift', notes: ['With R: Reset'], c: '#ffc000' }, ctrl: { label: 'Ctrl', notes: ['With wheel: zoom', 'O: Open, P: Print'], c: '#b58cff' },
+    space: { label: 'Space', main: 'Press / Hold + drag: Pan', c: '#46c46a' }, arrows: { label: '← ↑ ↓ →', main: 'Turn a Selector', c: '#ffc000' },
+  },
+};
 const KB = {
   canChange: false,   // (Dallas, 12 Nov 2026: each key fixed for now; true brings back Change Keys and Default Settings)
   store: 'oo-circuit-builder:keys', tipAttr: 'data-tip',
@@ -47,6 +82,7 @@ const KB = {
     s: { notes: ['Ctrl: Save'], c: '#b58cff' }, z: { notes: ['Ctrl: Undo', 'Ctrl+Shift: Redo'], c: '#b58cff' }, x: { notes: ['Ctrl: Cut'], c: '#b58cff' }, c: { notes: ['Ctrl: Copy'], c: '#b58cff' }, v: { notes: ['Ctrl: Paste'], c: '#b58cff' },
   },
 };
+if (TS_MODE) Object.assign(KB, { groups: KB_TS.groups, items: KB_TS.items, mapFixed: KB_TS.mapFixed });   // (the Fault Finder: its own)
 let lastKind = null;   // (the last part put on the panel, for Place Again: set in placePart)
 
 /* Nudging: a run of arrow presses is one move (one Undo), worked out each time from where things were at the first
@@ -125,6 +161,7 @@ function kbFromEvent(e) {
   if (/^F([1-9]|1[0-2])$/.test(e.key)) return e.shiftKey ? null : e.key.toLowerCase();   // (F1 too, to be told it is kept)
   if (/^Key[A-Z]$/.test(e.code)) return (e.shiftKey ? 'shift+' : '') + e.code.slice(3).toLowerCase();
   if (/^Digit[0-9]$/.test(e.code)) return e.shiftKey ? null : e.code.slice(5);
+  if (e.code === 'Backquote') return e.shiftKey ? null : '`';
   // (no key code, as from some on-screen keyboards and remote desktops: go by the character)
   if (!e.code && /^[a-z]$/i.test(e.key)) return (e.shiftKey ? 'shift+' : '') + e.key.toLowerCase();
   if (!e.code && /^[0-9]$/.test(e.key) && !e.shiftKey) return e.key;

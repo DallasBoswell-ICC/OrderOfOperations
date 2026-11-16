@@ -92,6 +92,8 @@ function tsPushTool(on) {
   TSM.push = on; tsShowAll();
   if (on) tsSay('Push In: click a relay\u2019s coil or one of its contacts to push it in by hand (and again to let it go).');
 }
+// the lead the next click on a terminal moves (the meter's Red / Black, or R and B)
+function tsPick1(c) { TSM.next = c; TSM.key = ''; tsShowMeter(); tsSay(`${c === 'red' ? 'Red' : 'Black'} lead: click a terminal to put it there.`); }
 // ---- the meter
 function tsMode(m, quiet) {
   if ((m === 'ohm' || m === 'cont') && !LOCKOUT) { tsSay('Lock out first: never measure resistance or continuity on a live circuit (Lock Out, on the Troubleshoot tab).'); return; }
@@ -303,11 +305,7 @@ function tsInit() {
     <div class="tgroup"><span class="label">Simulation</span><button type="button" class="tool big reset" id="ts-reset" data-tip="Turn everything off and start the machine again (a blown fuse stays blown)"><svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M15.5 10a5.5 5.5 0 1 1-1.6-3.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14.4 2.8l.1 3.9-3.9.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reset</span></button></div>`;
   document.getElementById('runbar').parentNode.insertBefore(bar, document.getElementById('runbar'));
   // every group on both tabs: its buttons in one box, centred across and down the group, its name along the bottom
-  for (const g of document.querySelectorAll('#tsbar > .tgroup, #tsbar > .row, #runbar > .tgroup, #runbar > .row')) {
-    const box = document.createElement('div'); box.className = 'ts-ctl';
-    for (const c of [...g.children]) if (!c.classList.contains('label')) box.appendChild(c);
-    g.insertBefore(box, g.firstChild); g.classList.add('ts-g');
-  }
+  centreGroups(bar);
   document.getElementById('reset-btn').closest('.ts-g').hidden = true;   // (Reset is on the Troubleshoot tab)
   // the panel and, down its right, the work order, the six steps and the test log
   const stage = document.getElementById('stage'), main = document.createElement('div'); main.className = 'ts-main';
@@ -393,6 +391,7 @@ function tsInit() {
     addEventListener('pointermove', mv); addEventListener('pointerup', up);
   });
   setInterval(tsShowFoot, 1000);
+  document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'o') { e.preventDefault(); if (!document.querySelector('dialog[open]')) document.getElementById('ts-file').click(); } });
 
   // ---- start: the assignment from last time, or the sample
   let st = null; try { st = JSON.parse(localStorage.getItem(TS_KEY) || 'null'); } catch (_) {}
@@ -402,6 +401,12 @@ function tsInit() {
     TS_BLOWN = st.blown && typeof st.blown === 'object' ? st.blown : {};
     tsUse(c, '', false);
   } else tsUse(tsSample(), '', true);
+  // the keys on the buttons' tips (F1 lists them all)
+  for (const [sel, id] of [['[data-meter="v"]', 'ts-v'], ['[data-meter="ohm"]', 'ts-ohm'], ['[data-meter="cont"]', 'ts-cont'], ['#ts-leads-off', 'ts-leads'], ['#ts-lock', 'ts-lock'], ['#ts-push', 'ts-push'],
+    ['[data-tsmode="click"]', 'ts-click'], ['[data-tsmode="latch"]', 'ts-latch'], ['[data-tsmode="hold"]', 'ts-hold'], ['#ts-steps-btn', 'ts-steps'], ['#ts-reset', 'ts-reset'], ['[data-lead="red"]', 'ts-red'], ['[data-lead="black"]', 'ts-black']]) {
+    const b = document.querySelector(sel); if (!b) continue;
+    for (const k of ['tip', 'tip0']) if (b.dataset[k]) b.dataset[k] = b.dataset[k] + ` (${kn(id)})`;
+  }
   showRibbon();
 }
 if (TS_MODE) tsInit();

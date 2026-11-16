@@ -9,9 +9,9 @@
    open loads no way through at all (OL).
    ===================================================================== */
 const TS_SUPPLY = 120, TS_LINE = 480;
-// a load's resistance in ohms (rough values for parts of this kind and size)
-const TS_OHMS = p => p.t === 'coil' ? (isTimer(p) ? 1500 : 600) : p.t === 'lamp' ? 1200 : p.t === 'sol' ? 200 : p.t === 'htr' ? 30 : p.t === 'xfm' ? 4 : 1000;
-const TS_XFM_SEC = 0.8, TS_MOTOR = 2;
+// a load's resistance in ohms
+const TS_OHMS = p => LOAD_OHMS(p);   // (the same resistances the circuit itself works with: see solve.js)
+const TS_XFM_SEC = 0.5, TS_MOTOR = 2;
 
 /* the network as it stands: junctions joined by wire or by a closed contact are one (sn: each junction's piece), and
    between pieces the loads, as conductances. Returns { sn, n, loads: [[a, b, g]], comp: the pieces each linked to
