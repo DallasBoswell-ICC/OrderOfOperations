@@ -9,19 +9,23 @@ a Downloads folder, or published as a web page.
 
     python3 build.py           the full build: dist/Circuit_Builder.html (what students use)
     python3 build.py --demo    the demo build: dist/demo/Circuit_Builder.html, where new features are tried out first
+    python3 build.py --ts      the Troubleshooter: dist/troubleshooter/index.html (students find and fix planted faults)
+    python3 build.py --ts --demo   its demo build: dist/troubleshooter/demo/index.html
 
 The demo build is the same program, marked DEMO in its title bar and window title, and keeping its own autosave,
 settings and app install, so trying it never touches work kept in the full build (the two share a website).
 """
+import re
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src"
 DEMO = "--demo" in sys.argv[1:]
+TS = "--ts" in sys.argv[1:]   # the Troubleshooter: the same program, Run only, with the meter, the work order and the test log
 # the demo build carries its own icons (green, with a DEMO band) so the two builds cannot be confused
 ICONS = "icons-demo" if DEMO else "icons"
-OUT = ROOT / "dist" / ("demo" if DEMO else "") / "Circuit_Builder.html"
+OUT = (ROOT / "dist" / "troubleshooter" / ("demo" if DEMO else "") / "index.html") if TS else (ROOT / "dist" / ("demo" if DEMO else "") / "Circuit_Builder.html")
 
 # The scripts run in this order (later files use things defined in earlier ones).
 MODULES = [
@@ -57,6 +61,8 @@ MODULES = [
     "storage.js",        # saving and opening circuits (files, codes, kept in the browser)
     "main.js",           # Build/Run switching, fitting to the window, start-up
     "keys.js",           # the left-hand keyboard shortcuts, nudging, and the Keyboard Shortcuts box (F1)
+    "ts-meter.js",       # Troubleshooter: the meter (volts from the live circuit; ohms and continuity, locked out)
+    "troubleshooter.js", # Troubleshooter: its page (ribbon, work order, six steps, test log, assignments)
 ]
 
 
@@ -74,20 +80,33 @@ def build() -> Path:
     # the O³ icon, built into the page as a data URL
     from urllib.parse import quote
     icon = "data:image/svg+xml," + quote(" ".join((SRC / ICONS / "favicon.svg").read_text(encoding="utf-8").split()), safe=" =:/'(),")
+    if TS:
+        # the Troubleshooter: its own name and coral title, its own keys in the browser's storage, Run only
+        if "const TS_MODE = false;" not in js:
+            raise SystemExit("constants.js must contain const TS_MODE = false;")
+        js = js.replace("const TS_MODE = false;", "const TS_MODE = true;").replace("'oo-circuit-builder:", "'oo-troubleshooter:")
+        page = page.replace("<title>Circuit Builder</title>", "<title>Troubleshooter</title>")
+        page = page.replace("<h1>Order of Operations: <span>Circuit Builder</span></h1>", "<h1>Order of Operations: <span>Troubleshooter</span></h1>")
+        page = re.sub(r'<link rel="manifest"[^>]*>\n', "", page)
+        if "<span>Troubleshooter</span>" not in page:
+            raise SystemExit("The Troubleshooter build could not name itself (has the title changed?)")
     if DEMO:
         # its own name and badge, and its own keys in the browser's storage (autosave, view and other settings)
-        js = js.replace("'oo-circuit-builder:", "'oo-circuit-builder-demo:")
-        page = page.replace("<title>Circuit Builder</title>", "<title>Circuit Builder (Demo)</title>")
-        page = page.replace("<h1>Order of Operations: <span>Circuit Builder</span></h1>", '<h1>Order of Operations: <span>Circuit Builder</span> <em class="demo-badge" title="The demo build: new features are tried out here before they go into the full Circuit Builder">DEMO</em></h1>')
+        js = js.replace("'oo-circuit-builder:", "'oo-circuit-builder-demo:").replace("'oo-troubleshooter:", "'oo-troubleshooter-demo:")
+        name = "Troubleshooter" if TS else "Circuit Builder"
+        page = page.replace(f"<title>{name}</title>", f"<title>{name} (Demo)</title>")
+        page = page.replace(f"<h1>Order of Operations: <span>{name}</span></h1>", f'<h1>Order of Operations: <span>{name}</span> <em class="demo-badge" title="The demo build: new features are tried out here before they go into the full {name}">DEMO</em></h1>')
         css += "\n.demo-badge { font-style: normal; font-size: .7rem; font-weight: 800; letter-spacing: .08em; color: #1c1d1f; background: #9be03a; border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }\n"
-        if "oo-circuit-builder-demo:" not in js or "DEMO</em>" not in page:
+        if ("oo-troubleshooter-demo:" if TS else "oo-circuit-builder-demo:") not in js or "DEMO</em>" not in page:
             raise SystemExit("The demo build could not mark itself (has the title or a storage key changed?)")
     for marker, text in (("/*@@CSS@@*/", css), ("/*@@JS@@*/", js), ("/*@@ICON@@*/", icon)):
         if page.count(marker) != 1:
             raise SystemExit(f"src/index.html must contain {marker} exactly once")
         page = page.replace(marker, text.rstrip("\n"))
-    OUT.parent.mkdir(exist_ok=True)
+    OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(page, encoding="utf-8")
+    if TS:
+        return OUT   # (no app install for the Troubleshooter yet)
     # the app icons and the web app manifest go next to it (for the website: installing it as an app)
     import shutil
     shutil.copytree(SRC / ICONS, OUT.parent / "icons", dirs_exist_ok=True)

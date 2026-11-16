@@ -60,6 +60,7 @@ document.addEventListener('keydown', e => {
    show: pressing one opens the ribbon over the panel until you press somewhere else. */
 function closeMenus() { document.body.classList.remove('ribbon-peek'); tpMenu(false); }
 function showRibbon() {
+  if (TS_MODE) return tsShowRibbon();   // (the Troubleshooter: its own tabs)
   const run = !editing, part = !run && selGroup().length > 0, tab = run ? 'run' : part && ribbonTab === 'part' ? 'part' : mainTab;
   const set = (id, shown, on) => { const b = document.getElementById(id); b.hidden = !shown; b.setAttribute('aria-pressed', String(on)); };
   set('rt-home', !run, tab === 'home'); set('rt-faults', !run, tab === 'faults'); set('rt-part', part, tab === 'part'); set('rt-run', run, tab === 'run');

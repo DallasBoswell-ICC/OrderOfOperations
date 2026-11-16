@@ -5,6 +5,11 @@
 /* The page exactly as it was loaded, before anything on it changed: saved again, with a circuit built in, as a
    locked simulator (see storage.js). And, in a locked simulator, the circuit built into it (LOCKED). */
 const PAGE_HTML = (() => { try { return '<!doctype html>\n' + document.documentElement.outerHTML; } catch (_) { return ''; } })();
+/* The Troubleshooter (build.py --ts): this same program as a page of its own, Run only, where students find and fix
+   the faults planted in a circuit (see troubleshooter.js and ts-meter.js). LOCKOUT: the circuit locked out (every
+   disconnect open and the control supply off), as it must be before the ohmmeter or the continuity tester is used. */
+const TS_MODE = false;
+let LOCKOUT = false, TS_BLOWN = {};   // (TS_BLOWN: the fuses that have blown, by id: they stay blown till replaced)
 const LOCKED = (() => { try { const s = document.getElementById('oo-locked'); return s ? JSON.parse(s.textContent) : null; } catch (_) { return null; } })();
 const W_MIN = 880;                   // narrowest the sheet gets (L1 is its left edge, x = 0; L2 its right edge, x = W: see geometry.js)
 const G = 20, SUB = 5;               // grid spacing; wires are traced in 5-unit steps for smooth flow

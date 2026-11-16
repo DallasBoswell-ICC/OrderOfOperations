@@ -99,7 +99,7 @@ if (LOCKED) {
   document.body.classList.add('locked');
   document.querySelector('h1 span').textContent = circuitName || 'Circuit';
   fit(true); fitView(); setMode(true);
-} else {
+} else if (!TS_MODE) {   // (the Troubleshooter starts itself: see troubleshooter.js)
   if (!restoreAutosave()) loadPreset('andor');   // carry on with the circuit from last time, if there is one
   fit(true); draw();
 }

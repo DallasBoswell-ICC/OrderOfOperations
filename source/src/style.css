@@ -477,3 +477,59 @@ dialog.keys-dlg { width: min(1000px, 96vw); max-height: 94vh; overflow: auto; }
 .fz-row button:hover { color: #ff9a8a; }
 #fz-wo { width: 300px; height: 64px; resize: none; background: #1f2225; color: var(--ink); border: 1px solid #3e3f44; border-radius: 6px; font: 12.5px/1.35 inherit; font-family: inherit; padding: 5px 7px; margin: 3px 6px 0; }
 #faultbar .tool.small span { white-space: nowrap; }
+
+/* ---- the Troubleshooter (build.py --ts): coral, Run only, the meter over the panel, the work order, six steps and
+   test log down its right */
+body.ts { --coral: #FF6F59; }
+body.ts h1 span { color: var(--coral); }
+body.ts .top-right, body.ts .modeseg, body.ts #rt-home, body.ts #rt-faults, body.ts #rt-part, body.ts #toolbar, body.ts #editpanel, body.ts #faultbar, body.ts #reset-btn { display: none !important; }
+body.ts .rtab[aria-pressed="true"] { box-shadow: inset 0 -3px 0 var(--coral); }
+body.ts .tool.big[aria-pressed="true"] { background: #4a2f2a; border-color: var(--coral); }
+.ts-hdr { display: flex; gap: 8px; margin-left: auto; }
+.ts-main { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 10px; align-items: stretch; }
+.ts-side { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: auto; }
+.ts-box { background: #26272a; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px 12px; }
+.ts-box h3 { margin: 0 0 6px; font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; justify-content: space-between; }
+.ts-name { margin: 0 0 4px; font-weight: 700; font-size: .92rem; }
+.ts-wo { margin: 0; font-style: italic; line-height: 1.38; font-size: .92rem; }
+.ts-empty { color: var(--faint); font-style: normal; font-size: .84rem; }
+.ts-link { font: inherit; font-size: .8rem; color: var(--muted); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; margin-top: 8px; }
+.ts-link:hover { color: var(--ink); }
+.ts-hide { margin: 0; text-transform: none; letter-spacing: 0; text-decoration: none; }
+.ts-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.ts-steps button { font: inherit; font-size: .92rem; color: var(--ink); background: none; border: 0; padding: 3px 4px; border-radius: 6px; display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; cursor: pointer; }
+.ts-steps button:hover { background: #303135; }
+.ts-n { width: 20px; height: 20px; border-radius: 50%; border: 1.6px solid #8d8d8d; display: inline-grid; place-items: center; font-size: .72rem; font-weight: 700; flex: none; }
+.ts-steps .done .ts-n { background: #3fae6a; border-color: #3fae6a; color: #fff; }
+.ts-steps .done { color: var(--muted); }
+.ts-steps .cur { font-weight: 700; }
+.ts-steps .cur .ts-n { border-color: var(--coral); color: var(--coral); }
+.ts-logbox { flex: 1; display: flex; flex-direction: column; min-height: 140px; }
+.ts-log { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; min-height: 60px; }
+.ts-log li { padding: 6px 0; border-bottom: 1px solid #34353a; font-size: .84rem; display: grid; gap: 1px; }
+.ts-log li i { color: var(--faint); }
+.ts-log li b { font-size: .95rem; font-variant-numeric: tabular-nums; }
+.ts-foot { margin: 6px 0 0; color: var(--faint); font-size: .8rem; }
+.ts-needs { display: none; font-size: .64rem; color: #e6a093; }
+.tool.big.needs-lock { opacity: .62; }
+.tool.big.needs-lock .ts-needs { display: block; }
+body.ts.ts-locked .ts-lockbtn { background: #5a2020; border-color: #ff5a4a; }
+body.ts.ts-locked .stage::after { content: "LOCKED OUT"; position: absolute; left: 50%; top: 10px; transform: translateX(-50%); background: #b3201c; color: #fff; font-weight: 800; letter-spacing: .12em; font-size: .78rem; padding: 4px 12px; border-radius: 6px; pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+.stage.ts-aim, .stage.ts-aim svg { cursor: crosshair; }
+.ts-leads { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.tsm { position: absolute; right: 18px; bottom: 54px; width: 168px; padding: 10px 10px 8px; background: linear-gradient(#f4c838, #e2b21e); border: 2px solid #6b5310; border-radius: 16px; box-shadow: 0 10px 24px rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.35); cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none; color: #222; z-index: 3; }
+.tsm-lcd { background: #c3d0ac; border: 2px solid #3a3a2c; border-radius: 6px; height: 50px; position: relative; box-shadow: inset 0 2px 5px rgba(0,0,0,.25); }
+.tsm-lcd.off { background: #8e9783; }
+.tsm-unit { position: absolute; left: 7px; top: 4px; font-size: .7rem; font-weight: 700; }
+.tsm-val { position: absolute; right: 8px; bottom: 2px; font: 700 1.75rem/1 ui-monospace, "Consolas", "Courier New", monospace; letter-spacing: .02em; }
+.tsm-dial { display: block; width: 128px; height: 128px; margin: 2px auto -6px; overflow: visible; }
+.tsm-dial text { font-size: 12px; font-weight: 800; fill: #3a2e08; cursor: pointer; }
+.tsm-dial text.on { fill: #b3201c; }
+.tsm-knob { transition: transform .15s ease; }
+.tsm-jacks { display: flex; justify-content: space-between; padding: 0 8px; }
+.jack { font-size: .64rem; font-weight: 800; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.jack::before { content: ""; width: 15px; height: 15px; border-radius: 50%; background: #111; border: 3px solid #b3201c; box-sizing: border-box; }
+.jack.black::before { border-color: #333; }
+.tsm-next { text-align: center; font-size: .7rem; margin-top: 4px; color: #4a3b0a; }
+.tsm-next b.red { color: #b3201c; } .tsm-next b.black { color: #111; }
+@media (max-width: 900px) { .ts-main { grid-template-columns: 1fr; } .ts-side { max-height: none; } }

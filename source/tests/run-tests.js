@@ -3065,6 +3065,17 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('The Troubleshooter\'s pieces stay out of the Circuit Builder (no Troubleshoot tab, meter or side panel; current still shown; wires uninsulated)', async page => {
+    const out = [];
+    const st = await page.evaluate(() => ({ ts: TS_MODE, bar: !!document.getElementById('tsbar'), meter: !!document.getElementById('ts-meter'), side: !!document.getElementById('ts-side'), cls: document.body.classList.contains('ts') }));
+    if (st.ts || st.bar || st.meter || st.side || st.cls) out.push(JSON.stringify(st));
+    await runPreset(page, 'io'); await page.evaluate(() => { setSpeed(300); press('A', true); }); await page.waitForTimeout(500);
+    const r = await page.evaluate(() => ({ runs: view.runs.reduce((n, r) => n + r.g.childElementCount, 0), jackets: document.querySelectorAll('#svg path[stroke="#2f3236"]').length, blocks: document.querySelectorAll('#svg rect[fill="#5d636a"]').length }));
+    if (!r.runs) out.push('no current shown');
+    if (r.jackets || r.blocks) out.push('Troubleshooter look in the Builder: ' + JSON.stringify(r));
+    return out;
+  });
+
   await browser.close();
   const failed = results.filter(r => !r.ok);
   console.log(`\n${results.length - failed.length} of ${results.length} checks passed.`);

@@ -183,7 +183,7 @@ async function pickAndOpen() {
 // ---- kept in this browser between visits
 let autosaveTimer = 0;
 function scheduleAutosave() {
-  if (LOCKED) return;   // (a locked simulator never keeps anything, nor touches the Builder's own saved circuit)
+  if (LOCKED || TS_MODE) return;   // (a locked simulator never keeps anything, nor touches the Builder's own saved circuit)
   showFileLabel();
   clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(() => { try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(circuitData())); } catch (_) {} }, 400);
@@ -258,13 +258,13 @@ document.getElementById('open-code-btn').addEventListener('click', async () => {
   catch (err) { document.getElementById('open-msg').textContent = err.message; }
 });
 document.addEventListener('keydown', e => {
-  if (LOCKED) return;
+  if (LOCKED || TS_MODE) return;
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); if (!saveDlg.open && !openDlg.open) quickSave(); }
 });
 // drop a saved file straight onto the panel (in Chrome and Edge, Save then writes back into that file)
 {
   const stage = document.getElementById('stage');
-  stage.addEventListener('dragover', e => { if (!LOCKED && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); stage.classList.add('dropping'); } });
+  stage.addEventListener('dragover', e => { if (!LOCKED && !TS_MODE && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); stage.classList.add('dropping'); } });
   stage.addEventListener('dragleave', () => stage.classList.remove('dropping'));
   stage.addEventListener('drop', async e => {
     stage.classList.remove('dropping');

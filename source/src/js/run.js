@@ -3,7 +3,7 @@ let prevT = performance.now();
 // (whatever goes wrong in one frame, the next is always asked for: one fault must never stop the clock for good, which
 // would leave the panel frozen even after Reset)
 function frame(now) {
-  try { frameBody(now); } catch (e) { console.error(e); } finally { requestAnimationFrame(frame); }
+  try { frameBody(now); if (TS_MODE) tsTick(now); } catch (e) { console.error(e); } finally { requestAnimationFrame(frame); }
 }
 function frameBody(now) {
   const real = Math.min(.5, Math.max(0, (now - prevT) / 1000)), dt = Math.min(.1, real); prevT = now;
@@ -37,8 +37,8 @@ function paint() {
 // one drawing of the circuit (the main view, or the second pane in split view): the wires and the parts
 function paintView(V) {
   if (!V.runs) return;
-  for (const it of V.runs) {
-    const cols = it.subs.map(s => lit(s.a, simT) && lit(s.b, simT) ? colAt(s.b, simT) : null), k = cols.join('|');
+  if (!TS_MODE) for (const it of V.runs) {
+    const cols = it.subs.map(s => lit(s.a, simT) && lit(s.b, simT) ? showCol(s.b, simT) : null), k = cols.join('|');
     if (k === it.last) continue; it.last = k;
     // each lit stretch of the wire is one smooth stroke, shaded along its length with a gradient
     it.g.innerHTML = '';
@@ -59,11 +59,11 @@ function paintView(V) {
     if (isPwr3(p)) { paintPwr(p, v); continue; }
     if (p.t === 'mtr') { paintMtr(p, v); continue; }
     if (isJmp(p)) {
-      for (const q of v.src || []) { const c = colAt(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
-      const c = (p._c !== undefined && colAt(p._c, simT)) || '#8a8a8a'; if (c !== v.cc) { v.cc = c; for (const ch of v.chev) ch.setAttribute('stroke', c); }
+      for (const q of v.src || []) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
+      const c = (p._c !== undefined && showCol(p._c, simT)) || '#8a8a8a'; if (c !== v.cc) { v.cc = c; for (const ch of v.chev) ch.setAttribute('stroke', c); }
       continue;
     }
-    if (isSrc(p) || isPh(p)) { if (v.src) for (const q of v.src) { const c = colAt(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } continue; }
+    if (isSrc(p) || isPh(p)) { if (v.src) for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } continue; }
     for (const S of ['A', 'B']) paintLead(v.lead[S], p._lead && p._lead[S]);
     let k;
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
@@ -163,7 +163,7 @@ function fuseSpan(v, S, L, a, b, c) { if (S === 'B') [a, b] = [1 - b, 1 - a]; L.
    crossing it from its line side as it arrives there (over the time it takes to cross the pole); blown, the load half
    going dark from the break; put back, on from the break */
 function paintPhaseFuse(q, k, cl) {
-  const ln = PLINE.get(k) ?? k._a, S = ln === k._a ? 'A' : 'B', lc = colAt(ln, simT), at = PARR.get(ln);
+  const ln = PLINE.get(k) ?? k._a, S = ln === k._a ? 'A' : 'B', lc = showCol(ln, simT), at = PARR.get(ln);
   const T0 = FU1T[k.id], g = T0 === undefined ? 1 : clamp01((simT - T0) * V / (q.span / 2));
   const f = !lc ? 0 : at ? clamp01((simT - at.t) * V / 80) : 1;
   const key = `${lc}|${f.toFixed(3)}|${cl}|${g.toFixed(3)}`; if (key === q.k) return; q.k = key;
@@ -186,11 +186,11 @@ function paintFu1(p, v) {
     // (the load end keeps its old colour a moment longer than the fuse, until the dark has run out along its lead: the
     // load half takes it again only once that has gone, so it never flashes back on behind the dark)
     const Ls = TERM(p) - BOX / 2, gone = T0 === undefined || simT >= end + Ls / V + 1e-6;
-    const a = colAt(inN, simT), b = gone ? colAt(outN, simT) : null; k = `x|${a}|${b}|${g.toFixed(3)}`; if (k === v.k) return; v.k = k;
+    const a = showCol(inN, simT), b = gone ? showCol(outN, simT) : null; k = `x|${a}|${b}|${g.toFixed(3)}`; if (k === v.k) return; v.k = k;
     set(v.cur, 0, .5, a); if (g < 1) set(v.old, .5 + .5 * g, 1, a); else set(v.old, .5, 1, b);   // (the load half going dark from the break)
   } else if (g < 1) {
-    const a = colAt(inN, simT); k = `r|${a}|${g.toFixed(3)}`; if (k === v.k) return; v.k = k;
-    set(v.cur, 0, .5 + .5 * g, a); set(v.old, .5 + .5 * g, 1, colAt(outN, simT));   // (put back: on from the break)
+    const a = showCol(inN, simT); k = `r|${a}|${g.toFixed(3)}`; if (k === v.k) return; v.k = k;
+    set(v.cur, 0, .5 + .5 * g, a); set(v.old, .5 + .5 * g, 1, showCol(outN, simT));   // (put back: on from the break)
   } else {
     const evs = p._lead && p._lead[S], Ls = TERM(p) - BOX / 2, at = e => e.t0 + Ls / V;
     let i = -1; if (evs) for (let n = 0; n < evs.length; n++) if (at(evs[n]) <= simT + 1e-9) i = n;
@@ -205,7 +205,7 @@ function paintFu1(p, v) {
    colour of the current coming in, from the end it comes in at, and drains the same way; once the primary is fed the
    secondary fills from X1 in the source's colour (the supply it now is), and drains back toward X1 when it is not */
 function paintXfm(p, v) {
-  for (const q of v.src || []) { const c = colAt(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
+  for (const q of v.src || []) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
   const S = p._inS || 'A', evs = p._lead && p._lead[S], body = 2 * TERM(p);
   let i = -1; if (evs) for (let k = 0; k < evs.length; k++) if (evs[k].t0 <= simT + 1e-9) i = k;
   const cur = i >= 0 ? evs[i] : null, f = cur ? clamp01((simT - cur.t0) * V / body) : 0;
@@ -231,6 +231,7 @@ function paintXfm(p, v) {
   fillW(v.sec, ...sec);
 }
 function paintLead(L, evs) {
+  if (TS_MODE) return;
   let i = -1; if (evs) for (let k = 0; k < evs.length; k++) if (evs[k].t0 <= simT + 1e-9) i = k;
   const cur = i >= 0 ? evs[i] : null, prev = i > 0 ? evs[i - 1].col : null;
   const len = Math.abs(L.term - L.body), from = cur && cur.from === 'body' ? L.body : L.term, to = from === L.term ? L.body : L.term;
@@ -247,6 +248,7 @@ function bindButton(g, p) {
   const dn = () => {
     if (pvLinked(p)) return linkedSay();   // (worked by its process value, not by hand)
     if (p.maint) return press(K, !down[K]);
+    if (mode === 'latch') return press(K, !down[K]);   // (the Troubleshooter's Click to Hold: a click holds it down, another lets it go)
     if (mode === 'click') { if (down[K]) return; press(K, true); autoRel[K] = true; } else press(K, true);
   };
   const up = () => { if (mode === 'hold' && !p.maint && !pvLinked(p)) press(K, false); };
@@ -278,13 +280,13 @@ const olState = L => { const o = OLTRIP[L], r = OLRESET[L]; return o ? { t0: o.t
 // a three-phase part: what reaches each of its ends lights its leads; each pole shows its state, lit where the
 // phase goes through it
 function paintPwr(p, v) {
-  for (const q of v.src) { const c = colAt(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
+  for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
   if (!p._poles) return;
   const ease = t0 => { const f = clamp01((simT - t0) / SWING); return f * f * (3 - 2 * f); };
   let lev = null;
   if (p.t === 'dsc') { const t0 = DSC_T[p.id] ?? -1e9, e = ease(t0), off = !!DSC[p.id]; lev = off ? lerp(0, 1, e) : lerp(1, 0, e); }
   p._poles.forEach((k, i) => {
-    const q = v.poles[i], a = colAt(k._a, simT), b = colAt(k._b, simT), cl = closed(k), c = a || b;
+    const q = v.poles[i], a = showCol(k._a, simT), b = showCol(k._b, simT), cl = closed(k), c = a || b;
     let key;
     if (p.t === 'dsc') {
       key = `${a}|${b}|${cl}|${lev.toFixed(3)}`; if (key === q.k) return; q.k = key;
@@ -308,8 +310,8 @@ function paintPwr(p, v) {
 }
 // a motor: each third of its ring in the phase at its terminal; its fan turning, or shaking, as it runs or hums
 function paintMtr(p, v) {
-  for (const q of v.src) { const c = colAt(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
-  const cols = (p._t || []).map(n => colAt(n, simT) || GREY), m = MOT[p.id] || { st: 'off', dir: 0 };
+  for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
+  const cols = (p._t || []).map(n => showCol(n, simT) || GREY), m = MOT[p.id] || { st: 'off', dir: 0 };
   const key = cols.join('|') + m.st + m.dir; if (key === v.k) return; v.k = key;
   cols.forEach((c, i) => v.arcs[i].setAttribute('stroke', c));
   spinFan(v, m.st === 'run' ? (m.dir < 0 ? 'rev' : 'fwd') : m.st === 'hum' ? 'hum' : '');

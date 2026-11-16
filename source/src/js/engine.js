@@ -48,6 +48,8 @@ function startRun() {
   LSW_T = {}; pvStartRun();   // (the process values back to where they start, and the switches they work)
   CON = {}; for (const p of parts) if (p.t === 'con' || p.t === 'mst') CON[p.id] = { t0: -1e9, closing: !!p.nc, shut: !!p.nc };
   DSC = {}; BLOWN = {}; FU1T = {}; OLTRIP = {}; MOT = {}; DSC_T = {}; OLRESET = {};   // every coil starts off
+  if (LOCKOUT) for (const p of parts) if (p.t === 'dsc') DSC[p.id] = { t: -1e9 };   // (locked out: every disconnect open)
+  if (TS_MODE) for (const id in TS_BLOWN) BLOWN[id] = { t: -1e9 };   // (Troubleshooter: a fuse that has blown stays blown, through a reset or a lock out, till it is replaced)
   tl = NET.nodes.map(() => [[-1e9, null]]);
   for (const p of parts) { delete p._chg; delete p._lead; delete p._sh; delete p._lv; delete p._ph; }
   // which way each button and coil is passed through (as if every button were passing current); worked out on the
@@ -76,7 +78,7 @@ function startRun() {
   INLEAD = new Map();
   for (const d of DIRS) if (d.e.kind === 'part') { const p = d.e.part; if (!INLEAD.has(d.from)) INLEAD.set(d.from, []); INLEAD.get(d.from).push([p, d.from === p._a ? 'A' : 'B']); }
   findPaths(); findNoway(); findReach();
-  SHORT_WAIT = false; checkShort(); const fz0 = shortNow ? shortFuses() : []; if (shortNow) blowSoon(fz0, 0); SUPPLY_CUT = shortNow && !fz0.length;
+  SHORT_WAIT = false; checkShort(); const fz0 = shortNow ? shortFuses() : []; if (shortNow) blowSoon(fz0, 0); SUPPLY_CUT = LOCKOUT || (shortNow && !fz0.length);
   ALLOW = allowNow();
   for (const [id, v] of NET.feedV) if (v === 1) setRec(id, SUPPLY_CUT ? null : EGG(), 0);
   phaseWays(); phasesNow(0);
@@ -442,7 +444,7 @@ function updateCoils(t) {
   }
   if (changed) refreshAllow(t);   // a coil picking up or dropping out changes what the wire past it may carry
 }
-function checkShort() { const f = components(NET, conducts); shortNow = f(NET.L1) === f(NET.L2); }
+function checkShort() { const f = components(NET, conducts); shortNow = !LOCKOUT && f(NET.L1) === f(NET.L2); }   // (locked out: nothing is fed, so nothing can blow)
 const allowKey = A => A ? [...A].sort().join() : '';
 // turn selector switch L to position pos (every drawing of it turns together; its knob turns over a moment)
 function turn(L, pos) {
@@ -516,8 +518,8 @@ function switched(sw, t) {
   const fz = shortNow ? shortFuses() : [];
   if (shortNow) blowSoon(fz, t);
   if (was !== shortNow) { const cut = shortNow && !fz.length;
-    if (cut || SUPPLY_CUT) for (const [id, fv] of NET.feedV) if (fv === 1) setRec(id, cut ? null : EGG(), t);
-    SUPPLY_CUT = cut; }
+    if (!LOCKOUT && (cut || SUPPLY_CUT)) for (const [id, fv] of NET.feedV) if (fv === 1) setRec(id, cut ? null : EGG(), t);
+    SUPPLY_CUT = cut || LOCKOUT; }
   for (const d of DIRS) if (d.e.kind === 'part' && sw.includes(d.e.part)) {
     const r = REC.get(d.from) || null;
     // a switch on the return side (past a coil) that opens stops the coil, and the return current already past the
@@ -552,6 +554,7 @@ function refreshAllow(t) {
 let PARR = new Map(), PDARK = new Map(), phFault = '';   // (PARR: each junction a phase has reached: { k: the phase, t: when })
 function phasesNow(t) {
   const PH = NET.PH; if (!PH || !Object.keys(PH).length) return;
+  if (LOCKOUT && !parts.some(p => p.t === 'dsc')) return;   // (locked out with no disconnect to open: the phases are off at the supply)
   const f = compNow(), cph = new Map(), l1 = f(NET.L1), l2 = f(NET.L2);
   // which phase each joined-up piece carries (-1: two phases, or a phase and L1 or L2)
   for (const L in PH) { const c = f(PH[L]); cph.set(c, cph.has(c) || c === l1 || c === l2 ? -1 : +L); }
@@ -648,7 +651,9 @@ function shortFuses() {
 // (trip it, or reset it once tripped), an overload contact (reset)
 function workPower(p, i) {
   const t = simT;
+  if (LOCKOUT && p.t === 'dsc') { if (typeof tsSay === 'function') tsSay('The disconnect is locked out: remove the lock first (Lock Out, on the Troubleshoot tab).'); return; }
   if (p.t === 'dsc') { if (DSC[p.id]) delete DSC[p.id]; else DSC[p.id] = { t }; DSC_T[p.id] = t; if (t + SWING > busyUntil) busyUntil = t + SWING; switched(p._poles, t); }
+  else if (TS_MODE && (p.t === 'fu1' || p.t === 'fus')) return;   // (Troubleshooter: a fuse is not blown or put back by clicking it)
   else if (p.t === 'fu1') { if (BLOWN[p.id]) delete BLOWN[p.id]; else BLOWN[p.id] = { t }; FU1T[p.id] = t; switched([p], t); }
   else if (p.t === 'fus') { const k = p._poles[i]; if (BLOWN[k.id]) delete BLOWN[k.id]; else BLOWN[k.id] = { t }; FU1T[k.id] = t; switched([k], t); }
   else if (p.t === 'olh') setTrip(p.L, !OLTRIP[p.L], t);

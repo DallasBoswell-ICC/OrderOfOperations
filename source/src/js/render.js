@@ -45,9 +45,9 @@ function renderInto(target, V, L) {
   const wy = w => (w.y1 + w.y2) / 2;   // (which band a wire is in: none crosses from one band to the next)
   for (const b of bands) {
     const chanD = wires.filter(w => B(wy(w)) === b).map(w => shape(w.x1, w.y1, w.x2, w.y2)).join('');
-    if (chanD) el('path', { d: chanD, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', fill: 'none' }, b.chan);
+    if (chanD) (TS_MODE && !editing ? insulated : el)('path', { d: chanD, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', fill: 'none' }, b.chan);
   }
-  for (const [x, y] of net.hops) el('path', { d: hPath(x - 10, x + 10, y, net.hops), stroke: '#262626', 'stroke-width': 18, fill: 'none' }, B(y).backs);
+  for (const [x, y] of net.hops) (TS_MODE && !editing ? insulated : el)('path', { d: hPath(x - 10, x + 10, y, net.hops), stroke: '#262626', 'stroke-width': 18, fill: 'none' }, B(y).backs);
   const layer = (x1, x2, y) => x1 === x2 ? B(y).wlV : B(y).wlH;
   V.runs = []; V.shape = shape;
   if (editing) {
@@ -116,6 +116,7 @@ function renderInto(target, V, L) {
     else if ((isPwr3(p) && p.t !== 'mst') || p.t === 'olc' || p.t === 'fu1') bindPower(g, p);
     else if (p.t === 'sel') bindSelector(g, p);
   }
+  if (TS_MODE && !editing) tsTerminals(V, B, net);   // (the Troubleshooter: a terminal block at each end of every part, where the meter's leads go)
   drawPics(V, B);
   if (SHOW.rungs) drawRefs(V, B, net);
   fitCaps(V);
@@ -315,4 +316,51 @@ function dragLink(e, b) {
   };
   const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); document.body.classList.remove('dragging'); };
   document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+}
+
+/* ---- the Troubleshooter's look (Dallas, 15 Nov 2026): wires in dark grey insulation, and at each end of every part a
+   grey terminal block holding a square screw terminal (the same as along the L1 and L2 bars), where students put the
+   meter's leads. The screw sits in the middle of the grey that shows past the part's body, the block's inner end
+   tucked under the body. */
+// a wire's channel as an insulated cable: a dark edge, the grey jacket, a soft highlight along it
+function insulated(tag, a, parent) {
+  const w = +a['stroke-width'], g = el('g', {}, parent);
+  el(tag, { ...a, stroke: '#121314', 'stroke-width': w === 22 ? 17 : 15 }, g);
+  el(tag, { ...a, stroke: '#2f3236', 'stroke-width': 13 }, g);
+  el(tag, { ...a, stroke: 'rgba(255,255,255,.16)', 'stroke-width': 2.4, transform: 'translate(-1.2 -3.4)' }, g);
+  return g;
+}
+// how far from its middle a part's body reaches along its wire (to its dark edge)
+const tsBodyEdge = (p, ux) => p.t === 'coil' || p.t === 'lamp' || isSolT(p.t) ? COIL / 2 + BEZEL : p.t === 'sel' ? SEL_BOX / 2 + BEZEL : p.t === 'tsw' ? TSW_HALF + 3 : isLim(p) ? LSW_W / 2 + BEZEL : BOX / 2 + BEZEL;
+const tsBlocked = p => !isBox(p) && !isPwr3(p) && p.t !== 'xfm' && p.t !== 'mtr';
+let TS_POINTS = [];   // (where the meter's leads can go: { x, y, n: the junction, label }, in panel units)
+function tsTerminals(V, B, net) {
+  const pts = [], at = new Map(net.nodes.map((n, i) => [n.k, i])), ys = rungYs(net);
+  const rung = y => `rung ${rungAt(ys, y)}`;
+  for (const p of parts) {
+    const T = terms(p);
+    if (tsBlocked(p)) {
+      const g = B(p.y).parts.querySelector(`[data-part="${p.id}"]`), top = B(p.y).ends, m = 5, sw = 22 * .85;
+      T.forEach(([tx, ty], i) => {
+        const dx = tx - p.x, dy = ty - p.y, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d, H = tsBodyEdge(p, ux);
+        const a = H - 8, b = H + 2 * m + sw, c = H + m + sw / 2;   // (the block, from under the body out past the screw; the screw's middle)
+        const r = ux ? { x: p.x + Math.min(ux * a, ux * b), y: p.y - 17, width: b - a, height: 34 } : { x: p.x - 17, y: p.y + Math.min(uy * a, uy * b), width: 34, height: b - a };
+        if (g) g.insertBefore(el('rect', { ...r, rx: 3, fill: '#5d636a', stroke: '#1b1d1f', 'stroke-width': 1.6 }), g.firstChild);
+        const sx = p.x + ux * c, sy = p.y + uy * c, sg = el('g', { transform: `translate(${sx} ${sy}) scale(.85)` }, top);
+        screw(0, 0, sg);
+        pts.push({ x: sx, y: sy, n: i ? p._b : p._a, label: `${captionOf(p)}, ${ux ? (ux < 0 ? 'left' : 'right') : uy < 0 ? 'top' : 'bottom'} (${rung(p.y)})` });
+      });
+      continue;
+    }
+    if (isJmp(p) || !p._t) continue;
+    const name = (i, side) => p.t === 'xfm' ? ['H1', 'H2', 'X1', 'X2'][i] : isPwr3(p) ? `${['L1', 'L2', 'L3'][i >> 1]} ${i & 1 ? 'load' : 'line'} side` : p.t === 'mtr' ? `T${i + 1}` : side;
+    T.forEach(([tx, ty], i) => { const n = at.get(key(tx, ty)); if (n !== undefined) pts.push({ x: tx, y: ty, n, label: `${captionOf(p)}, ${name(i, ['left', 'right', 'bottom', 'top'][i] || '')}` }); });
+  }
+  const seen = new Set();
+  for (const fd of net.feeds) {
+    if (!fd.bar) continue; const k = fd.t + fd.y; if (seen.has(k)) continue; seen.add(k);
+    const n = at.get(key(fd.t === 'L1' ? 0 : W, fd.y)); if (n === undefined) continue;
+    pts.push({ x: fd.t === 'L1' ? BAR / 2 : W - BAR / 2, y: fd.y, n, label: `${fd.t} bar (${rung(fd.y)})` });
+  }
+  if (V === view) TS_POINTS = pts;
 }

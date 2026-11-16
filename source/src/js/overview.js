@@ -42,7 +42,7 @@ function drawOverview() {
   if (!editing && NET && NET.subs && typeof tl !== 'undefined' && tl && tl.length >= NET.nodes.length) {   // (once the run has started)
     // (one stroke for each colour: cheap enough to keep up while running, even on a slow computer)
     const by = new Map();
-    for (const sb of NET.subs) { const col = lit(sb.a, simT) && lit(sb.b, simT) ? colAt(sb.b, simT) : null; if (!col) continue; let q = by.get(col); if (!q) by.set(col, q = []); q.push(sb); }
+    for (const sb of NET.subs) { const col = lit(sb.a, simT) && lit(sb.b, simT) ? showCol(sb.b, simT) : null; if (!col) continue; let q = by.get(col); if (!q) by.set(col, q = []); q.push(sb); }
     for (const [col, q] of by) { c.strokeStyle = col; c.beginPath(); for (const sb of q) { c.moveTo(sb.x1, sb.y1); c.lineTo(sb.x2, sb.y2); } c.stroke(); }
   } else { c.strokeStyle = '#5e5e5e'; c.beginPath(); for (const w of wires) { c.moveTo(w.x1, w.y1); c.lineTo(w.x2, w.y2); } c.stroke(); }
   // the parts: buttons and selectors in their colour, coils and lights lit when in

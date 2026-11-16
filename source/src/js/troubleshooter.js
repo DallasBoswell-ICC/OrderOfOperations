@@ -1,0 +1,324 @@
+/* =====================================================================
+   The Troubleshooter (build.py --ts): this same program as a page of its own, where students find the faults
+   planted in a circuit (Circuit Builder, Faults tab) the way a technician would: by what the machine does, and by
+   what a meter reads. Run only. The current's colours are hidden (lights, coils and motors still show what they do);
+   the wires are insulated and every part has terminal blocks, where the meter's leads go.
+   The Troubleshoot tab: the meter (Voltmeter on the live circuit; Ohmmeter and Continuity only once locked out), Lock
+   Out, the six steps (can be turned off) and the pushbutton mode. Down the right: the work order that came with the
+   assignment, the six steps, and the test log (every reading, kept automatically).
+   ===================================================================== */
+const TS_KEY = 'oo-circuit-builder:ts-state';
+const TS_STEPS = ['Symptoms', 'Possible causes', 'Find the faulty area', 'Find the faulty part', 'Repair', 'Test and document'];
+let tsTab = 'ts';
+const TSM = { mode: 'v', red: null, black: null, next: 'red', key: '', val: '', sig: '', due: 0, pend: null, lastLog: '' };
+let TS = { log: [], steps: [], t0: Date.now(), showSteps: true };
+
+function tsSay(t) { say(t); }
+// the Troubleshooter's ribbon: its own tab (Troubleshoot) and the Simulation tab
+function tsShowRibbon() {
+  for (const id of ['rt-home', 'rt-faults', 'rt-part']) document.getElementById(id).hidden = true;
+  const s = (id, on) => { const b = document.getElementById(id); b.hidden = false; b.setAttribute('aria-pressed', String(on)); };
+  s('rt-ts', tsTab === 'ts'); s('rt-run', tsTab === 'run');
+  for (const id of ['toolbar', 'editpanel', 'faultbar']) document.getElementById(id).hidden = true;
+  document.getElementById('runbar').hidden = tsTab !== 'run';
+  document.getElementById('tsbar').hidden = tsTab !== 'ts';
+}
+
+// ---- what is kept between visits (in this browser): the assignment, the test log, the steps ticked off
+function tsSave() { try { localStorage.setItem(TS_KEY, JSON.stringify({ circuit: circuitData(), log: TS.log, steps: TS.steps, t0: TS.t0, showSteps: TS.showSteps, blown: TS_BLOWN })); } catch (_) {} }
+function tsUse(c, msg, fresh) {
+  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; WORK_ORDER = c.wo || ''; normalize();
+  if (fresh) { TS.log = []; TS.steps = []; TS.t0 = Date.now(); TS_BLOWN = {}; }
+  LOCKOUT = false; TSM.red = TSM.black = null; TSM.next = 'red'; TSM.lastLog = ''; TSM.sig = '';
+  if (editing) { fit(true); fitView(); setMode(true); } else { fit(true); fitView(); NET = network(); draw(); startRun(); afterRunStart(); }
+  tsShowAll(); if (msg) tsSay(msg);
+  if (fresh) tsSave();
+}
+// the sample assignment: a start/stop station with a seal-in and a run light, its X coil open
+function tsSample() {
+  loadPreset('seal');
+  parts.push(P('con', 300, 420, { L: 'X' }), P('lamp', 700, 420, { L: '', color: '#00B050' }));
+  wires.push(Wr(0, 420, 260, 420), Wr(340, 420, 640, 420), Wr(760, 420, W, 420));
+  const x = parts.find(p => p.t === 'coil'); if (x) x.fault = 'open';
+  const c = readCircuit(JSON.parse(JSON.stringify(circuitData())));
+  c.name = 'Sample: Start/Stop Station'; c.wo = 'The machine won’t start. When you press START (A), nothing happens and the RUN light stays off.';
+  return c;
+}
+// Open Assignment: a circuit file saved from the Circuit Builder (faults planted on its Faults tab), a simulator
+// page saved from it, or a circuit code
+async function tsOpenText(text, name) {
+  const sim = /<script id="oo-locked" type="application\/json">([\s\S]*?)<\/script>/.exec(text);
+  let c;
+  if (sim) c = readCircuit(JSON.parse(sim[1]).circuit);
+  else if (/^\s*\{/.test(text)) c = readCircuit(JSON.parse(text));
+  else c = await decodeCircuit(text);
+  if (!c.name && name) c.name = name.replace(/\.(json|html?|txt)$/i, '');
+  const n = c.parts.filter(p => p.fault).length + c.wires.filter(w => w.fault).length;
+  tsUse(c, n ? `Opened ${c.name || 'the assignment'}. Read the work order, then start troubleshooting.` : `Opened ${c.name || 'the circuit'}: it has no faults planted in it (plant them on the Circuit Builder's Faults tab).`, true);
+}
+
+// ---- Lock Out: every disconnect open and the control supply off (the circuit starts again from dead); taking the lock
+// off starts it again from the top, as switching a machine back on does
+function tsLockOut(on) {
+  LOCKOUT = on; startRun(); buildProcess(); paint();
+  if (!on && TSM.mode !== 'v' && TSM.mode !== 'off') tsMode('v', true);
+  tsShowAll();
+  tsSay(on ? 'Locked out: every disconnect is open and the control power is off. Check with the voltmeter that it is dead before you measure resistance.' : 'Lock removed: the circuit is powered again.');
+}
+
+// the pushbuttons: Click, Press and Hold (as in the Circuit Builder), or Click to Hold (a click holds a momentary
+// button down till it is clicked again); leaving Click to Hold lets go of any it is holding
+function tsPushMode(m) {
+  if (mode === 'latch' && m !== 'latch') for (const p of parts) if (p.t === 'btn' && !p.maint && !p.estop && down[p.L]) press(p.L, false);
+  mode = m; autoRel = {};
+  for (const b of document.querySelectorAll('#mode-group [data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === m));
+  tsShowAll(); TSM.key = '';
+}
+// ---- the meter
+function tsMode(m, quiet) {
+  if ((m === 'ohm' || m === 'cont') && !LOCKOUT) { tsSay('Lock out first: never measure resistance or continuity on a live circuit (Lock Out, on the Troubleshoot tab).'); return; }
+  TSM.mode = m; TSM.sig = ''; tsBeep(false);
+  if (!quiet) tsSay(m === 'v' ? 'Voltmeter: put the red and black leads on two terminals (click one, then the other).' : m === 'ohm' ? 'Ohmmeter: put the leads across the part or wire to measure.' : m === 'cont' ? 'Continuity: the meter beeps when there is a way through.' : '');
+  tsShowAll();
+}
+// where a junction in panel units is, in pixels from the panel's top left (in Columns view, its band moved too)
+function tsScreen(x, y) {
+  const m = svg.getScreenCTM(); if (!m) return null;
+  const b = view.B ? view.B(y) : null, X = x + (b ? b.dx : 0), Y = y + (b ? b.dy : 0), r = document.getElementById('stage').getBoundingClientRect();
+  return [m.a * X + m.c * Y + m.e - r.left, m.b * X + m.d * Y + m.f - r.top];
+}
+// the terminal nearest a click (within reach), or null
+function tsPick(cx, cy) {
+  const r = document.getElementById('stage').getBoundingClientRect(); let best = null, bd = 18;
+  for (const q of TS_POINTS) { const s = tsScreen(q.x, q.y); if (!s) continue; const d = Math.hypot(s[0] - (cx - r.left), s[1] - (cy - r.top)); if (d < bd) { bd = d; best = q; } }
+  return best;
+}
+function tsPlace(q) {
+  const lead = TSM.next; TSM[lead] = { ...q }; TSM.next = lead === 'red' ? 'black' : 'red'; TSM.sig = ''; TSM.key = '';
+  tsShowMeter();
+}
+let tsAudio = null, tsTone = null;
+function tsBeep(on) {
+  if (!on) { if (tsTone) tsTone.gain.gain.setTargetAtTime(0, tsAudio.currentTime, .01); return; }
+  try {
+    if (!tsAudio) { tsAudio = new (window.AudioContext || window.webkitAudioContext)(); const o = tsAudio.createOscillator(), g = tsAudio.createGain(); o.frequency.value = 2700; o.type = 'square'; g.gain.value = 0; o.connect(g).connect(tsAudio.destination); o.start(); tsTone = { o, gain: g }; }
+    if (tsAudio.state === 'suspended') tsAudio.resume();
+    tsTone.gain.gain.setTargetAtTime(.05, tsAudio.currentTime, .01);
+  } catch (_) {}
+}
+// what the circuit is doing that a reading depends on (worked out again only when this changes)
+function tsState() {
+  let s = (LOCKOUT ? 'L' : '') + (SUPPLY_CUT ? 'C' : '');
+  for (const p of parts) { if (isSw(p)) s += closed(p) ? 1 : 0; if (p._sw) for (const k of p._sw) s += closed(k) ? 1 : 0; if (p._poles) for (const k of p._poles) s += closed(k) ? 1 : 0; }
+  return s;
+}
+function tsRead() {
+  const { red, black, mode } = TSM;
+  if (mode === 'off') return { text: '', unit: '', beep: false };
+  if (!red || !black) return { text: mode === 'v' ? '0.0' : 'OL', unit: mode === 'v' ? 'V AC' : 'Ω', beep: false, none: true };
+  if (mode === 'v') { const v = tsVolts(red.n, black.n); return { text: (v < .05 ? 0 : v).toFixed(1), unit: 'V AC' }; }
+  const r = tsOhms(red.n, black.n);
+  if (!isFinite(r) || r > 40e6 || (mode === 'cont' && r > 999.9)) return { text: 'OL', unit: 'Ω', beep: false };
+  const beep = mode === 'cont' && r < 20;
+  return r >= 1000 ? { text: (r / 1000).toFixed(2), unit: 'kΩ', beep } : { text: r.toFixed(1), unit: 'Ω', beep };
+}
+// every frame: the leads follow the view; a few times a second, the reading (and the test log)
+function tsTick(now) {
+  for (const id in BLOWN) if (!TS_BLOWN[id]) { TS_BLOWN[id] = 1; tsSave(); }   // (a blown fuse stays blown)
+  tsLeads();
+  if (now < TSM.due) return; TSM.due = now + 200;
+  const sig = TSM.mode + ':' + (TSM.red && TSM.red.n) + ':' + (TSM.black && TSM.black.n) + ':' + tsState();
+  if (sig !== TSM.sig) { TSM.sig = sig; TSM.rd = tsRead(); tsShowMeter(); tsBeep(!!TSM.rd.beep); }
+  // a reading that has held steady for a moment goes into the test log (once, till something changes)
+  const rd = TSM.rd; if (!rd || rd.none || TSM.mode === 'off') { TSM.pend = null; return; }
+  const k = sig + '=' + rd.text;
+  if (!TSM.pend || TSM.pend.k !== k) TSM.pend = { k, at: now };
+  else if (now - TSM.pend.at > 700 && TSM.lastLog !== k) { TSM.lastLog = k; tsLog(rd); }
+}
+function tsConditions() {
+  const held = parts.filter(p => p.t === 'btn' && down[p.L] && mainBtn(p.L) === p).map(p => `${idOf(p)} held`);
+  return [...new Set(held), ...(LOCKOUT ? ['locked out'] : [])].join(' · ');
+}
+function tsLog(rd) {
+  TS.log.push({ a: TSM.red.label, b: TSM.black.label, m: TSM.mode, v: `${rd.text} ${rd.unit}${rd.beep ? ' (beep)' : ''}`, c: tsConditions(), t: Date.now() - TS.t0 });
+  if (TS.log.length > 300) TS.log.shift();
+  tsSave(); tsShowLog(true);
+}
+
+// ---- drawing the meter's leads: from the jacks, in a curve, to the probes on their terminals
+function tsLeads() {
+  const ov = document.getElementById('ts-leads'), m = document.getElementById('ts-meter'); if (!ov || !m) return;
+  const st = document.getElementById('stage').getBoundingClientRect(), mr = m.getBoundingClientRect();
+  const jack = c => { const j = m.querySelector('.jack.' + c).getBoundingClientRect(); return [j.left + j.width / 2 - st.left, j.top + j.height / 2 - st.top]; };
+  const tips = ['red', 'black'].map(c => TSM[c] ? tsScreen(TSM[c].x, TSM[c].y) : null);
+  const held = mode === 'latch' ? parts.filter(p => p.t === 'btn' && !p.maint && !p.estop && down[p.L]) : [];
+  const hs = held.map(p => tsScreen(p.x, p.y - BOX / 2 - 50));
+  const key = [mr.left, mr.top, st.width, st.height, ...tips.flat(), ...hs.flat(), TSM.hover && TSM.hover.x, TSM.hover && TSM.hover.y, TSM.next, TSM.mode].map(v => v == null ? '' : Math.round(v)).join(',');
+  if (key === TSM.key) return; TSM.key = key;
+  let h = '';
+  for (const s of hs) if (s) h += `<g transform="translate(${s[0]} ${s[1]})"><rect x="-44" y="-11" width="88" height="20" rx="5" fill="#1c1d1f" stroke="#FF6F59" stroke-width="1.6"/><text y="4" text-anchor="middle" font-size="11" font-weight="800" fill="#fff" letter-spacing=".04em">HELD DOWN</text></g>`;
+  ['red', 'black'].forEach((c, i) => {
+    const t = tips[i]; if (!t || TSM.mode === 'off') return;
+    const [jx, jy] = jack(c), s = c === 'red' ? -1 : 1, ang = s * 28 * Math.PI / 180;
+    const bx = t[0] + Math.sin(ang) * 44, by = t[1] - Math.cos(ang) * 44;   // (the probe's back end, where the cable goes in)
+    const col = c === 'red' ? '#d62b2b' : '#1b1b1b', cab = c === 'red' ? '#c42424' : '#111';
+    const sag = Math.max(60, Math.abs(jy - by) * .5);
+    h += `<path d="M${jx} ${jy} C${jx} ${jy + sag} ${bx + s * 30} ${by - 40} ${bx} ${by}" fill="none" stroke="${cab}" stroke-width="4" stroke-linecap="round"/>`;
+    h += `<g transform="translate(${t[0]} ${t[1]}) rotate(${s * 28})"><path d="M-1.6 -12 L0 0 L1.6 -12Z" fill="#d9dde1"/><rect x="-5" y="-46" width="10" height="34" rx="3" fill="${col}" stroke="#000" stroke-width="1"/><rect x="-6.5" y="-16" width="13" height="4" rx="1.5" fill="${col}" stroke="#000" stroke-width=".8"/></g>`;
+    h += `<circle cx="${t[0]}" cy="${t[1]}" r="9" fill="none" stroke="${c === 'red' ? '#ff6b6b' : '#e6e9ec'}" stroke-width="2"/>`;
+  });
+  if (TSM.hover && TSM.mode !== 'off') { const s = tsScreen(TSM.hover.x, TSM.hover.y); if (s) h += `<circle cx="${s[0]}" cy="${s[1]}" r="13" fill="${TSM.next === 'red' ? 'rgba(255,90,90,.25)' : 'rgba(230,233,236,.22)'}" stroke="${TSM.next === 'red' ? '#ff6b6b' : '#e6e9ec'}" stroke-width="2.2"/>`; }
+  ov.innerHTML = h;
+}
+
+// ---- the page's pieces, shown as they are now
+const TSM_ANG = { off: -150, v: -90, ohm: -30, cont: 30 };
+function tsShowMeter() {
+  const m = document.getElementById('ts-meter'); if (!m) return;
+  const rd = TSM.rd || tsRead();
+  m.querySelector('.tsm-val').textContent = TSM.mode === 'off' ? '' : rd.text;
+  m.querySelector('.tsm-unit').textContent = TSM.mode === 'off' ? '' : TSM.mode === 'cont' ? `${rd.unit}  •))` : rd.unit;
+  m.querySelector('.tsm-lcd').classList.toggle('off', TSM.mode === 'off');
+  m.querySelector('.tsm-knob').setAttribute('transform', `rotate(${TSM_ANG[TSM.mode]} 60 60)`);
+  for (const b of m.querySelectorAll('[data-dial]')) b.classList.toggle('on', b.dataset.dial === TSM.mode);
+  m.querySelector('.tsm-next').innerHTML = TSM.mode === 'off' ? 'Turn the dial to measure' : `Next click: <b class="${TSM.next}">${TSM.next} lead</b>`;
+}
+function tsShowLog(scroll) {
+  const L = document.getElementById('ts-log'); if (!L) return;
+  L.innerHTML = TS.log.length ? TS.log.map((e, i) => `<li><span class="ts-what">${i + 1}. ${esc(e.a)} to ${esc(e.b)}${e.c ? ` <i>(${esc(e.c)})</i>` : ''}</span><b>${esc(e.v)}</b></li>`).join('')
+    : '<li class="ts-empty">Every reading you take is kept here automatically, with what was going on at the time.</li>';
+  if (scroll) L.scrollTop = L.scrollHeight;
+  tsShowFoot();
+}
+const tsClock = ms => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+function tsShowFoot() { const f = document.getElementById('ts-foot'); if (f) f.textContent = `Readings: ${TS.log.length} · Time: ${tsClock(Date.now() - TS.t0)}`; }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+function tsShowAll() {
+  document.getElementById('ts-wo').innerHTML = WORK_ORDER ? `“${esc(WORK_ORDER)}”` : '<span class="ts-empty">No work order came with this circuit.</span>';
+  document.getElementById('ts-name').textContent = circuitName || 'Untitled circuit';
+  const cur = TS_STEPS.findIndex((_, i) => !TS.steps[i]);
+  document.getElementById('ts-steps').innerHTML = TS_STEPS.map((s, i) => `<li><button type="button" data-step="${i}" class="${TS.steps[i] ? 'done' : i === cur ? 'cur' : ''}" aria-pressed="${!!TS.steps[i]}"><span class="ts-n">${TS.steps[i] ? '✓' : i + 1}</span>${s}</button></li>`).join('');
+  document.getElementById('ts-steps-box').hidden = !TS.showSteps;
+  const sb = document.getElementById('ts-steps-btn'); sb.setAttribute('aria-pressed', String(TS.showSteps)); sb.querySelector('span').textContent = `Six Steps: ${TS.showSteps ? 'On' : 'Off'}`;
+  const lk = document.getElementById('ts-lock'); lk.setAttribute('aria-pressed', String(LOCKOUT)); lk.querySelector('span').textContent = LOCKOUT ? 'Remove Lock' : 'Lock Out';
+  document.body.classList.toggle('ts-locked', LOCKOUT);
+  for (const b of document.querySelectorAll('#tsbar [data-meter]')) {
+    const m = b.dataset.meter, need = (m === 'ohm' || m === 'cont') && !LOCKOUT;
+    b.setAttribute('aria-pressed', String(TSM.mode === m)); b.classList.toggle('needs-lock', need);
+    b.dataset.tip = need ? 'Lock out first: resistance and continuity are only ever measured with the power off and locked out' : b.dataset.tip0;
+  }
+  for (const b of document.querySelectorAll('#tsbar [data-tsmode]')) b.setAttribute('aria-pressed', String(mode === b.dataset.tsmode));
+  tsShowMeter(); tsShowLog();
+}
+
+// ---- building the page
+const TS_ICON = {
+  v: '<svg viewBox="0 0 30 26"><rect x="5" y="2" width="20" height="22" rx="3" fill="#f2c230" stroke="#6b5310" stroke-width="1.2"/><rect x="8" y="5" width="14" height="6" rx="1" fill="#c9d6b3"/><text x="15" y="10" text-anchor="middle" font-size="5.6" font-weight="800" fill="#333">V~</text><circle cx="15" cy="17.5" r="4" fill="#2b2b2b"/></svg>',
+  ohm: '<svg viewBox="0 0 30 26"><rect x="5" y="2" width="20" height="22" rx="3" fill="#f2c230" stroke="#6b5310" stroke-width="1.2"/><rect x="8" y="5" width="14" height="6" rx="1" fill="#c9d6b3"/><text x="15" y="10.3" text-anchor="middle" font-size="6.5" font-weight="800" fill="#333">Ω</text><circle cx="15" cy="17.5" r="4" fill="#2b2b2b"/></svg>',
+  cont: '<svg viewBox="0 0 30 26"><rect x="5" y="2" width="20" height="22" rx="3" fill="#f2c230" stroke="#6b5310" stroke-width="1.2"/><rect x="8" y="5" width="14" height="6" rx="1" fill="#c9d6b3"/><path d="M12.5 6.5q1.6 1.5 0 3M15 5.5q2.6 2.5 0 5M17.5 4.7q3.5 3.3 0 6.6" fill="none" stroke="#333" stroke-width="1"/><circle cx="15" cy="17.5" r="4" fill="#2b2b2b"/></svg>',
+  leads: '<svg viewBox="0 0 30 26"><path d="M6 22L13 6M24 22L17 6" stroke-width="4" stroke-linecap="round" fill="none" stroke="#c42424"/><path d="M24 22L17 6" stroke-width="4" stroke-linecap="round" fill="none" stroke="#111"/><path d="M5 23l4-4M25 23l-4-4" stroke="#bbb" stroke-width="1.6"/></svg>',
+  lock: '<svg viewBox="0 0 30 26"><rect x="7" y="11" width="16" height="13" rx="2.5" fill="#d62b2b" stroke="#6e1111" stroke-width="1.2"/><path d="M10.5 11V7.5a4.5 4.5 0 0 1 9 0V11" fill="none" stroke="#c9ced4" stroke-width="2.4"/><circle cx="15" cy="16.5" r="1.8" fill="#300"/><path d="M15 17v3" stroke="#300" stroke-width="1.6"/></svg>',
+  steps: '<svg viewBox="0 0 30 26"><rect x="6" y="2" width="18" height="22" rx="2.5" fill="#2b2f34" stroke="#8a96a3" stroke-width="1.2"/><path d="M9 7.5l1.5 1.5 2.5-3M9 13.5l1.5 1.5 2.5-3" fill="none" stroke="#5ee08a" stroke-width="1.5"/><path d="M15 8h6M15 14h6M9 19.5h12" stroke="#c9ced4" stroke-width="1.4"/></svg>',
+  open: '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M3 5h5l2 2h7v9H3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  print: '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M6 7V3h8v4M6 14H4V8h12v6h-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M6 11h8v6H6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+};
+function tsInit() {
+  document.body.classList.add('ts');
+  FAULTS_ON = true; FAULT_BADGES = false;
+  document.title = document.title;   // (set by the build)
+  // the header: Open Assignment and View Print
+  const hdr = document.querySelector('.titlebar'), end = hdr.querySelector('.hdr-end');
+  const tb = document.createElement('div'); tb.className = 'ts-hdr';
+  tb.innerHTML = `<button type="button" class="filebtn" id="ts-open" data-tip="Open an assignment: a circuit file from the Circuit Builder with faults planted in it (or a circuit code)">${TS_ICON.open}Open Assignment</button>
+    <button type="button" class="filebtn" id="ts-print" data-tip="View Print: the circuit as a NEMA ladder diagram, with wire numbers and line numbers, to troubleshoot from">${TS_ICON.print}View Print</button>
+    <input type="file" id="ts-file" accept=".json,.html,.htm,.txt,application/json,text/html,text/plain" hidden>`;
+  hdr.insertBefore(tb, end);
+  document.getElementById('about-btn').dataset.tip = 'About the Troubleshooter: who made it, and the license it is shared under';
+  // the ribbon: a Troubleshoot tab first
+  const run = document.getElementById('rt-run'), t = document.createElement('button');
+  t.type = 'button'; t.className = 'rtab'; t.id = 'rt-ts'; t.textContent = 'Troubleshoot'; run.parentNode.insertBefore(t, run);
+  run.textContent = 'Simulation';
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('#rt-run, #rt-ts'); if (b) tsTab = b.id === 'rt-ts' ? 'ts' : 'run'; }, true);
+  t.addEventListener('click', () => { if (document.body.classList.contains('ribbon-min') || document.body.classList.contains('fs')) document.body.classList.add('ribbon-peek'); showRibbon(); });
+  const bar = document.createElement('div'); bar.className = 'rpanel'; bar.id = 'tsbar'; bar.setAttribute('role', 'toolbar'); bar.setAttribute('aria-label', 'Troubleshoot'); bar.hidden = true;
+  const mb = (m, label, tip) => `<button type="button" class="tool big" data-meter="${m}" data-tip="${tip}" data-tip0="${tip}">${TS_ICON[m]}<span>${label}</span><small class="ts-needs">Lock out first</small></button>`;
+  bar.innerHTML = `<div class="tgroup"><span class="label">Meter</span>
+      ${mb('v', 'Voltmeter', 'Voltmeter: the voltage between the two terminals the leads are on, on the live circuit')}
+      ${mb('ohm', 'Ohmmeter', 'Ohmmeter: the resistance between the two terminals (locked out only)')}
+      ${mb('cont', 'Continuity', 'Continuity: beeps when there is a way through between the two terminals (locked out only)')}
+      <button type="button" class="tool big" id="ts-leads-off" data-tip="Take both leads off the circuit">${TS_ICON.leads}<span>Remove Leads</span></button></div>
+    <div class="tgroup"><span class="label">Power</span><button type="button" class="tool big ts-lockbtn" id="ts-lock" aria-pressed="false" data-tip="Lock out the machine: every disconnect open and the control power off, as it must be before measuring resistance. Press again to take the lock off and power it up.">${TS_ICON.lock}<span>Lock Out</span></button></div>
+    <div class="tgroup"><span class="label">Record</span><button type="button" class="tool big" id="ts-steps-btn" aria-pressed="true" data-tip="Show or hide the six troubleshooting steps">${TS_ICON.steps}<span>Six Steps: On</span></button></div>
+    <div class="row"><span class="label">Pushbuttons</span><div class="seg" role="group" aria-label="Pushbutton mode">
+      <button type="button" data-tsmode="click" data-tip="One click presses a momentary button; it lets go once the circuit settles">Click</button><button type="button" data-tsmode="hold" data-tip="A momentary button stays down only while you hold the mouse button down on it">Press and Hold</button><button type="button" data-tsmode="latch" data-tip="Click to Hold: a click holds a momentary button down (marked HELD DOWN) till you click it again, so you can take readings with it held">Click to Hold</button></div></div>
+    <div class="tgroup"><span class="label">Simulation</span><button type="button" class="tool big reset" id="ts-reset" data-tip="Turn everything off and start the machine again (a blown fuse stays blown)"><svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M15.5 10a5.5 5.5 0 1 1-1.6-3.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14.4 2.8l.1 3.9-3.9.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reset</span></button></div>`;
+  document.getElementById('runbar').parentNode.insertBefore(bar, document.getElementById('runbar'));
+  // the panel and, down its right, the work order, the six steps and the test log
+  const stage = document.getElementById('stage'), main = document.createElement('div'); main.className = 'ts-main';
+  stage.parentNode.insertBefore(main, stage); main.appendChild(stage);
+  const side = document.createElement('aside'); side.className = 'ts-side'; side.id = 'ts-side';
+  side.innerHTML = `<section class="ts-box"><h3>Work Order</h3><p class="ts-name" id="ts-name"></p><p class="ts-wo" id="ts-wo"></p><button type="button" class="ts-link" id="ts-sample">Open the sample assignment</button></section>
+    <section class="ts-box" id="ts-steps-box"><h3>Six Steps <button type="button" class="ts-link ts-hide" id="ts-steps-hide" data-tip="Hide the six steps (Six Steps, on the Troubleshoot tab, brings them back)">Hide ×</button></h3><ol class="ts-steps" id="ts-steps"></ol></section>
+    <section class="ts-box ts-logbox"><h3>Test Log</h3><ol class="ts-log" id="ts-log"></ol><p class="ts-foot" id="ts-foot"></p></section>`;
+  main.appendChild(side);
+  // the meter, over the panel, and its leads
+  const ov = document.createElementNS(NS, 'svg'); ov.id = 'ts-leads'; ov.setAttribute('class', 'ts-leads'); stage.appendChild(ov);
+  const m = document.createElement('div'); m.id = 'ts-meter'; m.className = 'tsm';
+  const lab = (k, txt, a, r) => { const x = 60 + r * Math.cos(a * Math.PI / 180), y = 60 + r * Math.sin(a * Math.PI / 180); return `<text data-dial="${k}" x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle">${txt}</text>`; };
+  m.innerHTML = `<div class="tsm-lcd"><span class="tsm-unit"></span><span class="tsm-val"></span></div>
+    <svg class="tsm-dial" viewBox="0 0 120 120"><circle cx="60" cy="60" r="27" fill="#1f1f1f" stroke="#0c0c0c" stroke-width="2"/><g class="tsm-knob"><circle cx="60" cy="60" r="19" fill="#3a3a3a"/><rect x="77" y="57.5" width="10" height="5" rx="2" fill="#f2c230" transform="translate(-8 0)"/></g>
+      ${lab('off', 'OFF', -150, 46)}${lab('v', 'V~', -90, 46)}${lab('ohm', 'Ω', -30, 46)}${lab('cont', '•)))', 30, 46)}</svg>
+    <div class="tsm-jacks"><span class="jack red" title="VΩ: the red lead">VΩ</span><span class="jack black" title="COM: the black lead">COM</span></div>
+    <div class="tsm-next"></div>`;
+  stage.appendChild(m);
+
+  // ---- what everything does
+  document.getElementById('ts-open').addEventListener('click', () => document.getElementById('ts-file').click());
+  document.getElementById('ts-file').addEventListener('change', async e => {
+    const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
+    try { if (f.size > 8e6) throw new Error('That file is too big to be a circuit.'); await tsOpenText(await f.text(), f.name); }
+    catch (err) { tsSay('Could not open that file: ' + (err && err.message || err)); }
+  });
+  document.getElementById('ts-print').addEventListener('click', openPrint);
+  document.getElementById('ts-sample').addEventListener('click', () => tsUse(tsSample(), 'Opened the sample assignment. Read the work order, then start troubleshooting.', true));
+  for (const b of bar.querySelectorAll('[data-meter]')) b.addEventListener('click', () => tsMode(TSM.mode === b.dataset.meter ? 'off' : b.dataset.meter));
+  for (const b of m.querySelectorAll('[data-dial]')) b.addEventListener('click', () => tsMode(b.dataset.dial));
+  document.getElementById('ts-leads-off').addEventListener('click', () => { TSM.red = TSM.black = null; TSM.next = 'red'; TSM.sig = ''; tsShowMeter(); });
+  document.getElementById('ts-lock').addEventListener('click', () => tsLockOut(!LOCKOUT));
+  document.getElementById('ts-reset').addEventListener('click', () => { startRun(); buildProcess(); paint(); });
+  const steps = on => { TS.showSteps = on; tsSave(); tsShowAll(); };
+  document.getElementById('ts-steps-btn').addEventListener('click', () => steps(!TS.showSteps));
+  document.getElementById('ts-steps-hide').addEventListener('click', () => steps(false));
+  document.getElementById('ts-steps').addEventListener('click', e => { const b = e.target.closest('[data-step]'); if (!b) return; const i = +b.dataset.step; TS.steps[i] = !TS.steps[i]; tsSave(); tsShowAll(); });
+  for (const b of bar.querySelectorAll('[data-tsmode]')) b.addEventListener('click', () => tsPushMode(b.dataset.tsmode));
+  // the leads: a click on a terminal puts the next lead there (red, then black, then red again...)
+  stage.addEventListener('pointerdown', e => {
+    if (editing || TSM.mode === 'off' || e.button !== 0 || e.target.closest('#ts-meter')) return;
+    const q = tsPick(e.clientX, e.clientY); if (!q) return;
+    e.preventDefault(); e.stopPropagation(); tsPlace(q);
+    if (TSM.mode === 'cont') tsBeep(false);   // (the audio can start only from a click)
+  }, true);
+  stage.addEventListener('pointermove', e => { const q = editing || TSM.mode === 'off' ? null : tsPick(e.clientX, e.clientY); if (q !== TSM.hover) { TSM.hover = q; stage.classList.toggle('ts-aim', !!q); } });
+  stage.addEventListener('pointerleave', () => { TSM.hover = null; });
+  // the meter can be dragged anywhere over the panel (by its case)
+  m.addEventListener('pointerdown', e => {
+    if (e.target.closest('[data-dial]')) return;
+    e.preventDefault(); e.stopPropagation();
+    const r = m.getBoundingClientRect(), sr = stage.getBoundingClientRect(), ox = e.clientX - r.left, oy = e.clientY - r.top;
+    const mv = ev => { m.style.left = Math.max(0, Math.min(sr.width - r.width, ev.clientX - sr.left - ox)) + 'px'; m.style.top = Math.max(0, Math.min(sr.height - r.height, ev.clientY - sr.top - oy)) + 'px'; m.style.right = m.style.bottom = 'auto'; };
+    const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); };
+    addEventListener('pointermove', mv); addEventListener('pointerup', up);
+  });
+  setInterval(tsShowFoot, 1000);
+
+  // ---- start: the assignment from last time, or the sample
+  let st = null; try { st = JSON.parse(localStorage.getItem(TS_KEY) || 'null'); } catch (_) {}
+  let c = null; if (st && st.circuit) try { c = readCircuit(st.circuit); } catch (_) {}
+  if (c) {
+    TS = { log: Array.isArray(st.log) ? st.log : [], steps: Array.isArray(st.steps) ? st.steps : [], t0: +st.t0 || Date.now(), showSteps: st.showSteps !== false };
+    TS_BLOWN = st.blown && typeof st.blown === 'object' ? st.blown : {};
+    tsUse(c, '', false);
+  } else tsUse(tsSample(), '', true);
+  showRibbon();
+}
+if (TS_MODE) tsInit();

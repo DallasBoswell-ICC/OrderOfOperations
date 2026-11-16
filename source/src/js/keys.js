@@ -10,7 +10,7 @@ const KB = {
   items: [
     { g: 'tools', id: 'select', keys: ['e'], label: 'Select', short: 'Select', run: () => setTool('select') },
     { g: 'tools', id: 'wire', keys: ['w'], label: 'Wire', short: 'Wire', run: () => setTool('wire') },
-    { g: 'tools', id: 'mode', keys: ['g'], label: 'Switch Build and Run', short: 'Build / Run', inRun: true, run: () => { if (!LOCKED) setMode(editing); } },
+    { g: 'tools', id: 'mode', keys: ['g'], label: 'Switch Build and Run', short: 'Build / Run', inRun: true, run: () => { if (!LOCKED && !TS_MODE) setMode(editing); } },
     { g: 'tools', show: 'Esc', label: 'Back to Select, and let go of what is picked' },
     { g: 'parts', id: 'rotate', keys: ['r'], label: 'Turn a box or fuse a quarter turn', short: 'Rotate', run: () => { const P = selGroup(); if (P.length && P.every(turns)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); } },
     { g: 'parts', id: 'del', keys: ['x'], also: 'Delete', label: 'Delete', short: 'Delete', run: () => del() },

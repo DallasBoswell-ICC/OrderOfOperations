@@ -44,6 +44,7 @@ function colAt(n, t) {
   return mixCache.get(k);
 }
 const lit = (n, t) => colAt(n, t) !== null;
+const showCol = (n, t) => TS_MODE ? null : colAt(n, t);   // (the colour the current is drawn in: none in the Troubleshooter, where students see only what a technician would)
 function setAt(n, t, c, lane) {
   const a = lane === undefined ? tl[n] : ltl.get(n)[lane];
   while (a.length > 1 && a[a.length - 1][0] >= t - 1e-9) a.pop();
