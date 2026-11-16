@@ -1,6 +1,6 @@
 {
- "name": "Order of Operations: Troubleshooter",
- "short_name": "Troubleshooter",
+ "name": "Order of Operations: Fault Finder",
+ "short_name": "Fault Finder",
  "id": "./?app=troubleshooter",
  "start_url": "./",
  "scope": "./",

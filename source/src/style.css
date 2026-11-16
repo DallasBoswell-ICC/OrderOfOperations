@@ -547,3 +547,10 @@ body.ts.ts-locked .stage::after { content: "LOCKED OUT"; position: absolute; lef
 .tsm-jacks { margin-top: 4px; }
 .jack { gap: 9px; }
 .tsm-next { margin: 2px 0 2px; }
+
+/* the Fault Finder's ribbon: each group's buttons centred across and down the group, its name along the bottom */
+body.ts .rpanel .ts-g { flex-flow: column nowrap; align-items: stretch; align-content: normal; }
+body.ts .rpanel .ts-g > .ts-ctl { flex: 1; display: flex; flex-wrap: wrap; align-items: center; align-content: center; justify-content: center; gap: 4px 8px; min-height: 0; min-width: 0; }
+body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are on the Troubleshoot tab, with Click to Hold) */
+body.ts .rpanel .ts-g > .label { order: 2; flex-basis: auto; }
+body.ts .rpanel .ts-g[hidden] { display: none; }

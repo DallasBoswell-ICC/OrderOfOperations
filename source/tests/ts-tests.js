@@ -1,4 +1,4 @@
-/* Automatic checks for the Troubleshooter (the Circuit Builder built with build.py --ts).
+/* Automatic checks for the Fault Finder (once called the Troubleshooter: the Circuit Builder built with build.py --ts).
 
    Run after every change:   node tests/ts-tests.js [--demo]        (build first: python3 build.py --ts [--demo])
 
@@ -51,12 +51,12 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
 (async () => {
   browser = await chromium.launch();
 
-  await check('The page: Troubleshooter title, coral icons and app manifest (demo: DEMO corner), Run only (no Build, no parts, no Faults tab), faults live, no fault badges, its own storage', async page => {
+  await check('The page: Fault Finder title, coral icons and app manifest (demo: DEMO corner), Run only (no Build, no parts, no Faults tab), faults live, no fault badges, its own storage', async page => {
     const out = [];
     const st = await page.evaluate(() => ({ h1: document.querySelector('h1').textContent, title: document.title, editing, ts: TS_MODE, faults: faultsLive(), badges: document.querySelectorAll('#svg .fault-badge, #svg [data-fault]').length,
       build: getComputedStyle(document.querySelector('.modeseg')).display, home: getComputedStyle(document.getElementById('rt-home')).display, faultsTab: getComputedStyle(document.getElementById('rt-faults')).display,
       tsbar: !document.getElementById('tsbar').hidden, coral: getComputedStyle(document.querySelector('h1 span')).color, keys: Object.keys(localStorage) }));
-    if (!/Order of Operations: Troubleshooter/.test(st.h1)) out.push('h1: ' + st.h1);
+    if (!/Order of Operations: Fault Finder/.test(st.h1) || /Troubleshooter/.test(st.h1 + st.title)) out.push('h1: ' + st.h1);
     if (DEMO !== /DEMO/.test(st.h1)) out.push('demo badge: ' + st.h1);
     if (DEMO !== /\(Demo\)/.test(st.title)) out.push('title: ' + st.title);
     if (st.editing || !st.ts || !st.faults) out.push(`editing ${st.editing}, TS_MODE ${st.ts}, faults live ${st.faults}`);
@@ -71,12 +71,21 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     for (const f of ['icon-192.png', 'icon-512.png', 'maskable-512.png', 'apple-touch-icon.png', 'favicon-32.png', 'icon.svg']) if (!fs.existsSync(path.join(dir, 'icons', pre + f))) out.push('missing icon ' + pre + f);
     let man = {}; try { man = JSON.parse(fs.readFileSync(path.join(dir, 'troubleshooter.webmanifest'), 'utf8')); } catch (e) { out.push('no manifest'); }
     if (man.start_url !== './' || man.scope !== './' || man.id !== './?app=troubleshooter' + (DEMO ? '-demo' : '')) out.push('install address: ' + [man.id, man.start_url, man.scope]);
-    if (man.short_name !== (DEMO ? 'Troubleshooter Demo' : 'Troubleshooter') || !(man.icons || []).every(i => fs.existsSync(path.join(dir, i.src.split('?')[0])))) out.push('manifest: ' + JSON.stringify(man).slice(0, 200));
+    if (man.short_name !== (DEMO ? 'Fault Finder Demo' : 'Fault Finder') || !/^Order of Operations: Fault Finder/.test(man.name) || !(man.icons || []).every(i => fs.existsSync(path.join(dir, i.src.split('?')[0])))) out.push('manifest: ' + JSON.stringify(man).slice(0, 200));
     const svgI = fs.readFileSync(path.join(dir, 'icons', pre + 'icon.svg'), 'utf8');
     if (!/#FF6F59/.test(svgI) || /#FFC000/.test(svgI) || DEMO !== /#9BE03A/.test(svgI)) out.push('icon colours');
     const head = await page.evaluate(() => ({ man: document.querySelector('link[rel=manifest]').getAttribute('href'), apple: document.querySelector('link[rel=apple-touch-icon]').getAttribute('href'), fav: document.querySelector('link[rel=icon]').href, about: document.getElementById('about-title').textContent, logo: document.querySelector('.titlebar .logo').innerHTML }));
     if (!/troubleshooter\.webmanifest/.test(head.man) || !head.apple.includes(pre + 'apple-touch-icon') || !/FF6F59/.test(decodeURIComponent(head.fav))) out.push('page head: ' + JSON.stringify({ ...head, fav: '', logo: '' }));
-    if (head.about !== 'Order of Operations: Troubleshooter' || !/FF6F59/.test(head.logo)) out.push('About title or title-bar logo');
+    if (head.about !== 'Order of Operations: Fault Finder' || !/FF6F59/.test(head.logo)) out.push('About title or title-bar logo');
+    // every group's buttons centred across and down the group (both tabs)
+    const off = await page.evaluate(() => { const out = [];
+      for (const id of ['tsbar', 'runbar']) { const bar = document.getElementById(id), was = bar.hidden; bar.hidden = false;
+        for (const g of bar.querySelectorAll(':scope > .ts-g')) { if (g.hidden) continue; const c = g.querySelector('.ts-ctl'), gr = c.getBoundingClientRect();
+          let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (const k of c.children) { const r = k.getBoundingClientRect(); if (!r.width) continue; x0 = Math.min(x0, r.left); x1 = Math.max(x1, r.right); y0 = Math.min(y0, r.top); y1 = Math.max(y1, r.bottom); }
+          if (Math.abs((x0 + x1) / 2 - (gr.left + gr.right) / 2) > 1.5 || Math.abs((y0 + y1) / 2 - (gr.top + gr.bottom) / 2) > 1.5) out.push(id + ': ' + g.querySelector('.label').textContent); }
+        bar.hidden = was; }
+      return out; });
+    if (off.length) out.push('buttons not centred in: ' + off.join(', '));
     // pressing G (Build / Run) does nothing
     await page.keyboard.press('g'); await page.waitForTimeout(100);
     if (await page.evaluate(() => editing)) out.push('G switched to Build');
@@ -276,6 +285,6 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
 
   await browser.close();
   const failed = results.filter(r => !r.ok);
-  console.log(`\n${results.length - failed.length} of ${results.length} Troubleshooter checks passed.`);
+  console.log(`\n${results.length - failed.length} of ${results.length} Fault Finder checks passed.`);
   process.exit(failed.length ? 1 : 0);
 })();

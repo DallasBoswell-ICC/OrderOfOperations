@@ -9,7 +9,7 @@ a Downloads folder, or published as a web page.
 
     python3 build.py           the full build: dist/Circuit_Builder.html (what students use)
     python3 build.py --demo    the demo build: dist/demo/Circuit_Builder.html, where new features are tried out first
-    python3 build.py --ts      the Troubleshooter: dist/troubleshooter/index.html (students find and fix planted faults)
+    python3 build.py --ts      the Fault Finder (once called the Troubleshooter): dist/troubleshooter/index.html (students find and fix planted faults)
     python3 build.py --ts --demo   its demo build: dist/troubleshooter/demo/index.html
 
 The demo build is the same program, marked DEMO in its title bar and window title, and keeping its own autosave,
@@ -86,19 +86,19 @@ def build() -> Path:
         if "const TS_MODE = false;" not in js:
             raise SystemExit("constants.js must contain const TS_MODE = false;")
         js = js.replace("const TS_MODE = false;", "const TS_MODE = true;").replace("'oo-circuit-builder:", "'oo-troubleshooter:")
-        page = page.replace("<title>Circuit Builder</title>", "<title>Troubleshooter</title>")
-        page = page.replace("<h1>Order of Operations: <span>Circuit Builder</span></h1>", "<h1>Order of Operations: <span>Troubleshooter</span></h1>")
+        page = page.replace("<title>Circuit Builder</title>", "<title>Fault Finder</title>")
+        page = page.replace("<h1>Order of Operations: <span>Circuit Builder</span></h1>", "<h1>Order of Operations: <span>Fault Finder</span></h1>")
         page = re.sub(r'<link rel="manifest"[^>]*>', '<link rel="manifest" href="troubleshooter.webmanifest?v=2">', page)
         page = re.sub(r'<link rel="apple-touch-icon"[^>]*>', f'<link rel="apple-touch-icon" href="icons/{IP}apple-touch-icon.png?v=1">', page)
-        page = page.replace('<h2 id="about-title">Order of Operations: Circuit Builder</h2>', '<h2 id="about-title">Order of Operations: Troubleshooter</h2>')
+        page = page.replace('<h2 id="about-title">Order of Operations: Circuit Builder</h2>', '<h2 id="about-title">Order of Operations: Fault Finder</h2>')
         # its O³ mark in the title bar and the About box, in coral
         page = re.sub(r'<svg class="(?:logo|ab-logo)"[\s\S]*?</svg>', lambda m: m.group(0).replace("#FFC000", "#FF6F59"), page)
-        if "<span>Troubleshooter</span>" not in page:
+        if "<span>Fault Finder</span>" not in page:
             raise SystemExit("The Troubleshooter build could not name itself (has the title changed?)")
     if DEMO:
         # its own name and badge, and its own keys in the browser's storage (autosave, view and other settings)
         js = js.replace("'oo-circuit-builder:", "'oo-circuit-builder-demo:").replace("'oo-troubleshooter:", "'oo-troubleshooter-demo:")
-        name = "Troubleshooter" if TS else "Circuit Builder"
+        name = "Fault Finder" if TS else "Circuit Builder"
         page = page.replace(f"<title>{name}</title>", f"<title>{name} (Demo)</title>")
         page = page.replace(f"<h1>Order of Operations: <span>{name}</span></h1>", f'<h1>Order of Operations: <span>{name}</span> <em class="demo-badge" title="The demo build: new features are tried out here before they go into the full {name}">DEMO</em></h1>')
         css += "\n.demo-badge { font-style: normal; font-size: .7rem; font-weight: 800; letter-spacing: .08em; color: #1c1d1f; background: #9be03a; border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }\n"
@@ -113,8 +113,8 @@ def build() -> Path:
     if TS:   # (its icons and manifest, for installing it as an app of its own)
         import shutil, json
         shutil.copytree(SRC / ICONS, OUT.parent / "icons", dirs_exist_ok=True)
-        name = "Order of Operations: Troubleshooter" + (" (Demo)" if DEMO else "")
-        man = {"name": name, "short_name": "Troubleshooter Demo" if DEMO else "Troubleshooter", "id": "./?app=troubleshooter" + ("-demo" if DEMO else ""), "start_url": "./", "scope": "./",   # (as Print Builder: installs from the folder's own address, with or without index.html)
+        name = "Order of Operations: Fault Finder" + (" (Demo)" if DEMO else "")
+        man = {"name": name, "short_name": "Fault Finder Demo" if DEMO else "Fault Finder", "id": "./?app=troubleshooter" + ("-demo" if DEMO else ""), "start_url": "./", "scope": "./",   # (as Print Builder: installs from the folder's own address, with or without index.html)
               
                "display": "standalone", "background_color": "#1c1d1f", "theme_color": "#9be03a" if DEMO else "#1c1d1f",
                "description": "Find and fix the faults planted in a circuit with a meter, as a technician would, for the Order of Operations troubleshooting class.",
