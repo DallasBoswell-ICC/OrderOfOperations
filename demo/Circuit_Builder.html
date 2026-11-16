@@ -1114,6 +1114,17 @@ function printToCircuit(doc) {
   // (made from a circuit and not changed since: the circuit itself, exactly)
   if (doc.link && doc.link.cb && doc.link.fp && doc.link.fp === linkFingerprint(doc)) return { data: JSON.parse(JSON.stringify(doc.link.cb)), notes: { changed: [], left: [], same: true } };
   const changed = [], left = [], note = (list, s) => { if (!list.includes(s)) list.push(s); };
+  // (drawn closer across to fit its paper: spread back out first. What is where it was put goes back exactly; anything moved since,
+  // in proportion between the parts on either side of it)
+  if (doc.link && doc.link.xk) {
+    doc = JSON.parse(JSON.stringify(doc));
+    const K = doc.link.xk, N = doc.link.xn, n = K.length, un = v => { if (v <= N[0]) return v - N[0] + K[0]; for (let i = 1; i < n; i++) if (v <= N[i]) return linkSnap(K[i - 1] + (v - N[i - 1]) * (K[i] - K[i - 1]) / ((N[i] - N[i - 1]) || 1)); return v - N[n - 1] + K[n - 1]; };
+    for (const s of doc.sheets) {
+      for (const q of [...s.parts, ...s.nodes]) { q.x = q._x && q._x[0] === q.x ? q._x[1] : un(q.x); delete q._x; }
+      for (const w of s.wires) { w.pts = w._x && w._x[0] === JSON.stringify(w.pts) ? JSON.parse(w._x[1]) : w.pts.map(q => [un(q[0]), q[1]]); delete w._x; }
+    }
+    delete doc.link.xk; delete doc.link.xn;
+  }
   const all = []; doc.sheets.forEach((s, k) => { for (const p of s.parts) all.push({ s, k, p }); });
   const LK = doc.link && doc.link.cb && Array.isArray(doc.link.oy) ? doc.link : null;   // (made from a circuit: its own places, to map back to)
   const power = LK ? LK.cb.pw === 'boxes' : all.some(({ p }) => ['sup', 'xfmr', 'dsc3', 'fdsc3', 'fus3', 'mst3', 'ol3', 'motor', 'src_l1', 'src_l2', 'cb3', 'cb2'].includes(p.t));
@@ -1138,7 +1149,8 @@ function printToCircuit(doc) {
   let X = (x) => linkSnap(x + DX), Y = (k, y) => linkSnap(F[k](y) + DY[k]);
   if (LK) {   // (back to the circuit's own places: across as it was, down as it was before the print spread its rungs out)
     const oy = LK.oy, n = oy.length, step = n > 1 ? oy[n - 2] - oy[n - 1] : 3000, sy = LK.sy || 1;
-    X = x => linkSnap(x - LK.ox); Y = (k, y) => linkSnap((y - (k < n ? oy[k] : oy[n - 1] - (k - n + 1) * step)) / sy);
+    X = x => linkSnap(x - LK.ox);
+    Y = (k, y) => linkSnap((y - (k < n ? oy[k] : oy[n - 1] - (k - n + 1) * step)) / sy);
   }
   const W = !power && rL1 && rL2 ? (LK ? X(rL2.p.x) - X(rL1.p.x) : linkSnap(rL2.p.x - rL1.p.x)) : 0;
 
@@ -1318,6 +1330,7 @@ function circuitToPrint(d, env) {
   if (bars) { const ys = [...new Set(d.parts.map(a => +a[2]))].sort((a, b) => a - b), gaps = ys.slice(1).map((y, i) => y - ys[i]).filter(g => g > 0);
     if (gaps.length) sy = Math.max(1, Math.min(2, 160 / Math.min(...gaps)));
     if (sy > 1) d = { ...d, parts: d.parts.map(a => { const b = a.slice(); b[2] = linkSnap(+a[2] * sy); return b; }), wires: d.wires.map(w => { const b = w.slice(); b[1] = linkSnap(+w[1] * sy); b[3] = linkSnap(+w[3] * sy); return b; }) }; }
+  let xk = null, xn = null;   // (drawn closer across to fit a paper asked for: the parts' places before and after; see below)
   const R = d.parts.map((a, i) => ({ i, t: a[0], x: +a[1], y: +a[2], L: String(a[3] ?? ''), nc: !!a[4], maint: a[5] !== 0, color: a[6] || '', a }));
   const rotOf = r => ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(r.t) ? (Math.round(+r.a[7]) || 0) : 0;
   const coilBy = new Map(R.filter(r => r.t === 'coil').map(r => [r.L, r]));
@@ -1336,9 +1349,9 @@ function circuitToPrint(d, env) {
   const ysAll = parts0.map(q => q.r.y).concat(d.wires.flatMap(w => [+w[1], +w[3]]));
   const minX = Math.min(...xsAll, bars ? 0 : Infinity), maxX = Math.max(...xsAll, bars ? W : -Infinity), minY = Math.min(...ysAll), maxY = Math.max(...ysAll);
   const span = maxX - minX + (bars ? 0 : 160);
-  const PAPER = [['letter', false], ['letter', true], ['tabloid', true], ['ansic', true]].find(([pp, land]) => linkDrawW({ paper: pp, land }) - (bars ? 620 : 300) >= span) || ['ansic', true];
+  const PAPER = env.paper ? [env.paper.paper, !!env.paper.land] : [['letter', false], ['letter', true], ['tabloid', true], ['ansic', true]].find(([pp, land]) => linkDrawW({ paper: pp, land }) - (bars ? 620 : 300) >= span) || ['ansic', true];
   const sheet0 = { paper: PAPER[0], land: PAPER[1] }, DW = linkDrawW(sheet0), DH = linkDrawH(sheet0);
-  if (linkDrawW(sheet0) - (bars ? 620 : 300) < span) note(changed, 'The circuit is wider than the largest paper: it runs off the right of each sheet (shrink it in Circuit Builder, or move things on the print)');
+  if (!env.paper && linkDrawW(sheet0) - (bars ? 620 : 300) < span) note(changed, 'The circuit is wider than the paper: it runs off the right of each sheet (shrink it in Circuit Builder, or move things on the print)');
   const OX = bars ? 200 - minX : 160 - minX;
   // the rows things sit on; a sheet breaks above a row, where no part spans the break
   const rows = [...new Set(parts0.map(q => q.r.y))].sort((a, b) => a - b);
@@ -1436,12 +1449,36 @@ function circuitToPrint(d, env) {
   }
   // (where a wire's end meets another wire part way along, as Circuit Builder joins them: that wire split there, so the print joins them too)
   for (const s of sheets) { linkTees(s, uid); if (env.tidy) env.tidy(s); linkPrune(s); if (env.tidy) env.tidy(s); }
+  // (a paper asked for (env.paper) and the circuit wider than it: drawn closer across, each part its own size. The parts, nodes and
+  // corners brought in toward the left; a wire that ran up or down from a terminal stays upright, with a short step where it must)
+  if (env.paper) {
+    const xs = sheets.flatMap(s => [...s.parts.map(p => p.x), ...s.nodes.map(n => n.x), ...s.wires.flatMap(w => w.pts.map(q => q[0]))]);
+    const x0 = Math.min(...xs), x1 = Math.max(...sheets.flatMap(s => s.parts.flatMap(p => p.t === 'rail' ? [p.x] : linkPbTerms(p).map(q => q[0]).concat(p.x + 60))), ...xs), avail = linkDrawW(env.paper) - 380;   // (room on the right for the coils' cross-references)
+    if (x1 > avail) {
+      const c = (avail - x0 - 60) / (x1 - x0 - 60), sc = x => x0 + linkSnap((x - x0) * c);
+      xk = [...new Set(sheets.flatMap(s => s.parts.map(p => p.x)))].sort((u, v) => u - v); xn = xk.map(sc);
+      for (const s of sheets) {
+        const old = new Map(s.wires.map(w => [w.id, [linkPbPos(s, w.a), ...w.pts, linkPbPos(s, w.b)]]));
+        for (const q of [...s.parts, ...s.nodes]) { const x = sc(q.x); q._x = [x, q.x]; q.x = x; }   // (_x: where it is put, and where it was)
+        for (const w of s.wires) {
+          const O = old.get(w.id); if (O.some(q => !q)) continue;
+          const N = [linkPbPos(s, w.a), ...w.pts.map(q => [sc(q[0]), q[1]]), linkPbPos(s, w.b)];
+          // (from each end on a terminal, the wire's upright runs keep to the terminal's new place)
+          for (const [i, dir] of [[0, 1], [N.length - 1, -1]]) if ((i === 0 ? w.a : w.b).p) for (let j = i; j + dir >= 0 && j + dir < N.length && O[j][0] === O[j + dir][0] && j + dir !== N.length - 1 - i; j += dir) N[j + dir] = [N[j][0], N[j + dir][1]];
+          // (any run left slanting: a step across where it meets the next corner)
+          const R = [N[0]]; for (let j = 1; j < N.length; j++) { const p = R[R.length - 1], q = N[j]; if (p[0] !== q[0] && p[1] !== q[1]) R.push(O[j - 1][0] === O[j][0] ? [p[0], q[1]] : [q[0], p[1]]); R.push(q); }
+          w._x = [JSON.stringify(R.slice(1, -1)), JSON.stringify(w.pts)]; w.pts = R.slice(1, -1);
+        }
+      }
+      note(changed, `Drawn closer across to fit the paper (the parts their own size, the gaps between them ${Math.round(c * 100)}% as wide)`);
+    }
+  }
   if (contN > Math.max(0, ...[...jmpSeen.keys()].map(Number).filter(Number.isFinite))) note(changed, 'Wires running from one sheet to the next: a continuation at each end, numbered alike');
   if (d.pv && d.pv.length) note(left, 'Process values (they stay with the circuit, and come back with it)');
   if (d.fl || d.sn) note(left, 'Planted faults (they stay with the circuit, and come back with it)');
   const doc = { kind: 'o3-print', v: 1, tb: env.defaultTB(), sheets, cur: 0 };
   const tf = doc.tb.fields.find(f => /title/i.test(f.label)); if (tf) tf.value = d.name || 'Circuit';
-  doc.link = { from: 'circuit-builder', cb: d0, ox: OX, oy: sheets.map((_, k) => OY(k)), sy, fp: linkFingerprint(doc) };
+  doc.link = { from: 'circuit-builder', cb: d0, ox: OX, oy: sheets.map((_, k) => OY(k)), sy, ...(xk ? { xk, xn } : {}), fp: linkFingerprint(doc) };
   return { doc, notes: { changed, left } };
 }
 
