@@ -165,6 +165,13 @@ function tsRepair(kind, it, at) {
   const needed = kind === 'part' ? !!(it.fault || TS_BLOWN[it.id] || BLOWN[it.id]) : !!it.fault;
   const i = (kind === 'part' ? parts : wires).indexOf(it);
   if (kind === 'part') { delete it.fault; delete TS_BLOWN[it.id]; delete BLOWN[it.id]; } else delete it.fault;
+  // (a new coil comes in a different colour (Dallas, 16 Nov 2026): the next colour round the palette that no other coil
+  // has, if there is one; its contacts take it too, being the same relay)
+  if (kind === 'part' && it.t === 'coil') {
+    const cols = PALETTE.map(c => c[1]).filter(c => c !== '#FFFFFF'), cur = cols.indexOf(String(it.color).toUpperCase()), used = new Set(parts.filter(q => q.t === 'coil' && q !== it).map(q => String(q.color).toUpperCase()));
+    const order = cols.map((_, k) => cols[(Math.max(cur, 0) + 1 + k) % cols.length]).filter(c => c !== String(it.color).toUpperCase());
+    it.color = order.find(c => !used.has(c)) || order[0];
+  }
   const name = kind === 'part' ? `the ${captionOf(it)}` : tsWireName(it);
   TS.repairs.push({ k: kind, i, needed, t: Date.now() - TS.t0, ...(at ? { x: at.x, y: at.y, up: at.up } : {}) });
   TS.log.push({ r: kind, a: kind === 'part' ? `Replaced ${name}` : `Repaired ${name}`, v: kind === 'part' ? 'New Part' : 'Spliced', c: tsConditions(), t: Date.now() - TS.t0 });

@@ -351,6 +351,7 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     else { await page.click('.ts-card-no'); if (await page.evaluate(() => !parts.find(q => q.t === 'coil').fault)) out.push('Cancel replaced it anyway'); await page.mouse.click(...c); await page.click('.ts-card-go'); }
     await page.waitForTimeout(200);
     if (await page.evaluate(() => !!parts.find(q => q.t === 'coil').fault)) out.push('the coil is still faulty after replacing it');
+    if (await page.evaluate(() => parts.find(q => q.t === 'coil').color.toUpperCase() === '#FFDC00')) out.push('the new X coil is the same colour as the old one');
     await page.click('#ts-wire'); const w = await page.evaluate(() => { const m = svg.getScreenCTM(); return [m.a * 560 + m.e, m.d * 420 + m.f]; });
     await page.mouse.click(...w); await page.click('.ts-card-go'); await page.waitForTimeout(200);
     const r = await page.evaluate(() => ({ rep: TS.repairs.map(x => [x.k, x.needed]), log: TS.log.map(e => e.v), tags: document.getElementById('ts-leads').innerHTML }));
