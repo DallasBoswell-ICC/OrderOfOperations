@@ -9,8 +9,8 @@ a Downloads folder, or published as a web page.
 
     python3 build.py           the full build: dist/Circuit_Builder.html (what students use)
     python3 build.py --demo    the demo build: dist/demo/Circuit_Builder.html, where new features are tried out first
-    python3 build.py --ts      the Fault Finder (once called the Troubleshooter): dist/troubleshooter/index.html (students find and fix planted faults)
-    python3 build.py --ts --demo   its demo build: dist/troubleshooter/demo/index.html
+    python3 build.py --ts      the Fault Finder (once called the Troubleshooter): dist/fault-finder/index.html (students find and fix planted faults)
+    python3 build.py --ts --demo   its demo build: dist/fault-finder/demo/index.html
 
 The demo build is the same program, marked DEMO in its title bar and window title, and keeping its own autosave,
 settings and app install, so trying it never touches work kept in the full build (the two share a website).
@@ -26,7 +26,7 @@ TS = "--ts" in sys.argv[1:]   # the Troubleshooter: the same program, Run only, 
 # the demo build carries its own icons (green, with a DEMO band) so the two builds cannot be confused
 ICONS = ("icons-ts-demo" if DEMO else "icons-ts") if TS else "icons-demo" if DEMO else "icons"
 IP = ("tsd-" if DEMO else "ts-") if TS else ""   # (the Troubleshooter's icon files are named ts-..., its demo's tsd-...)
-OUT = (ROOT / "dist" / "troubleshooter" / ("demo" if DEMO else "") / "index.html") if TS else (ROOT / "dist" / ("demo" if DEMO else "") / "Circuit_Builder.html")
+OUT = (ROOT / "dist" / "fault-finder" / ("demo" if DEMO else "") / "index.html") if TS else (ROOT / "dist" / ("demo" if DEMO else "") / "Circuit_Builder.html")
 
 # The scripts run in this order (later files use things defined in earlier ones).
 MODULES = [
@@ -88,7 +88,7 @@ def build() -> Path:
         js = js.replace("const TS_MODE = false;", "const TS_MODE = true;").replace("'oo-circuit-builder:", "'oo-troubleshooter:")
         page = page.replace("<title>Circuit Builder</title>", "<title>Fault Finder</title>")
         page = page.replace("<h1>Order of Operations: <span>Circuit Builder</span></h1>", "<h1>Order of Operations: <span>Fault Finder</span></h1>")
-        page = re.sub(r'<link rel="manifest"[^>]*>', '<link rel="manifest" href="troubleshooter.webmanifest?v=2">', page)
+        page = re.sub(r'<link rel="manifest"[^>]*>', '<link rel="manifest" href="fault-finder.webmanifest?v=1">', page)
         page = re.sub(r'<link rel="apple-touch-icon"[^>]*>', f'<link rel="apple-touch-icon" href="icons/{IP}apple-touch-icon.png?v=1">', page)
         page = page.replace('<h2 id="about-title">Order of Operations: Circuit Builder</h2>', '<h2 id="about-title">Order of Operations: Fault Finder</h2>')
         # its O³ mark in the title bar and the About box, in coral
@@ -114,7 +114,7 @@ def build() -> Path:
         import shutil, json
         shutil.copytree(SRC / ICONS, OUT.parent / "icons", dirs_exist_ok=True)
         name = "Order of Operations: Fault Finder" + (" (Demo)" if DEMO else "")
-        man = {"name": name, "short_name": "Fault Finder Demo" if DEMO else "Fault Finder", "id": "./?app=troubleshooter" + ("-demo" if DEMO else ""), "start_url": "./", "scope": "./",   # (as Print Builder: installs from the folder's own address, with or without index.html)
+        man = {"name": name, "short_name": "Fault Finder Demo" if DEMO else "Fault Finder", "id": "./?app=fault-finder" + ("-demo" if DEMO else ""), "start_url": "./", "scope": "./",   # (as Print Builder: installs from the folder's own address, with or without index.html)
               
                "display": "standalone", "background_color": "#1c1d1f", "theme_color": "#9be03a" if DEMO else "#1c1d1f",
                "description": "Find and fix the faults planted in a circuit with a meter, as a technician would, for the Order of Operations troubleshooting class.",
@@ -122,7 +122,7 @@ def build() -> Path:
                          {"src": f"icons/{IP}icon-512.png?v=1", "sizes": "512x512", "type": "image/png", "purpose": "any"},
                          {"src": f"icons/{IP}maskable-512.png?v=1", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
                          {"src": f"icons/{IP}icon.svg?v=1", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]}
-        (OUT.parent / "troubleshooter.webmanifest").write_text(json.dumps(man, indent=1), encoding="utf-8")
+        (OUT.parent / "fault-finder.webmanifest").write_text(json.dumps(man, indent=1), encoding="utf-8")
         return OUT
     # the app icons and the web app manifest go next to it (for the website: installing it as an app)
     import shutil

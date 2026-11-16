@@ -5,9 +5,10 @@ Technology at Illinois Central College.
 
 - **Circuit Builder**: build a ladder circuit and run it. Open `Circuit_Builder.html`, or the site's front page.
 - **Print Builder**: draw NEMA wiring diagrams and check them. Open `print-builder/index.html`.
+- **Fault Finder**: find the faults planted in a circuit with a meter, as a technician would. Open `fault-finder/index.html`.
 
 Each one is a single page that works in any modern browser, online or from a USB stick. New features are tried out
-first in the demos (`demo/` and `print-builder/demo/`).
+first in the demos (`demo/`, `print-builder/demo/` and `fault-finder/demo/`).
 
 ## License
 

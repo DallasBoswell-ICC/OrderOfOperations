@@ -2,7 +2,7 @@
 
    Run after every change:   node tests/ts-tests.js [--demo]        (build first: python3 build.py --ts [--demo])
 
-   Each check opens the built page (dist/troubleshooter/index.html, or its demo) in a headless browser, as the
+   Each check opens the built page (dist/fault-finder/index.html, or its demo) in a headless browser, as the
    Circuit Builder's checks do (tests/run-tests.js). */
 const path = require('path');
 const fs = require('fs');
@@ -10,7 +10,7 @@ const os = require('os');
 const { chromium } = require('playwright');
 
 const DEMO = process.argv.includes('--demo');
-const PAGE = 'file://' + path.resolve(__dirname, '..', 'dist', 'troubleshooter', ...(DEMO ? ['demo'] : []), 'index.html');
+const PAGE = 'file://' + path.resolve(__dirname, '..', 'dist', 'fault-finder', ...(DEMO ? ['demo'] : []), 'index.html');
 const results = [];
 let browser;
 
@@ -69,13 +69,13 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     // its own icons (coral, FAULTS; the demo's with the green DEMO corner) and its own app manifest, next to the page
     const dir = path.dirname(PAGE.replace('file://', '')), pre = DEMO ? 'tsd-' : 'ts-';
     for (const f of ['icon-192.png', 'icon-512.png', 'maskable-512.png', 'apple-touch-icon.png', 'favicon-32.png', 'icon.svg']) if (!fs.existsSync(path.join(dir, 'icons', pre + f))) out.push('missing icon ' + pre + f);
-    let man = {}; try { man = JSON.parse(fs.readFileSync(path.join(dir, 'troubleshooter.webmanifest'), 'utf8')); } catch (e) { out.push('no manifest'); }
-    if (man.start_url !== './' || man.scope !== './' || man.id !== './?app=troubleshooter' + (DEMO ? '-demo' : '')) out.push('install address: ' + [man.id, man.start_url, man.scope]);
+    let man = {}; try { man = JSON.parse(fs.readFileSync(path.join(dir, 'fault-finder.webmanifest'), 'utf8')); } catch (e) { out.push('no manifest'); }
+    if (man.start_url !== './' || man.scope !== './' || man.id !== './?app=fault-finder' + (DEMO ? '-demo' : '')) out.push('install address: ' + [man.id, man.start_url, man.scope]);
     if (man.short_name !== (DEMO ? 'Fault Finder Demo' : 'Fault Finder') || !/^Order of Operations: Fault Finder/.test(man.name) || !(man.icons || []).every(i => fs.existsSync(path.join(dir, i.src.split('?')[0])))) out.push('manifest: ' + JSON.stringify(man).slice(0, 200));
     const svgI = fs.readFileSync(path.join(dir, 'icons', pre + 'icon.svg'), 'utf8');
     if (!/#FF6F59/.test(svgI) || /#FFC000/.test(svgI) || DEMO !== /#9BE03A/.test(svgI)) out.push('icon colours');
     const head = await page.evaluate(() => ({ man: document.querySelector('link[rel=manifest]').getAttribute('href'), apple: document.querySelector('link[rel=apple-touch-icon]').getAttribute('href'), fav: document.querySelector('link[rel=icon]').href, about: document.getElementById('about-title').textContent, logo: document.querySelector('.titlebar .logo').innerHTML }));
-    if (!/troubleshooter\.webmanifest/.test(head.man) || !head.apple.includes(pre + 'apple-touch-icon') || !/FF6F59/.test(decodeURIComponent(head.fav))) out.push('page head: ' + JSON.stringify({ ...head, fav: '', logo: '' }));
+    if (!/fault-finder\.webmanifest/.test(head.man) || !head.apple.includes(pre + 'apple-touch-icon') || !/FF6F59/.test(decodeURIComponent(head.fav))) out.push('page head: ' + JSON.stringify({ ...head, fav: '', logo: '' }));
     if (head.about !== 'Order of Operations: Fault Finder' || !/FF6F59/.test(head.logo)) out.push('About title or title-bar logo');
     // every group's buttons centred across and down the group (both tabs)
     const off = await page.evaluate(() => { const out = [];
