@@ -860,6 +860,44 @@ let passed = 0, failed = 0;
     return out;
   });
 
+  // ---- O³ link (Dallas, 16 Nov 2026): Circuit Builder and Print Builder open each other's work
+  const SEAL = {"app":"order-of-operations-circuit-builder","v":1,"name":"Seal In","w":880,"parts":[["btn",120,200,"D",1,0,"FF9600"],["btn",300,200,"A",0,0,"FF0032"],["con",300,300,"X",0,1,""],["coil",700,200,"X",0,1,"FFDC00"]],"wires":[[0,200,80,200],[160,200,260,200],[340,200,640,200],[760,200,880,200],[220,300,260,300],[340,300,380,300],[220,200,220,300],[380,200,380,300]]};
+
+  await check('O³ link: the terminal table shared with Circuit Builder matches where Print Builder\'s parts really join (every symbol)', async p => {
+    return p.evaluate(() => Object.keys(LIB).filter(t => t !== 'rail').flatMap(t => { const q = { id: 'q', t, x: 0, y: 0, rot: 0 }; const got = JSON.stringify(termsOf(t).map((_, i) => termPos(q, i))), want = JSON.stringify(LINK_PB_TERMS[t] || null); return got === want ? [] : [t + ': table ' + want + ', Print Builder ' + got]; }));
+  });
+
+  await check('O³ link: Open takes a circuit saved in Circuit Builder and draws it as a print: L1 and L2 rails, its parts tagged, every wire joined, a note of what was kept, and the rungs spread out', async p => {
+    const out = [];
+    await p.evaluate(async d => { await openFile(new File([JSON.stringify(d)], 'Seal In.json')); }, SEAL);
+    const r = await p.evaluate(() => [$('link-dlg').open, fileName(), S.parts.map(q => q.t + ':' + (q.tag || q.label)).sort().join(' '), ISSUES.filter(i => i.sev === 'e').map(i => i.title).join('; '), [...new Set(S.parts.filter(q => q.t !== 'rail').map(q => q.y))].sort((a, b) => a - b).join(), !!doc.link]);
+    if (!r[0]) out.push('no note on arriving');
+    if (r[1] !== 'Seal In') out.push('title: ' + r[1]);
+    if (r[2] !== 'coil:CR1 con_no:CR1 pb_nc:PB1 pb_no:PB2 rail:L1 rail:L2') out.push('parts: ' + r[2]);
+    if (r[3]) out.push('Check Print: ' + r[3]);
+    const ys = r[4].split(',').map(Number); if (ys.length !== 2 || ys[1] - ys[0] < 160) out.push('rung and branch rows: ' + r[4]);
+    if (!r[5]) out.push('the circuit is not kept with the print');
+    return out;
+  });
+
+  await check('O³ link: Save ▾ → Open in Circuit Builder hands the print over in a new tab; a page opened for a circuit draws it, once', async p => {
+    const out = [];
+    const h = await p.evaluate(() => { let url = null; window.open = u => { url = u; return {}; }; $('save-more').click(); const shown = !$('save-menu').hidden && !!$('open-cb-btn'); $('open-cb-btn').click(); const s = JSON.parse(localStorage.getItem('o3-link:handoff')); return [url, shown, s && s.kind, s && s.data.kind, $('save-menu').hidden]; });
+    if (!/Circuit_Builder\.html\?from=link$/.test(h[0] || '')) out.push('opens: ' + h[0]);
+    if (!h[1]) out.push('not in the Save menu');
+    if (h[2] !== 'print' || h[3] !== 'o3-print') out.push('handed over: ' + h.slice(2, 4));
+    if (!h[4]) out.push('the menu stayed open');
+    await p.evaluate(d => localStorage.setItem('o3-link:handoff', JSON.stringify({ kind: 'circuit', t: Date.now(), data: d })), SEAL);
+    await p.goto(PAGE + '?from=link'); await p.waitForTimeout(400);
+    const g = await p.evaluate(() => [$('link-dlg').open, S.parts.filter(q => q.t === 'coil').length, localStorage.getItem('o3-link:handoff'), location.search]);
+    if (!g[0] || g[1] !== 1) out.push('opened for a circuit: ' + g.slice(0, 2));
+    if (g[2]) out.push('the hand-over was left in storage');
+    if (g[3]) out.push('the address still says ' + g[3]);
+    await p.reload(); await p.waitForTimeout(300);
+    if (await p.evaluate(() => $('link-dlg').open)) out.push('drawn again on reload');
+    return out;
+  });
+
   await b.close();
   console.log(`\n${passed} of ${passed + failed} checks passed.`);
   process.exit(failed ? 1 : 0);

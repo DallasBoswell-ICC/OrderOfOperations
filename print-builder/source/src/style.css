@@ -327,3 +327,9 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .shd { padding: 6px 8px; background: transparent; color: #dfe4e8; font-size: 12px; border-radius: 6px; } .shd:hover { background: #2d3136; }
 .psub .pg { padding: 0 5px 6px; } .pg[hidden] { display: none; }
 .pcat .phd .pc { color: #9aa3ab; }
+
+/* the note on a circuit opened from Circuit Builder */
+.link-dlg { width: min(560px, 94vw); }
+.link-dlg h4 { margin: 10px 0 2px; font-size: 14px; }
+.link-dlg ul { margin: 0 0 4px 18px; padding: 0; font-size: 13px; color: #cfd3d8; max-height: 34vh; overflow: auto; }
+.link-dlg p { margin: 0; font-size: 13.5px; }

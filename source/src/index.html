@@ -373,16 +373,26 @@
     <span class="label">Or save it as a simulator</span>
     <div class="dlg-row"><button type="button" id="save-sim">Save as simulator</button><span class="hint">A page of its own that opens straight into Run mode: students can press the buttons, change the speed and reset it, but cannot change the circuit. One file, nothing to install. (To change it later, open the simulator file here.)</span></div>
     <div class="dlg-sep"></div>
+    <span class="label">Or open it in Print Builder</span>
+    <div class="dlg-row"><button type="button" id="save-pb">Open in Print Builder</button><span class="hint">Opens Print Builder in a new tab with this circuit drawn as a print, ready to tidy up and print. Bring it back with Open in Circuit Builder there: anything only Circuit Builder knows (colours, faults, process values) comes back with it.</span></div>
+    <div class="dlg-sep"></div>
     <span class="label">Or share it as a code</span>
     <textarea id="save-code" readonly rows="3" aria-label="Circuit code"></textarea>
     <div class="dlg-row"><button type="button" id="copy-code">Copy code</button><span class="hint" id="copy-msg">Paste it into an email, a document or your class page. Anyone can open it with Open → Paste a code.</span></div>
     <div class="dlg-end"><button value="close">Done</button></div>
   </form>
 </dialog>
+<dialog id="link-dlg" class="link-dlg" aria-labelledby="link-title">
+  <form method="dialog" class="dlg">
+    <h2 id="link-title">Opened from Print Builder</h2>
+    <div id="link-body"></div>
+    <div class="dlg-end"><button value="close" class="primary">OK</button></div>
+  </form>
+</dialog>
 <dialog id="open-dlg" aria-labelledby="open-title">
   <form method="dialog" class="dlg">
     <h2 id="open-title">Open a circuit</h2>
-    <div class="dlg-row"><button type="button" class="primary" id="open-file">Choose a file…</button><span class="hint">A circuit saved with Save, or a simulator made with Save as simulator (you can also drop the file onto the panel).</span></div>
+    <div class="dlg-row"><button type="button" class="primary" id="open-file">Choose a file…</button><span class="hint">A circuit saved with Save, a simulator made with Save as simulator, or a print from Print Builder (you can also drop the file onto the panel).</span></div>
     <input id="open-input" type="file" accept=".json,application/json,.html,text/html" hidden>
     <div class="dlg-sep"></div>
     <span class="label">Or paste a circuit code</span>

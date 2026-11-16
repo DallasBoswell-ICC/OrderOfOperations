@@ -506,9 +506,28 @@ async function saveToFile(asNew) {
     return 'Could not save: ' + (e && e.message || e);
   }
 }
+// ---- Circuit Builder's work (O³ link): a circuit, drawn as a print, and a note of what changed to fit
+const LINK_DEMO = 'oo-print-builder:'.includes('-demo');   // (the demo build's storage keys say -demo: it opens the demo Circuit Builder)
+const CB_URL = LINK_DEMO ? '../../demo/Circuit_Builder.html' : '../Circuit_Builder.html';
+const isCircuit = d => d && !d.kind && Array.isArray(d.parts) && Array.isArray(d.wires);
+function openCircuit(d, fname) {
+  const r = circuitToPrint(d, { uid, defaultTB, tidy });
+  if (fname && !d.name) { const tf = r.doc.tb.fields.find(f => /title/i.test(f.label)); if (tf) tf.value = fname; }
+  const dd = withDrawnBy(r.doc); dd.link = r.doc.link;
+  snapshot(); const keep = UNDO.slice(); loadDoc(dd); UNDO.push(...keep); forgetFile(); refresh(true); fitZoom();
+  const esc = t => String(t).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+  const n = r.notes, list = (h, xs) => xs.length ? `<h4>${h} (${xs.length})</h4><ul>${xs.map(x => '<li>' + esc(x) + '</li>').join('')}</ul>` : '';
+  const np = dd.sheets.reduce((a, s) => a + s.parts.filter(p => p.t !== 'rail').length, 0);
+  $('link-body').innerHTML = `<p>“${esc(fileName())}”: ${np} parts on ${dd.sheets.length} sheet${dd.sheets.length > 1 ? 's' : ''}, drawn as a print. Tidy it up and print it; Save ▾ → Open in Circuit Builder takes it back.</p>` + list('Changed to fit Print Builder', n.changed) + list('Kept with the circuit, not drawn', n.left);
+  $('link-dlg').showModal();
+  say('Opened ' + fileName() + ' from Circuit Builder.');
+}
+$('link-ok').addEventListener('click', () => $('link-dlg').close());
+$('open-cb-btn').addEventListener('click', e => { e.stopPropagation(); closeMenus(); say(linkHandOff('print', doc, CB_URL) || 'Opened in Circuit Builder, in a new tab.'); });
 async function openFile(f, handle) {
-  try { const d = JSON.parse(await f.text()); snapshot(); const keep = UNDO.slice(); loadDoc(d); UNDO.push(...keep); fileHandle = handle || null; refresh(true); fitZoom(); markSaved(); say('Opened ' + f.name + (handle ? '. Save writes your changes back into it.' : '')); }
-  catch (err) { alert('That file could not be opened: it is not a Print Builder file (' + err.message + ').'); }
+  try { const d = JSON.parse(await f.text());
+    if (isCircuit(d)) { openCircuit(d, f.name.replace(/\.json$/i, '')); return; } snapshot(); const keep = UNDO.slice(); loadDoc(d); UNDO.push(...keep); fileHandle = handle || null; refresh(true); fitZoom(); markSaved(); say('Opened ' + f.name + (handle ? '. Save writes your changes back into it.' : '')); }
+  catch (err) { alert('That file could not be opened: it is not a Print Builder print or a Circuit Builder circuit (' + err.message + ').'); }
 }
 async function pickAndOpen() {
   if (canUseFiles()) {
@@ -612,9 +631,13 @@ function start() {
   $('show-wn').checked = SHOW.wn; $('show-rn').checked = SHOW.rn; $('show-xr').checked = SHOW.xr;
   let d = null; try { d = JSON.parse(localStorage.getItem(AUTOSAVE) || 'null'); } catch (_) {}
   try { if (d) loadDoc(d); else loadDoc(withDrawnBy(template('starter'))); } catch (_) { loadDoc(withDrawnBy(template('blank'))); }
+  // (opened by Circuit Builder's Open in Print Builder: its circuit, drawn as a print)
+  const h = linkTake(); let fromCB = null;
+  if (h && h.kind === 'circuit') fromCB = h.data;
   try { const z = parseFloat(localStorage.getItem(UIKEY)); if (z) setUiSize(z); } catch (_) {}
   $('ui-size').addEventListener('change', e => setUiSize(parseFloat(e.target.value)));
   buildPalette(); palGrip(); refresh(true); setTool('select'); requestAnimationFrame(fitZoom);
+  if (fromCB) try { openCircuit(fromCB); } catch (e) { say('The circuit from Circuit Builder could not be drawn: ' + e.message); }
 }
 // (start() is called at the very end, in shell.js, once every script has run)
 

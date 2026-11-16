@@ -586,3 +586,9 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
 .ts-sign-dlg .ts-sg-lock { margin: 0 0 10px; color: #ff9d8f; font-weight: 600; }
 .ts-sign-dlg .ts-sg-go:disabled { opacity: .45; cursor: not-allowed; }
 .ts-sign-dlg .dlg-end { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+
+/* the note on a print opened from Print Builder: what changed to fit, and what was left out */
+.link-dlg { width: min(560px, calc(100vw - 32px)); }
+.link-dlg h3 { margin: 8px 0 2px; font-size: .92rem; color: #fff; }
+.link-dlg ul { margin: 0 0 4px 18px; padding: 0; font-size: .86rem; color: #cfcfcf; max-height: 34vh; overflow: auto; }
+.link-dlg p { margin: 0; font-size: .88rem; }

@@ -184,11 +184,36 @@ async function openFile(file, handle) {
     forgetFile(); return;
   }
   let d; try { d = JSON.parse(text); } catch (_) { throw new Error(/^\s*</.test(text) ? 'That page is not a simulator saved from the Circuit Builder.' : 'That file is not a saved circuit.'); }
+  // a print from Print Builder: built as a circuit (a new one: Save makes a file of its own)
+  if (d && d.kind === 'o3-print') { openFromPrint(d, file.name.replace(/(\.o3print)?\.json$/i, '')); forgetFile(); return; }
   const c = readCircuit(d);
   if (!c.name) c.name = file.name.replace(/\.json$/i, '');
   useCircuit(c, `Opened ${c.name || 'the circuit'}.`);
   fileHandle = handle || null; markSaved();
 }
+// ---- Print Builder's work (O³ link): a print, built as a circuit, and a note of what changed to fit
+const LINK_DEMO = 'oo-circuit-builder:'.includes('-demo');   // (the demo build's storage keys say -demo: it opens the demo Print Builder)
+const PB_URL = LINK_DEMO ? '../print-builder/demo/' : 'print-builder/';
+function openFromPrint(doc, fname) {
+  const r = printToCircuit(doc), c = readCircuit(r.data);
+  const title = (((doc.tb || {}).fields || []).find(f => /title/i.test(f.label)) || {}).value;
+  if (!c.name || (!r.notes.same && c.name === 'Print')) c.name = title || fname || 'Circuit';
+  useCircuit(c, r.notes.same ? `Opened ${c.name}, back from Print Builder unchanged.` : `Opened ${c.name} from Print Builder.`);
+  showLinkNote(c, r.notes);
+}
+function showLinkNote(c, n) {
+  const esc = t => String(t).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+  const list = (h, xs) => xs.length ? `<h3>${h} (${xs.length})</h3><ul>${xs.map(x => '<li>' + esc(x) + '</li>').join('')}</ul>` : '';
+  document.getElementById('link-body').innerHTML = `<p>“${esc(c.name)}”: ${c.parts.length} parts and ${c.wires.length} wires, ${n.same ? 'exactly as it was before it went to Print Builder.' : 'built as a circuit you can run.'}</p>`
+    + list('Changed to fit Circuit Builder', n.changed) + list('Left out, or missing on the print', n.left)
+    + (n.same ? '' : '<p class="hint" style="margin-top:8px">Check the timers’ times and the lights’ colours on each part’s tab before running it.</p>');
+  document.getElementById('link-dlg').showModal();
+}
+document.getElementById('save-pb').addEventListener('click', () => {
+  const m = linkHandOff('circuit', circuitData(), PB_URL);
+  document.getElementById('copy-msg').textContent = m || 'Opened in Print Builder, in a new tab.';
+  if (!m) { saveDlg.close(); toast('Opened in Print Builder, in a new tab.'); }
+});
 async function pickAndOpen() {
   if (canUseFiles()) {
     try { const [h] = await window.showOpenFilePicker({ types: FILE_TYPES }); await openFile(await h.getFile(), h); return true; }

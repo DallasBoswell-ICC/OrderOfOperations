@@ -66,6 +66,9 @@ MODULES = [
     "troubleshooter.js", # Troubleshooter: its page (ribbon, work order, six steps, test log, assignments)
 ]
 
+# shared with Print Builder (../shared): the two programs opening each other's work
+SHARED = ["o3link-tables.js", "o3link.js"]
+
 
 def build() -> Path:
     page = (SRC / "index.html").read_text(encoding="utf-8")
@@ -75,6 +78,8 @@ def build() -> Path:
     if missing:
         raise SystemExit(f"These scripts are not listed in MODULES in build.py: {', '.join(missing)}")
     js = "\n".join(f"/* ---- js/{name} ---- */\n" + (SRC / "js" / name).read_text(encoding="utf-8") for name in MODULES)
+    # (and, ahead of them, what it shares with Print Builder: opening each other's work)
+    js = "\n".join(f"/* ---- shared/{name} ---- */\n" + (ROOT.parent / "shared" / name).read_text(encoding="utf-8") for name in SHARED) + "\n" + js
     # the scripts sit inside the page's <script> tag: the text "</script" anywhere in them would end it early
     if "</script" in js.lower():
         raise SystemExit("A script contains </script, which would end the page's <script> early: write it <\\/script")

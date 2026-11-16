@@ -38,7 +38,7 @@
                   </div></div>
       <button class="btn" id="open-btn">Open</button>
       <div class="menuwrap split"><button class="btn" id="save-btn">Save</button><button class="btn more" id="save-more" title="More ways to save" aria-haspopup="menu">▾</button>
-        <div class="dmenu" id="save-menu" hidden><button id="saveas-btn">Save As a New File… <span class="k">Ctrl+Shift+S</span></button></div></div>
+        <div class="dmenu" id="save-menu" hidden><button id="saveas-btn">Save As a New File… <span class="k">Ctrl+Shift+S</span></button><button id="open-cb-btn" title="Opens Circuit Builder in a new tab with this print built as a circuit you can run">Open in Circuit Builder</button></div></div>
       <button class="btn" id="print-btn">Print</button>
       <label class="uisz" title="How big the buttons, menus and writing are (the sheet has its own zoom)">Size
         <select id="ui-size"><option value="1">Small</option><option value="1.15" selected>Medium</option><option value="1.3">Large</option><option value="1.5">Extra Large</option></select></label>
@@ -161,6 +161,7 @@
   <p class="cp-err" id="cp-err" hidden>Each side must be 4 to 48 inches (102 to 1219 mm).</p>
   <div class="acts"><button type="button" class="btn" id="cp-cancel">Cancel</button><button type="submit" class="btn primary">Use This Size</button></div>
 </form></dialog>
+<dialog id="link-dlg" class="dlg link-dlg" aria-labelledby="link-title"><h3 id="link-title">Opened from Circuit Builder</h3><div id="link-body"></div><div class="dlg-foot"><span></span><button class="btn" id="link-ok">OK</button></div></dialog>
 <dialog id="tb-dlg" class="dlg">
   <h3>Title Block</h3>
   <p class="sub">Change any box, add your own, or take one away. Widths are out of 12 across the sheet. Type <code>{sheet}</code> for “1 of 2”, <code>{date}</code> for today.</p>

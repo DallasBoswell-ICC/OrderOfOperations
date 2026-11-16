@@ -102,6 +102,9 @@ if (LOCKED) {
 } else if (!TS_MODE) {   // (the Troubleshooter starts itself: see troubleshooter.js)
   if (!restoreAutosave()) loadPreset('andor');   // carry on with the circuit from last time, if there is one
   fit(true); draw();
+  // (opened by Print Builder's Open in Circuit Builder: its print, built as a circuit)
+  const h = linkTake();
+  if (h && h.kind === 'print') try { openFromPrint(h.data); } catch (e) { say('The print from Print Builder could not be built: ' + e.message); }
 }
 showOverview();
 requestAnimationFrame(frame);

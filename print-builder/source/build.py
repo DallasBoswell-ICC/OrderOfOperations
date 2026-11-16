@@ -36,6 +36,9 @@ MODULES = [
     "shell.js",      # Print Preview, tooltips, folding the ribbon, full screen, dropping a file in; then starts it all
 ]
 
+# shared with Circuit Builder (../../shared): the two programs opening each other's work
+SHARED = ["o3link-tables.js", "o3link.js"]
+
 
 def build() -> Path:
     page = (SRC / "index.html").read_text(encoding="utf-8")
@@ -45,6 +48,7 @@ def build() -> Path:
     if missing:
         raise SystemExit(f"These scripts are not listed in MODULES in build.py: {', '.join(missing)}")
     js = "\n".join(f"/* ---- js/{n} ---- */\n" + (SRC / "js" / n).read_text(encoding="utf-8") for n in MODULES)
+    js = "\n".join(f"/* ---- shared/{n} ---- */\n" + (ROOT.parent.parent / "shared" / n).read_text(encoding="utf-8") for n in SHARED) + "\n" + js
     if "</script" in js.lower():
         raise SystemExit("A script contains </script, which would end the page's <script> early")
     icon = "data:image/svg+xml," + quote(" ".join((SRC / "icons" / "pb-favicon.svg").read_text(encoding="utf-8").split()), safe=" =:/'(),")

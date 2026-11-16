@@ -24,6 +24,7 @@ async function openPage(width = 1300, height = 1000, context) {
   return page;
 }
 async function check(name, fn) {
+  if (process.env.ONLY && !name.includes(process.env.ONLY)) return;   // (ONLY=some words: just the checks whose names have them)
   const t0 = Date.now();
   let page;
   try {
@@ -3226,6 +3227,110 @@ const DEF_CIRCUIT = `
     for (let i = 0; i < 60 && !await on('CR26'); i++) await page.waitForTimeout(50);
     if (!await on('CR22')) out.push('drill 1 cycle relay CR22 not in');
     if (!await on('CR26')) out.push('drill 1 extend relay CR26 not in (its selector\'s AUTO drawing feeds wire 105 from below)');
+    return out;
+  });
+
+  // ---- O³ link (Dallas, 16 Nov 2026): Circuit Builder and Print Builder open each other's work
+  const PB_PAGE = 'file://' + path.resolve(__dirname, '..', '..', 'print-builder', 'source', 'dist', ...(process.argv.includes('--demo') ? ['demo'] : []), 'Print_Builder.html');
+  // (a page of Print Builder alongside, for its ready-made prints and for drawing circuits as prints)
+  const withPB = async (page, fn) => { const pb = await page.context().newPage(); const errs = []; pb.on('pageerror', e => errs.push(e.message)); await pb.goto(PB_PAGE); await pb.waitForTimeout(300); try { return await fn(pb); } finally { if (errs.length) page.errors.push(...errs.map(e => 'Print Builder: ' + e)); await pb.close(); } };
+  // the nets a circuit makes: which part terminals are joined (by wires, and continuations of one number)
+  const NETSIG = `const netSig = d => {
+    const par = new Map(), f = k => { if (!par.has(k)) par.set(k, k); let r = k; while (par.get(r) !== r) r = par.get(r); par.set(k, r); return r; }, u = (a, b) => { const A = f(a), B = f(b); if (A !== B) par.set(A, B); };
+    for (const w of d.wires) { const [x1, y1, x2, y2] = w.map(Number), n = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) / 20; let prev = null; for (let i = 0; i <= n; i++) { const k = (x1 + (x2 - x1) * i / n) + ',' + (y1 + (y2 - y1) * i / n); if (prev) u(prev, k); else f(k); prev = k; } }
+    const T = [], J = new Map();
+    for (const a of d.parts) { const rot = ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(a[0]) ? (Math.round(+a[7]) || 0) : 0;
+      linkCbTerms(a[0] === 'est' ? 'btn' : a[0], +a[1], +a[2], rot).forEach((q, i) => { const k = q.join(','); f(k); if (a[0] === 'jmp') { if (J.has(a[3])) u(k, J.get(a[3])); else J.set(a[3], k); } else T.push([a[0] + '@' + a[1] + ',' + a[2] + '#' + i, k]); }); }
+    const g = new Map(); for (const [n, k] of T) { const r = f(k); if (!g.has(r)) g.set(r, []); g.get(r).push(n); }
+    return [...g.values()].map(x => x.sort().join(' ')).sort().join('\\n'); };`;
+
+  await check('O³ link: the terminal table shared with Print Builder matches where Circuit Builder\'s parts really join (every part, every turn)', async page => {
+    return page.evaluate(() => {
+      const out = [];
+      for (const key of Object.keys(LINK_CB_TERMS)) {
+        const [t, r] = key.split('@'), row = [t, 400, 400, t === 'jmp' ? '1' : 'A', 0, 1, ''];
+        if (r) row.push(+r);
+        const p = readCircuit({ parts: [row], wires: [] }).parts[0], got = JSON.stringify(terms(p).map(([x, y]) => [x - 400, y - 400])), want = JSON.stringify(LINK_CB_TERMS[key]);
+        if (got !== want) out.push(key + ': table ' + want + ', Circuit Builder ' + got);
+      }
+      return out;
+    });
+  });
+
+  await check('O³ link: Print Builder\'s motor starter print opens as a circuit that runs: START pulls in M and the motor runs, STOP drops it out', async page => {
+    const print = await withPB(page, pb => pb.evaluate(() => template('starter')));
+    const out = [], r = await page.evaluate(d => { openFromPrint(d, 'Starter'); document.getElementById('link-dlg').close(); return [parts.length, parts.filter(p => p.t === 'btn').map(p => p.label).sort().join(), document.getElementById('link-body').textContent]; }, print);
+    if (r[0] < 15) out.push('only ' + r[0] + ' parts');
+    if (r[1] !== 'START,STOP') out.push('buttons: ' + r[1]);
+    if (!/built as a circuit you can run/.test(r[2])) out.push('arrival note: ' + r[2]);
+    await page.evaluate(() => { setMode(true); setSpeed(10); }); await page.waitForTimeout(800);
+    const st = () => page.evaluate(() => [!!coilOn[parts.find(p => p.t === 'coil').id], Object.values(MOT).map(m => m.st).join()].join());
+    const push = async l => { const L = await page.evaluate(l => parts.find(p => p.label === l).L, l); await page.evaluate(L => press(L, true), L); await page.waitForTimeout(500); await page.evaluate(L => press(L, false), L); await page.waitForTimeout(800); };
+    let s = await st(); if (s !== 'false,off') out.push('at first: ' + s);
+    await push('START'); s = await st(); if (s !== 'true,run') out.push('after START: ' + s);
+    await push('STOP'); s = await st(); if (s !== 'false,off') out.push('after STOP: ' + s);
+    return out;
+  });
+
+  await check('O³ link: every ready-made circuit and the drill station go to Print Builder and come back; unchanged, exactly as they were; changed on the print, the same parts in the same places, joined the same way', async page => {
+    const out = [];
+    await page.evaluate(NETSIG + 'window.netSig = netSig;');
+    const circs = await page.evaluate(() => Object.keys(PRESETS).map(n => { loadPreset(n); return [n, circuitData()]; }));
+    circs.push(['drill station', JSON.parse(require('fs').readFileSync(path.join(__dirname, 'fixtures', 'drill-station.json'), 'utf8'))]);
+    const prints = await withPB(page, pb => pb.evaluate(cs => cs.map(([n, d]) => { openCircuit(d); $('link-dlg').close(); return [n, JSON.parse(JSON.stringify(doc)), checkPrint().filter(i => /without reaching anything/.test(i.title)).length]; }), circs));
+    for (let i = 0; i < circs.length; i++) {
+      const [n, d] = circs[i], [, print, loose] = prints[i];
+      const r = await page.evaluate(([print, d]) => {
+        const a = printToCircuit(print), same = a.notes.same && JSON.stringify(a.data) === JSON.stringify(d);
+        const ch = JSON.parse(JSON.stringify(print)); ch.link.fp = 'changed'; const b = printToCircuit(ch);
+        const key = r => r.slice(0, 3).join(','), A = d.parts.map(key).sort().join(' '), B = b.data.parts.map(key).sort().join(' ');
+        return [same, A === B, netSig(d) === netSig(b.data)];
+      }, [print, d]);
+      if (!r[0]) out.push(n + ': not exactly the same back');
+      if (!r[1]) out.push(n + ': changed print, parts not where they were');
+      if (!r[2]) out.push(n + ': changed print, joined differently');
+      if (loose && n !== 'fwdrev') out.push(n + ': ' + loose + ' loose wire ends on the print');
+    }
+    if (prints.find(p => p[0] === 'drill station')[1].sheets.length < 2) out.push('the drill station should run over several sheets');
+    return out;
+  });
+
+  await check('O³ link: a print made from a circuit keeps what only Circuit Builder knows (colours, planted faults, a work order) when it comes back changed; a light\'s colour named on the print wins', async page => {
+    const out = [];
+    const d = await page.evaluate(() => { loadPreset('traffic'); const c = circuitData(); c.parts.find(a => a[0] === 'coil')[6] = '7030A0'; c.fl = [[c.parts.findIndex(a => a[0] === 'coil'), 'open']]; c.wo = 'Lights stay dark'; return c; });
+    const print = await withPB(page, pb => pb.evaluate(d => { openCircuit(d); $('link-dlg').close(); const p = doc.sheets[0].parts.find(q => q.t === 'pl' && q.desc === 'RED'); p.desc = 'BLUE'; const c = doc.sheets[0].parts.find(q => q.t === 'coil'); c.x += 0; return JSON.parse(JSON.stringify(doc)); }, d));
+    const r = await page.evaluate(p => { const a = printToCircuit(p).data; return [a.notes, a.parts.find(x => x[0] === 'coil')[6], JSON.stringify(a.fl), a.wo, a.parts.filter(x => x[0] === 'lamp').map(x => x[6]).join()]; }, print);
+    if (r[1] !== '7030A0') out.push('coil colour: ' + r[1]);
+    if (!r[2] || !/open/.test(r[2])) out.push('fault: ' + r[2]);
+    if (r[3] !== 'Lights stay dark') out.push('work order: ' + r[3]);
+    if (!/0070C0/.test(r[4]) || /FF0032/.test(r[4])) out.push('lights: ' + r[4]);
+    return out;
+  });
+
+  await check('O³ link: Open takes a print file from Print Builder (with a note of what changed); Open in Print Builder in the Save box hands the circuit over in a new tab; a page opened for a print builds it', async page => {
+    const out = [];
+    const print = await withPB(page, pb => pb.evaluate(() => { const d = template('starter'); d.sheets[0].parts.push({ id: 'pz', t: 'prs_no', x: 3000, y: 3000, rot: 0, tag: 'PRS1', desc: '' }); return d; }));
+    await page.evaluate(async d => { await openFile(new File([JSON.stringify(d)], 'Motor Starter.o3print.json')); }, print);
+    const r = await page.evaluate(() => [document.getElementById('link-dlg').open, document.getElementById('link-body').textContent, circuitName, parts.some(p => p.t === 'lsw')]);
+    if (!r[0]) out.push('no arrival note');
+    if (!/proximity switch → limit switch LS1/.test(r[1])) out.push('note: ' + r[1]);
+    if (r[2] !== 'Motor Starter' && r[2] !== 'Basic Motor Starter') out.push('name: ' + r[2]);
+    if (!r[3]) out.push('the proximity switch did not come in as a limit switch');
+    await page.evaluate(() => document.getElementById('link-dlg').close());
+    // the Save box: Open in Print Builder (the new tab stubbed: just where it goes and what is handed over)
+    const h = await page.evaluate(() => { let url = null; window.open = u => { url = u; return {}; }; document.getElementById('save-more').click(); document.getElementById('save-pb').click(); const s = JSON.parse(localStorage.getItem('o3-link:handoff')); return [url, s && s.kind, s && s.data.parts.length === parts.length, document.getElementById('save-dlg').open]; });
+    if (!/print-builder\/(demo\/)?\?from=link$/.test(h[0] || '')) out.push('opens: ' + h[0]);
+    if (h[1] !== 'circuit' || !h[2]) out.push('handed over: ' + h.slice(1, 3));
+    if (h[3]) out.push('the Save box stayed open');
+    // a page opened for a print: the print handed over, built, and taken out of storage
+    const pg2 = await page.context().newPage(); pg2.on('pageerror', e => page.errors.push(e.message));
+    await page.evaluate(d => localStorage.setItem('o3-link:handoff', JSON.stringify({ kind: 'print', t: Date.now(), data: d })), print);
+    await pg2.goto(PAGE + '?from=link'); await pg2.waitForTimeout(400);
+    const g = await pg2.evaluate(() => [document.getElementById('link-dlg').open, parts.filter(p => p.t === 'mst').length, localStorage.getItem('o3-link:handoff'), location.search]);
+    if (!g[0] || g[1] !== 1) out.push('opened for a print: ' + g.slice(0, 2));
+    if (g[2]) out.push('the hand-over was left in storage');
+    if (g[3]) out.push('the address still says ' + g[3]);
+    await pg2.close();
     return out;
   });
 
