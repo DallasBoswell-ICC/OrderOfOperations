@@ -83,6 +83,11 @@ function printToCircuit(doc) {
     }
     delete doc.link.xk; delete doc.link.xn;
   }
+  // (each sheet centred on its own (from 17 Nov 2026): back to one place across first)
+  if (doc.link && Array.isArray(doc.link.oxs)) { doc = JSON.parse(JSON.stringify(doc)); const ox = doc.link.ox;
+    doc.sheets.forEach((s, k) => { const d = ox - (doc.link.oxs[k] ?? ox); if (!d) return;
+      for (const p of s.parts) p.x += d; for (const q of s.nodes) q.x += d; for (const w of s.wires) w.pts = (w.pts || []).map(q => [q[0] + d, q[1]]); });
+    delete doc.link.oxs; }
   // (laid out rung by rung (from 17 Nov 2026): each place back through its own rung's layout; the uprights between rungs by the pins)
   if (doc.link && doc.link.v === 2 && Array.isArray(doc.link.xb) && Array.isArray(doc.link.oy)) {
     doc = JSON.parse(JSON.stringify(doc));
@@ -91,6 +96,13 @@ function printToCircuit(doc) {
     const at = (k, x, y) => { const gy = y - (oy[Math.min(k, oy.length - 1)] || 0); let b = xb.find(([a, c]) => gy >= a && gy <= c);
       if (!b) b = xb.reduce((best, q) => { const d = gy < q[0] ? q[0] - gy : gy - q[1]; return !best || d < best[0] ? [d, q] : best; }, null)[1];
       return un(b[2], b[3], x - ox) + ox; };
+    // (drawn closer down where a rung was too tall for a sheet: back down first)
+    if (Array.isArray(doc.link.ym)) { const [G, N] = doc.link.ym, uy = (k, y) => { const o = oy[Math.min(k, oy.length - 1)] || 0; return un(G, N, y - o) + o; };
+      doc.sheets.forEach((s, k) => {
+        for (const p of s.parts) { if (p.t === 'rail') { p.y0 = uy(k, p.y0); p.y1 = uy(k, p.y1); continue; } const ts = linkPbTerms(p); p.y = ts.length ? uy(k, ts[0][1]) - (ts[0][1] - p.y) : uy(k, p.y); }
+        for (const q of s.nodes) q.y = uy(k, q.y);
+        for (const w of s.wires) { w.pts = (w.pts || []).map(q => [q[0], uy(k, q[1])]); for (const e of [w.a, w.b]) if (e.r != null && e.y != null) e.y = uy(k, e.y); }
+      }); delete doc.link.ym; }
     doc.sheets.forEach((s, k) => {
       for (const p of s.parts) { if (p.t === 'rail') { p.x = at(k, p.x, p.y0); continue; }
         // (a part placed by its terminals, all in one upright line (a motor, a line in): back by them)
@@ -100,6 +112,14 @@ function printToCircuit(doc) {
     });
     delete doc.link.xb;
   }
+  // (sheets drawn each centred on its own: where every continuation pair between two sheets is shifted alike, the later sheet moved
+  // back in line, so a wire running on over the break comes out straight)
+  if (!(doc.link && doc.link.cb)) { let moved = false; const d2 = JSON.parse(JSON.stringify(doc)); let acc = 0;
+    for (let k = 1; k < d2.sheets.length; k++) { const prev = d2.sheets[k - 1], cur = d2.sheets[k];
+      const ds = prev.parts.filter(p => p.t === 'cnt_out').map(a => { const b = cur.parts.find(q => q.t === 'cnt_in' && q.tag === a.tag); return b ? Math.round(linkPbTerms(a)[0][0] - linkPbTerms(b)[0][0]) : null; }).filter(v => v != null);
+      const dx = ds.length && ds.every(v => v === ds[0]) ? ds[0] : 0; void acc;
+      if (dx) { moved = true; for (const p of cur.parts) p.x += dx; for (const q of cur.nodes) q.x += dx; for (const w of cur.wires) w.pts = (w.pts || []).map(q => [q[0] + dx, q[1]]); } }
+    if (moved) doc = d2; }
   const all = []; doc.sheets.forEach((s, k) => { for (const p of s.parts) all.push({ s, k, p }); });
   const LK = doc.link && doc.link.cb && Array.isArray(doc.link.oy) ? doc.link : null;   // (made from a circuit: its own places, to map back to)
   const power = LK ? LK.cb.pw === 'boxes' : all.some(({ p }) => ['sup', 'xfmr', 'dsc3', 'fdsc3', 'fus3', 'mst3', 'ol3', 'motor', 'src_l1', 'src_l2', 'cb3', 'cb2'].includes(p.t));
@@ -184,7 +204,7 @@ function printToCircuit(doc) {
   // are one under another, so the wire just runs on down)
   const pairDown = new Set();
   for (const a of all) if (a.p.t === 'cnt_out') { const b = all.find(q => q.p.t === 'cnt_in' && q.p.tag === a.p.tag && q.k === a.k + 1); if (!b) continue;
-    const ta = linkPbTerms(a.p)[0], tb = linkPbTerms(b.p)[0]; if (ta && tb && ta[0] === tb[0]) { pairDown.add(a.p); pairDown.add(b.p); } }
+    const ta = linkPbTerms(a.p)[0], tb = linkPbTerms(b.p)[0]; if (ta && tb && Math.abs(ta[0] - tb[0]) < 1) { pairDown.add(a.p); pairDown.add(b.p); } }
   let coilN = 0; const noCoil = [], ownCol = new Set();   // (ownCol: lights whose colour the print names)
   for (const it of all) {
     const { p, k } = it, x = X(p.x), y = Y(k, p.y), pb = linkPbTerms(p).map(q => [X(q[0]), Y(k, q[1])]), name = p.tag || (LIB_NAME_FOR[p.t] || p.t);
@@ -338,7 +358,7 @@ function linkMerge(old, nu, cbi, ownCol = new Set()) {
 function circuitToPrint(d, env) {
   if (!d || typeof d !== 'object' || !Array.isArray(d.parts) || !Array.isArray(d.wires)) throw new Error('That is not a circuit from Circuit Builder.');
   const uid = env.uid, changed = [], left = [], note = (list, s) => { if (!list.includes(s)) list.push(s); };
-  const bars = d.pw !== 'boxes', d0 = d;
+  const bars = d.pw !== 'boxes', d0 = d; let ylink = null;
   // (a ladder: its rungs spread out down the print as far as needed for the tags and names, up to twice as far)
   let sy = 1;
   if (bars) { const ys = [...new Set(d.parts.map(a => +a[2]))].sort((a, b) => a - b), gaps = ys.slice(1).map((y, i) => y - ys[i]).filter(g => g > 0);
@@ -469,16 +489,17 @@ function circuitToPrint(d, env) {
   const leftM = () => { const xs = allX(), m = Math.min(...xs); return 160 + (rails.length && Math.min(...rails.map(r => r.x)) - m < 120 ? 120 : 0); };   // (in from the left edge; more when the L1 rail is the leftmost thing, for its rung numbers)
   // (room on the right for the coils' cross-references: up to three numbers a line, Print Builder wraps the rest)
   const xrefN = new Map(); for (const { o } of made) if (/^(con|tc)_/.test(o.t) || o.t === 'mst3') xrefN.set(o.tag, (xrefN.get(o.tag) || 0) + 1);
-  const xrefW = 46 + 54 * Math.min(3, Math.max(1, ...xrefN.values()));
-  const roomFor = pap => linkDrawW(pap) - leftM() - xrefW;
+  const xrefOf = n => 36 + Math.min(250, n * 54);   // (Print Builder wraps them at 250 across)
+  const xrefW = xrefOf(Math.max(1, ...xrefN.values()));
+  const roomFor = pap => linkDrawW(pap) - Math.max(leftM(), 140) - xrefW - 40;   // (a margin each side, the rung numbers on the left, the cross-references on the right)
   const oneX = o => o.fold ? null : (() => { const ts = linkPbTerms(o); return ts.length && ts.every(q => q[0] === ts[0][0]) ? ts[0][0] : null; })();   // (a part whose terminals are all in one upright line: placed by them)
   // (how far a part's tag and the name under it reach out each side of its middle)
   const LIT = new Set(made.filter(({ o }) => o.inPB).map(({ o }) => o.inPB));
   const noteOf = o => [o.desc, o.t === 'coil' && /^TR/.test(o.tag || '') ? `${o.tof ? 'OFF' : 'ON'}-DELAY ${o.delay || ''} s` : '', o.t === 'sel' ? 'CLOSED: ' + (o.pos || '') : '', o.inPB ? 'IN ' + o.inPB : '', LIT.has(o.tag) ? 'LIGHTED (PL00)' : ''].filter(Boolean).join(' · ');
   const halfW = o => Math.max(40, (o.tag || '').length * 8 + 6, noteOf(o).length * 5.6 + 6);
   // (a terminal joined only along its own row: placed with its part, not on its own. Its part's middle, and how far out it is)
-  let derived = new Map();
-  const mkDerived = () => { derived = new Map(); for (const { o } of made) { if (oneX(o) != null) continue; linkPbTerms(o).forEach((q, i) => { const k = K(...q), ns = [...(E.get(k) || [])]; if (ns.some(n => XY(n)[0] === q[0])) return; derived.set(k, { o, off: q[0] - o.x }); }); } };
+  let derived = new Map(), PREP = new Map();   // (PREP: each rung's places and spacing rules, worked out once)
+  const mkDerived = () => { PREP = new Map(); derived = new Map(); for (const { o } of made) { if (oneX(o) != null) continue; linkPbTerms(o).forEach((q, i) => { const k = K(...q), ns = [...(E.get(k) || [])]; if (ns.some(n => XY(n)[0] === q[0])) return; derived.set(k, { o, off: q[0] - o.x }); }); } };
   mkDerived();
   // (the rungs: groups of rows between lines that nothing crosses but the uprights every rung comes off (or the rails). Each is laid out
   // across on its own, so one rung's spacing never pushes another's; the uprights (the pins) stay in one line down the sheet)
@@ -502,6 +523,14 @@ function circuitToPrint(d, env) {
   // (one rung laid out across: 'proper' keeps the tags, names and wire numbers clear of each other; 'tight' lets parts come as close as
   // their terminals allow. c: how much of the circuit's own gaps is kept. P: where the pins are already)
   const layBand = (band, mode, c, P, pins) => {
+    const ck = band.join('-') + mode + pins.join(','); let pr = PREP.get(ck);
+    if (!pr) { pr = prepBand(band, mode, pins); PREP.set(ck, pr); }
+    const { keys, need } = pr;
+    const n = [P.has(keys[0]) ? Math.max(keys[0], P.get(keys[0])) : keys[0]];
+    for (let j = 1; j < keys.length; j++) { let v = n[j - 1] + Math.max(20, linkSnap((keys[j] - keys[j - 1]) * c)); for (const [i, r] of need[j]) v = Math.max(v, n[i] + r); if (P.has(keys[j])) v = Math.max(v, P.get(keys[j])); n.push(Math.ceil(v / 20 - 1e-9) * 20); }   // (on the grid, never closer than asked)
+    return { keys, n, m: new Map(keys.map((k, i) => [k, n[i]])) };
+  };
+  const prepBand = (band, mode, pins) => {
     const inB = y => y >= band[0] && y <= band[1], M = made.filter(({ o }) => inB(o.y)), PR = mode === 'proper';
     const keySet = new Set(M.map(({ o }) => o.x).concat(pins));
     for (const k of E.keys()) if (!derived.has(k) && inB(XY(k)[1])) keySet.add(XY(k)[0]);
@@ -515,36 +544,42 @@ function circuitToPrint(d, env) {
       linkPbTerms(o).forEach(q => { const k = K(...q), off = q[0] - o.x, away = Math.sign(off) || 1;
         const outs = derived.has(k) ? nb(k, away) : [k];
         for (const n of outs) { const d2 = derived.get(n);
-          if (d2 && d2.o !== o) { const sep = PR ? Math.max(Math.abs(off - d2.off) + 60, hw + halfW(d2.o) + 30) : Math.abs(off - d2.off) + 20;
+          if (d2 && d2.o !== o) { const sep = PR ? Math.max(Math.abs(off - d2.off) + 60, hw + halfW(d2.o) + 30) : Math.max(Math.abs(off - d2.off) + 20, hw + halfW(d2.o) + 12);   // (tighter: the names still clear of each other)
             if (away > 0) req(o.x, d2.o.x, sep); else req(d2.o.x, o.x, sep); continue; }
-          const nx = XY(n)[0], gap = n === k ? 0 : railAt.has(n) ? (PR ? 80 : 60) : (PR ? 60 : 20), r = n === k ? Math.abs(off) : PR ? Math.max(Math.abs(off) + gap, hw + 20) : Math.abs(off) + gap;
+          const nx = XY(n)[0], gap = n === k ? 0 : railAt.has(n) ? (PR ? 80 : 60) : (PR ? 60 : 20), r = n === k ? Math.abs(off) : PR ? Math.max(Math.abs(off) + gap, hw + 20) : Math.max(Math.abs(off) + gap, hw + 8);
           if (away > 0) req(o.x, nx, r); else req(nx, o.x, r); } }); }
-    const n = [P.has(keys[0]) ? Math.max(keys[0], P.get(keys[0])) : keys[0]];
-    for (let j = 1; j < keys.length; j++) { let v = n[j - 1] + Math.max(20, linkSnap((keys[j] - keys[j - 1]) * c)); for (const [i, r] of need[j]) v = Math.max(v, n[i] + r); if (P.has(keys[j])) v = Math.max(v, P.get(keys[j])); n.push(v); }
-    return { keys, n, m: new Map(keys.map((k, i) => [k, n[i]])) };
+    return { keys, need };
   };
   // (every rung laid out, the pins lined up: [rungs' layouts, the pins' places, how much of the gaps was kept, whether it fits])
   // ('tight': only the rungs that need it drawn tighter, the widest first, until it fits)
-  const fitTo = (pap, mode = 'proper') => {
+  // (align: every column the circuit has in more than one rung kept in one line down the sheet (Dallas, 17 Nov 2026: the parts
+  // weren't lined up), when the paper has room for it)
+  const fitTo = (pap, mode = 'proper', align = false) => {
     // (pins: the uprights, and buttons and switches drawn more than once one above another (their dashed link stays straight))
     const seen = new Map(); for (const { o } of made) if (o.tag && /^(pbm?_|sel|estop|ls_|ts_|ps_|fls_)/.test(o.t)) { const k = o.tag + '@' + o.x; seen.set(k, (seen.get(k) || 0) + 1); }
     const bands = GR.groups, tightB = new Set(), bandOfY = y => bands.findIndex(([a, b]) => y >= a && y <= b);
-    const linkedIn = new Map();   // (x -> the rungs it is lined up across)
+    const linkedIn = new Map(), mech = new Set();   // (x -> the rungs it is lined up across; mech: a button's or switch's own, always)
     for (const [k, n] of seen) if (n > 1) { const [tg, x] = [k.slice(0, k.lastIndexOf('@')), +k.slice(k.lastIndexOf('@') + 1)];
-      const bs = new Set(made.filter(({ o }) => o.tag === tg && o.x === x).map(({ o }) => bandOfY(o.y)).filter(i => i >= 0)); if (bs.size > 1) { if (!linkedIn.has(x)) linkedIn.set(x, new Set()); for (const i of bs) linkedIn.get(x).add(i); } }
+      const bs = new Set(made.filter(({ o }) => o.tag === tg && o.x === x).map(({ o }) => bandOfY(o.y)).filter(i => i >= 0)); if (bs.size > 1) { mech.add(x); if (!linkedIn.has(x)) linkedIn.set(x, new Set()); for (const i of bs) linkedIn.get(x).add(i); } }
     const pins = [...new Set([...GR.BUS, ...rails.map(r => r.x)])].sort((a, b) => a - b), pinSet = new Set(pins);
+    if (align) { const inBands = new Map(); bands.forEach((b, i) => { for (const k of layBand(b, 'proper', 1, new Map(), pins).keys) if (!pinSet.has(k)) { if (!inBands.has(k)) inBands.set(k, new Set()); inBands.get(k).add(i); } });
+      for (const [x, bs] of inBands) if (bs.size > 1) { if (!linkedIn.has(x)) linkedIn.set(x, new Set()); for (const i of bs) linkedIn.get(x).add(i); } }
     const layAt = c => { let P = new Map(), PL = new Map(), res = [];
-      for (let it = 0; it < 8; it++) { res = bands.map((b, i) => { const P2 = new Map(P); for (const [x, bs] of linkedIn) if (bs.has(i) && PL.has(x)) P2.set(x, PL.get(x)); return layBand(b, tightB.has(i) ? 'tight' : 'proper', c, P2, pins); }); let moved = false;
+      for (let it = 0; it < 8; it++) { res = bands.map((b, i) => { const P2 = new Map(P); for (const [x, bs] of linkedIn) if (bs.has(i) && PL.has(x) && (!tightB.has(i) || mech.has(x))) P2.set(x, PL.get(x)); return layBand(b, tightB.has(i) ? 'tight' : 'proper', c, P2, pins); }); let moved = false;
         res.forEach((r, bi) => r.keys.forEach((k, i) => { if (pinSet.has(k) && !(P.get(k) >= r.n[i])) { P.set(k, r.n[i]); moved = true; }
-          if (linkedIn.has(k) && linkedIn.get(k).has(bi) && !pinSet.has(k) && !(PL.get(k) >= r.n[i])) { PL.set(k, r.n[i]); moved = true; } }));
+          if (linkedIn.has(k) && linkedIn.get(k).has(bi) && (!tightB.has(bi) || mech.has(k)) && !pinSet.has(k) && !(PL.get(k) >= r.n[i])) { PL.set(k, r.n[i]); moved = true; } }));
         if (!moved) break; }
       const all = res.flatMap(r => [r.n[0], r.n[r.n.length - 1]]).concat([...P.values()]);
       return { res, P, w: all.length ? Math.max(...all) - Math.min(...all) : 0 }; };
     if (mode === 'tight') { const iso = bands.map((b, i) => { const r = layBand(b, 'proper', .1, new Map(), pins); return [r.n[r.n.length - 1] - r.n[0], i]; }).sort((u, v) => v[0] - u[0]);
       for (const [, i] of iso) { if (layAt(.1).w <= roomFor(pap)) break; tightB.add(i); } }
-    let c = 1, L = layAt(1); while (c > .1 && L.w > roomFor(pap)) { c -= .02; L = layAt(c); }
-    return { ...L, c, ok: L.w <= roomFor(pap), bands, pins, tight: tightB.size };
+    // (as much of the circuit's own spacing kept as fits: found by halving)
+    let c = 1, L = layAt(1);
+    if (L.w > roomFor(pap)) { let lo = .1, hi = 1, Lo = layAt(.1); c = .1; L = Lo;
+      if (Lo.w <= roomFor(pap)) for (let i = 0; i < 7; i++) { const m = (lo + hi) / 2, Lm = layAt(m); if (Lm.w <= roomFor(pap)) { lo = m; c = m; L = Lm; } else hi = m; } }
+    return { ...L, c, ok: L.w <= roomFor(pap), bands, pins, tight: tightB.size, align };
   };
+  const fitBest = (pap, mode = 'proper') => { const a = fitTo(pap, mode, true); if (env.debug) (env.debug.fb = env.debug.fb || []).push([mode, a.ok, a.tight, a.w]); if (a.ok && (mode !== 'tight' || a.tight <= fitTo(pap, mode).tight + 3)) return a; return fitTo(pap, mode); };
   // (fold: each rung too long for the paper broken where only its own wire crosses, the rest drawn on a line under it, a continuation each end)
   let foldN = 0;
   const foldLong = pap => {
@@ -611,12 +646,12 @@ function circuitToPrint(d, env) {
   };
   const P0 = { paper: 'letter', land: false }, mode = env.long || 'tight', blank = !made.length && !E.size;
   let paper = env.paper || null, fit = null, ask = false;
-  if (paper) { fit = fitTo(paper, 'proper'); if (!fit.ok) fit = fitTo(paper, 'tight'); }
-  else if (blank) { paper = P0; fit = fitTo(P0); }
-  else { const f0 = fitTo(P0, 'proper'); ask = !f0.ok; if (env.debug) env.debug.f0 = { w: f0.w, c: f0.c, room: roomFor(P0), b0: [f0.res[0].keys.join(' '), f0.res[0].n.join(' ')], wide: f0.res.map((r, i) => [f0.bands[i].join('-'), r.n[r.n.length - 1] - r.n[0]]).filter(q => q[1] > roomFor(P0) - 200) }; paper = P0; fit = f0;
-    if (ask && mode === 'tight') fit = fitTo(P0, 'tight');
-    else if (ask && mode === 'fold') { foldLong(P0); fit = fitTo(P0, 'proper'); if (!fit.ok) fit = fitTo(P0, 'tight'); }
-    else if (ask) for (const pap of [{ paper: 'letter', land: true }, { paper: 'tabloid', land: true }, { paper: 'ansic', land: true }]) { const f = fitTo(pap, 'proper'); paper = pap; fit = f; if (f.ok) break; }
+  if (paper) { fit = fitBest(paper, 'proper'); if (!fit.ok) fit = fitBest(paper, 'tight'); }
+  else if (blank) { paper = P0; fit = fitBest(P0); }
+  else { const f0 = fitBest(P0, 'proper'); ask = !f0.ok; paper = P0; fit = f0;
+    if (ask && mode === 'tight') fit = fitBest(P0, 'tight');
+    else if (ask && mode === 'fold') { foldLong(P0); fit = fitBest(P0, 'proper'); if (!fit.ok) fit = fitBest(P0, 'tight'); }
+    else if (ask) for (const pap of [{ paper: 'letter', land: true }, { paper: 'tabloid', land: true }, { paper: 'ansic', land: true }]) { const f = fitBest(pap, 'proper'); paper = pap; fit = f; if (f.ok) break; }
   }
   if (env.debug) { env.debug.fit = fit; env.debug.made = made.map(({ o }) => [o.t, o.x, spanOf(o)]); env.debug.room = roomFor(paper); }
   const sheet0 = { paper: paper.paper, land: !!paper.land }, DH = linkDrawH(sheet0);
@@ -637,29 +672,84 @@ function circuitToPrint(d, env) {
     for (const { o } of made) { const tx = oneX(o), ty = tx != null ? linkPbTerms(o)[0][1] : o.y; o.x = tx != null ? MXb(tx, ty) - (tx - o.x) : MXb(o.x, o.y); }
     for (const rl of rails) rl.x = pinK.length ? interp(pinK, pinN, rl.x) : rl.x; }
 
-  // ---- 5. sheets: broken where the fewest wires cross (rails don't count: every sheet has its own), between rungs, never through a part
-  const pys = made.flatMap(({ o }) => { const ys = linkPbTerms(o).map(q => q[1]).concat(o.y); return [Math.min(...ys) - 80, Math.max(...ys) + 80]; });
+  // ---- 5. sheets (Dallas, 17 Nov 2026: as few continuations as can be; a rung's logic kept on one sheet; the ladder centred)
+  const room = DH - 320;   // (the drawing's height, less a margin and the continuations at its top and its foot, clear of the title block)
+  // (a rung too tall for a sheet: its rows drawn closer down, as close as their tags and names allow)
+  { const yk = new Set(); for (const k of E.keys()) yk.add(XY(k)[1]); for (const k of termAt.keys()) yk.add(XY(k)[1]);
+    for (const { o } of made) { yk.add(o.y); for (const q of linkPbTerms(o)) yk.add(q[1]); } for (const r of rails) { yk.add(r.from); yk.add(r.to); }
+    const ys = [...yk].sort((a, b) => a - b), idx = new Map(ys.map((y, i) => [y, i]));
+    const tall = GR.groups.filter(([a, b]) => b - a + 160 > room);
+    // (and every rung a little closer down than Circuit Builder draws it, so more rungs share a sheet: its rows, at most 4/5 as far apart)
+    const CY = .8;
+    if (ys.length) {
+      // (points along an upright that join nothing: taken out first, so the rows alone set how close they can come)
+      for (const k of [...E.keys()]) { if (deg(k) !== 2 || termAt.has(k) || railAt.has(k) || runEnds.has(k)) continue; const [x] = XY(k), [a, b] = [...E.get(k)];
+        if (XY(a)[0] !== x || XY(b)[0] !== x) continue; unlink(k, a); unlink(k, b); E.delete(k); link2(a, b); }
+      yk.clear(); for (const k of E.keys()) yk.add(XY(k)[1]); for (const k of termAt.keys()) yk.add(XY(k)[1]);
+      for (const { o } of made) { yk.add(o.y); for (const q of linkPbTerms(o)) yk.add(q[1]); } for (const r of rails) { yk.add(r.from); yk.add(r.to); }
+      ys.length = 0; ys.push(...[...yk].sort((a, b) => a - b)); idx.clear(); ys.forEach((y, i) => idx.set(y, i));
+      const up = new Map(), down = new Map(), need = ys.map(() => []);
+      for (const { o } of made) { const ts = linkPbTerms(o), ty = ts.map(q => q[1]);
+        if (ty.length && ty.some(y => y !== ty[0])) { const lo = Math.min(...ty, o.y), hi = Math.max(...ty, o.y); need[idx.get(hi)].push([idx.get(lo), hi - lo]); continue; }
+        up.set(o.y, Math.max(up.get(o.y) || 0, 70)); down.set(o.y, Math.max(down.get(o.y) || 0, noteOf(o) ? 64 : 34)); }
+      const rows = ys.filter(y => up.has(y)); for (let i = 1; i < rows.length; i++) need[idx.get(rows[i])].push([idx.get(rows[i - 1]), down.get(rows[i - 1]) + up.get(rows[i]) + 10]);
+      const cOf = new Map(tall.map(g => [g, 1]));
+      const lay = () => { const n = [ys[0]]; for (let j = 1; j < ys.length; j++) { const g = tall.find(([a, b]) => ys[j - 1] >= a && ys[j] <= b), c = g ? cOf.get(g) : 1;
+        const gap = ys[j] - ys[j - 1]; let v = n[j - 1] + Math.max(20, linkSnap(c < CY ? gap * c : Math.max(Math.min(gap, 160), gap * CY)));   // (never closer than 160 unless a rung needs it to fit)
+        for (const [i, r] of need[j]) v = Math.max(v, n[i] + r); n.push(linkSnap(v)); } return n; };
+      let n = lay(); for (const g of tall) { const h = () => n[idx.get(Math.max(...ys.filter(y => y <= g[1])))] - n[idx.get(Math.min(...ys.filter(y => y >= g[0])))];
+        while ((cOf.get(g) > .45 && h() + 160 > room * .75) || (cOf.get(g) > .2 && h() + 160 > room)) {   // (closer still, so the rungs before or after can share its sheet)
+          cOf.set(g, cOf.get(g) - .05); n = lay(); } }
+      const MY = new Map(ys.map((y, i) => [y, n[i]])), my = y => MY.has(y) ? MY.get(y) : y;
+      if (n.some((v, i) => v !== ys[i])) {
+        const mk = k => { const [x, y] = XY(k); return K(x, my(y)); };
+        const E2 = new Map(); for (const [k, ns] of E) E2.set(mk(k), new Set([...ns].map(mk))); E.clear(); for (const [k, v] of E2) E.set(k, v);
+        const re = m => { const m2 = new Map(); for (const [k, v] of m) m2.set(mk(k), v); m.clear(); for (const [k, v] of m2) m.set(k, v); }; re(termAt); re(railAt); { const r2 = [...runEnds].map(mk); runEnds.clear(); for (const k of r2) runEnds.add(k); }
+        for (const { o } of made) { const ts = linkPbTerms(o); o.y = ts.length ? my(ts[0][1]) - (ts[0][1] - o.y) : my(o.y); }
+        for (const r of rails) { r.from = my(r.from); r.to = my(r.to); }
+        // (uprights back into short steps)
+        for (const [k, ns] of [...E]) for (const q of [...ns]) { const [x, y] = XY(k), [qx, qy] = XY(q); if (x !== qx || qy - y <= 20) continue;
+          unlink(k, q); let prev = y; for (let yy = y + 20; yy <= qy; yy += 20) { link2(K(x, prev), K(x, yy)); prev = yy; } }
+        ylink = [ys, n];
+        GR = findGroups();
+      } } }
   const allY = [...E.keys()].map(k => XY(k)[1]).concat(made.map(({ o }) => o.y), rails.flatMap(r => [r.from, r.to]));
   const gy0 = Math.min(...allY), gy1 = Math.max(...allY);
-  const horizAt = new Set(); for (const [k, ns] of E) { const [x, y] = XY(k); for (const n of ns) if (XY(n)[1] === y) horizAt.add(y); }
+  const horizAt = new Set(); for (const [k, ns] of E) { const [, y] = XY(k); for (const n of ns) if (XY(n)[1] === y) horizAt.add(y); }
   const partBand = []; for (const { o } of made) { const ys = linkPbTerms(o).map(q => q[1]).concat(o.y); partBand.push([Math.min(...ys) - 80, Math.max(...ys) + 80]); }
-  const railX = new Set(rails.map(r => r.x));
-  const crossing = C => { let n = 0; for (const [k, ns] of E) { const [x, y] = XY(k); if (y === C - 20 && ns.has(K(x, C))) n++; } return n; };
-  const okCut = C => !horizAt.has(C - 20) && !horizAt.has(C) && !horizAt.has(C + 20) && !partBand.some(([u, v]) => C > u && C < v) && ![...termAt.keys()].some(k => Math.abs(XY(k)[1] - C) <= 20);
-  const room = DH - 360;   // (the drawing's height, less room for the arrows at top and foot)
-  const cuts = []; let top = gy0 - 40;
-  while (gy1 - top > room) {
-    let best = null;
-    for (let C = linkSnap(top + room); C > top + room * .35; C -= 20) if (okCut(C)) { const c = crossing(C); if (!best || c < best[1]) best = [C, c]; if (c === 0) break; }
-    if (!best) for (let C = linkSnap(top + room); C > top + 200; C -= 20) if (okCut(C)) { best = [C, crossing(C)]; break; }
-    if (!best) best = [linkSnap(top + room), crossing(linkSnap(top + room))];
-    cuts.push(best[0]); top = best[0];
+  const crossN = new Map(); for (const [k, ns] of E) { const [x, y] = XY(k); if (ns.has(K(x, y + 20))) crossN.set(y + 20, (crossN.get(y + 20) || 0) + 1); }
+  const crossing = C => crossN.get(C) || 0;
+  const inPart = new Set(); for (const [u, v] of partBand) for (let y = linkSnap(u) + 20; y < v; y += 20) inPart.add(y);
+  const termYs = new Set([...termAt.keys()].map(k => XY(k)[1]));
+  const okCut = C => !horizAt.has(C - 20) && !horizAt.has(C) && !horizAt.has(C + 20) && !(inPart.has(C) || partBand.some(([u, v]) => C > u && C < v && C % 20)) && !termYs.has(C) && !termYs.has(C - 20) && !termYs.has(C + 20);
+  // (where the sheets break: the fewest wires cut over the whole print (each one a pair of continuations), never inside a rung if it
+  // can be helped, then the fewest sheets. Every line between rungs is looked at, not just the first that fills a sheet)
+  const between = y => !GR.groups.some(([a, b]) => y > a && y < b);
+  const base = Math.min(...GR.groups.slice(0, -1).map((g, i) => { const c = []; for (let y = g[1] + 20; y < GR.groups[i + 1][0]; y += 20) if (okCut(y)) c.push(crossing(y)); return c.length ? Math.min(...c) : Infinity; }).concat([Infinity]));
+  const cuts = [];
+  if (gy1 - (gy0 - 40) > room) {
+    const cand = []; for (let C = linkSnap(gy0) + 20; C < gy1; C += 20) { const ok = okCut(C), x = crossing(C);
+      cand.push({ C, cost: ok ? (between(C) ? 0 : 400) + 1000 * Math.max(0, x - (Number.isFinite(base) ? base : 0)) + 10 * x : 1e6 + 1000 * x }); }
+    const start = gy0 - 40, best = cand.map(() => null);
+    for (let i = 0; i < cand.length; i++) { if (cand[i].C - start <= room) best[i] = { cost: cand[i].cost + 50, prev: -1, n: 1 };
+      for (let j = i - 1; j >= 0 && cand[i].C - cand[j].C <= room; j--) if (best[j]) { const c = best[j].cost + cand[i].cost + 50; if (!best[i] || c < best[i].cost) best[i] = { cost: c, prev: j, n: best[j].n + 1 }; } }
+    let end = -1, endCost = Infinity; for (let i = 0; i < cand.length; i++) if (best[i] && gy1 - cand[i].C <= room && best[i].cost < endCost) { endCost = best[i].cost; end = i; }
+    for (let i = end; i >= 0; i = best[i].prev) cuts.unshift(cand[i].C);
   }
   const tops = [gy0 - 40, ...cuts], sheetOf = y => { let k = 0; while (k < cuts.length && y > cuts[k]) k++; return k; };
   const sheets = tops.map(() => ({ id: uid('s'), ...(sheet0.paper !== 'letter' ? { paper: sheet0.paper } : {}), land: sheet0.land, parts: [], wires: [], nodes: [], texts: [] }));
-  const OX = leftM() - Math.min(...allX());
-  const OY = k => 300 - tops[k] + (k ? 40 : 0);
-  const P = (k, x, y) => [x + OX, y + OY(k)];
+  // (each sheet's ladder centred across it, its rung numbers on the left and the coils' cross-references on the right counted in
+  // (Dallas, 17 Nov 2026: it always leaned to one side); top: a short margin, then the continuations)
+  const TOP = 180;
+  const OXs = tops.map((t, k) => { const lo = k ? t : -Infinity, hi = k < cuts.length ? cuts[k] : Infinity, inS = y => y > lo && y <= hi;
+    const xs = [...E.keys()].filter(q => inS(XY(q)[1])).map(q => XY(q)[0]).concat(made.filter(({ o }) => inS(o.y)).flatMap(({ o }) => [o.x, ...linkPbTerms(o).map(q => q[0])]));
+    const rx = rails.filter(r => r.from <= hi && r.to >= lo).map(r => r.x); xs.push(...rx); if (!xs.length) xs.push(...allX());
+    const coilN = Math.max(0, ...made.filter(({ o }) => inS(o.y) && (o.t === 'coil' || o.t === 'mst3')).map(({ o }) => xrefN.get(o.tag) || 1));
+    const xl = Math.min(...xs) - (rx.length && Math.min(...rx) - Math.min(...xs) < 120 ? 170 : 110), xr = Math.max(...xs) + (coilN ? xrefOf(coilN) : 60);
+    return linkSnap(Math.max(40 - xl, (linkDrawW(sheet0) - (xr - xl)) / 2 - xl)); });
+  const OX = OXs[0];
+  const OY = k => TOP - tops[k] + (k ? 40 : 0);
+  const P = (k, x, y) => [x + OXs[k], y + OY(k)];
   // (a wire running down over a break: a continuation each side, numbered alike)
   let contN = Math.max(foldN, ...[...jmpSeen.keys()].map(Number).filter(Number.isFinite)); const contAt = new Map();
   for (const C of cuts) for (const [k, ns] of [...E].sort((u, v) => XY(u[0])[0] - XY(v[0])[0])) { const [x, y] = XY(k); if (y !== C - 20 || !ns.has(K(x, C))) continue;
@@ -674,8 +764,8 @@ function circuitToPrint(d, env) {
   rails.forEach((rl, n) => sheets.forEach((s, k) => {
     const lo = Math.max(rl.from, k ? tops[k] : -Infinity), hi = Math.min(rl.to, k < cuts.length ? cuts[k] : Infinity);
     if (lo > hi) return;
-    const y0 = (k && rl.from < tops[k]) || bars ? Math.min(240, lo + OY(k)) : lo + OY(k), y1 = k < cuts.length && rl.to > cuts[k] ? linkDrawH(sheet0) - 40 : hi + OY(k) + (bars ? 60 : 0);
-    const id = uid('r'); railIds[n].set(k, id); s.parts.push({ id, t: 'rail', label: rl.label, x: rl.x + OX, y0, y1 });
+    const y0 = (k && rl.from < tops[k]) || bars ? Math.min(TOP - 60, lo + OY(k)) : lo + OY(k), y1 = k < cuts.length && rl.to > cuts[k] ? linkDrawH(sheet0) - 40 : hi + OY(k) + (bars ? 60 : 0);
+    const id = uid('r'); railIds[n].set(k, id); s.parts.push({ id, t: 'rail', label: rl.label, x: rl.x + OXs[k], y0, y1 });
   }));
   for (const [k, c] of contAt) { const [x, y] = XY(k), sk = sheetOf(y), [px, py] = P(sk, x, y), o = { id: uid('p'), t: c.t, rot: 90, desc: '', tag: c.n, brk: 1 };
     const [u, v] = linkTurn(LINK_PB_TERMS[c.t][0], 90); o.x = px - u; o.y = py - v; o.k = sk; sheets[sk].parts.push(o); addTerm(k, o, 0); }
@@ -707,7 +797,7 @@ function circuitToPrint(d, env) {
   if (d.fl || d.sn) note(left, 'Planted faults (they stay with the circuit, and come back with it)');
   const doc = { kind: 'o3-print', v: 1, tb: env.defaultTB(), sheets, cur: 0 };
   const tf = doc.tb.fields.find(f => /title/i.test(f.label)); if (tf) tf.value = d.name || 'Circuit';
-  doc.link = { from: 'circuit-builder', v: 2, cb: d0, ox: OX, oy: sheets.map((_, k) => OY(k)), sy, ...(xb ? { xb } : {}), fp: linkFingerprint(doc) };
+  doc.link = { from: 'circuit-builder', v: 2, cb: d0, ox: OX, ...(OXs.some(v => v !== OX) ? { oxs: OXs } : {}), oy: sheets.map((_, k) => OY(k)), sy, ...(xb ? { xb } : {}), ...(ylink ? { ym: ylink } : {}), fp: linkFingerprint(doc) };
   return { doc, notes: { changed, left }, ask };
 }
 

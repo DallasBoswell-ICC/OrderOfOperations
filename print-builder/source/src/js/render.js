@@ -139,7 +139,7 @@ function drawSheet(s, k, A) {
     if (rL2 && p.y >= rL2.y0 && p.y <= rL2.y1) xs.push(rL2.x);
     const x = Math.max(...xs) + 26;
     // (as many numbers a line as fit inside the border; the rest on the lines under it (Dallas, 17 Nov 2026: they ran off the sheet))
-    const room = drawW(s) - 16 - x, lines = [[]]; let lw = 0;
+    const room = Math.min(drawW(s) - 16 - x, 250), lines = [[]]; let lw = 0;   // (and no wider than a few numbers, so the ladder can sit centred)
     for (const o of r) { const w = String(o.n).length * 13.4 + 12; if (lines[lines.length - 1].length && lw + w - 12 > room) { lines.push([]); lw = 0; } lines[lines.length - 1].push(o); lw += w; }
     lines.forEach((ln, li) => { const y = p.y + 9 + li * 24;
       g += `<text x="${x}" y="${y}" font-size="22" font-weight="700">${ln.map(o => o.nc ? `<tspan text-decoration="underline">${o.n}</tspan>` : o.n).join(', ')}${li < lines.length - 1 ? ',' : ''}</text>`;
