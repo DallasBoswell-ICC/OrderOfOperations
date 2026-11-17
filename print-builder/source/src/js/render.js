@@ -138,9 +138,13 @@ function drawSheet(s, k, A) {
       if (a[1] === p.y && b[1] === p.y) xs.push(Math.max(a[0], b[0])); else if (a[0] === b[0] && Math.min(a[1], b[1]) <= p.y && Math.max(a[1], b[1]) >= p.y) xs.push(a[0]); } }
     if (rL2 && p.y >= rL2.y0 && p.y <= rL2.y1) xs.push(rL2.x);
     const x = Math.max(...xs) + 26;
-    g += `<text x="${x}" y="${p.y + 9}" font-size="22" font-weight="700">${r.map(o => o.nc ? `<tspan text-decoration="underline">${o.n}</tspan>` : o.n).join(', ')}</text>`;
-    // (each number's box, for clicking: it goes to that rung; PWR goes to the coil's power contacts)
-    let cx = x; for (const o of r) { const w = String(o.n).length * 13.4; XREFS.push({ n: o.n, tag: p.tag, x0: cx - 3, x1: cx + w + 3, y0: p.y - 12, y1: p.y + 14 }); cx += w + 12; } }
+    // (as many numbers a line as fit inside the border; the rest on the lines under it (Dallas, 17 Nov 2026: they ran off the sheet))
+    const room = drawW(s) - 16 - x, lines = [[]]; let lw = 0;
+    for (const o of r) { const w = String(o.n).length * 13.4 + 12; if (lines[lines.length - 1].length && lw + w - 12 > room) { lines.push([]); lw = 0; } lines[lines.length - 1].push(o); lw += w; }
+    lines.forEach((ln, li) => { const y = p.y + 9 + li * 24;
+      g += `<text x="${x}" y="${y}" font-size="22" font-weight="700">${ln.map(o => o.nc ? `<tspan text-decoration="underline">${o.n}</tspan>` : o.n).join(', ')}${li < lines.length - 1 ? ',' : ''}</text>`;
+      // (each number's box, for clicking: it goes to that rung; PWR goes to the coil's power contacts)
+      let cx = x; for (const o of ln) { const w = String(o.n).length * 13.4; XREFS.push({ n: o.n, tag: p.tag, x0: cx - 3, x1: cx + w + 3, y0: y - 21, y1: y + 5 }); cx += w + 12; } }); }
   // notes
   for (const t of s.texts) { const lines = String(t.s || '').split('\n');
     g += `<text x="${t.x}" y="${t.y}" font-size="${t.size || 24}" font-weight="${t.bold ? 700 : 500}">${lines.map((l, i) => `<tspan x="${t.x}" dy="${i ? (t.size || 24) * 1.25 : 0}">${esc(l)}</tspan>`).join('')}</text>`; }

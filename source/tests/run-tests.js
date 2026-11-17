@@ -3281,7 +3281,7 @@ const DEF_CIRCUIT = `
     await page.evaluate(NETSIG + 'window.netSig = netSig;');
     const circs = await page.evaluate(() => Object.keys(PRESETS).map(n => { loadPreset(n); return [n, circuitData()]; }));
     circs.push(['drill station', JSON.parse(require('fs').readFileSync(path.join(__dirname, 'fixtures', 'drill-station.json'), 'utf8'))]);
-    const prints = await withPB(page, pb => pb.evaluate(cs => cs.map(([n, d]) => { openCircuit(d); $('link-dlg').close(); return [n, JSON.parse(JSON.stringify(doc)), checkPrint().filter(i => /without reaching anything/.test(i.title)).length]; }), circs));
+    const prints = await withPB(page, pb => pb.evaluate(cs => cs.map(([n, d]) => { openCircuit(d, undefined, 'tight'); $('link-dlg').close(); return [n, JSON.parse(JSON.stringify(doc)), checkPrint().filter(i => /without reaching anything/.test(i.title)).length]; }), circs));
     for (let i = 0; i < circs.length; i++) {
       const [n, d] = circs[i], [, print, loose] = prints[i];
       const r = await page.evaluate(([print, d]) => {
@@ -3299,26 +3299,72 @@ const DEF_CIRCUIT = `
     return out;
   });
 
-  await check('O³ link (Dallas, 17 Nov 2026): the drill station drawn as a print is clean: letter portrait, L1 and L2 as real rails, no junction where wires only cross, no loose ends, sheets broken between rungs', async page => {
+  await check('O³ link (Dallas, 17 Nov 2026): the drill station drawn as a print is clean: letter portrait, no L1/L2 rails (its uprights are wires 3 and 2), no junction where wires only cross, no loose ends, sheets broken between rungs', async page => {
     const out = [], d = JSON.parse(require('fs').readFileSync(path.join(__dirname, 'fixtures', 'drill-station.json'), 'utf8'));
-    const r = await withPB(page, pb => pb.evaluate(d => { const res = circuitToPrint(d, { uid, defaultTB }); const doc0 = res.doc; loadDoc(JSON.parse(JSON.stringify(doc0))); refresh(true);
+    const r = await withPB(page, pb => pb.evaluate(d => { const res = circuitToPrint(d, { uid, defaultTB, long: 'tight' }); const doc0 = res.doc; loadDoc(JSON.parse(JSON.stringify(doc0))); refresh(true);
       const iss = checkPrint().filter(i => i.sev === 'e' && !/used twice/.test(i.title)).map(i => i.title);
-      let crossJoins = 0, rails = 0, conts = 0, wiresAlongRails = 0;
-      for (const s of doc0.sheets) { rails += s.parts.filter(p => p.t === 'rail').length; conts += s.parts.filter(p => p.brk).length;
+      let crossJoins = 0, rails = 0;
+      for (const s of doc0.sheets) { rails += s.parts.filter(p => p.t === 'rail').length;
         // (a junction where only two straight wires meet across each other, neither turning: a crossing drawn as a join)
         const use = new Map(); for (const w of s.wires) for (const e of [w.a, w.b]) if (e.n) use.set(e.n, (use.get(e.n) || 0) + 1);
-        for (const n of s.nodes) if ((use.get(n.id) || 0) === 4) crossJoins++;
-        const rl = s.parts.filter(p => p.t === 'rail'); for (const w of s.wires) { const ps = [linkPbPos(s, w.a), ...w.pts, linkPbPos(s, w.b)]; for (let i = 0; i + 1 < ps.length; i++) if (ps[i] && ps[i + 1] && ps[i][0] === ps[i + 1][0] && rl.some(r => r.x === ps[i][0] && Math.max(ps[i][1], ps[i + 1][1]) > r.y0 + 20 && Math.min(ps[i][1], ps[i + 1][1]) < r.y1 - 20)) wiresAlongRails++; } }
+        for (const n of s.nodes) if ((use.get(n.id) || 0) === 4) crossJoins++; }
       // (four-way joins the circuit really has: four wires ending at one point)
       const endsAt = new Map(); for (const w of d.wires) for (const k of [w[0] + ',' + w[1], w[2] + ',' + w[3]]) endsAt.set(k, (endsAt.get(k) || 0) + 1);
       const realFour = [...endsAt.values()].filter(n => n >= 4).length;
-      return { paper: doc0.sheets[0].paper || 'letter', land: !!doc0.sheets[0].land, sheets: doc0.sheets.length, iss, crossJoins, realFour, rails, conts, wiresAlongRails }; }, d));
+      // (each sheet break: how many wires it cuts. The two uprights always; more than that, a branch cut in two)
+      const perBreak = doc0.sheets.slice(1).map(s => s.parts.filter(p => p.brk && p.t === 'cnt_in').length);
+      // (the uprights' numbers, where they run onto the next sheet: wire 3 down the left, 2 down the right)
+      const A = analyse(), ups = new Set(); doc0.sheets.forEach(s => { for (const p of s.parts) if (p.brk && p.t === 'cnt_out') { const w = s.wires.find(w => [w.a, w.b].some(e => e.p === p.id)); if (w) ups.add(A.label.get(A.wireRoot(s, w))); } });
+      return { paper: doc0.sheets[0].paper || 'letter', land: !!doc0.sheets[0].land, sheets: doc0.sheets.length, iss, crossJoins, realFour, rails, perBreak, ups: [...ups] }; }, d));
     if (r.paper !== 'letter' || r.land) out.push('paper: ' + r.paper + (r.land ? ' landscape' : ''));
-    if (r.rails < r.sheets * 2 - 1) out.push('rails: ' + r.rails + ' on ' + r.sheets + ' sheets');
+    if (r.rails) out.push(r.rails + ' rails: its uprights should be plain wires');
+    if (!r.ups.includes('3') || !r.ups.includes('2')) out.push('the uprights run onto the next sheet numbered ' + r.ups.join(', ') + ', not 3 and 2');
     if (r.iss.length) out.push('Check Print: ' + r.iss.slice(0, 4).join('; '));
     if (r.crossJoins > r.realFour) out.push(r.crossJoins + ' four-way joins, ' + r.realFour + ' in the circuit (wires that only cross, joined)');
-    if (r.wiresAlongRails) out.push(r.wiresAlongRails + ' long wires along a rail (the rail should be a rail)');
-    if (r.conts > 2 * r.sheets) out.push(r.conts + ' break continuations on ' + r.sheets + ' sheets');
+    const extra = r.perBreak.filter(n => n > 2).length;
+    if (extra > r.perBreak.length / 2 || r.perBreak.some(n => n > 4)) out.push('sheet breaks cutting wires: ' + r.perBreak.join(', '));
+    return out;
+  });
+
+  await check('O³ link (Dallas, 17 Nov 2026): on the print every tag, name and cross-reference stays clear of the others and inside the border, landscape or tighter', async page => {
+    const out = [], d = JSON.parse(require('fs').readFileSync(path.join(__dirname, 'fixtures', 'drill-station.json'), 'utf8'));
+    const r = await withPB(page, pb => pb.evaluate(d => ['land', 'tight', 'fold'].map(mode => { const res = circuitToPrint(d, { uid, defaultTB, long: mode }); loadDoc(JSON.parse(JSON.stringify(res.doc)));
+      let over = 0, outside = 0, labs = 0;
+      doc.sheets.forEach((s, k) => { doc.cur = k; S = s; refresh(true); const L = PLABS.filter(l => l.x1 != null); labs += L.length;
+        for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) { const a = L[i], c = L[j]; if (a.id !== c.id && a.x0 < c.x1 - 2 && c.x0 < a.x1 - 2 && a.y0 < c.y1 - 2 && c.y0 < a.y1 - 2) over++; }
+        for (const x of XREFS) if (x.x1 > drawW(s) - 4) outside++;
+        for (const p of s.parts) if (p.t !== 'rail' && (p.x < 0 || p.x > drawW(s))) outside++; });
+      return { mode, land: !!doc.sheets[0].land, over, outside, labs }; }), d));
+    for (const x of r) { if (x.over) out.push(x.mode + ': ' + x.over + ' tags or names on top of each other'); if (x.outside) out.push(x.mode + ': ' + x.outside + ' things past the border'); if (x.labs < 300) out.push(x.mode + ': only ' + x.labs + ' labels'); }
+    if (!r[0].land) out.push('landscape when needed: not landscape');
+    if (r[1].land || r[2].land) out.push('tighter and fold should stay portrait');
+    return out;
+  });
+
+  await check('O³ link (Dallas, 17 Nov 2026): a rung too long for letter portrait asks how to draw it (landscape, tighter, or folded onto a second line) and remembers; folded, it comes back to Circuit Builder joined the same way', async page => {
+    const out = [], fs = require('fs'), d = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'long-rung.json'), 'utf8'));
+    // (folded, the parts come back on new lines: the nets compared by what each part is, not where it is)
+    await page.evaluate(NETSIG.replace("a[0] + '@' + a[1] + ',' + a[2] + '#' + i", "a[0] + ':' + a[3] + ':' + (a[4] ? 1 : 0) + '#' + i").replace('const netSig =', 'const netSigL =') + 'window.netSigL = netSigL;');
+    const r = await withPB(page, pb => pb.evaluate(d => { try { localStorage.removeItem('oo-print-builder:long-rungs'); } catch (_) {}
+      const res = {}; openCircuit(d); res.asked = $('long-dlg').open; res.opts = [...document.querySelectorAll('#long-dlg .long-opt b')].map(b => b.textContent);
+      document.querySelector('#long-dlg .long-opt[data-long="fold"]').click(); res.closed = !$('long-dlg').open; $('link-dlg').close();
+      res.fold = { sheets: doc.sheets.length, land: !!doc.sheets[0].land, conts: doc.sheets[0].parts.filter(p => p.t === 'cnt_out' || p.t === 'cnt_in').length, rails: doc.sheets[0].parts.filter(p => p.t === 'rail').length };
+      try { res.saved = localStorage.getItem('oo-print-builder:long-rungs'); } catch (_) {}
+      openCircuit(d); res.lastMarked = document.querySelector('#long-dlg .long-opt.last')?.dataset.long; document.querySelector('#long-dlg .long-opt[data-long="land"]').click(); $('link-dlg').close(); res.land = !!doc.sheets[0].land;
+      res.print = JSON.parse(JSON.stringify(circuitToPrint(d, { uid, defaultTB, long: 'fold' }).doc));
+      // (a rung that fits: no question)
+      const short = JSON.parse(JSON.stringify(d)); short.parts = short.parts.filter(p => p[2] !== 200); short.wires = short.wires.filter(w => w[1] !== 200); openCircuit(short); res.askedShort = $('long-dlg').open; if (res.askedShort) $('long-dlg').close(); else $('link-dlg').close();
+      return res; }, d));
+    if (!r.asked) out.push('no question for a rung too long for portrait');
+    if (r.opts.join('|') !== 'Landscape When Needed|Stay Portrait, Tighter|Fold Long Rungs') out.push('choices: ' + r.opts.join(', '));
+    if (!r.closed) out.push('the question stayed open after a choice');
+    if (r.fold.land || r.fold.conts !== 2 || r.fold.rails !== 2) out.push('folded: ' + JSON.stringify(r.fold));
+    if (r.lastMarked !== 'fold') out.push('the choice not remembered (' + r.lastMarked + ')');
+    if (!r.land) out.push('landscape when needed: not landscape');
+    if (r.askedShort) out.push('asked for a circuit that fits');
+    const back = await page.evaluate(([print, d]) => { const ch = JSON.parse(JSON.stringify(print)); ch.link.fp = 'changed'; const b = printToCircuit(ch); return [netSigL(d) === netSigL(b.data), printToCircuit(print).notes.same]; }, [r.print, d]);
+    if (!back[0]) out.push('folded print, changed, comes back joined differently');
+    if (!back[1]) out.push('folded print, unchanged, does not come back exactly');
     return out;
   });
 

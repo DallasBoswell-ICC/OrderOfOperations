@@ -510,8 +510,16 @@ async function saveToFile(asNew) {
 const LINK_DEMO = 'oo-print-builder:'.includes('-demo');   // (the demo build's storage keys say -demo: it opens the demo Circuit Builder)
 const CB_URL = LINK_DEMO ? '../../demo/Circuit_Builder.html' : '../Circuit_Builder.html';
 const isCircuit = d => d && !d.kind && Array.isArray(d.parts) && Array.isArray(d.wires);
-function openCircuit(d, fname) {
-  const r = circuitToPrint(d, { uid, defaultTB, tidy });
+// (rungs too long for letter portrait: the person picks how they are drawn (Dallas, 17 Nov 2026); the choice remembered)
+const LONGKEY = 'oo-print-builder:long-rungs';
+function openCircuit(d, fname, long) {
+  let saved = 'tight'; try { const v = localStorage.getItem(LONGKEY); if (['land', 'tight', 'fold'].includes(v)) saved = v; } catch (_) {}
+  const r = circuitToPrint(d, { uid, defaultTB, tidy, long: long || saved });
+  if (r.ask && !long) {
+    const dl = $('long-dlg'); dl.querySelectorAll('.long-opt').forEach(b => { b.classList.toggle('last', b.dataset.long === saved); b.onclick = () => { dl.close(); try { localStorage.setItem(LONGKEY, b.dataset.long); } catch (_) {} openCircuit(d, fname, b.dataset.long); }; });
+    $('long-cancel').onclick = () => { dl.close(); say('Not opened.'); };
+    dl.showModal(); dl.querySelector('.long-opt.last')?.focus(); return;
+  }
   if (fname && !d.name) { const tf = r.doc.tb.fields.find(f => /title/i.test(f.label)); if (tf) tf.value = fname; }
   const dd = withDrawnBy(r.doc); dd.link = r.doc.link;
   snapshot(); const keep = UNDO.slice(); loadDoc(dd); UNDO.push(...keep); forgetFile(); refresh(true); fitZoom();

@@ -176,6 +176,19 @@ let passed = 0, failed = 0;
     return r != null && r >= 1620 ? [] : ['cross-reference x (should be right of the wire at 1600): ' + r];
   });
 
+  await check('Cross-references (Dallas, 17 Nov 2026): a coil with many contacts wraps its numbers onto more lines, all inside the border', async p => {
+    const r = await p.evaluate(() => { loadDoc(template('blank')); const L2 = S.parts.find(q => q.t === 'rail' && q.label === 'L2').x;
+      addWire(S, [[200, 400], [L2, 400]]); const c = addPart(S, 'coil', L2 - 200, 400, { pre: 'CR' });
+      for (let i = 0; i < 18; i++) { const y = 520 + i * 100; addWire(S, [[200, y], [L2, y]]); addPart(S, 'con_no', 500, y, { tag: c.tag }); }
+      refresh(true); const mine = XREFS.filter(x => x.tag === c.tag);
+      return { n: mine.length, right: Math.max(...mine.map(x => x.x1)), lines: new Set(mine.map(x => x.y0)).size, W: drawW(S) }; });
+    const out = [];
+    if (r.n < 3) out.push('only ' + r.n + ' numbers');
+    if (r.right > r.W - 4) out.push('numbers reach ' + r.right + ', the border is at ' + r.W);
+    if (r.lines < 2) out.push('the numbers were not wrapped (' + r.lines + ' line)');
+    return out;
+  });
+
   await check('Moving parts: wires step next to the part, never running along another wire', async p => {
     const r = await p.evaluate(() => { const out = [];
       for (const [t, dx, dy] of [['mst3', 0, 200], ['mst3', 0, -100], ['xfmr', 200, 0], ['fus3', 0, 60], ['coil', 0, -120], ['ol3', 0, 160]]) {
