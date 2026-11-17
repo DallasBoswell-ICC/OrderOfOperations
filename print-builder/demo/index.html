@@ -1094,6 +1094,35 @@ function circuitToPrint(d, env) {
           if (away > 0) req(o.x, nx, r); else req(nx, o.x, r); } }); }
     return { keys, need };
   };
+  // (the ladder across the whole sheet, as Dallas draws it (17 Nov 2026): the uprights out near the edges, each rung's contacts from the
+  // left, and the loads (coils, lights, solenoids) in one column on the right, whatever comes after a load kept beside it)
+  const LOADT = new Set(['coil', 'pl', 'sol', 'htr']);
+  const fullWidth = (L, bands, pins, pap, tightB) => {
+    if (pins.length < 2 || !L.res.length) return;
+    const pl = pins[0], pr = pins[pins.length - 1], PL0 = L.P.get(pl), PR0 = L.P.get(pr); if (PL0 == null || PR0 == null) return;
+    const info = L.res.map((r, i) => { const [a, b] = bands[i], inB = y => y >= a && y <= b;
+      const loads = made.filter(({ o }) => inB(o.y) && LOADT.has(o.t) && oneX(o) == null && o.x > pl && o.x < pr).map(({ o }) => o.x);
+      if (!loads.length) return null; const fl = Math.max(...loads);
+      const before = made.filter(({ o }) => inB(o.y) && !LOADT.has(o.t) && o.x < fl && o.x > pl).map(({ o }) => o.x), S = Math.max(pl, ...before, ...pins.filter(x => x < fl));   // (never past an upright: those stay in line)
+      if (pins.some(x => x > fl && x < pr)) return null;
+      // (from the last contact on: the loads and what follows them as close together as they can be; the long wire goes before them)
+      const mr = layBand(bands[i], tightB.has(i) ? 'tight' : 'proper', .1, new Map(), pins), m0 = mr.m.get(fl);
+      return { S, rel: k => mr.m.get(k) - m0, tail: mr.m.get(pr) - m0, lx: r.m.get(S) + (m0 - mr.m.get(S)) }; });
+    // (the column set by what most rungs have after their loads; a rung with more after its load has it a little further left)
+    const tails = info.filter(Boolean).map(q => q.tail).sort((a, b) => a - b), base = tails.length ? tails[Math.floor(tails.length * .75)] : 0, tail = Math.max(0, ...tails.filter(t => t <= base + 40));   // (lights a little wider than coils: still one column)
+    const lo = Math.min(...L.res.map(r => r.n[0])), want = lo + roomFor(pap);
+    // (the right upright as far out as the paper allows, never closer than any rung needs)
+    const need = Math.max(...L.res.map((r, i) => info[i] ? info[i].lx + info[i].tail : r.m.get(pr)));   // (a rung too full for the column: its loads a little further right)
+    const BR = Math.max(need, linkSnap(want) - 20), LX = BR - tail;
+    L.res.forEach((r, i) => { const q = info[i];
+      const nn = r.keys.map((k, j) => { const v = r.n[j];
+        if (k >= pr) return v - r.m.get(pr) + BR;
+        if (!q || k <= q.S) return v;
+        return (q.tail > tail ? BR - q.tail : Math.max(LX, q.lx)) + q.rel(k); });
+      r.n = nn; r.m = new Map(r.keys.map((k, j) => [k, nn[j]])); });
+    L.P.set(pr, BR); for (const [k, v] of L.P) if (k > pr) L.P.set(k, v - PR0 + BR);
+    L.w = BR - lo + Math.max(0, ...L.res.map(r => r.n[r.n.length - 1] - BR));
+  };
   // (every rung laid out, the pins lined up: [rungs' layouts, the pins' places, how much of the gaps was kept, whether it fits])
   // ('tight': only the rungs that need it drawn tighter, the widest first, until it fits)
   // (align: every column the circuit has in more than one rung kept in one line down the sheet (Dallas, 17 Nov 2026: the parts
@@ -1121,7 +1150,8 @@ function circuitToPrint(d, env) {
     let c = 1, L = layAt(1);
     if (L.w > roomFor(pap)) { let lo = .1, hi = 1, Lo = layAt(.1); c = .1; L = Lo;
       if (Lo.w <= roomFor(pap)) for (let i = 0; i < 7; i++) { const m = (lo + hi) / 2, Lm = layAt(m); if (Lm.w <= roomFor(pap)) { lo = m; c = m; L = Lm; } else hi = m; } }
-    return { ...L, c, ok: L.w <= roomFor(pap), bands, pins, tight: tightB.size, align };
+    const ok = L.w <= roomFor(pap); if (ok) fullWidth(L, bands, pins, pap, tightB);
+    return { ...L, c, ok, bands, pins, tight: tightB.size, align };
   };
   const fitBest = (pap, mode = 'proper') => { const a = fitTo(pap, mode, true); if (env.debug) (env.debug.fb = env.debug.fb || []).push([mode, a.ok, a.tight, a.w]); if (a.ok && (mode !== 'tight' || a.tight <= fitTo(pap, mode).tight + 3)) return a; return fitTo(pap, mode); };
   // (fold: each rung too long for the paper broken where only its own wire crosses, the rest drawn on a line under it, a continuation each end)
@@ -1217,7 +1247,7 @@ function circuitToPrint(d, env) {
     for (const rl of rails) rl.x = pinK.length ? interp(pinK, pinN, rl.x) : rl.x; }
 
   // ---- 5. sheets (Dallas, 17 Nov 2026: as few continuations as can be; a rung's logic kept on one sheet; the ladder centred)
-  const room = DH - 320;   // (the drawing's height, less a margin and the continuations at its top and its foot, clear of the title block)
+  const room = DH - 280;   // (the drawing's height, less a margin and the continuations at its top and its foot, clear of the title block)
   // (a rung too tall for a sheet: its rows drawn closer down, as close as their tags and names allow)
   { const yk = new Set(); for (const k of E.keys()) yk.add(XY(k)[1]); for (const k of termAt.keys()) yk.add(XY(k)[1]);
     for (const { o } of made) { yk.add(o.y); for (const q of linkPbTerms(o)) yk.add(q[1]); } for (const r of rails) { yk.add(r.from); yk.add(r.to); }
@@ -1239,7 +1269,7 @@ function circuitToPrint(d, env) {
       const rows = ys.filter(y => up.has(y)); for (let i = 1; i < rows.length; i++) need[idx.get(rows[i])].push([idx.get(rows[i - 1]), down.get(rows[i - 1]) + up.get(rows[i]) + 10]);
       const cOf = new Map(tall.map(g => [g, 1]));
       const lay = () => { const n = [ys[0]]; for (let j = 1; j < ys.length; j++) { const g = tall.find(([a, b]) => ys[j - 1] >= a && ys[j] <= b), c = g ? cOf.get(g) : 1;
-        const gap = ys[j] - ys[j - 1]; let v = n[j - 1] + Math.max(20, linkSnap(c < CY ? gap * c : Math.max(Math.min(gap, 160), gap * CY)));   // (never closer than 160 unless a rung needs it to fit)
+        const gap = ys[j] - ys[j - 1]; let v = n[j - 1] + Math.max(20, linkSnap(c < CY ? gap * c : gap <= 200 ? Math.max(Math.min(gap, 160), gap * CY) : 160 + (gap - 200) * .4));   // (never closer than 160 unless a rung needs it to fit; a long run with nothing on it much shorter)
         for (const [i, r] of need[j]) v = Math.max(v, n[i] + r); n.push(linkSnap(v)); } return n; };
       let n = lay(); for (const g of tall) { const h = () => n[idx.get(Math.max(...ys.filter(y => y <= g[1])))] - n[idx.get(Math.min(...ys.filter(y => y >= g[0])))];
         while ((cOf.get(g) > .45 && h() + 160 > room * .75) || (cOf.get(g) > .2 && h() + 160 > room)) {   // (closer still, so the rungs before or after can share its sheet)
@@ -1284,7 +1314,7 @@ function circuitToPrint(d, env) {
   const sheets = tops.map(() => ({ id: uid('s'), ...(sheet0.paper !== 'letter' ? { paper: sheet0.paper } : {}), land: sheet0.land, parts: [], wires: [], nodes: [], texts: [] }));
   // (each sheet's ladder centred across it, its rung numbers on the left and the coils' cross-references on the right counted in
   // (Dallas, 17 Nov 2026: it always leaned to one side); top: a short margin, then the continuations)
-  const TOP = 180;
+  const TOP = 120;
   const OXs = tops.map((t, k) => { const lo = k ? t : -Infinity, hi = k < cuts.length ? cuts[k] : Infinity, inS = y => y > lo && y <= hi;
     const xs = [...E.keys()].filter(q => inS(XY(q)[1])).map(q => XY(q)[0]).concat(made.filter(({ o }) => inS(o.y)).flatMap(({ o }) => [o.x, ...linkPbTerms(o).map(q => q[0])]));
     const rx = rails.filter(r => r.from <= hi && r.to >= lo).map(r => r.x); xs.push(...rx); if (!xs.length) xs.push(...allX());

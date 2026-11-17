@@ -3299,7 +3299,7 @@ const DEF_CIRCUIT = `
     return out;
   });
 
-  await check('O³ link (Dallas, 17 Nov 2026): the drill station drawn as a print is clean: letter portrait, no L1/L2 rails (its uprights are wires 3 and 2), no junction where wires only cross, no loose ends, sheets broken only between rungs (no continuation but the uprights, none under the title block), each sheet centred, linked buttons in line', async page => {
+  await check('O³ link (Dallas, 17 Nov 2026): the drill station drawn as a print is clean: letter portrait, no L1/L2 rails (its uprights are wires 3 and 2), no junction where wires only cross, no loose ends, sheets broken only between rungs (no continuation but the uprights, none under the title block), each sheet centred, linked buttons in line, the loads in one column on the right', async page => {
     const out = [], d = JSON.parse(require('fs').readFileSync(path.join(__dirname, 'fixtures', 'drill-station.json'), 'utf8'));
     const r = await withPB(page, pb => pb.evaluate(d => { const res = circuitToPrint(d, { uid, defaultTB, long: 'tight' }); const doc0 = res.doc; loadDoc(JSON.parse(JSON.stringify(doc0))); refresh(true);
       const iss = checkPrint().filter(i => i.sev === 'e' && !/used twice/.test(i.title)).map(i => i.title);
@@ -3316,14 +3316,18 @@ const DEF_CIRCUIT = `
       // (the uprights' numbers, where they run onto the next sheet: wire 3 down the left, 2 down the right)
       const A = analyse(), ups = new Set(); doc0.sheets.forEach(s => { for (const p of s.parts) if (p.brk && p.t === 'cnt_out') { const w = s.wires.find(w => [w.a, w.b].some(e => e.p === p.id)); if (w) ups.add(A.label.get(A.wireRoot(s, w))); } });
       // (Dallas, 17 Nov 2026: continuations clear of the title block; each sheet's ladder centred; a button drawn on two rungs in one line)
-      let underTB = 0, offCentre = [], skew = 0;
+      let underTB = 0, offCentre = [], skew = 0; const loadsOff = [];
       doc0.sheets.forEach((s, k) => { doc.cur = k; S = doc.sheets[k]; refresh(true);
         for (const p of s.parts) if (p.brk && p.y + 80 > drawH(s)) underTB++;
         const xs = s.parts.filter(p => p.t !== 'rail').flatMap(p => { const e = extOf(p); return [p.x + e.x0, p.x + e.x1]; }).concat(RUNGNUMS.map(r => r.x0), XREFS.map(r => r.x1));
         const l = Math.min(...xs), r = drawW(s) - Math.max(...xs); if (Math.abs(l - r) > 160) offCentre.push((k + 1) + ': ' + Math.round(l) + '/' + Math.round(r));
         const byTag = new Map(); for (const p of s.parts) if (/^pbm?_/.test(p.t)) { if (!byTag.has(p.tag)) byTag.set(p.tag, new Set()); byTag.get(p.tag).add(p.x); }
-        for (const xs2 of byTag.values()) if (xs2.size > 1) skew++; });
-      return { paper: doc0.sheets[0].paper || 'letter', land: !!doc0.sheets[0].land, sheets: doc0.sheets.length, iss, crossJoins, realFour, rails, perBreak, ups: [...ups], underTB, offCentre, skew }; }, d));
+        for (const xs2 of byTag.values()) if (xs2.size > 1) skew++;
+        // (the loads in one column on the right, as Dallas draws them)
+        const lx = s.parts.filter(p => ['coil', 'pl', 'sol'].includes(p.t)).map(p => p.x), cnt = new Map(); for (const x of lx) cnt.set(x, (cnt.get(x) || 0) + 1);
+        if (lx.length >= 3 && Math.max(...cnt.values()) < lx.length * .75) loadsOff.push((k + 1) + ': ' + [...cnt].map(([x, n]) => x + '×' + n).join(' ')); });
+      return { paper: doc0.sheets[0].paper || 'letter', land: !!doc0.sheets[0].land, sheets: doc0.sheets.length, iss, crossJoins, realFour, rails, perBreak, ups: [...ups], underTB, offCentre, skew, loadsOff }; }, d));
+    if (r.loadsOff.length > 1) out.push('loads not in one column: ' + r.loadsOff.join('; '));   // (one sheet may have a starter rung with its overloads after the coil)
     if (r.underTB) out.push(r.underTB + ' continuations reaching into the title block');
     if (r.offCentre.length) out.push('ladder not centred on sheets ' + r.offCentre.join(', '));
     if (r.skew) out.push(r.skew + ' buttons drawn on two rungs out of line');
