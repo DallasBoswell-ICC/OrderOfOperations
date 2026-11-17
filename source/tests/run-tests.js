@@ -3320,7 +3320,9 @@ const DEF_CIRCUIT = `
       doc0.sheets.forEach((s, k) => { doc.cur = k; S = doc.sheets[k]; refresh(true);
         for (const p of s.parts) if (p.brk && p.y + 80 > drawH(s)) underTB++;
         const xs = s.parts.filter(p => p.t !== 'rail').flatMap(p => { const e = extOf(p); return [p.x + e.x0, p.x + e.x1]; }).concat(RUNGNUMS.map(r => r.x0), XREFS.map(r => r.x1));
-        const l = Math.min(...xs), r = drawW(s) - Math.max(...xs); if (Math.abs(l - r) > 160) offCentre.push((k + 1) + ': ' + Math.round(l) + '/' + Math.round(r));
+        const l = Math.min(...xs), r = drawW(s) - Math.max(...xs); if (l < 30 || r < 10) offCentre.push((k + 1) + ': past the border ' + Math.round(l) + '/' + Math.round(r));
+        // (Dallas, 17 Nov 2026: the ladder centred on the sheet's middle line: its two uprights as far in from each edge)
+        const ux = s.parts.filter(p => p.brk).map(p => linkPbTerms(p)[0][0]); if (ux.length >= 2) { const a = Math.min(...ux), b = drawW(s) - Math.max(...ux); if (Math.abs(a - b) > 40) offCentre.push((k + 1) + ': uprights ' + Math.round(a) + '/' + Math.round(b) + ' in from the edges'); }
         const byTag = new Map(); for (const p of s.parts) if (/^pbm?_/.test(p.t)) { if (!byTag.has(p.tag)) byTag.set(p.tag, new Set()); byTag.get(p.tag).add(p.x); }
         for (const xs2 of byTag.values()) if (xs2.size > 1) skew++;
         // (the loads in one column on the right, as Dallas draws them)

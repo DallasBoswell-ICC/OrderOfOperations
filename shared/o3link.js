@@ -491,7 +491,8 @@ function circuitToPrint(d, env) {
   const xrefN = new Map(); for (const { o } of made) if (/^(con|tc)_/.test(o.t) || o.t === 'mst3') xrefN.set(o.tag, (xrefN.get(o.tag) || 0) + 1);
   const xrefOf = n => 36 + Math.min(250, n * 54);   // (Print Builder wraps them at 250 across)
   const xrefW = xrefOf(Math.max(1, ...xrefN.values()));
-  const roomFor = pap => linkDrawW(pap) - Math.max(leftM(), 140) - xrefW - 40;   // (a margin each side, the rung numbers on the left, the cross-references on the right)
+  let ROOMCUT = 0;   // (taken off so the ladder can sit centred: see below)
+  const roomFor = pap => linkDrawW(pap) - Math.max(leftM(), 140) - xrefW - 40 - ROOMCUT;   // (a margin each side, the rung numbers on the left, the cross-references on the right)
   const oneX = o => o.fold ? null : (() => { const ts = linkPbTerms(o); return ts.length && ts.every(q => q[0] === ts[0][0]) ? ts[0][0] : null; })();   // (a part whose terminals are all in one upright line: placed by them)
   // (how far a part's tag and the name under it reach out each side of its middle)
   const LIT = new Set(made.filter(({ o }) => o.inPB).map(({ o }) => o.inPB));
@@ -566,7 +567,10 @@ function circuitToPrint(d, env) {
       return { S, rel: k => mr.m.get(k) - m0, tail: mr.m.get(pr) - m0, lx: r.m.get(S) + (m0 - mr.m.get(S)) }; });
     // (the column set by what most rungs have after their loads; a rung with more after its load has it a little further left)
     const tails = info.filter(Boolean).map(q => q.tail).sort((a, b) => a - b), base = tails.length ? tails[Math.floor(tails.length * .75)] : 0, tail = Math.max(0, ...tails.filter(t => t <= base + 40));   // (lights a little wider than coils: still one column)
-    const lo = Math.min(...L.res.map(r => r.n[0])), want = lo + roomFor(pap);
+    // (Dallas, 17 Nov 2026: the ladder centred on the sheet's middle line, so its uprights as far in from each edge: room each side for
+    // the wider of the rung numbers and the cross-references)
+    const lo = Math.min(...L.res.map(r => r.n[0])), side = Math.max(130 + Math.max(0, PL0 - lo), xrefW) + 30,   // (and for whatever the power section has out left of the first upright)
+       want = Math.min(lo + roomFor(pap), PL0 + linkDrawW(pap) - 2 * side);
     // (the right upright as far out as the paper allows, never closer than any rung needs)
     const need = Math.max(...L.res.map((r, i) => info[i] ? info[i].lx + info[i].tail : r.m.get(pr)));   // (a rung too full for the column: its loads a little further right)
     const BR = Math.max(need, linkSnap(want) - 20), LX = BR - tail;
@@ -683,6 +687,13 @@ function circuitToPrint(d, env) {
     else if (ask && mode === 'fold') { foldLong(P0); fit = fitBest(P0, 'proper'); if (!fit.ok) fit = fitBest(P0, 'tight'); }
     else if (ask) for (const pap of [{ paper: 'letter', land: true }, { paper: 'tabloid', land: true }, { paper: 'ansic', land: true }]) { const f = fitBest(pap, 'proper'); paper = pap; fit = f; if (f.ok) break; }
   }
+  // (centred: room the same each side of the uprights for the rung numbers (and anything out left of them) and the cross-references;
+  // drawn closer, or tighter, if that is what it takes)
+  for (let it = 0; it < 3 && fit.ok && fit.P && fit.P.size >= 2; it++) {
+    const PLx = fit.P.get(Math.min(...fit.P.keys())), lo = Math.min(...fit.res.map(r => r.n[0])), over = Math.max(0, PLx - lo);
+    const side = Math.max(130 + over, xrefW) + 30, fits = over + linkDrawW(paper) - 2 * side;
+    if (fit.w <= fits + 1) break;
+    ROOMCUT += fit.w - fits; const m2 = fit.tight ? 'tight' : 'proper'; let f2 = fitBest(paper, m2); if (!f2.ok) f2 = fitBest(paper, 'tight'); if (!f2.ok) { ROOMCUT = 0; break; } fit = f2; }
   if (env.debug) { env.debug.fit = fit; env.debug.made = made.map(({ o }) => [o.t, o.x, spanOf(o)]); env.debug.room = roomFor(paper); }
   const sheet0 = { paper: paper.paper, land: !!paper.land }, DH = linkDrawH(sheet0);
   if (!fit.ok) note(changed, 'The circuit is wider than the paper even drawn closer: it runs off the right of each sheet (shrink it in Circuit Builder, or move things on the print)');
@@ -776,7 +787,11 @@ function circuitToPrint(d, env) {
     const rx = rails.filter(r => r.from <= hi && r.to >= lo).map(r => r.x); xs.push(...rx); if (!xs.length) xs.push(...allX());
     const coilN = Math.max(0, ...made.filter(({ o }) => inS(o.y) && (o.t === 'coil' || o.t === 'mst3')).map(({ o }) => xrefN.get(o.tag) || 1));
     const xl = Math.min(...xs) - (rx.length && Math.min(...rx) - Math.min(...xs) < 120 ? 170 : 110), xr = Math.max(...xs) + (coilN ? xrefOf(coilN) : 60);
-    return linkSnap(Math.max(40 - xl, (linkDrawW(sheet0) - (xr - xl)) / 2 - xl)); });
+    // (the uprights' middle on the sheet's middle; moved over only as far as needed to keep everything inside the border)
+    const ups = fit.P && fit.P.size >= 2 ? [Math.min(...fit.P.values()), Math.max(...fit.P.values())] : null, DW = linkDrawW(sheet0);
+    let ox = ups ? (DW - (ups[0] + ups[1])) / 2 : (DW - (xr - xl)) / 2 - xl;
+    if (xl + ox < 40) ox = 40 - xl; else if (xr + ox > DW - 16) ox = Math.max(40 - xl, DW - 16 - xr);
+    return linkSnap(ox); });
   const OX = OXs[0];
   const OY = k => TOP - tops[k] + (k ? 40 : 0);
   const P = (k, x, y) => [x + OXs[k], y + OY(k)];
