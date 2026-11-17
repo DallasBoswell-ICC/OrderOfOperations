@@ -74,7 +74,7 @@ function printToCircuit(doc) {
   const changed = [], left = [], note = (list, s) => { if (!list.includes(s)) list.push(s); };
   // (drawn closer across to fit its paper: spread back out first. What is where it was put goes back exactly; anything moved since,
   // in proportion between the parts on either side of it)
-  if (doc.link && doc.link.xk) {
+  if (doc.link && doc.link.xk && doc.link.v !== 2) {   // (prints made before 17 Nov 2026 kept their places this way)
     doc = JSON.parse(JSON.stringify(doc));
     const K = doc.link.xk, N = doc.link.xn, n = K.length, un = v => { if (v <= N[0]) return v - N[0] + K[0]; for (let i = 1; i < n; i++) if (v <= N[i]) return linkSnap(K[i - 1] + (v - N[i - 1]) * (K[i] - K[i - 1]) / ((N[i] - N[i - 1]) || 1)); return v - N[n - 1] + K[n - 1]; };
     for (const s of doc.sheets) {
@@ -104,13 +104,47 @@ function printToCircuit(doc) {
   const DY = []; let y0 = 0; doc.sheets.forEach((s, k) => { const ys = s.parts.filter(p => p.t !== 'rail').map(p => p.y).concat(s.parts.filter(p => p.t === 'rail').map(p => p.y0)); const top = ys.length ? Math.min(...ys) : 0;
     const bot = Math.max(linkDrawH(s), ...s.parts.map(p => p.t === 'rail' ? p.y1 : p.y + 140), ...s.wires.flatMap(w => (w.pts || []).map(q => q[1])));
     DY[k] = linkSnap(y0 + 160 - top); y0 = DY[k] + F[k](bot) - 100; });
-  let X = (x) => linkSnap(x + DX), Y = (k, y) => linkSnap(F[k](y) + DY[k]);
+  // (Circuit Builder's parts are wider than the print's symbols: along each row, things drawn close on the print are spread apart
+  // as far as they need, so no part lands on another or on a wire; nothing is moved closer)
+  const FX = (() => {
+    if (LK) return x => x;
+    const CBW = { coil: 60, pl: 60, sol: 60, htr: 60, sel: 60, ls_no: 60, ls_nc: 60, ls_hc: 60, ls_ho: 60, ps_no: 60, ps_nc: 60, fls_no: 60, fls_nc: 60, prs_no: 60, prs_nc: 60, fs_no: 60, fs_nc: 60, ts_no: 80, ts_nc: 80, ts_nol: 80, ts_ncl: 80 };
+    const keySet = new Set(), items = new Map(), cons = [];
+    const row = (k, y) => { const key = k + ':' + y; if (!items.has(key)) items.set(key, []); return items.get(key); };
+    doc.sheets.forEach((s, k) => {
+      for (const p of s.parts) { if (p.t === 'rail') { keySet.add(p.x); continue; }
+        const ts = linkPbTerms(p); keySet.add(p.x); ts.forEach(q => keySet.add(q[0]));
+        const two = ts.length === 2 && ts[0][1] === ts[1][1] && ts[0][0] !== ts[1][0];
+        if (two) { const [l, r] = ts[0][0] < ts[1][0] ? [ts[0], ts[1]] : [ts[1], ts[0]], w = CBW[p.t] || 40;
+          if (w > p.x - l[0]) cons.push([l[0], p.x, w]); if (w > r[0] - p.x) cons.push([p.x, r[0], w]);
+          row(k, p.y).push({ a: l[0], b: r[0], ea: 0, eb: 0, part: 1 }); continue; }
+        const one = ts.length && ts.every(q => q[0] === ts[0][0]) ? ts[0][0] : null;
+        const [ea, eb] = p.t === 'motor' ? [0, 300] : p.t === 'xfmr' ? [105, 105] : one != null && ts.length === 1 ? [80, 80] : [40, 40];
+        const anchor = p.t === 'motor' && one != null ? one : p.x; keySet.add(anchor);
+        for (const y of new Set(ts.map(q => q[1]).concat(ts.length ? [] : [p.y]))) row(k, y).push({ a: anchor, b: anchor, ea, eb, part: 1 }); }
+      for (const n of s.nodes || []) keySet.add(n.x);
+      for (const w of s.wires) { const ps = [linkPbPos(s, w.a), ...(w.pts || []), linkPbPos(s, w.b)].filter(Boolean);
+        ps.forEach(q => keySet.add(q[0]));
+        // (a wire's corners and joins on a row, and an upright wire crossing a row: things a part must not land on)
+        ps.forEach((q, i) => { if (i && i < ps.length - 1) row(k, q[1]).push({ a: q[0], b: q[0], ea: 0, eb: 0 }); });
+        for (const e of [w.a, w.b]) if (e.n) { const q = linkPbPos(s, e); if (q) row(k, q[1]).push({ a: q[0], b: q[0], ea: 0, eb: 0 }); }
+        for (let i = 0; i + 1 < ps.length; i++) if (ps[i][0] === ps[i + 1][0]) for (const [key, list] of items) { const [kk, yy] = key.split(':').map(Number); if (kk === k && yy > Math.min(ps[i][1], ps[i + 1][1]) && yy < Math.max(ps[i][1], ps[i + 1][1])) list.push({ a: ps[i][0], b: ps[i][0], ea: 0, eb: 0 }); } }
+    });
+    for (const list of items.values()) { list.sort((u, v) => (u.a - u.ea) - (v.a - v.ea)); for (let i = 0; i + 1 < list.length; i++) { const u = list[i], v = list[i + 1]; if (v.a <= u.b) continue; const gap = u.part && v.part ? 40 : u.part || v.part ? 20 : 0; cons.push([u.b, v.a, u.eb + v.ea + gap]); } }
+    const keys = [...keySet].sort((a, b) => a - b), idx = new Map(keys.map((k, i) => [k, i])), need = keys.map(() => []);
+    for (const [lo, hi, r] of cons) { const i = idx.get(lo), j = idx.get(hi); if (i != null && j != null && j > i) need[j].push([i, r]); }
+    const n = [keys[0]]; for (let j = 1; j < keys.length; j++) { let v = n[j - 1] + keys[j] - keys[j - 1]; for (const [i, r] of need[j]) v = Math.max(v, n[i] + r); n.push(v); }
+    const m = new Map(keys.map((k, i) => [k, n[i]]));
+    return x => { if (m.has(x)) return m.get(x); let i = 0; while (i < keys.length && keys[i] < x) i++; if (i === 0) return x - keys[0] + n[0]; if (i === keys.length) return x - keys[i - 1] + n[i - 1]; return n[i - 1] + (x - keys[i - 1]) * (n[i] - n[i - 1]) / (keys[i] - keys[i - 1]); };
+  })();
+  let X = (x) => linkSnap(FX(x) + DX), Y = (k, y) => linkSnap(F[k](y) + DY[k]);
   if (LK) {   // (back to the circuit's own places: across as it was, down as it was before the print spread its rungs out)
     const oy = LK.oy, n = oy.length, step = n > 1 ? oy[n - 2] - oy[n - 1] : 3000, sy = LK.sy || 1;
     X = x => linkSnap(x - LK.ox);
+    if (LK.v === 2 && LK.xk) { const Kk = LK.xk, N = LK.xn, n2 = Kk.length, un = v => { if (v <= N[0]) return v - N[0] + Kk[0]; for (let i = 1; i < n2; i++) if (v <= N[i]) return Kk[i - 1] + (v - N[i - 1]) * (Kk[i] - Kk[i - 1]) / ((N[i] - N[i - 1]) || 1); return v - N[n2 - 1] + Kk[n2 - 1]; }; X = x => linkSnap(un(x - LK.ox)); }   // (drawn closer across: spread back out)
     Y = (k, y) => linkSnap((y - (k < n ? oy[k] : oy[n - 1] - (k - n + 1) * step)) / sy);
   }
-  const W = !power && rL1 && rL2 ? (LK ? X(rL2.p.x) - X(rL1.p.x) : linkSnap(rL2.p.x - rL1.p.x)) : 0;
+  const W = !power && rL1 && rL2 ? (LK ? Math.max(400, +LK.cb.w || 400) : linkSnap(FX(rL2.p.x) - FX(rL1.p.x))) : 0;
 
   // letters: pushbuttons and selectors first (A, B...), then coils; M kept for a starter's coil
   const LET = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].concat([...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].flatMap(a => [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(b => a + b)));
@@ -129,12 +163,17 @@ function printToCircuit(doc) {
 
   const parts = [], fromIdx = [], terms = new Map();   // (terms: a print part -> [its terminals here, in its own order])
   const add = (src, row, ts) => { parts.push(row); fromIdx.push(src); if (ts) terms.set(src.p, ts); return row; };
+  // (a continuation at the foot of a sheet and its partner at the top of the next, in the same column: in Circuit Builder the sheets
+  // are one under another, so the wire just runs on down)
+  const pairDown = new Set();
+  for (const a of all) if (a.p.t === 'cnt_out') { const b = all.find(q => q.p.t === 'cnt_in' && q.p.tag === a.p.tag && q.k === a.k + 1); if (!b) continue;
+    const ta = linkPbTerms(a.p)[0], tb = linkPbTerms(b.p)[0]; if (ta && tb && ta[0] === tb[0]) { pairDown.add(a.p); pairDown.add(b.p); } }
   let coilN = 0; const noCoil = [], ownCol = new Set();   // (ownCol: lights whose colour the print names)
   for (const it of all) {
     const { p, k } = it, x = X(p.x), y = Y(k, p.y), pb = linkPbTerms(p).map(q => [X(q[0]), Y(k, q[1])]), name = p.tag || (LIB_NAME_FOR[p.t] || p.t);
     const two = (t, row) => { const ts = linkCbTerms(t, x, y, 0); add(it, row, pb.length === 2 && pb[0][0] > pb[1][0] ? [ts[1], ts[0]] : ts); };   // (a flipped part: its first terminal on the right)
     if (p.t === 'rail') continue;
-    if (p.brk && LK) { it.brk = pb[0]; continue; }   // (a continuation the print put where a wire ran over onto the next sheet: the wire joins up again)
+    if ((p.brk && LK) || pairDown.has(p)) { it.brk = pb[0]; continue; }   // (a continuation the print put where a wire ran over onto the next sheet: the wire joins up again)
     if (/^pbm?_/.test(p.t) || p.t === 'estop') {
       const est = p.t === 'estop', row = [est ? 'est' : 'btn', x, y, opL.get(opKey(p)), est || /_nc$/.test(p.t) ? 1 : 0, est || /^pbm/.test(p.t) ? 1 : 0, est ? 'FF0032' : /_nc$/.test(p.t) ? 'FF0032' : '00B050'];
       const l = lab(p.desc || p.tag); if (l) { while (row.length < 9) row.push(null); row.push(l); }
@@ -183,7 +222,7 @@ function printToCircuit(doc) {
       it.extra = [0, 2, 4].map(i => [dt[i + 1], ft[i]]);   // (the short wires between them)
     } else if (p.t === 'fuse' || p.t === 'cb') {
       if (p.t === 'cb') note(changed, `${name} circuit breaker → a fuse`);
-      const up = pb[0] && pb[1] && pb[0][0] === pb[1][0], cx = up ? pb[0][0] : linkSnap((pb[0][0] + pb[1][0]) / 2), cy = up ? linkSnap((pb[0][1] + pb[1][1]) / 2) : pb[0][1], rot = up ? 1 : 0;
+      const up = pb[0] && pb[1] && pb[0][0] === pb[1][0], cx = LK ? x : up ? pb[0][0] : linkSnap((pb[0][0] + pb[1][0]) / 2), cy = LK ? y : up ? linkSnap((pb[0][1] + pb[1][1]) / 2) : pb[0][1], rot = up ? 1 : 0;   // (made from a circuit: back at its own middle)
       const ts = linkCbTerms('fu1', cx, cy, rot), first = up ? (pb[0][1] < pb[1][1] ? 0 : 1) : (pb[0][0] < pb[1][0] ? 0 : 1);
       const sorted = up ? ts.slice().sort((a, b) => a[1] - b[1]) : ts.slice().sort((a, b) => a[0] - b[0]);
       add(it, ['fu1', cx, cy, linkDigits(p.tag, '1'), 0, 1, '', ...(rot ? [rot] : [])], first === 0 ? sorted : [sorted[1], sorted[0]]);
@@ -288,7 +327,6 @@ function circuitToPrint(d, env) {
   if (bars) { const ys = [...new Set(d.parts.map(a => +a[2]))].sort((a, b) => a - b), gaps = ys.slice(1).map((y, i) => y - ys[i]).filter(g => g > 0);
     if (gaps.length) sy = Math.max(1, Math.min(2, 160 / Math.min(...gaps)));
     if (sy > 1) d = { ...d, parts: d.parts.map(a => { const b = a.slice(); b[2] = linkSnap(+a[2] * sy); return b; }), wires: d.wires.map(w => { const b = w.slice(); b[1] = linkSnap(+w[1] * sy); b[3] = linkSnap(+w[3] * sy); return b; }) }; }
-  let xk = null, xn = null;   // (drawn closer across to fit a paper asked for: the parts' places before and after; see below)
   const R = d.parts.map((a, i) => ({ i, t: a[0], x: +a[1], y: +a[2], L: String(a[3] ?? ''), nc: !!a[4], maint: a[5] !== 0, color: a[6] || '', a }));
   const rotOf = r => ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(r.t) ? (Math.round(+r.a[7]) || 0) : 0;
   const coilBy = new Map(R.filter(r => r.t === 'coil').map(r => [r.L, r]));
@@ -301,33 +339,14 @@ function circuitToPrint(d, env) {
   let pbn = 0, ssn = 0;
   for (const r of R.filter(r => r.t === 'btn' || r.t === 'est' || r.t === 'sel')) { const k = (r.t === 'sel' ? 'S:' : 'B:') + r.L; if (!tagOf.has(k)) tagOf.set(k, r.t === 'sel' ? 'SS' + (++ssn) : r.t === 'est' ? 'ES' + (++pbn) : 'PB' + (++pbn)); }
   const descOf = new Map(R.filter(r => (r.t === 'btn' || r.t === 'est') && lbl(r)).map(r => ['B:' + r.L, lbl(r)]));
-  // sheets: as tall as the paper; a long circuit over several, broken between rungs
+  // ---- 1. each part as it will be on the print, at the circuit's own place for now (G: the circuit's grid)
   const parts0 = R.map(r => ({ r, ts: linkCbTerms(r.t === 'est' ? 'btn' : r.t, r.x, r.y, rotOf(r)) }));
-  const xsAll = parts0.flatMap(q => q.ts.map(t => t[0]).concat(q.r.x)).concat(d.wires.flatMap(w => [+w[0], +w[2]]));
-  const ysAll = parts0.map(q => q.r.y).concat(d.wires.flatMap(w => [+w[1], +w[3]]));
-  const minX = Math.min(...xsAll, bars ? 0 : Infinity), maxX = Math.max(...xsAll, bars ? W : -Infinity), minY = Math.min(...ysAll), maxY = Math.max(...ysAll);
-  const span = maxX - minX + (bars ? 0 : 160);
-  const PAPER = env.paper ? [env.paper.paper, !!env.paper.land] : [['letter', false], ['letter', true], ['tabloid', true], ['ansic', true]].find(([pp, land]) => linkDrawW({ paper: pp, land }) - (bars ? 620 : 300) >= span) || ['ansic', true];
-  const sheet0 = { paper: PAPER[0], land: PAPER[1] }, DW = linkDrawW(sheet0), DH = linkDrawH(sheet0);
-  if (!env.paper && linkDrawW(sheet0) - (bars ? 620 : 300) < span) note(changed, 'The circuit is wider than the paper: it runs off the right of each sheet (shrink it in Circuit Builder, or move things on the print)');
-  const OX = bars ? 200 - minX : 160 - minX;
-  // the rows things sit on; a sheet breaks above a row, where no part spans the break
-  const rows = [...new Set(parts0.map(q => q.r.y))].sort((a, b) => a - b);
-  const room = DH - 420;   // (rails from 240 down to the foot, less a margin)
-  const breaks = [minY - 120]; let top = minY - 120;
-  for (const y of rows) if (y - top > room) { const b = linkSnap(y - 140); breaks.push(b); top = b; }
-  const sheetOf = y => { let k = 0; while (k + 1 < breaks.length && y >= breaks[k + 1]) k++; return k; };
-  const sheets = breaks.map(() => ({ id: uid('s'), ...(sheet0.paper !== 'letter' ? { paper: sheet0.paper } : {}), land: sheet0.land, parts: [], wires: [], nodes: [], texts: [] }));
-  const OY = k => 240 + 80 - breaks[k];
-  const P = (k, x, y) => [linkSnap(x + OX), linkSnap(y + OY(k))];
-  // rails (a ladder on bars): on every sheet, from the top down past its last rung
-  if (bars) sheets.forEach((s, k) => { const ys = rows.filter(y => sheetOf(y) === k); const y1 = ys.length ? linkSnap(Math.max(...ys) + OY(k) + 100) : 600; s.parts.push({ id: uid('r'), t: 'rail', label: 'L1', x: P(k, 0, 0)[0], y0: 240, y1 }, { id: uid('r'), t: 'rail', label: 'L2', x: P(k, W, 0)[0], y0: 240, y1 }); });
-  // parts
-  const made = new Map();   // (a circuit part -> [sheet, print part])
+  const wired = new Set(d.wires.flatMap(w => [w[0] + ',' + w[1], w[2] + ',' + w[3]]));
+  const made = [];   // ({ r, o }: a circuit part and its print part, o.x/o.y in G for now)
   const COLN = { 'FF0032': 'RED', '00B050': 'GREEN', 'FFDC00': 'YELLOW', 'FF9600': 'AMBER', '0070C0': 'BLUE', 'FFFFFF': 'WHITE', '7030A0': 'VIOLET', 'EC008C': 'MAGENTA', '00D2BE': 'TEAL' };
   let plN = 0; const jmpSeen = new Map();
-  for (const { r } of parts0) {
-    const k = sheetOf(r.y), [x, y] = P(k, r.x, r.y), s = sheets[k], o = { id: uid('p'), x, y, rot: 0, desc: '', cbi: r.i };
+  for (const { r, ts } of parts0) {
+    const o = { id: uid('p'), x: r.x, y: r.y, rot: 0, desc: '', cbi: r.i };
     let t = null;
     switch (r.t) {
       case 'btn': t = r.nc ? (r.maint ? 'pbm_nc' : 'pb_nc') : (r.maint ? 'pbm_no' : 'pb_no'); o.tag = tagOf.get('B:' + r.L); o.desc = descOf.get('B:' + r.L) || ''; break;
@@ -342,7 +361,7 @@ function circuitToPrint(d, env) {
       case 'lamp': t = 'pl'; o.tag = 'PL' + (++plN); o.desc = COLN[(r.color || '').toUpperCase()] || ''; if (r.L && R.some(q => (q.t === 'btn' || q.t === 'est') && q.L === r.L)) o.inPB = tagOf.get('B:' + r.L); break;
       case 'sol': t = 'sol'; o.tag = 'SOL' + r.L; break;
       case 'htr': t = 'htr'; o.tag = 'HTR' + r.L; break;
-      case 'mtr': t = 'motor'; o.tag = 'M' + r.L; o.x = x - 20; break;   // (its leads: 140 out on the print, 160 here)
+      case 'mtr': t = 'motor'; o.tag = 'M' + r.L; o.x = r.x - 20; break;   // (its leads: 140 out on the print, 160 here)
       case 'mst': t = 'mst3'; o.tag = tagOf.get('C:' + r.L) || ('M' + r.L); break;
       case 'olc': t = 'olc'; o.tag = 'OL' + r.L; break;
       case 'olh': t = 'ol3'; o.tag = 'OL' + r.L; break;
@@ -356,87 +375,207 @@ function circuitToPrint(d, env) {
       case 'jmp': { const seen = jmpSeen.get(r.L) || 0; jmpSeen.set(r.L, seen + 1); t = seen ? 'cnt_in' : 'cnt_out'; o.tag = String(r.L); break; }
     }
     if (!t) { note(left, `A ${r.t} part: Print Builder has nothing like it`); continue; }
-    o.t = t; if (o.tag == null) o.tag = env.defaultTag ? env.defaultTag(t) : '';
-    // (one terminal on the print: the part sits on the circuit box's terminal that a wire goes to)
+    o.t = t; if (o.tag == null) o.tag = '';
+    // (one terminal on the print: the part sits on the circuit box's terminal that a wire goes to, its terminal facing the wire)
+    o.cbT = ts;   // (the circuit part's terminals, in G)
     if (['sup', 'src_l1', 'src_l2', 'cnt_out', 'cnt_in'].includes(t)) {
-      const ts = linkCbTerms(r.t, r.x, r.y, rotOf(r)), hit = ts.find(q => d.wires.some(w => (+w[0] === q[0] && +w[1] === q[1]) || (+w[2] === q[0] && +w[3] === q[1]))) || ts[0];
-      const [hx, hy] = P(k, hit[0], hit[1]), dir = [Math.sign(hit[0] - r.x), Math.sign(hit[1] - r.y)];
-      const pt = LINK_PB_TERMS[t][0];   // (the print part's terminal, unturned: sup and sources at its middle, continuations 40 to its left)
-      // turn it so its terminal faces the wire: a continuation's terminal on its left faces left unturned
-      if (t === 'cnt_out' || t === 'cnt_in') { o.rot = [0, 90, 180, 270].find(r => { const [u, v] = linkTurn(pt, r); return Math.sign(u) === dir[0] && Math.sign(v) === dir[1]; }) || 0; const [u, v] = linkTurn(pt, o.rot); o.x = hx - u; o.y = hy - v; }
-      else { o.x = hx - pt[0]; o.y = hy - pt[1]; }
+      const hits = ts.filter(q => wired.has(q.join(','))), hit = hits[0] || ts[0], dir = [Math.sign(hit[0] - r.x), Math.sign(hit[1] - r.y)];
+      const pt = LINK_PB_TERMS[t][0];
+      if (t === 'cnt_out' || t === 'cnt_in') { o.rot = [0, 90, 180, 270].find(q => { const [u, v] = linkTurn(pt, q); return Math.sign(u) === dir[0] && Math.sign(v) === dir[1]; }) || 0; const [u, v] = linkTurn(pt, o.rot); o.x = hit[0] - u; o.y = hit[1] - v; }
+      else { o.x = hit[0] - pt[0]; o.y = hit[1] - pt[1]; }
+      o.one = hits.length ? hits : [hit];   // (every wired circuit terminal joins the print's one terminal)
+      if (hits.length > 1) note(changed, `${o.tag ? o.tag + ' ' : ''}${t === 'sup' ? 'phase box' : t.startsWith('cnt') ? 'continuation' : 'supply box'} wired on more than one side: drawn with one terminal, the wires joined to it`);
     }
-    s.parts.push(o); made.set(r.i, [k, o]);
+    made.push({ r, o });
   }
-  // wires: each run of wire on the sheet its middle is on (one crossing a break: a continuation each side)
-  const segs = d.wires.map(w => [+w[0], +w[1], +w[2], +w[3]]);
-  let contN = Math.max(0, ...[...jmpSeen.keys()].map(Number).filter(Number.isFinite));
-  const ends = new Map();   // (a circuit terminal's place -> the print part and terminal there)
-  for (const [i, [k, o]] of made) { const pts = linkPbTerms(o), cts = linkCbTerms(R[i].t === 'est' ? 'btn' : R[i].t, R[i].x, R[i].y, rotOf(R[i]));
-    // pair each circuit terminal with the print terminal it stands for (same order; one-terminal parts: the one wired)
-    cts.forEach((c, j) => { const q = pts.length === 1 ? pts[0] : pts[j]; if (!q) return; if (pts.length === 1 && !(d.wires.some(w => (+w[0] === c[0] && +w[1] === c[1]) || (+w[2] === c[0] && +w[3] === c[1])))) return; ends.set(c.join(','), { k, o, i: pts.length === 1 ? 0 : j, at: q }); }); }
-  const nodeAt = (s, x, y) => { let n = s.nodes.find(q => q.x === x && q.y === y); if (!n) { n = { id: uid('n'), x, y }; s.nodes.push(n); } return { n: n.id }; };
-  const railAt = (s, x, y) => { const r = s.parts.find(p => p.t === 'rail' && p.x === x && y >= p.y0 && y <= p.y1); return r ? { r: r.id, y } : null; };
-  const addW = (k, a, b) => {
-    const s = sheets[k], A = ends.get(a.join(',')), B = ends.get(b.join(','));
-    let pa = P(k, a[0], a[1]), pb = P(k, b[0], b[1]);
-    if (A && A.k === k) pa = A.at; if (B && B.k === k) pb = B.at;
-    const pts = linkMoveEnds([P(k, a[0], a[1]), P(k, b[0], b[1])], pa, pb);
-    const e = (q, E) => E && E.k === k ? { p: E.o.id, i: E.i } : (bars && railAt(s, q[0], q[1])) || nodeAt(s, q[0], q[1]);
-    s.wires.push({ id: uid('w'), a: e(pts[0], A), b: e(pts[pts.length - 1], B), pts: pts.slice(1, -1) });
+
+  // ---- 2. the wiring as a grid of short steps (20 each), so wires lying on top of each other become one
+  const E = new Map();   // ("x,y" -> Set of neighbouring "x,y")
+  const K = (x, y) => x + ',' + y, XY = k => k.split(',').map(Number);
+  const link2 = (a, b) => { if (a === b) return; if (!E.has(a)) E.set(a, new Set()); if (!E.has(b)) E.set(b, new Set()); E.get(a).add(b); E.get(b).add(a); };
+  const unlink = (a, b) => { E.get(a)?.delete(b); E.get(b)?.delete(a); };
+  const runEnds = new Set();   // (where a wire starts or ends: a wire crossing another anywhere else hops over it, as in Circuit Builder)
+  const run = (x1, y1, x2, y2) => { x1 = linkSnap(x1); y1 = linkSnap(y1); x2 = linkSnap(x2); y2 = linkSnap(y2);
+    if (x1 !== x2 && y1 !== y2) { run(x1, y1, x2, y1); run(x2, y1, x2, y2); return; }
+    runEnds.add(K(x1, y1)); runEnds.add(K(x2, y2));
+    const n = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) / 20, dx = Math.sign(x2 - x1) * 20, dy = Math.sign(y2 - y1) * 20;
+    for (let i = 0; i < n; i++) link2(K(x1 + dx * i, y1 + dy * i), K(x1 + dx * (i + 1), y1 + dy * (i + 1))); };
+  for (const w of d.wires) run(+w[0], +w[1], +w[2], +w[3]);
+  const deg = k => (E.get(k) || new Set()).size;
+  // (a stub ending inside a part, short of its terminal: joined nothing in Circuit Builder, so it goes)
+  const cbTerm = new Set(made.flatMap(({ o }) => o.cbT.map(q => q.join(','))));
+  const inside = (x, y) => made.some(({ o }) => { const ts = o.cbT; if (ts.length !== 2 || ts[0][1] !== ts[1][1] || y !== ts[0][1]) return false; const [u, v] = [Math.min(ts[0][0], ts[1][0]), Math.max(ts[0][0], ts[1][0])]; return x > u && x < v; });
+  for (let again = true; again;) { again = false; for (const k of [...E.keys()]) if (deg(k) === 1 && !cbTerm.has(k) && inside(...XY(k))) { for (const n of [...E.get(k)]) unlink(k, n); E.delete(k); again = true; } }
+  // (each circuit terminal joined to where the print's terminal is: Print Builder's parts are a little narrower)
+  const termAt = new Map();   // ("x,y" -> [{ o, i }]: the print terminals there)
+  const addTerm = (k, o, i) => { if (!termAt.has(k)) termAt.set(k, []); termAt.get(k).push({ o, i }); };
+  for (const { o } of made) {
+    const pts = linkPbTerms(o);
+    if (o.one) { const k = K(...pts[0]); addTerm(k, o, 0); for (const q of o.one) { const qk = q.join(','); if (qk !== k && deg(qk)) run(q[0], q[1], pts[0][0], pts[0][1]); } continue; }
+    o.cbT.forEach((c, j) => { const q = pts[j]; if (!q) return; const ck = c.join(','), qk = K(...q); addTerm(qk, o, j); if (ck !== qk && deg(ck)) run(c[0], c[1], q[0], q[1]); });
+  }
+
+  // ---- 3. the L1 and L2 rails: the bars (a ladder on bars), or the two long wires every rung comes off (on supply boxes)
+  const rails = [];   // ({ label, x, from, to }: the stretch of the rail line the rungs come off, in G)
+  if (bars) for (const [label, x, out] of [['L1', 0, -60], ['L2', W, 60]]) {
+    // (the bar set a little out from the rungs, so a part that touches it in Circuit Builder gets a short wire to its rail on the print)
+    const ys = [...new Set([...E.keys(), ...termAt.keys()].map(XY).filter(([px]) => px === x).map(q => q[1]))];
+    for (const y of ys) run(x, y, x + out, y);
+    rails.push({ label, x: x + out, from: ys.length ? Math.min(...ys) : 0, to: ys.length ? Math.max(...ys) : 200 }); }   // (a ladder always has its rails, even with nothing on it yet)
+  else {
+    const runs = [];   // (upright runs of wire, and how many wires come off each)
+    const byX = new Map(); for (const k of E.keys()) { const [x, y] = XY(k); if (E.get(k).has(K(x, y + 20))) { if (!byX.has(x)) byX.set(x, []); byX.get(x).push(y); } }
+    for (const [x, ys] of byX) { ys.sort((a, b) => a - b); let s0 = ys[0], prev = ys[0];
+      const close = (s1, e1) => { const tees = []; for (let y = s1; y <= e1 + 20; y += 20) { const k = K(x, y); if ([...(E.get(k) || [])].some(n => XY(n)[1] === y)) tees.push(y); } runs.push({ x, y0: s1, y1: e1 + 20, tees }); };
+      for (const y of ys.slice(1)) { if (y !== prev + 20) { close(s0, prev); s0 = y; } prev = y; } close(s0, prev); }
+    runs.sort((a, b) => b.tees.length - a.tees.length);
+    const net = k0 => { const seen = new Set([k0]), st = [k0]; while (st.length) for (const n of E.get(st.pop()) || []) if (!seen.has(n)) { seen.add(n); st.push(n); } return seen; };
+    // (a control rail never carries a phase: no three-phase part, motor or phase box anywhere on its wire)
+    const POWER = new Set(['mst3', 'dsc3', 'fus3', 'ol3', 'motor', 'sup']);
+    const phaseNet = r => { const nt = net(K(r.x, r.y0)); for (const [k, tt] of termAt) if (nt.has(k) && tt.some(q => POWER.has(q.o.t))) return true; return false; };
+    const cand = runs.filter(r => r.tees.length >= 4 && !phaseNet(r));
+    if (cand.length >= 2) {
+      const a = cand[0], na = net(K(a.x, a.y0)), b = cand.find(r => r !== a && !na.has(K(r.x, r.y0)));
+      if (b) for (const [label, r] of [['L1', a.x <= b.x ? a : b], ['L2', a.x <= b.x ? b : a]]) rails.push({ label, x: r.x, from: Math.min(...r.tees), to: Math.max(...r.tees) });
+    }
+  }
+  // (the rail lines' own wire between their first and last rung is the rail now; past the last rung, nothing)
+  const railAt = new Map();   // ("x,y" -> rail index: a point where a wire joins a rail)
+  rails.forEach((rl, n) => {
+    for (let y = rl.from; y < rl.to; y += 20) unlink(K(rl.x, y), K(rl.x, y + 20));
+    for (let y = rl.to; deg(K(rl.x, y + 20)) && E.get(K(rl.x, y + 20)).has(K(rl.x, y)) && deg(K(rl.x, y + 20)) <= 2 && !termAt.has(K(rl.x, y + 20)); y += 20) unlink(K(rl.x, y), K(rl.x, y + 20));
+    for (let y = rl.from; y <= rl.to; y += 20) if (deg(K(rl.x, y)) || termAt.has(K(rl.x, y))) railAt.set(K(rl.x, y), n);
+  });
+  // (wire left joined to nothing at either end, and overhangs running past a junction to nowhere: in Circuit Builder they joined nothing)
+  const keyPt = k => termAt.has(k) || railAt.has(k);
+  const isCross = k => deg(k) === 4 && !runEnds.has(k) && !keyPt(k);   // (two wires crossing, neither ending there: not joined)
+  const through = k => !keyPt(k) && (deg(k) === 2 || isCross(k));
+  const onward = (prev, cur) => { if (deg(cur) === 2) return [...E.get(cur)].find(n => n !== prev); const [px, py] = XY(prev), [cx, cy] = XY(cur); return [...E.get(cur)].find(n => { const [nx, ny] = XY(n); return n !== prev && (px === cx ? nx === cx : ny === cy); }); };
+  for (let again = true; again;) { again = false; for (const k of [...E.keys()]) if (deg(k) === 0 && !keyPt(k)) E.delete(k); else if (deg(k) === 1 && !keyPt(k)) {
+    // (walk back to where it joins something; drop it if that is a junction (an overhang), keep it if it leads to a terminal: a loose wire to show)
+    let prev = k, cur = [...E.get(k)][0], path = [k]; while (cur && through(cur)) { path.push(cur); const nx = onward(prev, cur); prev = cur; cur = nx; }
+    if (cur && ((deg(cur) >= 3 && !keyPt(cur)) || (deg(cur) === 1 && !keyPt(cur)))) { if (deg(cur) === 1) { path.push(cur); for (let i = 0; i + 1 < path.length; i++) unlink(path[i], path[i + 1]); for (const q of path) if (!deg(q)) E.delete(q); again = true; continue; } path.push(cur); for (let i = 0; i + 1 < path.length; i++) unlink(path[i], path[i + 1]); for (const q of path.slice(0, -1)) if (!deg(q)) E.delete(q); again = true; } } }
+
+  // (points along a level run of wire that join nothing: taken out, so only the places that matter set how close things can be drawn)
+  for (const k of [...E.keys()]) { if (deg(k) !== 2 || keyPt(k)) continue; const [x, y] = XY(k), [a, b] = [...E.get(k)];
+    if (XY(a)[1] !== y || XY(b)[1] !== y) continue; unlink(k, a); unlink(k, b); E.delete(k); link2(a, b); }
+  // ---- 4. the paper: letter portrait unless asked otherwise; drawn closer across to fit, each part its own size
+  const spanOf = o => { const xs = linkPbTerms(o).map(q => q[0]); const half = o.t === 'motor' ? 60 : 40; return [Math.min(...xs, o.x - half), Math.max(...xs, o.x + half)]; };
+  const allX = () => [...E.keys()].map(k => XY(k)[0]).concat(made.flatMap(({ o }) => [o.x, ...linkPbTerms(o).map(q => q[0])]), rails.map(r => r.x));
+  const xs0 = allX(), gx0 = Math.min(...xs0), gx1 = Math.max(...xs0);
+  const leftM = () => { const xs = allX(), m = Math.min(...xs); return 160 + (rails.length && Math.min(...rails.map(r => r.x)) - m < 120 ? 120 : 0); };   // (in from the left edge; more when the L1 rail is the leftmost thing, for its rung numbers)
+  const roomFor = pap => linkDrawW(pap) - leftM() - 300;   // (and room on the right for the coils' cross-references)
+  const oneX = o => { const ts = linkPbTerms(o); return ts.length && ts.every(q => q[0] === ts[0][0]) ? ts[0][0] : null; };   // (a part whose terminals are all in one upright line: placed by them)
+  // (a terminal joined only along its own row: placed with its part, not on its own. Its part's middle, and how far out it is)
+  const derived = new Map();
+  for (const { o } of made) { if (oneX(o) != null) continue; linkPbTerms(o).forEach((q, i) => { const k = K(...q), ns = [...(E.get(k) || [])]; if (ns.some(n => XY(n)[0] === q[0])) return; derived.set(k, { o, off: q[0] - o.x }); }); }
+  const fitTo = (pap) => {   // (the places across, closed up as needed: [keys, new places, how much the gaps were closed, whether it fits])
+    const keySet = new Set(made.map(({ o }) => o.x).concat(rails.map(r => r.x)));
+    for (const k of E.keys()) if (!derived.has(k)) keySet.add(XY(k)[0]);
+    for (const [k] of termAt) if (!derived.has(k)) keySet.add(XY(k)[0]);
+    const keys = [...keySet].sort((a, b) => a - b), idx = new Map(keys.map((k, i) => [k, i]));
+    const need = keys.map(() => []), req = (lo, hi, r) => { const i = idx.get(lo), j = idx.get(hi); if (i == null || j == null) return; if (j > i) need[j].push([i, r]); };
+    // (along each part's own row: whatever its terminals join stays outside the part)
+    const nb = (k, away) => [...(E.get(k) || [])].filter(n => { const [x, y] = XY(n), [kx, ky] = XY(k); return y === ky && Math.sign(x - kx) === away; });
+    for (const { o } of made) { if (oneX(o) != null) continue;
+      linkPbTerms(o).forEach(q => { const k = K(...q), off = q[0] - o.x, away = Math.sign(off) || 1;
+        const outs = derived.has(k) ? nb(k, away) : [k];
+        for (const n of outs) { const d2 = derived.get(n);
+          if (d2 && d2.o !== o) { if (away > 0) req(o.x, d2.o.x, off - d2.off + 20); else req(d2.o.x, o.x, d2.off - off + 20); continue; }
+          const nx = XY(n)[0], gap = n === k ? 0 : railAt.has(n) ? 60 : 20; if (away > 0) req(o.x, nx, off + gap); else req(nx, o.x, -off + gap); } }); }
+    const lay = c => { const n = [keys[0]]; for (let j = 1; j < keys.length; j++) { let v = n[j - 1] + Math.max(20, linkSnap((keys[j] - keys[j - 1]) * c)); for (const [i, r] of need[j]) v = Math.max(v, n[i] + r); n.push(v); } return n; };
+    let c = 1, nn = lay(1); while (c > .1 && nn[nn.length - 1] - nn[0] > roomFor(pap)) { c -= .02; nn = lay(c); }
+    return [keys, nn, c, nn[nn.length - 1] - nn[0] <= roomFor(pap)];
   };
-  for (const [x1, y1, x2, y2] of segs) {
-    const k1 = sheetOf(y1), k2 = sheetOf(y2);
-    if (k1 === k2 || x1 !== x2) { addW(Math.min(k1, k2), [x1, y1], [x2, y2]); continue; }
-    // (a wire running down over a break: down to the foot of the sheet, a continuation; on the next, from its top)
-    let [ya, yb] = y1 < y2 ? [y1, y2] : [y2, y1], k = sheetOf(ya), ys = ya;
-    while (k < sheetOf(yb)) {
-      const cut = breaks[k + 1] - 20, n = String(++contN);
-      // (on this sheet: down to a continuation at the foot, its terminal on top)
-      const [cx, cy] = P(k, x1, cut), c1 = { id: uid('p'), t: 'cnt_out', x: cx, y: cy, rot: 90, desc: '', tag: n, brk: 1 };
-      { const [u, v] = linkTurn(LINK_PB_TERMS.cnt_out[0], 90); c1.x = cx - u; c1.y = cy - v; }
-      sheets[k].parts.push(c1); ends.set(x1 + ',' + cut, { k, o: c1, i: 0, at: [cx, cy] });
-      if (cut > ys) addW(k, [x1, ys], [x1, cut]);
-      // (on the next: from a continuation at the top, its terminal underneath)
-      k++; const top = breaks[k] + 20; ys = top;
-      const [dx2, dy2] = P(k, x1, top), c2 = { id: uid('p'), t: 'cnt_in', x: dx2, y: dy2, rot: 90, desc: '', tag: n, brk: 1 };
-      { const [u, v] = linkTurn(LINK_PB_TERMS.cnt_in[0], 90); c2.x = dx2 - u; c2.y = dy2 - v; }
-      sheets[k].parts.push(c2); ends.set(x1 + ',' + top, { k, o: c2, i: 0, at: [dx2, dy2] });
-    }
-    addW(k, [x1, ys], [x1, yb]);
+  let paper = env.paper || (made.length || E.size ? null : { paper: 'letter', land: false }), fit = null;
+  if (!paper) for (const pap of [{ paper: 'letter', land: false }, { paper: 'letter', land: true }, { paper: 'tabloid', land: true }, { paper: 'ansic', land: true }]) {
+    const f = fitTo(pap); paper = pap; fit = f; if (f[3]) break;   // (letter portrait if it fits drawn closer; landscape only if it can't)
   }
-  // (where a wire's end meets another wire part way along, as Circuit Builder joins them: that wire split there, so the print joins them too)
-  for (const s of sheets) { linkTees(s, uid); if (env.tidy) env.tidy(s); linkPrune(s); if (env.tidy) env.tidy(s); }
-  // (a paper asked for (env.paper) and the circuit wider than it: drawn closer across, each part its own size. The parts, nodes and
-  // corners brought in toward the left; a wire that ran up or down from a terminal stays upright, with a short step where it must)
-  if (env.paper) {
-    const xs = sheets.flatMap(s => [...s.parts.map(p => p.x), ...s.nodes.map(n => n.x), ...s.wires.flatMap(w => w.pts.map(q => q[0]))]);
-    const x0 = Math.min(...xs), x1 = Math.max(...sheets.flatMap(s => s.parts.flatMap(p => p.t === 'rail' ? [p.x] : linkPbTerms(p).map(q => q[0]).concat(p.x + 60))), ...xs), avail = linkDrawW(env.paper) - 380;   // (room on the right for the coils' cross-references)
-    if (x1 > avail) {
-      const c = (avail - x0 - 60) / (x1 - x0 - 60), sc = x => x0 + linkSnap((x - x0) * c);
-      xk = [...new Set(sheets.flatMap(s => s.parts.map(p => p.x)))].sort((u, v) => u - v); xn = xk.map(sc);
-      for (const s of sheets) {
-        const old = new Map(s.wires.map(w => [w.id, [linkPbPos(s, w.a), ...w.pts, linkPbPos(s, w.b)]]));
-        for (const q of [...s.parts, ...s.nodes]) { const x = sc(q.x); q._x = [x, q.x]; q.x = x; }   // (_x: where it is put, and where it was)
-        for (const w of s.wires) {
-          const O = old.get(w.id); if (O.some(q => !q)) continue;
-          const N = [linkPbPos(s, w.a), ...w.pts.map(q => [sc(q[0]), q[1]]), linkPbPos(s, w.b)];
-          // (from each end on a terminal, the wire's upright runs keep to the terminal's new place)
-          for (const [i, dir] of [[0, 1], [N.length - 1, -1]]) if ((i === 0 ? w.a : w.b).p) for (let j = i; j + dir >= 0 && j + dir < N.length && O[j][0] === O[j + dir][0] && j + dir !== N.length - 1 - i; j += dir) N[j + dir] = [N[j][0], N[j + dir][1]];
-          // (any run left slanting: a step across where it meets the next corner)
-          const R = [N[0]]; for (let j = 1; j < N.length; j++) { const p = R[R.length - 1], q = N[j]; if (p[0] !== q[0] && p[1] !== q[1]) R.push(O[j - 1][0] === O[j][0] ? [p[0], q[1]] : [q[0], p[1]]); R.push(q); }
-          w._x = [JSON.stringify(R.slice(1, -1)), JSON.stringify(w.pts)]; w.pts = R.slice(1, -1);
-        }
-      }
-      note(changed, `Drawn closer across to fit the paper (the parts their own size, the gaps between them ${Math.round(c * 100)}% as wide)`);
-    }
+  if (!fit) fit = fitTo(paper);
+  if (env.debug) { env.debug.fit = fit; env.debug.made = made.map(({ o }) => [o.t, o.x, spanOf(o)]); env.debug.room = roomFor(paper); }
+  const sheet0 = { paper: paper.paper, land: !!paper.land }, DH = linkDrawH(sheet0);
+  if (!fit[3]) note(changed, 'The circuit is wider than the paper even drawn closer: it runs off the right of each sheet (shrink it in Circuit Builder, or move things on the print)');
+  if (fit[2] < 1) note(changed, `Drawn closer across to fit ${sheet0.paper === 'letter' ? 'letter' : sheet0.paper} paper (the parts their own size, the gaps between them closed up)`);
+  const [xk, xn] = fit[2] < 1 ? [fit[0], fit[1]] : [null, null];
+  const mapX = new Map(xk ? xk.map((k, i) => [k, xn[i]]) : []), MX = x => mapX.has(x) ? mapX.get(x) : x;
+  // (everything moved across: parts, rails, the wiring)
+  { const E2 = new Map(); const mk = k => { const [x, y] = XY(k), dv = derived.get(k); return K(dv ? MX(dv.o.x) + dv.off : MX(x), y); };
+    for (const [k, ns] of E) E2.set(mk(k), new Set([...ns].map(mk)));
+    E.clear(); for (const [k, v] of E2) E.set(k, v);
+    const re = m => { const m2 = new Map(); for (const [k, v] of m) m2.set(mk(k), v); m.clear(); for (const [k, v] of m2) m.set(k, v); }; re(termAt); re(railAt); { const r2 = [...runEnds].map(mk); runEnds.clear(); for (const k of r2) runEnds.add(k); }
+    for (const { o } of made) { const tx = oneX(o); o.x = tx != null ? MX(tx) - (tx - o.x) : MX(o.x); } for (const rl of rails) rl.x = MX(rl.x); }
+
+  // ---- 5. sheets: broken where the fewest wires cross (rails don't count: every sheet has its own), between rungs, never through a part
+  const pys = made.flatMap(({ o }) => { const ys = linkPbTerms(o).map(q => q[1]).concat(o.y); return [Math.min(...ys) - 80, Math.max(...ys) + 80]; });
+  const allY = [...E.keys()].map(k => XY(k)[1]).concat(made.map(({ o }) => o.y), rails.flatMap(r => [r.from, r.to]));
+  const gy0 = Math.min(...allY), gy1 = Math.max(...allY);
+  const horizAt = new Set(); for (const [k, ns] of E) { const [x, y] = XY(k); for (const n of ns) if (XY(n)[1] === y) horizAt.add(y); }
+  const partBand = []; for (const { o } of made) { const ys = linkPbTerms(o).map(q => q[1]).concat(o.y); partBand.push([Math.min(...ys) - 80, Math.max(...ys) + 80]); }
+  const railX = new Set(rails.map(r => r.x));
+  const crossing = C => { let n = 0; for (const [k, ns] of E) { const [x, y] = XY(k); if (y === C - 20 && ns.has(K(x, C))) n++; } return n; };
+  const okCut = C => !horizAt.has(C - 20) && !horizAt.has(C) && !horizAt.has(C + 20) && !partBand.some(([u, v]) => C > u && C < v) && ![...termAt.keys()].some(k => Math.abs(XY(k)[1] - C) <= 20);
+  const room = DH - 360;   // (the drawing's height, less room for the arrows at top and foot)
+  const cuts = []; let top = gy0 - 40;
+  while (gy1 - top > room) {
+    let best = null;
+    for (let C = linkSnap(top + room); C > top + room * .5; C -= 20) if (okCut(C)) { const c = crossing(C); if (!best || c < best[1]) best = [C, c]; if (c === 0) break; }
+    if (!best) for (let C = linkSnap(top + room); C > top + 200; C -= 20) if (okCut(C)) { best = [C, crossing(C)]; break; }
+    if (!best) best = [linkSnap(top + room), crossing(linkSnap(top + room))];
+    cuts.push(best[0]); top = best[0];
   }
-  if (contN > Math.max(0, ...[...jmpSeen.keys()].map(Number).filter(Number.isFinite))) note(changed, 'Wires running from one sheet to the next: a continuation at each end, numbered alike');
+  const tops = [gy0 - 40, ...cuts], sheetOf = y => { let k = 0; while (k < cuts.length && y > cuts[k]) k++; return k; };
+  const sheets = tops.map(() => ({ id: uid('s'), ...(sheet0.paper !== 'letter' ? { paper: sheet0.paper } : {}), land: sheet0.land, parts: [], wires: [], nodes: [], texts: [] }));
+  const OX = leftM() - Math.min(...allX());
+  const OY = k => 300 - tops[k] + (k ? 40 : 0);
+  const P = (k, x, y) => [x + OX, y + OY(k)];
+  // (a wire running down over a break: a continuation each side, numbered alike)
+  let contN = Math.max(0, ...[...jmpSeen.keys()].map(Number).filter(Number.isFinite)); const contAt = new Map();
+  for (const C of cuts) for (const [k, ns] of [...E]) { const [x, y] = XY(k); if (y !== C - 20 || !ns.has(K(x, C))) continue;
+    // (cut the run at C: the point above ends on a continuation out, the one below starts from a continuation in)
+    const ab = K(x, C - 20), at = K(x, C), be = K(x, C + 20); unlink(ab, at); unlink(at, be); if (!deg(at)) E.delete(at);
+    const n = String(++contN); contAt.set(ab, { t: 'cnt_out', n }); contAt.set(be, { t: 'cnt_in', n }); }
+  if (contAt.size) note(changed, 'Wires running from one sheet to the next: a continuation at each end, numbered alike');
+  // parts on their sheets
+  for (const { o } of made) { const k = sheetOf(o.y), [x, y] = P(k, o.x, o.y); o.x = x; o.y = y; o.k = k; delete o.cbT; delete o.one; sheets[k].parts.push(o); }
+  // rails on every sheet they reach, from the top of the drawing (or the first rung) down to the foot (or the last rung)
+  const railIds = rails.map(() => new Map());
+  rails.forEach((rl, n) => sheets.forEach((s, k) => {
+    const lo = Math.max(rl.from, k ? tops[k] : -Infinity), hi = Math.min(rl.to, k < cuts.length ? cuts[k] : Infinity);
+    if (lo > hi) return;
+    const y0 = (k && rl.from < tops[k]) || bars ? Math.min(240, lo + OY(k)) : lo + OY(k), y1 = k < cuts.length && rl.to > cuts[k] ? linkDrawH(sheet0) - 40 : hi + OY(k) + (bars ? 60 : 0);
+    const id = uid('r'); railIds[n].set(k, id); s.parts.push({ id, t: 'rail', label: rl.label, x: rl.x + OX, y0, y1 });
+  }));
+  for (const [k, c] of contAt) { const [x, y] = XY(k), sk = sheetOf(y), [px, py] = P(sk, x, y), o = { id: uid('p'), t: c.t, rot: 90, desc: '', tag: c.n, brk: 1 };
+    const [u, v] = linkTurn(LINK_PB_TERMS[c.t][0], 90); o.x = px - u; o.y = py - v; o.k = sk; sheets[sk].parts.push(o); addTerm(k, o, 0); }
+  // ---- 6. wires: traced from terminal to terminal (or rail, or junction), corners kept
+  const nodeIds = new Map();
+  const endOf = (k, sk) => { const tt = termAt.get(k); if (tt) { const t0 = tt.find(q => q.o.k === sk); if (t0) return { p: t0.o.id, i: t0.i }; }
+    if (railAt.has(k)) { const id = railIds[railAt.get(k)].get(sk); if (id) return { r: id, y: XY(k)[1] + OY(sk) }; }
+    if (!nodeIds.has(k)) { const [x, y] = P(sk, ...XY(k)), id = uid('n'); sheets[sk].nodes.push({ id, x, y }); nodeIds.set(k, id); } return { n: nodeIds.get(k) }; };
+  const stop = k => !through(k);
+  const done = new Set(), ek = (a, b) => a < b ? a + '|' + b : b + '|' + a;
+  for (const start of E.keys()) { if (!stop(start)) continue;
+    for (const first of E.get(start)) { if (done.has(ek(start, first))) continue;
+      const path = [start]; let prev = start, cur = first; done.add(ek(start, first));
+      while (!stop(cur)) { path.push(cur); const nx = onward(prev, cur); prev = cur; cur = nx; done.add(ek(prev, cur)); }
+      path.push(cur);
+      const sk = sheetOf(XY(path[0])[1]), ea = endOf(path[0], sk), eb = endOf(path[path.length - 1], sk);
+      // (in print places: the ends where the wire really joins; a terminal can sit a little in from where the wiring reached it)
+      const real = (e, k) => { const q = e.p && sheets[sk].parts.find(q => q.id === e.p); return q ? linkPbTerms(q)[e.i] : P(sk, ...XY(k)); };
+      let pts = [real(ea, path[0]), ...path.map(k => P(sk, ...XY(k))), real(eb, path[path.length - 1])];
+      // (a step where a terminal sits in from the wiring's end: along the terminal's own line first)
+      const fixEnd = (arr) => { const [t, q, r] = arr; if (t[0] !== q[0] && t[1] !== q[1]) arr.splice(1, 0, r && r[0] === q[0] ? [q[0], t[1]] : [t[0], q[1]]); return arr; };
+      pts = fixEnd(pts); pts = fixEnd(pts.reverse()).reverse();
+      const clean = []; for (const q of pts) { const l = clean[clean.length - 1]; if (!l || l[0] !== q[0] || l[1] !== q[1]) clean.push(q); }
+      for (let i = clean.length - 2; i >= 1; i--) { const [a, q, b] = [clean[i - 1], clean[i], clean[i + 1]]; if ((a[0] === q[0] && q[0] === b[0]) || (a[1] === q[1] && q[1] === b[1])) clean.splice(i, 1); }
+      sheets[sk].wires.push({ id: uid('w'), a: ea, b: eb, pts: clean.slice(1, -1) });
+    } }
+  // (a ring of wire with no ends at all: nothing to number; Circuit Builder would join it to nothing either)
   if (d.pv && d.pv.length) note(left, 'Process values (they stay with the circuit, and come back with it)');
   if (d.fl || d.sn) note(left, 'Planted faults (they stay with the circuit, and come back with it)');
   const doc = { kind: 'o3-print', v: 1, tb: env.defaultTB(), sheets, cur: 0 };
   const tf = doc.tb.fields.find(f => /title/i.test(f.label)); if (tf) tf.value = d.name || 'Circuit';
-  doc.link = { from: 'circuit-builder', cb: d0, ox: OX, oy: sheets.map((_, k) => OY(k)), sy, ...(xk ? { xk, xn } : {}), fp: linkFingerprint(doc) };
+  doc.link = { from: 'circuit-builder', v: 2, cb: d0, ox: OX, oy: sheets.map((_, k) => OY(k)), sy, ...(xk ? { xk, xn } : {}), fp: linkFingerprint(doc) };
   return { doc, notes: { changed, left } };
 }
 

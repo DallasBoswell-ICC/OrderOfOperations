@@ -3236,11 +3236,15 @@ const DEF_CIRCUIT = `
   const withPB = async (page, fn) => { const pb = await page.context().newPage(); const errs = []; pb.on('pageerror', e => errs.push(e.message)); await pb.goto(PB_PAGE); await pb.waitForTimeout(300); try { return await fn(pb); } finally { if (errs.length) page.errors.push(...errs.map(e => 'Print Builder: ' + e)); await pb.close(); } };
   // the nets a circuit makes: which part terminals are joined (by wires, and continuations of one number)
   const NETSIG = `const netSig = d => {
+    // (as Circuit Builder joins wires: where a wire ends, or at a part's terminal; wires that only cross are not joined)
     const par = new Map(), f = k => { if (!par.has(k)) par.set(k, k); let r = k; while (par.get(r) !== r) r = par.get(r); par.set(k, r); return r; }, u = (a, b) => { const A = f(a), B = f(b); if (A !== B) par.set(A, B); };
-    for (const w of d.wires) { const [x1, y1, x2, y2] = w.map(Number), n = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) / 20; let prev = null; for (let i = 0; i <= n; i++) { const k = (x1 + (x2 - x1) * i / n) + ',' + (y1 + (y2 - y1) * i / n); if (prev) u(prev, k); else f(k); prev = k; } }
+    const at = new Map(), joins = new Set();
+    d.wires.forEach((w, wi) => { const [x1, y1, x2, y2] = w.map(Number), n = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) / 20; joins.add(x1 + ',' + y1); joins.add(x2 + ',' + y2); f('w' + wi);
+      for (let i = 0; i <= n; i++) { const k = (x1 + (x2 - x1) * i / n) + ',' + (y1 + (y2 - y1) * i / n); if (!at.has(k)) at.set(k, []); at.get(k).push('w' + wi); } });
     const T = [], J = new Map();
     for (const a of d.parts) { const rot = ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(a[0]) ? (Math.round(+a[7]) || 0) : 0;
-      linkCbTerms(a[0] === 'est' ? 'btn' : a[0], +a[1], +a[2], rot).forEach((q, i) => { const k = q.join(','); f(k); if (a[0] === 'jmp') { if (J.has(a[3])) u(k, J.get(a[3])); else J.set(a[3], k); } else T.push([a[0] + '@' + a[1] + ',' + a[2] + '#' + i, k]); }); }
+      linkCbTerms(a[0] === 'est' ? 'btn' : a[0], +a[1], +a[2], rot).forEach((q, i) => { const k = q.join(','), node = 't' + k; joins.add(k); f(node); if (a[0] === 'jmp') { if (J.has(a[3])) u(node, J.get(a[3])); else J.set(a[3], node); } else T.push([a[0] + '@' + a[1] + ',' + a[2] + '#' + i, node]); }); }
+    for (const k of joins) { const ws = at.get(k) || []; if (par.has('t' + k)) ws.forEach(w => u('t' + k, w)); for (let i = 1; i < ws.length; i++) u(ws[0], ws[i]); }
     const g = new Map(); for (const [n, k] of T) { const r = f(k); if (!g.has(r)) g.set(r, []); g.get(r).push(n); }
     return [...g.values()].map(x => x.sort().join(' ')).sort().join('\\n'); };`;
 
@@ -3292,6 +3296,43 @@ const DEF_CIRCUIT = `
       if (loose && n !== 'fwdrev') out.push(n + ': ' + loose + ' loose wire ends on the print');
     }
     if (prints.find(p => p[0] === 'drill station')[1].sheets.length < 2) out.push('the drill station should run over several sheets');
+    return out;
+  });
+
+  await check('O³ link (Dallas, 17 Nov 2026): the drill station drawn as a print is clean: letter portrait, L1 and L2 as real rails, no junction where wires only cross, no loose ends, sheets broken between rungs', async page => {
+    const out = [], d = JSON.parse(require('fs').readFileSync(path.join(__dirname, 'fixtures', 'drill-station.json'), 'utf8'));
+    const r = await withPB(page, pb => pb.evaluate(d => { const res = circuitToPrint(d, { uid, defaultTB }); const doc0 = res.doc; loadDoc(JSON.parse(JSON.stringify(doc0))); refresh(true);
+      const iss = checkPrint().filter(i => i.sev === 'e' && !/used twice/.test(i.title)).map(i => i.title);
+      let crossJoins = 0, rails = 0, conts = 0, wiresAlongRails = 0;
+      for (const s of doc0.sheets) { rails += s.parts.filter(p => p.t === 'rail').length; conts += s.parts.filter(p => p.brk).length;
+        // (a junction where only two straight wires meet across each other, neither turning: a crossing drawn as a join)
+        const use = new Map(); for (const w of s.wires) for (const e of [w.a, w.b]) if (e.n) use.set(e.n, (use.get(e.n) || 0) + 1);
+        for (const n of s.nodes) if ((use.get(n.id) || 0) === 4) crossJoins++;
+        const rl = s.parts.filter(p => p.t === 'rail'); for (const w of s.wires) { const ps = [linkPbPos(s, w.a), ...w.pts, linkPbPos(s, w.b)]; for (let i = 0; i + 1 < ps.length; i++) if (ps[i] && ps[i + 1] && ps[i][0] === ps[i + 1][0] && rl.some(r => r.x === ps[i][0] && Math.max(ps[i][1], ps[i + 1][1]) > r.y0 + 20 && Math.min(ps[i][1], ps[i + 1][1]) < r.y1 - 20)) wiresAlongRails++; } }
+      // (four-way joins the circuit really has: four wires ending at one point)
+      const endsAt = new Map(); for (const w of d.wires) for (const k of [w[0] + ',' + w[1], w[2] + ',' + w[3]]) endsAt.set(k, (endsAt.get(k) || 0) + 1);
+      const realFour = [...endsAt.values()].filter(n => n >= 4).length;
+      return { paper: doc0.sheets[0].paper || 'letter', land: !!doc0.sheets[0].land, sheets: doc0.sheets.length, iss, crossJoins, realFour, rails, conts, wiresAlongRails }; }, d));
+    if (r.paper !== 'letter' || r.land) out.push('paper: ' + r.paper + (r.land ? ' landscape' : ''));
+    if (r.rails < r.sheets * 2 - 1) out.push('rails: ' + r.rails + ' on ' + r.sheets + ' sheets');
+    if (r.iss.length) out.push('Check Print: ' + r.iss.slice(0, 4).join('; '));
+    if (r.crossJoins > r.realFour) out.push(r.crossJoins + ' four-way joins, ' + r.realFour + ' in the circuit (wires that only cross, joined)');
+    if (r.wiresAlongRails) out.push(r.wiresAlongRails + ' long wires along a rail (the rail should be a rail)');
+    if (r.conts > 2 * r.sheets) out.push(r.conts + ' break continuations on ' + r.sheets + ' sheets');
+    return out;
+  });
+
+  await check('O³ link (Dallas, 17 Nov 2026): a print drawn in Print Builder (the drill station, several sheets) comes into Circuit Builder with no part on another, and no continuation boxes where a wire just runs onto the next sheet', async page => {
+    const out = [], d = JSON.parse(require('fs').readFileSync(path.join(__dirname, 'fixtures', 'drill-station.json'), 'utf8'));
+    const print = await withPB(page, pb => pb.evaluate(d => { const doc0 = circuitToPrint(d, { uid, defaultTB }).doc; delete doc0.link; return doc0; }, d));
+    const r = await page.evaluate(p => { const res = printToCircuit(p), c = readCircuit(res.data);
+      const box = q => { const ts = terms(q); const xs = ts.map(t => t[0]).concat(q.x), ys = ts.map(t => t[1]).concat(q.y); return [Math.min(...xs) + 4, Math.max(...xs) - 4, Math.min(...ys), Math.max(...ys)]; };
+      let over = 0; const two = c.parts.filter(q => terms(q).length === 2 && terms(q)[0][1] === terms(q)[1][1]);
+      for (let i = 0; i < two.length; i++) for (let j = i + 1; j < two.length; j++) { const a = box(two[i]), b = box(two[j]); if (a[2] === b[2] && a[0] < b[1] && b[0] < a[1]) over++; }
+      return { over, jmp: c.parts.filter(q => q.t === 'jmp').length, n: c.parts.length }; }, print);
+    if (r.over) out.push(r.over + ' parts overlapping another on its row');
+    if (r.jmp) out.push(r.jmp + ' continuation boxes');
+    if (r.n < 370) out.push('only ' + r.n + ' parts');
     return out;
   });
 
