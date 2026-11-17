@@ -36,16 +36,28 @@ src/js/               the program, one file per job, in the order they run:
   properties.js       the selected part's settings
   storage.js          saving and opening circuits (files, codes, kept in the browser)
   main.js             Build/Run switching and start-up
-tests/run-tests.js    automatic checks
-dist/                 the built page (made by build.py)
+  (also, in build order: process.js and pictures.js (process values and their pictures), print-symbols.js and
+   print.js (the wire diagram print; print-symbols.js is a copy of Print Builder's psym.js, keep the two the same),
+   clipboard.js, faults.js (planted faults and scenarios), keys.js (keyboard shortcuts, F1), and for the Fault Finder
+   build ts-meter.js and troubleshooter.js; build.py lists the exact order)
+../shared/            code shared with Print Builder (o3link.js, o3link-tables.js: the O³ link), built into both
+tests/run-tests.js    automatic checks (122); --demo tests the demo build
+tests/ts-tests.js     the Fault Finder's checks (14); --demo tests its demo
+tests/fixtures/       saved circuits the checks open (the drill station among them)
+dist/                 the built pages (made by build.py)
 ```
 
 ## Making a change
 
 1. Edit the files in `src/`.
-2. Build: `python3 build.py`
-3. Check: `node tests/run-tests.js` (needs Node.js and Playwright: `npm install playwright` then `npx playwright install chromium`)
+2. Build the demo: `python3 build.py --demo` (dist/demo/Circuit_Builder.html) and, for the Fault Finder, `python3 build.py --ts --demo` (dist/fault-finder/demo/index.html). Copy them over `demo/Circuit_Builder.html` and `fault-finder/demo/index.html` at the top of the repository.
+3. Check: `node tests/run-tests.js --demo` and `node tests/ts-tests.js --demo` (needs Node.js and Playwright: `npm install playwright` then `npx playwright install chromium`). The O³ link checks also open Print Builder's built pages, so build `../print-builder/source` first (`python3 build.py` and `python3 build.py --demo`).
 4. Commit the change with a short note of what it does.
+
+New features always go to the demos first. Only when Dallas says **"push it to main"**:
+1. **Back up first, every time:** copy the live `Circuit_Builder.html`, `print-builder/index.html` (as `Print_Builder.html`) and `fault-finder/index.html` with its manifest into `backups/YYYY-MM-DD/` (-pm, -late, -night for later the same day), with `source_<commit>.zip` of the source they were built from; check that the zip rebuilds them exactly, and add a row to `backups/README.md`.
+2. Build the full pages from the same source the demos were tested on: `python3 build.py` (dist/Circuit_Builder.html) and `python3 build.py --ts` (dist/fault-finder/index.html); run the checks without `--demo`; copy them up over `Circuit_Builder.html` and `fault-finder/index.html`.
+3. There is one branch, `main`; the demo and full pages are separate builds of the same source.
 
 ## What the checks cover
 

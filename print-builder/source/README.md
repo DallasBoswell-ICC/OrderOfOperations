@@ -22,8 +22,8 @@ as an app of its own, and keeps its own autosave and settings (its storage keys 
 
 The source here is always the demo's. The full page was last built from commit 4406a57 (16 Nov 2026); update this
 line when the demo is promoted. To promote: build without `--demo`, run the checks, copy dist/Print_Builder.html to
-print-builder/index.html (and dist/icons, dist/print-builder.webmanifest beside it), save a backup of the old page
-first if asked, then update the commit named above.
+print-builder/index.html (and dist/icons, dist/print-builder.webmanifest beside it), having saved a backup of the old
+page first (always, see below), then update the commit named above.
 
 Before every push to main, save the live page and its source in `backups/YYYY-MM-DD/print-builder/` (Print_Builder.html plus Print_Builder_source.zip) and check the source rebuilds it exactly.
 
