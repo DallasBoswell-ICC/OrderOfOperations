@@ -89,12 +89,19 @@ function printSheet(drawnBy, fit = false) {
   // power: traced pole by pole from the phases
   const LET = d => d > 0 ? String.fromCharCode(64 + d) : '';
   const POLED = new Set(['dsc', 'fus', 'mst', 'olh']);
-  const across = n => { const o = []; for (const q of P) if ((POLED.has(q.t) && q.t !== 'mst') || (q.t === 'fu1' && q.terms.some(t => PWRNET.has(netAt(...t))))) for (const [i, j] of poles(q)) {
-    const a = netAt(...q.terms[i]), b = netAt(...q.terms[j]); if (a === n && b != null) o.push(b); else if (b === n && a != null) o.push(a); } return o; };
+  const acrossQ = n => { const o = []; for (const q of P) if ((POLED.has(q.t) && q.t !== 'mst') || (q.t === 'fu1' && q.terms.some(t => PWRNET.has(netAt(...t))))) for (const [i, j] of poles(q)) {
+    const a = netAt(...q.terms[i]), b = netAt(...q.terms[j]); if (a === n && b != null) o.push({ m: b, q }); else if (b === n && a != null) o.push({ m: a, q }); } return o; };
+  const across = n => acrossQ(n).map(o => o.m);
   const mstLoad = new Set(); for (const q of P) if (q.t === 'mst') for (let i = 1; i < 6; i += 2) { const n = netAt(...q.terms[i]); if (n != null) mstLoad.add(n); }
-  const lineQ = [];
-  for (const q of P) if (q.t === 'ph') { const n = netAt(...q.terms[0]); if (n != null && !NUM.has(n)) { NUM.set(n, 'L' + q.L); PHASE.add(n); lineQ.push([n, q.L, 0]); } }
-  while (lineQ.length) { const [n, L, d] = lineQ.shift(); for (const m of across(n)) if (!NUM.has(m) && !mstLoad.has(m)) { NUM.set(m, 'L' + L + LET(d + 1)); lineQ.push([m, L, d + 1]); } }
+  // (each device a line passes takes that line's next letter, level by level, in reading order: every fused
+  // branch its own letter, Dallas 19 Nov 2026; the same as Print Builder)
+  for (const q of P) if (q.t === 'ph') { const n0 = netAt(...q.terms[0]); if (n0 == null || NUM.has(n0)) continue;
+    NUM.set(n0, 'L' + q.L); PHASE.add(n0);
+    let front = [n0], k = 0;
+    while (front.length) { const hop = [];
+      for (const a of front) for (const o of acrossQ(a)) if (!NUM.has(o.m) && !mstLoad.has(o.m)) hop.push(o);
+      hop.sort((u, v) => u.q.y - v.q.y || u.q.x - v.q.x); front = [];
+      for (const { m } of hop) if (!NUM.has(m)) { NUM.set(m, 'L' + q.L + LET(++k)); front.push(m); } } }
   const motors = P.filter(q => q.t === 'mtr').sort((a, b) => +a.L - +b.L || a.y - b.y || a.x - b.x);
   motors.forEach((m, k) => m.terms.forEach((t, i) => {
     const chain = [netAt(...t)]; if (chain[0] == null) return;

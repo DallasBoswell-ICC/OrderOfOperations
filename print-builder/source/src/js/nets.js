@@ -57,22 +57,28 @@ function analyse(D = doc) {
   const give = (r, l) => { if (r == null || label.has(r)) return false; label.set(r, l); return true; };
   // (the poles a line passes through, and the starters' contacts)
   const CROSS = new Set(['power', 'fuse', 'ol']);
-  const across = new Map(), addX = (a, b) => { if (!across.has(a)) across.set(a, []); across.get(a).push(b); };
+  const across = new Map(), addX = (a, b, x) => { if (!across.has(a)) across.set(a, []); across.get(a).push({ m: b, x }); };
   const starterLoad = new Set(), starterLine = new Map();
-  for (const { s, p } of parts) {
-    const k = kindOf(p); if (!CROSS.has(k) && k !== 'starter') continue;
+  for (const x of parts) {
+    const { s, p } = x, k = kindOf(p); if (!CROSS.has(k) && k !== 'starter') continue;
     for (const [i, j] of polesOf(p.t)) {
       const a = rootT(p, s, i), b = rootT(p, s, j);
-      if (k === 'starter') { starterLoad.add(b); starterLine.set(b, a); } else { addX(a, b); addX(b, a); }
+      if (k === 'starter') { starterLoad.add(b); starterLine.set(b, a); } else { addX(a, b, x); addX(b, a, x); }
     }
   }
-  // power, the line side: from each line in, lettered at each pole passed, up to the starters
+  // power, the line side: from each line in, lettered at each pole passed, up to the starters. Each device a line
+  // passes takes that line's next letter (Dallas, 19 Nov 2026: every fused branch its own letter), level by level
+  // from the line in, in reading order: L1, past the disconnect L1A, past two fuse blocks L1B and L1C.
   const sups = parts.filter(x => x.p.t === 'sup').sort((a, b) => (a.p.tag || '').localeCompare(b.p.tag || '') || reading(a, b));
-  const q = [];
-  for (const { s, p } of sups) { const r = rootT(p, s, 0); power.add(r); if (give(r, p.tag || 'L?')) q.push([r, p.tag || 'L?', 0]); }
-  while (q.length) {
-    const [r, L, d] = q.shift();
-    for (const m of across.get(r) || []) if (!label.has(m) && !starterLoad.has(m)) { label.set(m, L + LET(d + 1)); power.add(m); q.push([m, L, d + 1]); }
+  for (const { s, p } of sups) {
+    const r = rootT(p, s, 0), L = p.tag || 'L?'; power.add(r); if (!give(r, L)) continue;
+    let front = [r], n = 0;
+    while (front.length) {
+      const hop = [];
+      for (const a of front) for (const { m, x } of across.get(a) || []) if (!label.has(m) && !starterLoad.has(m)) hop.push({ m, x });
+      hop.sort((u, v) => reading(u.x, v.x)); front = [];
+      for (const { m } of hop) if (!label.has(m)) { label.set(m, L + LET(++n)); power.add(m); front.push(m); }
+    }
   }
   // power, the load side: each motor's leads, back from it to its starter
   const motors = parts.filter(x => kindOf(x.p) === 'motor').sort(reading);
@@ -82,7 +88,7 @@ function analyse(D = doc) {
     leads.forEach(({ i }, j) => {
       const chain = [rootT(p, s, i)];
       for (let g = 0; g < 30 && !starterLoad.has(chain[chain.length - 1]); g++) {
-        const nx = (across.get(chain[chain.length - 1]) || []).find(m => !chain.includes(m) && !label.has(m)); if (nx == null) break; chain.push(nx);
+        const nx = (across.get(chain[chain.length - 1]) || []).map(o => o.m).find(m => !chain.includes(m) && !label.has(m)); if (nx == null) break; chain.push(nx);
       }
       const n = 3 * mk_ + j + 1; tN = Math.max(tN, n);
       if (starterLoad.has(chain[chain.length - 1])) chain.reverse().forEach((r, d) => { if (give(r, 'T' + n + LET(d))) power.add(r); });

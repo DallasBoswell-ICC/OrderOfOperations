@@ -2331,6 +2331,16 @@ const DEF_CIRCUIT = `
     if (m[1] !== 'FU1,FU2,FU3,FU4,FU5,FU6') out.push('fuses on the print: ' + m[1]);
     return out;
   });
+  await check('Start from… (Dallas, 19 Nov 2026): a ready-made circuit takes its own name; the open circuit\'s name is not carried onto it', async page => {
+    const r = await page.evaluate(() => { circuitName = 'My Old Circuit'; const sel = document.getElementById('preset'); const o = [...sel.options].find(o => o.value && o.value !== 'blank');
+      sel.value = o.value; sel.dispatchEvent(new Event('change')); openSaveDialog(); const v = document.getElementById('save-name').value; document.getElementById('save-dlg')?.close?.();
+      return { want: o.textContent, name: circuitName, field: v, title: document.title, label: document.body.innerText.includes('My Old Circuit') }; });
+    const out = [];
+    if (r.name !== r.want) out.push('name after Start from: ' + r.name + ' (want ' + r.want + ')');
+    if (r.field !== r.want) out.push('Save box name: ' + r.field);
+    if (r.label || /My Old/.test(r.title)) out.push('the old name still shows on the page');
+    return out;
+  });
   await check('Print Diagram: wire numbers (control 1, 2, then reading order; power L1, L1A... and T1, T1A...), line numbers, cross-references, title block; printing puts the sheet alone on the page', async page => {
     const out = [];
     const d = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'fixtures', 'fwdrev.json'), 'utf8'));
@@ -3358,6 +3368,18 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Print Diagram and Print Builder (Dallas, 19 Nov 2026): each fused branch its own wire letter (a line through one fuse, then two in parallel: L1, L1A, L1B, L1C), the same in both programs', async page => {
+    const d = { app: 'order-of-operations-circuit-builder', v: 1, name: 'Branches', w: 880, parts: [['ph', 100, 120, '1', 0, 1, '', 3], ['fu1', 280, 120, '1', 0, 1, ''], ['fu1', 440, 120, '2', 0, 1, ''], ['fu1', 440, 240, '3', 0, 1, '']],
+      wires: [[140, 120, 240, 120], [320, 120, 400, 120], [320, 120, 320, 240], [320, 240, 400, 240], [480, 120, 560, 120], [480, 240, 560, 240]] };
+    await page.evaluate(d => { const c = readCircuit(d); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; normalize(); fit(true); draw(); }, d);
+    const cb = await page.evaluate(() => { const h = document.createElement('div'); h.innerHTML = printSheet('x', true).html; return [...new Set([...h.querySelectorAll('.wn')].map(t => t.textContent))].filter(l => /^L/.test(l)).sort().join(','); });
+    const pb = await withPB(page, pb => pb.evaluate(d => { const res = circuitToPrint(d, { uid, defaultTB, long: 'tight' }); loadDoc(JSON.parse(JSON.stringify(res.doc))); refresh(true);
+      return [...new Set(analyse().label.values())].filter(l => /^L/.test(l)).sort().join(','); }, d));
+    const out = [];
+    if (cb !== 'L1A,L1B,L1C') out.push('Circuit Builder print: ' + cb + ' (want L1A,L1B,L1C past the fuses)');
+    if (pb !== 'L1,L1A,L1B,L1C') out.push('Print Builder: ' + pb + ' (want L1,L1A,L1B,L1C)');
+    return out;
+  });
   await check('O³ link (Dallas, 19 Nov 2026, his "Ladder Edit" drawings): a rung too long for letter portrait asks how to draw it (landscape, tighter, wrapped, or continued on a new rung) and remembers; wrapped, the wire runs back under the rung and the line keeps its number; continued, a new rung from continuations named R#-W#; either way it comes back to Circuit Builder joined the same way', async page => {
     const out = [], fs = require('fs'), d = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'long-rung.json'), 'utf8'));
     // (the parts come back on new lines: the nets compared by what each part is, not where it is)

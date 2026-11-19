@@ -464,9 +464,21 @@ let saveT = null;
 function autosave() { showFileLabel(); clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(AUTOSAVE, JSON.stringify(doc)); localStorage.setItem(SHOWKEY, JSON.stringify(SHOW)); } catch (_) {} }, 400); }
 function loadDoc(d) {
   if (!d || d.kind !== 'o3-print' || !Array.isArray(d.sheets) || !d.sheets.length) throw new Error('not a Print Builder file');
+  // (a file that cannot be drawn is refused with a reason, never opened half-way: every sheet, part, wire and node
+  // must be there with numbers where numbers go)
+  const num = v => typeof v === 'number' && Number.isFinite(v);
+  d.sheets.forEach((s, k) => { const bad = why => { throw new Error('sheet ' + (k + 1) + ': ' + why); };
+    if (!s || typeof s !== 'object') bad('missing');
+    for (const key of ['parts', 'wires', 'nodes', 'texts']) if (s[key] != null && !Array.isArray(s[key])) bad(key + ' is not a list');
+    for (const p of s.parts || []) if (!p || typeof p.t !== 'string' || !num(p.x) || !(p.t === 'rail' ? num(p.y0) && num(p.y1) : num(p.y))) bad('a part with no symbol or place');
+    for (const n of s.nodes || []) if (!n || !num(n.x) || !num(n.y)) bad('a junction with no place');
+    for (const w of s.wires || []) if (!w || !w.a || !w.b || (w.pts != null && (!Array.isArray(w.pts) || w.pts.some(q => !Array.isArray(q) || !num(q[0]) || !num(q[1]))))) bad('a wire with a missing end or bend'); });
   for (const s of d.sheets) { s.parts ||= []; s.wires ||= []; s.nodes ||= []; s.texts ||= []; for (const p of s.parts) { if (/^(spdt|dpdt)_m$/.test(p.t)) { p.t = p.t.slice(0, -2); p.fx = true; }   // (flipped switches saved in the demo as parts of their own)
     if (p.t !== 'rail' && !LIB[p.t]) throw new Error('unknown symbol ' + p.t); } }
-  d.tb ||= defaultTB(); d.cur = Math.min(d.cur || 0, d.sheets.length - 1);
+  d.tb ||= defaultTB();
+  // (the sheet it was on: a sheet number, or (as some saved files have it) a sheet's id; anything else, sheet 1)
+  const ci = Number.isInteger(d.cur) ? d.cur : d.sheets.findIndex(s => s.id === d.cur);
+  d.cur = ci >= 0 && ci < d.sheets.length ? ci : 0;
   doc = d; S = doc.sheets[doc.cur]; sel = new Set(); selW = null; UNDO.length = 0; REDO.length = 0;
   // (a fused disconnect from before its fuses were numbered: the next three numbers)
   for (const s of d.sheets) for (const p of s.parts) if (p.t === 'fdsc3' && !p.fu) p.fu = nextTag('FU');

@@ -876,6 +876,17 @@ let passed = 0, failed = 0;
   // ---- O³ link (Dallas, 16 Nov 2026): Circuit Builder and Print Builder open each other's work
   const SEAL = {"app":"order-of-operations-circuit-builder","v":1,"name":"Seal In","w":880,"parts":[["btn",120,200,"D",1,0,"FF9600"],["btn",300,200,"A",0,0,"FF0032"],["con",300,300,"X",0,1,""],["coil",700,200,"X",0,1,"FFDC00"]],"wires":[[0,200,80,200],[160,200,260,200],[340,200,640,200],[760,200,880,200],[220,300,260,300],[340,300,380,300],[220,200,220,300],[380,200,380,300]]};
 
+  await check('Safe open (Dallas, 19 Nov 2026): a saved sheet given by its id (or out of range) opens on that sheet or sheet 1, never frozen; a file with a broken part, junction or wire is refused with the reason and the open print kept', async p => {
+    return p.evaluate(() => { const out = [], base = () => JSON.parse(JSON.stringify(template('starter')));
+      for (const [cur, want] of [[0, 0], [base().sheets[0].id, 0], ['zz', 0], [7, 0], [-1, 0], [null, 0]]) { const d = base(); d.cur = cur;
+        try { loadDoc(d); refresh(true); if (doc.cur !== want || S !== doc.sheets[want]) out.push('cur ' + JSON.stringify(cur) + ': on sheet ' + doc.cur); } catch (e) { out.push('cur ' + JSON.stringify(cur) + ': ' + e.message); } }
+      const before = doc;
+      for (const [name, spoil] of [['part with no place', d => { d.sheets[0].parts[0].x = 'a'; }], ['junction with no place', d => { d.sheets[0].nodes.push({ id: 'nz' }); }],
+        ['wire with a bad bend', d => { d.sheets[0].wires.push({ id: 'wz', a: { n: 'x' }, b: { n: 'y' }, pts: [[1]] }); }], ['parts not a list', d => { d.sheets[0].parts = {}; }], ['no sheet', d => { d.sheets[0] = null; }]]) {
+        const d = base(); spoil(d); let ok = false; try { loadDoc(d); } catch (e) { ok = /^sheet 1: /.test(e.message); }
+        if (!ok) out.push(name + ': not refused with a reason'); if (doc !== before) out.push(name + ': the open print was replaced'); }
+      return out; });
+  });
   await check('O³ link: the terminal table shared with Circuit Builder matches where Print Builder\'s parts really join (every symbol)', async p => {
     return p.evaluate(() => Object.keys(LIB).filter(t => t !== 'rail').flatMap(t => { const q = { id: 'q', t, x: 0, y: 0, rot: 0 }; const got = JSON.stringify(termsOf(t).map((_, i) => termPos(q, i))), want = JSON.stringify(LINK_PB_TERMS[t] || null); return got === want ? [] : [t + ': table ' + want + ', Print Builder ' + got]; }));
   });

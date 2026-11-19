@@ -2299,7 +2299,7 @@ const TRAFFIC = {"app":"order-of-operations-circuit-builder","v":1,"name":"Traff
 PRESETS.traffic = () => { const c = readCircuit(TRAFFIC); return [c.parts, c.wires, c.w, c.fixed]; };
 // FWD/REV template (Dallas's, as saved from the builder): 3-phase power through a disconnect and fuses to forward and
 // reverse starters, an overload and a motor, with the control transformer and its fuses; the control circuit left to build
-const FWDREV_TEMPLATE = {"app":"order-of-operations-circuit-builder","v":1,"name":"FWD/REV Template","w":2180,"pw":"boxes","pc":["E8413C","00FF64","3F7FFF"],"parts":[["ph",100,120,"1",0,1,"",3],["ph",100,240,"2",0,1,"",3],["ph",100,360,"3",0,1,"",3],["dsc",280,240,"1",0,1,""],["fus",440,240,"1",0,1,""],["xfm",640,700,"1",0,1,""],["fu1",580,500,"2",0,1,"",3],["fu1",700,500,"2",0,1,"",3],["mst",1160,240,"X",0,1,""],["olh",1700,240,"1",0,1,""],["mtr",1980,240,"1",0,1,""],["mst",1160,620,"Y",0,1,""],["fu1",420,1000,"3",0,1,""]],"wires":[[140,120,240,120],[320,120,400,120],[480,120,580,120],[580,120,1020,120],[1020,120,1120,120],[1200,120,1500,120],[1500,120,1660,120],[1740,120,1820,120],[140,240,240,240],[320,240,400,240],[480,240,940,240],[940,240,1120,240],[1200,240,1400,240],[1400,240,1660,240],[1740,240,1820,240],[140,360,240,360],[320,360,400,360],[480,360,700,360],[700,360,860,360],[860,360,1120,360],[1200,360,1300,360],[1300,360,1660,360],[1740,360,1820,360],[1020,500,1120,500],[1200,500,1300,500],[940,620,1120,620],[1200,620,1400,620],[860,740,1120,740],[1200,740,1500,740],[460,1000,580,1000],[700,360,700,460],[700,540,700,620],[700,780,700,900],[580,120,580,460],[580,540,580,620],[580,780,580,1000],[1020,120,1020,500],[940,240,940,620],[860,360,860,740],[1300,360,1300,500],[1400,240,1400,620],[1500,120,1500,740]],"pv":[["vapcfat","Pressure 1","pressure","psi",0,100,0],["voh3xcn","Temperature","temperature","°F",32,600,70]],"pd":[],"pl":[]};
+const FWDREV_TEMPLATE = {"app":"order-of-operations-circuit-builder","v":1,"name":"FWD/REV Template","w":2180,"pw":"boxes","pc":["E8413C","00FF64","3F7FFF"],"parts":[["ph",100,120,"1",0,1,"",3],["ph",100,240,"2",0,1,"",3],["ph",100,360,"3",0,1,"",3],["dsc",280,240,"1",0,1,""],["fus",440,240,"1",0,1,""],["xfm",640,700,"1",0,1,""],["fu1",580,500,"4",0,1,"",3],["fu1",700,500,"5",0,1,"",3],["mst",1160,240,"X",0,1,""],["olh",1700,240,"1",0,1,""],["mtr",1980,240,"1",0,1,""],["mst",1160,620,"Y",0,1,""],["fu1",420,1000,"6",0,1,""]],"wires":[[140,120,240,120],[320,120,400,120],[480,120,580,120],[580,120,1020,120],[1020,120,1120,120],[1200,120,1500,120],[1500,120,1660,120],[1740,120,1820,120],[140,240,240,240],[320,240,400,240],[480,240,940,240],[940,240,1120,240],[1200,240,1400,240],[1400,240,1660,240],[1740,240,1820,240],[140,360,240,360],[320,360,400,360],[480,360,700,360],[700,360,860,360],[860,360,1120,360],[1200,360,1300,360],[1300,360,1660,360],[1740,360,1820,360],[1020,500,1120,500],[1200,500,1300,500],[940,620,1120,620],[1200,620,1400,620],[860,740,1120,740],[1200,740,1500,740],[460,1000,580,1000],[700,360,700,460],[700,540,700,620],[700,780,700,900],[580,120,580,460],[580,540,580,620],[580,780,580,1000],[1020,120,1020,500],[940,240,940,620],[860,360,860,740],[1300,360,1300,500],[1400,240,1400,620],[1500,120,1500,740]],"pv":[["vapcfat","Pressure 1","pressure","psi",0,100,0],["voh3xcn","Temperature","temperature","°F",32,600,70]],"pd":[],"pl":[]};
 PRESETS.fwdrev = () => { const c = readCircuit(FWDREV_TEMPLATE); return [c.parts, c.wires, c.w, c.fixed, c]; };
 // (a preset saved from the builder brings its own power, colours and process values with it)
 function loadPreset(k) { W = W_MIN; W_USER = null; POWER = 'bars'; PV = []; WORK_ORDER = ''; SCEN = 0; SCEN_N = 1; SCEN_WO = ['']; FF_OFFER = { r: true, n: true }; SRC_COL = SRC_DEFAULT; PH_COL = [...PH_DEFAULT]; const r = PRESETS[k](); [parts, wires] = r; if (r[2]) W = r[2]; if (r[3]) W_USER = W;
@@ -6051,12 +6051,19 @@ function printSheet(drawnBy, fit = false) {
   // power: traced pole by pole from the phases
   const LET = d => d > 0 ? String.fromCharCode(64 + d) : '';
   const POLED = new Set(['dsc', 'fus', 'mst', 'olh']);
-  const across = n => { const o = []; for (const q of P) if ((POLED.has(q.t) && q.t !== 'mst') || (q.t === 'fu1' && q.terms.some(t => PWRNET.has(netAt(...t))))) for (const [i, j] of poles(q)) {
-    const a = netAt(...q.terms[i]), b = netAt(...q.terms[j]); if (a === n && b != null) o.push(b); else if (b === n && a != null) o.push(a); } return o; };
+  const acrossQ = n => { const o = []; for (const q of P) if ((POLED.has(q.t) && q.t !== 'mst') || (q.t === 'fu1' && q.terms.some(t => PWRNET.has(netAt(...t))))) for (const [i, j] of poles(q)) {
+    const a = netAt(...q.terms[i]), b = netAt(...q.terms[j]); if (a === n && b != null) o.push({ m: b, q }); else if (b === n && a != null) o.push({ m: a, q }); } return o; };
+  const across = n => acrossQ(n).map(o => o.m);
   const mstLoad = new Set(); for (const q of P) if (q.t === 'mst') for (let i = 1; i < 6; i += 2) { const n = netAt(...q.terms[i]); if (n != null) mstLoad.add(n); }
-  const lineQ = [];
-  for (const q of P) if (q.t === 'ph') { const n = netAt(...q.terms[0]); if (n != null && !NUM.has(n)) { NUM.set(n, 'L' + q.L); PHASE.add(n); lineQ.push([n, q.L, 0]); } }
-  while (lineQ.length) { const [n, L, d] = lineQ.shift(); for (const m of across(n)) if (!NUM.has(m) && !mstLoad.has(m)) { NUM.set(m, 'L' + L + LET(d + 1)); lineQ.push([m, L, d + 1]); } }
+  // (each device a line passes takes that line's next letter, level by level, in reading order: every fused
+  // branch its own letter, Dallas 19 Nov 2026; the same as Print Builder)
+  for (const q of P) if (q.t === 'ph') { const n0 = netAt(...q.terms[0]); if (n0 == null || NUM.has(n0)) continue;
+    NUM.set(n0, 'L' + q.L); PHASE.add(n0);
+    let front = [n0], k = 0;
+    while (front.length) { const hop = [];
+      for (const a of front) for (const o of acrossQ(a)) if (!NUM.has(o.m) && !mstLoad.has(o.m)) hop.push(o);
+      hop.sort((u, v) => u.q.y - v.q.y || u.q.x - v.q.x); front = [];
+      for (const { m } of hop) if (!NUM.has(m)) { NUM.set(m, 'L' + q.L + LET(++k)); front.push(m); } } }
   const motors = P.filter(q => q.t === 'mtr').sort((a, b) => +a.L - +b.L || a.y - b.y || a.x - b.x);
   motors.forEach((m, k) => m.terms.forEach((t, i) => {
     const chain = [netAt(...t)]; if (chain[0] == null) return;
