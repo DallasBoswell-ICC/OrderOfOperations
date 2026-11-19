@@ -268,6 +268,9 @@ function removeWire(s, id) { const w = s.wires.find(w => w.id === id); if (w) s.
 /* ---------- tags ---------- */
 // every part in the document, with its sheet
 const allParts = () => doc.sheets.flatMap((s, k) => s.parts.filter(p => p.t !== 'rail').map(p => ({ p, s, k })));
+// a timer's coil: its kind is TR (a print from Circuit Builder tags it by the circuit's letter, T, as Circuit Builder's prints do;
+// older prints went by the tag alone, TR1)
+const isTimerCoil = c => !!c && c.t === 'coil' && (c.pre ? c.pre === 'TR' : /^TR/.test(c.tag || ''));
 const tagPre = p => p.t === 'coil' ? (p.pre || 'CR') : LIB[p.t] && LIB[p.t].pre;
 // the next free tag starting pre: one more than the highest in use (FU1, FU2, FU3...: never the same twice)
 function nextTag(pre, motor = false) {   // (motors are counted among themselves: motor M1 and its starter M1 go together)
@@ -279,7 +282,7 @@ function nextTag(pre, motor = false) {   // (motors are counted among themselves
 let lastCoil = '';
 function defaultTag(t) {
   const k = LIB[t].kind;
-  if (t === 'tc_no' || t === 'tc_nc') { const tm = allParts().filter(q => q.p.t === 'coil' && /^TR/.test(q.p.tag || '')); return (tm.find(q => q.p.tag === lastCoil) || tm[tm.length - 1] || {}).p?.tag || 'TR1'; }   // (a timed contact: the last timer's)
+  if (t === 'tc_no' || t === 'tc_nc') { const tm = allParts().filter(q => isTimerCoil(q.p)); return (tm.find(q => q.p.tag === lastCoil) || tm[tm.length - 1] || {}).p?.tag || 'TR1'; }   // (a timed contact: the last timer's)
   if (k === 'contact') return lastCoil || (allParts().find(q => q.p.t === 'coil') || {}).p?.tag || '';
   if (k === 'starter') { const m = allParts().find(q => q.p.t === 'coil' && /^M\d*$/.test(q.p.tag || '')); return m ? m.p.tag : 'M1'; }
   if (k === 'olc') { const o = allParts().find(q => LIB[q.p.t].kind === 'ol'); return o ? o.p.tag : 'OL1'; }

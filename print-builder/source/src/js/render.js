@@ -33,7 +33,7 @@ const mainBlock = p => blocksOf(p)[0] || p;
 function blockGroups(s) { const g = new Map(); for (const p of s.parts) if (linkable(p) && p.tag) { const k = family(p) + ':' + p.tag; if (!g.has(k)) g.set(k, []); g.get(k).push(p); }
   return [...g.values()].map(bs => bs.sort((a, b) => a.y - b.y)).filter(bs => bs.length > 1); }
 // the timer a contact belongs to (its coil, if that is a timer)
-const timerOf = p => { const c = allParts().find(q => q.p.t === 'coil' && q.p.tag === p.tag); return c && /^TR/.test(c.p.tag) ? c.p : null; };
+const timerOf = p => { const c = allParts().find(q => q.p.t === 'coil' && q.p.tag === p.tag); return c && isTimerCoil(c.p) ? c.p : null; };
 // the print symbol a part is drawn with: a timer's contacts timed (unless instant); a selector's extra blocks without the arrow
 function symOf(p) {
   if (p.t === 'tc_no' || p.t === 'tc_nc') { const tm = timerOf(p); return `${p.t === 'tc_no' ? 'NO' : 'NC'} ${tm && tm.tof ? 'FD' : 'ND'} Switch`; }   // (timed: on- or off-delay as its timer is)
@@ -44,7 +44,7 @@ function symOf(p) {
 // block is closed in, the button a light is built into, the light built into a button)
 function noteOf(p) {
   const n = [p.desc || LIB[p.t].note];
-  if (p.t === 'coil' && /^TR/.test(p.tag || '')) n.push(`${p.tof ? 'OFF' : 'ON'}-DELAY${p.delay ? ' ' + p.delay + ' s' : ''}`);
+  if (isTimerCoil(p)) n.push(`${p.tof ? 'OFF' : 'ON'}-DELAY${p.delay ? ' ' + p.delay + ' s' : ''}`);
   if (p.t === 'sel') { const names = selNames(p), cl = (p.closedIn || []).map(i => names[i]).filter(Boolean); n.push(cl.length ? 'CLOSED: ' + cl.join(', ') : 'OPEN IN ALL'); }
   if (p.t === 'pl' && p.inPB) n.push('IN ' + p.inPB);
   if (isPB(p) && mainBlock(p) === p) { const ls = allParts().filter(q => q.p.t === 'pl' && q.p.inPB === p.tag).map(q => q.p.tag); if (ls.length) n.push('LIGHTED (' + ls.join(', ') + ')'); }

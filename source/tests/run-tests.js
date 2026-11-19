@@ -3411,6 +3411,57 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  // (Dallas, 19 Nov 2026: the transfer tests. Prints edited in Print Builder, by its own moves, come back joined exactly as before, with
+  // their letters; a print drawn closer than Circuit Builder's parts allow comes back spread out, nothing on top of anything)
+  const TRANSFER = ['T1_Every_Control_Part', 'T2_Branches_and_Seal-ins', 'T6_Uneven_Placement'].map(n => [n, JSON.parse(require('fs').readFileSync(path.join(__dirname, 'fixtures', 'transfer', n + '.json'), 'utf8'))]);
+  await check('O³ link (Dallas, 19 Nov 2026): a print edited in Print Builder comes back joined just as the print joins it, letters kept, no part on another, no wire through a part', async page => {
+    const out = [];
+    await page.evaluate(NETSIG.replace("a[0] + '@' + a[1] + ',' + a[2] + '#' + i", "a[0] + ':' + a[3] + ':' + (a[4] ? 1 : 0) + '#' + i").replace('const netSig =', 'const netSigL =') + 'window.netSigL = netSigL;');
+    const circs = TRANSFER.concat(await page.evaluate(() => ['seal', 'abc', 'traffic', 'stress', 'three'].map(n => { loadPreset(n); return [n, circuitData()]; })));
+    const edits = await withPB(page, pb => pb.evaluate(cs => { const out = [];
+      const remap = (d, fy, fx = x => x) => { for (const s of d.sheets) { for (const p of s.parts) { if (p.t === 'rail') { p.x = fx(p.x); p.y0 = fy(p.y0); p.y1 = fy(p.y1); } else { p.x = fx(p.x); p.y = fy(p.y); } }
+        for (const w of s.wires) { for (const e of [w.a, w.b]) if (e.r != null && e.y != null) e.y = fy(e.y); w.pts = (w.pts || []).map(q => [fx(q[0]), fy(q[1])]); } for (const n of s.nodes) { n.x = fx(n.x); n.y = fy(n.y); } } return d; };
+      for (const [n, d] of cs) {
+        const base = circuitToPrint(d, { uid, defaultTB, long: 'tight' }).doc;
+        // (1) each contact and pushbutton moved two squares right on its own, as a drag does (its wires bend to follow)
+        const movable = base.sheets[0].parts.filter(p => /^(con_|tc_|pb_|pbm_)/.test(p.t)).slice(0, 4);
+        // (only to where the print stays clean: no junction, wire bend or other part inside the moved part's own span)
+        const clean = p => { const ts = linkPbTerms(p), lo = Math.min(...ts.map(q => q[0])), hi = Math.max(...ts.map(q => q[0])), y = p.y;
+          if (S.nodes.some(nd => nd.y === y && nd.x > lo - 20 && nd.x < hi + 20)) return false;
+          if (S.parts.some(q => q !== p && q.t !== 'rail' && linkPbTerms(q).some(t => t[1] === y && t[0] > lo - 20 && t[0] < hi + 20))) return false;
+          if (S.wires.some(w => (w.pts || []).some(q => q[1] === y && q[0] > lo - 20 && q[0] < hi + 20))) return false;
+          if (S.wires.some(w => { const P = [linkPbPos(S, w.a), ...(w.pts || []), linkPbPos(S, w.b)]; return P.some((q, i) => i && q[1] === y && P[i - 1][1] === y && Math.min(q[0], P[i - 1][0]) < hi - 1 && Math.max(q[0], P[i - 1][0]) > lo + 1); })) return false;
+          // (and no wire running straight over a junction it doesn't end at: on paper that reads as joined)
+          return !S.wires.some(w => { const P = [linkPbPos(S, w.a), ...(w.pts || []), linkPbPos(S, w.b)]; return S.nodes.some(nd => w.a.n !== nd.id && w.b.n !== nd.id && P.some((q, i) => i && (q[0] === P[i - 1][0] ? nd.x === q[0] && nd.y > Math.min(q[1], P[i - 1][1]) && nd.y < Math.max(q[1], P[i - 1][1]) : nd.y === q[1] && nd.x > Math.min(q[0], P[i - 1][0]) && nd.x < Math.max(q[0], P[i - 1][0])))); }); };
+        for (const p0 of movable) for (const dx of [80, -80, 160, -160]) { loadDoc(JSON.parse(JSON.stringify(base))); moveItems(S, new Set([p0.id]), dx, 0); tidy(S);
+          if (!clean(S.parts.find(q => q.id === p0.id))) continue; out.push([n, 'moved ' + p0.tag + ' by ' + dx, JSON.parse(JSON.stringify(doc)), null]); break; }
+        // (2) the whole print drawn closer down, to 3/4 of its height (a clean print: rungs 120 apart)
+        { const d2 = remap(JSON.parse(JSON.stringify(base)), y => 160 + Math.round((y - 160) * .75 / 20) * 20); out.push([n, 'drawn closer down', d2, null]); }
+        // (3) everything nudged two squares right
+        out.push([n, 'all nudged', remap(JSON.parse(JSON.stringify(base)), y => y, x => x + 40), null]);
+        // (4) a coil renamed (and its contacts with it): its letter in the circuit follows
+        { const d4 = JSON.parse(JSON.stringify(base)), c = d4.sheets.flatMap(s => s.parts).find(p => p.t === 'coil');
+          if (c) { const old = c.tag, nu = old === 'Q' ? 'R' : 'Q'; for (const s of d4.sheets) for (const p of s.parts) if (p.tag === old && (p.t === 'coil' || /^(con|tc)_/.test(p.t))) p.tag = nu; out.push([n, 'coil ' + old + ' renamed ' + nu, d4, [old, nu]]); } }
+      }
+      return out; }, circs));
+    for (const [n, what, print, ren] of edits) {
+      const d = circs.find(c => c[0] === n)[1];
+      const r = await page.evaluate(([print, d, ren]) => { const b = printToCircuit(print), c = linkCheck(print, { data: b.data, map: [] });
+        let want = netSigL(d); if (ren) want = netSigL({ ...d, parts: d.parts.map(a => (a[0] === 'coil' || a[0] === 'con') && a[3] === ren[0] ? [a[0], a[1], a[2], ren[1], ...a.slice(4)] : a) });
+        const lettersIn = new Set(d.parts.filter(a => ['btn', 'coil', 'sel', 'est'].includes(a[0])).map(a => a[3]));
+        const lettersOut = b.data.parts.filter(a => ['btn', 'coil', 'sel', 'est'].includes(a[0])).map(a => a[3]).filter(l => !lettersIn.has(l) && !(ren && l === ren[1]));
+        const labels = b.data.parts.filter((a, i) => ['btn', 'coil'].includes(a[0]) && typeof a[9] === 'string' && a[9] && !d.parts.some(q => q[0] === a[0] && q[3] === (ren && a[3] === ren[1] ? ren[0] : a[3]) && q[9] === a[9])).length;
+        return [netSigL(b.data) === want, c.over, c.thru, lettersOut.join(','), labels, /Drawn again/.test(b.notes.changed.join()) ? 'drawn again' : 'kept places']; }, [print, d, ren]);
+      if (process.env.SHOW) console.log('      . ' + n + ' | ' + what + ' | ' + r[5]);
+      if (!r[0]) out.push(n + ', ' + what + ': not joined as the print joins it');
+      if (r[1]) out.push(n + ', ' + what + ': ' + r[1] + ' parts on top of others');
+      if (r[2]) out.push(n + ', ' + what + ': ' + r[2] + ' wires through a part');
+      if (r[3]) out.push(n + ', ' + what + ': letters changed (new: ' + r[3] + ')');
+      if (r[4]) out.push(n + ', ' + what + ': ' + r[4] + ' labels added to caps');
+    }
+    return out;
+  });
+
   await check('O³ link: Open takes a print file from Print Builder (with a note of what changed); Open in Print Builder in the Save box hands the circuit over in a new tab; a page opened for a print builds it', async page => {
     const out = [];
     const print = await withPB(page, pb => pb.evaluate(() => { const d = template('starter'); d.sheets[0].parts.push({ id: 'pz', t: 'prs_no', x: 3000, y: 3000, rot: 0, tag: 'PRS1', desc: '' }); return d; }));

@@ -886,7 +886,7 @@ let passed = 0, failed = 0;
     const r = await p.evaluate(() => [$('link-dlg').open, fileName(), S.parts.map(q => q.t + ':' + (q.tag || q.label)).sort().join(' '), ISSUES.filter(i => i.sev === 'e').map(i => i.title).join('; '), [...new Set(S.parts.filter(q => q.t !== 'rail').map(q => q.y))].sort((a, b) => a - b).join(), !!doc.link]);
     if (!r[0]) out.push('no note on arriving');
     if (r[1] !== 'Seal In') out.push('title: ' + r[1]);
-    if (r[2] !== 'coil:CR1 con_no:CR1 pb_nc:PB1 pb_no:PB2 rail:L1 rail:L2') out.push('parts: ' + r[2]);
+    if (r[2] !== 'coil:X con_no:X pb_nc:PB-D pb_no:PB-A rail:L1 rail:L2') out.push('parts: ' + r[2]);   // (tagged as Circuit Builder's own prints are (Dallas, 19 Nov 2026))
     if (r[3]) out.push('Check Print: ' + r[3]);
     const ys = r[4].split(',').map(Number); if (ys.length !== 2 || ys[1] - ys[0] < 160) out.push('rung and branch rows: ' + r[4]);
     if (!r[5]) out.push('the circuit is not kept with the print');

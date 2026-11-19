@@ -281,7 +281,7 @@ function renderProps0() {
       ${k === 'contact' || k === 'starter' || k === 'olc' ? `<div class="f">Worked by<select id="p-of">${[...new Set([...list, p.tag].filter(Boolean))].map(x => `<option value="${esc(x)}"${x === p.tag ? ' selected' : ''}>${esc(x)}${list.includes(x) ? '' : ' (no ' + (k === 'olc' ? 'overload' : 'coil') + ' yet)'}</option>`).join('')}${list.length || p.tag ? '' : `<option value="">(place a ${k === 'olc' ? 'overload' : 'coil'} first)</option>`}<option value="__other">Other…</option></select></div>`
         : `<div class="f">${k === 'coil' || k === 'sw' || k === 'cont' ? 'Letter' : 'Number'}<input class="in" id="p-tag" value="${esc(p.tag)}" autocomplete="off"></div>`}`}
       ${p.t === 'fdsc3' ? `<div class="f">Fuses<input class="in" id="p-fu" value="${esc(p.fu || '')}" autocomplete="off" title="The first of its three fuses: FU1 makes them FU1, FU2, FU3"></div><div class="f">&nbsp;<span class="ro">${esc(tagsOf(p).slice(1).join(', '))}</span></div>` : ''}
-      ${k === 'coil' && /^TR/.test(p.tag || '') ? `<div class="f">Delay<div class="seg"><button data-tof="0" aria-pressed="${!p.tof}">On-Delay</button><button data-tof="1" aria-pressed="${!!p.tof}">Off-Delay</button></div></div><div class="f">Seconds<input class="in" id="p-delay" type="number" min="0" step="0.5" value="${esc(p.delay ?? '')}" style="min-width:80px;width:90px"></div>` : ''}
+      ${k === 'coil' && isTimerCoil(p) ? `<div class="f">Delay<div class="seg"><button data-tof="0" aria-pressed="${!p.tof}">On-Delay</button><button data-tof="1" aria-pressed="${!!p.tof}">Off-Delay</button></div></div><div class="f">Seconds<input class="in" id="p-delay" type="number" min="0" step="0.5" value="${esc(p.delay ?? '')}" style="min-width:80px;width:90px"></div>` : ''}
       ${/^(con|tc)_n[oc]$/.test(p.t) && (timerOf(p) || p.t.startsWith('tc')) ? `<div class="f">Contact Type<div class="seg"><button data-ctype="tc" aria-pressed="${p.t.startsWith('tc')}">Timed</button><button data-ctype="con" aria-pressed="${p.t.startsWith('con')}">Instant</button></div></div>` : ''}
       ${p.t === 'sel' ? `<div class="f">Positions<input class="in" id="p-pos" value="${esc(selNames(p).join('/'))}" title="2 to 4 positions, with slashes: HAND/OFF/AUTO"></div><div class="f">Closed In<div class="seg">${selNames(p).map((n, i) => `<button data-cl="${i}" aria-pressed="${(p.closedIn || []).includes(i)}">${esc(n)}</button>`).join('')}</div></div>` : ''}
       ${p.t === 'pl' ? `<div class="f">Built Into<select id="p-inpb"><option value="">None (a light of its own)</option>${[...new Set(allParts().filter(q => isPB(q.p) && q.p.tag).map(q => q.p.tag).concat(p.inPB ? [p.inPB] : []))].map(t => `<option value="${esc(t)}"${t === p.inPB ? ' selected' : ''}>${esc(t)} (lighted pushbutton)</option>`).join('')}</select></div>` : ''}
@@ -471,7 +471,7 @@ function loadDoc(d) {
   // (a fused disconnect from before its fuses were numbered: the next three numbers)
   for (const s of d.sheets) for (const p of s.parts) if (p.t === 'fdsc3' && !p.fu) p.fu = nextTag('FU');
   // (a timer's contact drawn timed before there were timed contacts of their own: one now)
-  for (const s of d.sheets) for (const p of s.parts) if ((p.t === 'con_no' || p.t === 'con_nc') && !p.inst && d.sheets.some(t => t.parts.some(c => c.t === 'coil' && c.tag === p.tag && /^TR/.test(c.tag || '')))) p.t = 'tc_' + p.t.split('_')[1];
+  for (const s of d.sheets) for (const p of s.parts) if ((p.t === 'con_no' || p.t === 'con_nc') && !p.inst && d.sheets.some(t => t.parts.some(c => c.t === 'coil' && c.tag === p.tag && isTimerCoil(c)))) p.t = 'tc_' + p.t.split('_')[1];
 }
 const fileName = () => ((doc.tb.fields.find(f => /title/i.test(f.label)) || {}).value || 'Print').replace(/[\\/:*?"<>|]+/g, '').trim() || 'Print';
 /* ---------- files, as in Circuit Builder: where the browser allows it (Chrome and Edge, and the installed app), the
@@ -651,7 +651,7 @@ function start() {
 
 /* ---------- several parts of one kind picked: one Part tab for them all (as in Circuit Builder) ---------- */
 // what parts are alike for this: contacts; relay coils; timers; pushbuttons; otherwise the same symbol, NO or NC
-const multiKey = p => { const k = LIB[p.t].kind; if (k === 'contact') return 'contact'; if (k === 'coil') return /^TR/.test(p.tag || '') ? 'timer' : 'coil'; if (isPB(p)) return 'pb'; return p.t.replace(/_(no|nc|hc|ho)$/, ''); };
+const multiKey = p => { const k = LIB[p.t].kind; if (k === 'contact') return 'contact'; if (k === 'coil') return isTimerCoil(p) ? 'timer' : 'coil'; if (isPB(p)) return 'pb'; return p.t.replace(/_(no|nc|hc|ho)$/, ''); };
 const MULTI_NAME = { contact: 'Contacts', coil: 'Relay Coils', timer: 'Timers', pb: 'Pushbuttons', pl: 'Pilot Lights', sel: 'Selector Switches' };
 // the picked parts, if every one is a symbol (not a rail) and all of one kind; else null
 function multiParts(ids) {

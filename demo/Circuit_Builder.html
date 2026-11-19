@@ -1057,6 +1057,7 @@ const LINK_KEY = 'o3-link:handoff';   // (the work handed from one program to th
 // Print Builder's papers, for laying sheets one under another (its own model.js has the same)
 const LINK_PAPERS = { letter: [8.5, 11], legal: [8.5, 14], tabloid: [11, 17], ansic: [17, 22], a4: [8.27, 11.69], a3: [11.69, 16.54] };
 const LINK_U_IN = 312.5;
+const LINK_W_MIN = 880;   // (Circuit Builder's narrowest sheet: its W_MIN)
 const linkPaper = s => { const k = s.paper && (LINK_PAPERS[s.paper] || s.paper === 'custom') ? s.paper : 'letter'; const [w, h] = k === 'custom' ? [s.pw, s.ph] : LINK_PAPERS[k]; return s.land ? [h, w] : [w, h]; };
 const linkDrawH = s => Math.round((linkPaper(s)[1] - .8 - .24 - 1.25) * LINK_U_IN);
 const linkDrawW = s => Math.round((linkPaper(s)[0] - .8 - .24) * LINK_U_IN);
@@ -1108,15 +1109,34 @@ function linkFingerprint(doc) {
    A print -> a circuit
    ===================================================================== */
 const LINK_LAMP_COL = { GREEN: '00B050', GRN: '00B050', RED: 'FF0032', AMBER: 'FF9600', AMB: 'FF9600', ORANGE: 'FF9600', YELLOW: 'FFDC00', YLW: 'FFDC00', BLUE: '0070C0', BLU: '0070C0', WHITE: 'FFFFFF', WHT: 'FFFFFF', CLEAR: 'FFFFFF', VIOLET: '7030A0', PURPLE: '7030A0', PINK: 'EC008C', MAGENTA: 'EC008C', TEAL: '00D2BE' };
+// a print's timer coil: its kind TR (or, on older prints, a tag starting TR), or a delay set on it
+const linkTimer = c => (c.pre ? c.pre === 'TR' : /^TR/i.test(c.tag || '')) || !!c.delay || !!c.tof;
 const LINK_PAL = ['FFDC00', 'EC008C', '7030A0', '00D2BE', 'FF9600', '0070C0', '00B050', 'FF0032'];
 function printToCircuit(doc) {
   if (!doc || doc.kind !== 'o3-print' || !Array.isArray(doc.sheets)) throw new Error('That is not a print from Print Builder.');
   // (made from a circuit and not changed since: the circuit itself, exactly)
   if (doc.link && doc.link.cb && doc.link.fp && doc.link.fp === linkFingerprint(doc)) return { data: JSON.parse(JSON.stringify(doc.link.cb)), notes: { changed: [], left: [], same: true } };
+  // (made from a circuit and changed on the print: first each part back at the circuit's own places. That is checked against the print:
+  // joined just as the print joins it, no part on another, no wire through a part. If not (Dallas, 19 Nov 2026: a contact moved on the print
+  // came back with a loose end; rungs drawn closer came back on top of each other), the circuit is drawn again from the print itself, its
+  // rows and parts spread out as far as Circuit Builder's parts need)
+  if (doc.link && doc.link.cb) {
+    const a = linkBuild(doc, true), ca = linkCheck(doc, a);
+    if (ca.ok) return linkOut(a);
+    const b = linkBuild(doc, false), cb = linkCheck(doc, b);
+    if (!cb.ok && cb.score > ca.score) return linkOut(a);
+    b.notes.changed.unshift('Drawn again from the print (it was changed too much to put each part back where it was in the circuit)');
+    return linkOut(b);
+  }
+  return linkOut(linkBuild(doc, false));
+}
+const linkOut = r => ({ data: r.data, notes: r.notes });
+// a print turned into a circuit. back: each part at the circuit's own places (a print made from a circuit); otherwise as the print draws it
+function linkBuild(doc, back) {
   const changed = [], left = [], note = (list, s) => { if (!list.includes(s)) list.push(s); };
   // (drawn closer across to fit its paper: spread back out first. What is where it was put goes back exactly; anything moved since,
   // in proportion between the parts on either side of it)
-  if (doc.link && doc.link.xk && doc.link.v !== 2) {   // (prints made before 17 Nov 2026 kept their places this way)
+  if (back && doc.link && doc.link.xk && doc.link.v !== 2) {   // (prints made before 17 Nov 2026 kept their places this way)
     doc = JSON.parse(JSON.stringify(doc));
     const K = doc.link.xk, N = doc.link.xn, n = K.length, un = v => { if (v <= N[0]) return v - N[0] + K[0]; for (let i = 1; i < n; i++) if (v <= N[i]) return linkSnap(K[i - 1] + (v - N[i - 1]) * (K[i] - K[i - 1]) / ((N[i] - N[i - 1]) || 1)); return v - N[n - 1] + K[n - 1]; };
     for (const s of doc.sheets) {
@@ -1126,12 +1146,12 @@ function printToCircuit(doc) {
     delete doc.link.xk; delete doc.link.xn;
   }
   // (each sheet centred on its own (from 17 Nov 2026): back to one place across first)
-  if (doc.link && Array.isArray(doc.link.oxs)) { doc = JSON.parse(JSON.stringify(doc)); const ox = doc.link.ox;
+  if (back && doc.link && Array.isArray(doc.link.oxs)) { doc = JSON.parse(JSON.stringify(doc)); const ox = doc.link.ox;
     doc.sheets.forEach((s, k) => { const d = ox - (doc.link.oxs[k] ?? ox); if (!d) return;
       for (const p of s.parts) p.x += d; for (const q of s.nodes) q.x += d; for (const w of s.wires) w.pts = (w.pts || []).map(q => [q[0] + d, q[1]]); });
     delete doc.link.oxs; }
   // (laid out rung by rung (from 17 Nov 2026): each place back through its own rung's layout; the uprights between rungs by the pins)
-  if (doc.link && doc.link.v === 2 && Array.isArray(doc.link.xb) && Array.isArray(doc.link.oy)) {
+  if (back && doc.link && doc.link.v === 2 && Array.isArray(doc.link.xb) && Array.isArray(doc.link.oy)) {
     doc = JSON.parse(JSON.stringify(doc));
     const xb = doc.link.xb, ox = doc.link.ox, oy = doc.link.oy;
     const un = (keys, n, v) => { let i = 0; while (i < n.length && n[i] < v) i++; if (i < n.length && n[i] === v) return keys[i]; if (i === 0) return v - n[0] + keys[0]; if (i === n.length) return v - n[i - 1] + keys[i - 1]; return linkSnap(keys[i - 1] + (v - n[i - 1]) * (keys[i] - keys[i - 1]) / ((n[i] - n[i - 1]) || 1)); };
@@ -1156,15 +1176,16 @@ function printToCircuit(doc) {
   }
   // (sheets drawn each centred on its own: where every continuation pair between two sheets is shifted alike, the later sheet moved
   // back in line, so a wire running on over the break comes out straight)
-  if (!(doc.link && doc.link.cb)) { let moved = false; const d2 = JSON.parse(JSON.stringify(doc)); let acc = 0;
+  if (!(back && doc.link && doc.link.cb)) { let moved = false; const d2 = JSON.parse(JSON.stringify(doc)); let acc = 0;
     for (let k = 1; k < d2.sheets.length; k++) { const prev = d2.sheets[k - 1], cur = d2.sheets[k];
       const ds = prev.parts.filter(p => p.t === 'cnt_out').map(a => { const b = cur.parts.find(q => q.t === 'cnt_in' && q.tag === a.tag); return b ? Math.round(linkPbTerms(a)[0][0] - linkPbTerms(b)[0][0]) : null; }).filter(v => v != null);
       const dx = ds.length && ds.every(v => v === ds[0]) ? ds[0] : 0; void acc;
       if (dx) { moved = true; for (const p of cur.parts) p.x += dx; for (const q of cur.nodes) q.x += dx; for (const w of cur.wires) w.pts = (w.pts || []).map(q => [q[0] + dx, q[1]]); } }
     if (moved) doc = d2; }
   const all = []; doc.sheets.forEach((s, k) => { for (const p of s.parts) all.push({ s, k, p }); });
-  const LK = doc.link && doc.link.cb && Array.isArray(doc.link.oy) ? doc.link : null;   // (made from a circuit: its own places, to map back to)
-  const power = LK ? LK.cb.pw === 'boxes' : all.some(({ p }) => ['sup', 'xfmr', 'dsc3', 'fdsc3', 'fus3', 'mst3', 'ol3', 'motor', 'src_l1', 'src_l2', 'cb3', 'cb2'].includes(p.t));
+  const LK = back && doc.link && doc.link.cb && Array.isArray(doc.link.oy) ? doc.link : null;
+  const CB0 = doc.link && doc.link.cb ? doc.link.cb : null;   // (the circuit it was made from, if any: what only Circuit Builder knows)   // (made from a circuit: its own places, to map back to)
+  const power = CB0 ? CB0.pw === 'boxes' : all.some(({ p }) => ['sup', 'xfmr', 'dsc3', 'fdsc3', 'fus3', 'mst3', 'ol3', 'motor', 'src_l1', 'src_l2', 'cb3', 'cb2'].includes(p.t));
   // where each sheet goes: one under another; across, the L1 rail at Circuit Builder's L1 bar (or, with power, a margin)
   const rails = all.filter(({ p }) => p.t === 'rail');
   const rL1 = rails.find(({ p }) => p.label === 'L1'), rL2 = rails.find(({ p }) => p.label === 'L2');
@@ -1223,18 +1244,36 @@ function printToCircuit(doc) {
     if (LK.v === 2 && LK.xk) { const Kk = LK.xk, N = LK.xn, n2 = Kk.length, un = v => { if (v <= N[0]) return v - N[0] + Kk[0]; for (let i = 1; i < n2; i++) if (v <= N[i]) return Kk[i - 1] + (v - N[i - 1]) * (Kk[i] - Kk[i - 1]) / ((N[i] - N[i - 1]) || 1); return v - N[n2 - 1] + Kk[n2 - 1]; }; X = x => linkSnap(un(x - LK.ox)); }   // (drawn closer across: spread back out)
     Y = (k, y) => linkSnap((y - (k < n ? oy[k] : oy[n - 1] - (k - n + 1) * step)) / sy);
   }
-  const W = !power && rL1 && rL2 ? (LK ? Math.max(400, +LK.cb.w || 400) : linkSnap(FX(rL2.p.x) - FX(rL1.p.x))) : 0;
+  // (Circuit Builder's sheet is never narrower than LINK_W_MIN (its W_MIN): the L2 bar is there, so the wires reach it there)
+  const W = !power && rL1 && rL2 ? Math.max(LK && LK.cb.fw ? 400 : LINK_W_MIN, LK ? +LK.cb.w || 0 : linkSnap(FX(rL2.p.x) - FX(rL1.p.x))) : 0;
 
   // letters: pushbuttons and selectors first (A, B...), then coils; M kept for a starter's coil
   const LET = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].concat([...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].flatMap(a => [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(b => a + b)));
   const used = new Set(), take = pref => { if (pref && !used.has(pref)) { used.add(pref); return pref; } const l = LET.find(c => !used.has(c)); used.add(l); return l; };
   const opKey = p => (/^pbm?_/.test(p.t) ? 'PB' : p.t === 'estop' ? 'ES' : p.t === 'sel' ? 'SS' : p.t) + ':' + (p.tag || p.id);
   const opL = new Map(), coilL = new Map();
+  // (each part's own letter where the print has it: a tag as Circuit Builder's prints write it (PB-A, ES-A, SS-S, a coil's X), or, for a
+  // part made from the circuit, the letter it had there (Dallas, 19 Nov 2026: an edited print came back with every coil re-lettered).
+  // Those are kept first; parts new on the print get the next free letters)
+  const cbOld = doc.link && doc.link.cb && Array.isArray(doc.link.cb.parts) ? doc.link.cb : null;
+  const FAM = { btn: 'op', est: 'op', sel: 'op', coil: 'coil', mst: 'coil' }, famOf = p => /^(pbm?_|estop|spst)/.test(p.t) || p.t === 'sel' ? 'op' : p.t === 'coil' || p.t === 'mst3' ? 'coil' : '';
+  const tagLetter = p => { const t = String(p.tag || '').toUpperCase(); let m;
+    if (/^(pbm?_|estop)/.test(p.t) && (m = /^(?:PB|ES)-([A-Z]{1,2})$/.exec(t))) return m[1];
+    if (p.t === 'sel' && (m = /^SS-([A-Z]{1,2})$/.exec(t))) return m[1];
+    if ((p.t === 'coil' || p.t === 'mst3') && /^[A-Z]{1,2}$/.test(t)) return t;
+    return null; };
+  const oldLetter = p => { if (!cbOld || p.cbi == null) return null; const a = cbOld.parts[p.cbi]; return a && FAM[a[0]] && FAM[a[0]] === famOf(p) && a[3] ? String(a[3]) : null; };
+  const prefOf = p => tagLetter(p) || oldLetter(p);
   const starters = new Set(all.filter(({ p }) => p.t === 'mst3').map(({ p }) => p.tag));
-  for (const { p } of all) if (p.t === 'coil' && starters.has(p.tag) && !coilL.has(p.tag)) coilL.set(p.tag, take('M'));
-  for (const { p } of all) if (/^(pbm?_|estop|sel|spst)/.test(p.t) && !opL.has(opKey(p))) opL.set(opKey(p), take());
-  for (const { p } of all) if (p.t === 'coil' && !coilL.has(p.tag)) coilL.set(p.tag, take());
+  for (const pass of [0, 1]) {   // (pass 0: the parts that have a letter of their own; pass 1: the rest)
+    for (const { p } of all) if (p.t === 'coil' && !coilL.has(p.tag)) { const pr = prefOf(p); if (pass === 0 && pr) coilL.set(p.tag, take(pr)); else if (pass === 1 && starters.has(p.tag)) coilL.set(p.tag, take('M')); }
+    for (const { p } of all) if (/^(pbm?_|estop|sel|spst)/.test(p.t) && !opL.has(opKey(p))) { const pr = prefOf(p); if (pass === 0 ? pr : true) opL.set(opKey(p), take(pass === 0 ? pr : null)); }
+    for (const { p } of all) if (p.t === 'coil' && !coilL.has(p.tag) && pass === 1) coilL.set(p.tag, take());
+  }
+  for (const { p } of all) if (p.t === 'mst3' && !coilL.has(p.tag) && tagLetter(p)) coilL.set(p.tag, take(tagLetter(p)));
   const lab = s => String(s || '').replace(/\s+/g, ' ').trim().toUpperCase().slice(0, 8);
+  // (a label for the cap: the print's own words under the tag; or the tag itself where it is the print's own (PB1, CR1), not a letter)
+  const capLab = p => lab(p.desc) || (tagLetter(p) ? '' : lab(p.tag));
   // numbers for limit switches (a print's proximity and float switches become limit switches too: the next free ones)
   const lsN = new Set(all.filter(({ p }) => /^ls_/.test(p.t)).map(({ p }) => linkDigits(p.tag, '')).filter(Boolean)), nextLS = () => { let n = 1; while (lsN.has(String(n))) n++; lsN.add(String(n)); return String(n); };
   const swapLS = new Map();
@@ -1252,17 +1291,17 @@ function printToCircuit(doc) {
     const { p, k } = it, x = X(p.x), y = Y(k, p.y), pb = linkPbTerms(p).map(q => [X(q[0]), Y(k, q[1])]), name = p.tag || (LIB_NAME_FOR[p.t] || p.t);
     const two = (t, row) => { const ts = linkCbTerms(t, x, y, 0); add(it, row, pb.length === 2 && pb[0][0] > pb[1][0] ? [ts[1], ts[0]] : ts); };   // (a flipped part: its first terminal on the right)
     if (p.t === 'rail') continue;
-    if ((p.brk && LK) || pairDown.has(p)) { it.brk = pb[0]; continue; }   // (a continuation the print put where a wire ran over onto the next sheet: the wire joins up again)
+    if ((p.brk && CB0) || pairDown.has(p)) { it.brk = pb[0]; continue; }   // (a continuation the print put where a wire ran over onto the next sheet: the wire joins up again)
     if (/^pbm?_/.test(p.t) || p.t === 'estop') {
       const est = p.t === 'estop', row = [est ? 'est' : 'btn', x, y, opL.get(opKey(p)), est || /_nc$/.test(p.t) ? 1 : 0, est || /^pbm/.test(p.t) ? 1 : 0, est ? 'FF0032' : /_nc$/.test(p.t) ? 'FF0032' : '00B050'];
-      const l = lab(p.desc || p.tag); if (l) { while (row.length < 9) row.push(null); row.push(l); }
+      const l = capLab(p); if (l) { while (row.length < 9) row.push(null); row.push(l); }
       two('btn', row);
     } else if (p.t === 'sel') {
       const names = (p.pos || 'OFF/ON').split(/[\/,]+/).map(s => s.trim().toUpperCase().slice(0, 5)).filter(Boolean).slice(0, 4), n = Math.max(2, names.length);
       two('sel', ['sel', x, y, opL.get(opKey(p)), 0, 1, '0070C0', n, (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, names.join('/'), 0]);
     } else if (p.t === 'spst') {
       note(changed, `${name} toggle switch → a maintained pushbutton`);
-      two('btn', ['btn', x, y, opL.get(opKey(p)), 0, 1, '00B050', null, null, lab(p.desc || p.tag)]);
+      two('btn', ['btn', x, y, opL.get(opKey(p)), 0, 1, '00B050', null, null, capLab(p)]);
     } else if (/^(ls_|prs_|fs_)/.test(p.t)) {
       let n = linkDigits(p.tag, '1');
       if (!/^ls_/.test(p.t)) { const key = p.t.split('_')[0] + ':' + p.tag; if (!swapLS.has(key)) swapLS.set(key, nextLS()); n = swapLS.get(key); note(changed, `${p.tag || ''} ${/^prs/.test(p.t) ? 'proximity' : 'float'} switch → limit switch LS${n} (Circuit Builder has none yet)`.trim()); }
@@ -1273,13 +1312,13 @@ function printToCircuit(doc) {
     } else if (/^ps_/.test(p.t)) two('psw', ['psw', x, y, linkDigits(p.tag, '1'), /_nc$/.test(p.t) ? 1 : 0, 1, 'FF9C37']);
     else if (/^fls_/.test(p.t)) two('fsw', ['fsw', x, y, linkDigits(p.tag, '1'), /_nc$/.test(p.t) ? 1 : 0, 1, '9B6BFF']);
     else if (p.t === 'coil') {
-      const timer = /^TR/i.test(p.tag || '') || p.delay || p.tof, row = ['coil', x, y, coilL.get(p.tag), 0, 1, LINK_PAL[coilN++ % LINK_PAL.length]];
+      const timer = linkTimer(p), row = ['coil', x, y, coilL.get(p.tag), 0, 1, LINK_PAL[coilN++ % LINK_PAL.length]];
       if (timer) { if (!p.delay) note(changed, 'Timers with no delay on the print start at 5 s: check them on each timer’s tab'); row.push(Math.max(1, Math.min(999, Math.round(p.delay || 5)))); if (p.tof) row.push(1); }
-      while (row.length < 9) row.push(null); const l = lab(p.tag); if (l) row.push(l);
+      const l = capLab(p); if (l) { while (row.length < 9) row.push(null); row.push(l); }
       two('coil', row);
     } else if (/^(con|tc)_/.test(p.t)) {
       if (!coilL.has(p.tag)) { noCoil.push(p.tag || '?'); coilL.set(p.tag, take()); } const L = coilL.get(p.tag);
-      const timer = all.some(({ p: c }) => c.t === 'coil' && c.tag === p.tag && (/^TR/i.test(c.tag) || c.delay || c.tof));
+      const timer = all.some(({ p: c }) => c.t === 'coil' && c.tag === p.tag && linkTimer(c));
       const row = ['con', x, y, L, /_nc$/.test(p.t) ? 1 : 0, 1, '']; if (timer && /^con_/.test(p.t)) row.push(1);
       two('con', row);
     } else if (p.t === 'olc') two('olc', ['olc', x, y, linkDigits(p.tag, '1'), 1, 1, '']);
@@ -1360,13 +1399,51 @@ function printToCircuit(doc) {
     if (!fed && r.k === 0) { parts.push([r.p.label === 'L2' ? 'l2' : 'l1', X(r.p.x), Y(r.k, r.p.y0) - 40, '', 0, 1, '']); fromIdx.push(null); }
   }
   const name = (((doc.tb || {}).fields || []).find(f => /title/i.test(f.label)) || {}).value || 'Print';
-  let data = { app: 'order-of-operations-circuit-builder', v: 1, name, w: power ? linkSnap(Math.max(...parts.map(r => r[1]), ...wires.flatMap(w => [w[0], w[2]])) + 200) : Math.max(W, 400), ...(power ? { pw: 'boxes' } : {}), parts, wires };
+  let data = { app: 'order-of-operations-circuit-builder', v: 1, name, w: power ? linkSnap(Math.max(...parts.map(r => r[1]), ...wires.flatMap(w => [w[0], w[2]])) + 200) : W || LINK_W_MIN, ...(power ? { pw: 'boxes' } : {}), parts, wires };
   // (made from a circuit, then changed on the print: what only Circuit Builder knows comes back, part by part)
   if (doc.link && doc.link.cb) data = linkMerge(doc.link.cb, data, fromIdx.map(it => it && it.p.cbi != null ? it.p.cbi : null), ownCol);
   if (noCoil.length) note(left, `The coil${noCoil.length > 1 ? 's' : ''} for ${noCoil.join(', ')}: not on the print (${noCoil.length > 1 ? 'their contacts are there, worked by nothing' : 'its contacts are there, worked by nothing'}: put ${noCoil.length > 1 ? 'the coils' : 'the coil'} in to run it)`);
-  return { data, notes: { changed, left } };
+  return { data, notes: { changed, left }, map: all.filter(it => terms.has(it.p)).map(it => ({ k: it.k, id: it.p.id, t: it.p.t, ts: terms.get(it.p) })), through: all.filter(it => it.through || it.brk).map(it => ({ k: it.k, id: it.p.id, t: it.p.t })) };
 }
 const LIB_NAME_FOR = { fuse: 'A fuse', cb: 'A circuit breaker', cb2: 'A circuit breaker', cb3: 'A circuit breaker', ol: 'An overload heater', fdsc3: 'A fused disconnect', spst: 'A switch', spdt: 'A switch', dpst: 'A switch', dpdt: 'A switch', xover: 'A switch' };
+// does a circuit made from a print join what the print joins, and only that, with no part on another and no wire through a part?
+// (each print terminal against the circuit terminal it became: two joined on the print must be joined in the circuit, and the other way)
+function linkCheck(doc, r) {
+  const mk = () => { const par = new Map(); const f = k => { if (!par.has(k)) par.set(k, k); let x = k; while (par.get(x) !== x) x = par.get(x); par.set(k, x); return x; }; return { f, u: (a, b) => { const A = f(a), B = f(b); if (A !== B) par.set(A, B); } }; };
+  // the print: wires, junctions, the rails (one each, L1 and L2, on every sheet), continuations of one name, a one-line overload heater (joined through)
+  const P = mk(), cnt = new Map();
+  doc.sheets.forEach((s, k) => { const rail = {}; for (const p of s.parts) if (p.t === 'rail') rail[p.id] = p.label;
+    const key = e => e.r != null ? 'R:' + rail[e.r] : e.n != null ? k + ':n:' + e.n : k + ':p:' + e.p + ':' + e.i;
+    for (const w of s.wires) P.u(key(w.a), key(w.b));
+    for (const p of s.parts) { if (p.t === 'ol') P.u(k + ':p:' + p.id + ':0', k + ':p:' + p.id + ':1');
+      if (p.t === 'cnt_out' || p.t === 'cnt_in') { const t = String(p.tag || ''), q = k + ':p:' + p.id + ':0'; if (cnt.has(t)) P.u(q, cnt.get(t)); else cnt.set(t, q); } } });
+  // the circuit: as Circuit Builder joins wires (where one ends, or at a terminal; only crossing, not joined), its bars, continuations by number
+  const d = r.data, C = mk(), bars = d.pw !== 'boxes', W = +d.w, at = new Map(), ends = new Set();
+  d.wires.forEach((w, wi) => { const [x1, y1, x2, y2] = w.map(Number), n = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) / 20; C.f('w' + wi);
+    for (const q of [[x1, y1], [x2, y2]]) { ends.add(q.join(',')); if (bars && q[0] === 0) C.u('w' + wi, 'BAR:L1'); if (bars && q[0] === W) C.u('w' + wi, 'BAR:L2'); }
+    for (let i = 0; i <= n; i++) { const k = (x1 + (x2 - x1) * i / (n || 1)) + ',' + (y1 + (y2 - y1) * i / (n || 1)); if (!at.has(k)) at.set(k, []); at.get(k).push('w' + wi); } });
+  const J = new Map(), rotOf = a => ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(a[0]) ? (Math.round(+a[7]) || 0) : 0;
+  for (const a of d.parts) linkCbTerms(a[0] === 'est' ? 'btn' : a[0], +a[1], +a[2], rotOf(a)).forEach(q => { const k = q.join(','); ends.add(k); C.f('t' + k); if (a[0] === 'jmp') { if (J.has(a[3])) C.u('t' + k, J.get(a[3])); else J.set(a[3], 't' + k); } });
+  for (const k of ends) { const ws = at.get(k) || []; for (const w of ws) C.u('t' + k, w); }
+  // each mapped terminal: its group on the print and in the circuit must pair up one to one
+  const pToC = new Map(), cToP = new Map(); let bad = 0; const problems = [];
+  for (const m of r.map) m.ts.forEach((q, i) => { if (!q) return; const pk = P.f(m.k + ':p:' + m.id + ':' + i), ck = C.f('t' + q.join(','));
+    if (pToC.has(pk) && pToC.get(pk) !== ck) { bad++; if (problems.length < 6) problems.push(m.t + ' ' + i + ': joined on the print, not in the circuit'); } else pToC.set(pk, ck);
+    if (cToP.has(ck) && cToP.get(ck) !== pk) { bad++; if (problems.length < 6) problems.push(m.t + ' ' + i + ': joined in the circuit, not on the print'); } else cToP.set(ck, pk); });
+  // parts on top of each other, and wires through a part (Circuit Builder's sizes: a switch with a head is taller above its wire)
+  const TALL = new Set(['lsw', 'psw', 'fsw', 'tsw']);
+  const box = a => { const ts = linkCbTerms(a[0] === 'est' ? 'btn' : a[0], +a[1], +a[2], rotOf(a)); if (!ts.length) return null; const xs = ts.map(q => q[0]), ys = ts.map(q => q[1]);
+    if (ts.length === 2 && ys[0] === ys[1]) return { x0: Math.min(...xs), x1: Math.max(...xs), y0: ys[0] - (TALL.has(a[0]) ? 41 : 34), y1: ys[0] + (TALL.has(a[0]) ? 82 : 34), two: 1 };
+    if (ts.length === 2 && xs[0] === xs[1]) return { x0: xs[0] - 34, x1: xs[0] + 34, y0: Math.min(...ys), y1: Math.max(...ys), two: 1 };
+    return { x0: Math.min(...xs, +a[1]) - 20, x1: Math.max(...xs, +a[1]) + 20, y0: Math.min(...ys, +a[2]) - 20, y1: Math.max(...ys, +a[2]) + 20 }; };
+  const B = d.parts.map(box); let over = 0, thru = 0;
+  for (let i = 0; i < B.length; i++) for (let j = i + 1; j < B.length; j++) { const a = B[i], b = B[j]; if (!a || !b) continue;
+    if (Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0) > 4 && Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) > 4) { over++; if (problems.length < 8) problems.push(d.parts[i][0] + ' ' + d.parts[i][3] + ' on ' + d.parts[j][0] + ' ' + d.parts[j][3]); } }
+  for (const w of d.wires) { const [x1, y1, x2, y2] = w.map(Number); for (const b of B) { if (!b || !b.two) continue; const X0 = b.x0 + 8, X1 = b.x1 - 8, Y0 = b.y0 + 8, Y1 = b.y1 - 8;
+    if ((y1 === y2 && y1 > Y0 && y1 < Y1 && Math.max(x1, x2) > X0 && Math.min(x1, x2) < X1) || (x1 === x2 && x1 > X0 && x1 < X1 && Math.max(y1, y2) > Y0 && Math.min(y1, y2) < Y1)) thru++; } }
+  const score = bad * 10 + over * 3 + thru;
+  return { ok: !score, score, bad, over, thru, problems };
+}
 // a circuit rebuilt from its print, given back what the print could not carry (cbi: each new part's place in the old circuit)
 function linkMerge(old, nu, cbi, ownCol = new Set()) {
   const oi = new Map(); cbi.forEach((o, n) => { if (o != null && old.parts[o] && old.parts[o][0] === (nu.parts[n][0] === 'est' ? 'est' : nu.parts[n][0])) oi.set(o, n); });
@@ -1410,14 +1487,15 @@ function circuitToPrint(d, env) {
   const rotOf = r => ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(r.t) ? (Math.round(+r.a[7]) || 0) : 0;
   const coilBy = new Map(R.filter(r => r.t === 'coil').map(r => [r.L, r]));
   const isTimer = r => r && r.t === 'coil' && +r.a[7] >= 1;
-  const W = Math.max(400, +d.w || 400);
-  // tags: coils by their label (or CR1, TR1, M1...), buttons by their letter (PB-A, or the label), the rest by number
-  const tagOf = new Map(); let cr = 0, tr = 0;
+  const W = Math.max(d.fw ? 400 : LINK_W_MIN, +d.w || 0);   // (as Circuit Builder reads it: never under its W_MIN unless its bars were set by hand)
+  // tags as Circuit Builder's own prints have them (Dallas, 19 Nov 2026): buttons PB-A (an E-stop ES-A), selectors SS-S, coils and
+  // their contacts by the coil's letter (a timer T, a starter M); a label goes under the tag. So the print and the circuit on the
+  // screen name every part alike, and the letters come back to Circuit Builder as they were
+  const tagOf = new Map();
   const lbl = r => typeof r.a[9] === 'string' && r.a[9].trim() ? r.a[9].trim().toUpperCase() : '';
-  for (const r of R.filter(r => r.t === 'coil')) if (!tagOf.has('C:' + r.L)) tagOf.set('C:' + r.L, lbl(r) || (R.some(q => q.t === 'mst' && q.L === r.L) ? 'M' + (r.L === 'M' ? '1' : r.L) : isTimer(r) ? 'TR' + (++tr) : 'CR' + (++cr)));
-  let pbn = 0, ssn = 0;
-  for (const r of R.filter(r => r.t === 'btn' || r.t === 'est' || r.t === 'sel')) { const k = (r.t === 'sel' ? 'S:' : 'B:') + r.L; if (!tagOf.has(k)) tagOf.set(k, r.t === 'sel' ? 'SS' + (++ssn) : r.t === 'est' ? 'ES' + (++pbn) : 'PB' + (++pbn)); }
-  const descOf = new Map(R.filter(r => (r.t === 'btn' || r.t === 'est') && lbl(r)).map(r => ['B:' + r.L, lbl(r)]));
+  for (const r of R.filter(r => r.t === 'coil')) if (!tagOf.has('C:' + r.L)) tagOf.set('C:' + r.L, r.L);
+  for (const r of R.filter(r => r.t === 'btn' || r.t === 'est' || r.t === 'sel')) { const k = (r.t === 'sel' ? 'S:' : 'B:') + r.L; if (!tagOf.has(k)) tagOf.set(k, (r.t === 'sel' ? 'SS-' : r.t === 'est' ? 'ES-' : 'PB-') + r.L); }
+  const descOf = new Map(R.filter(r => (r.t === 'btn' || r.t === 'est' || r.t === 'coil') && lbl(r)).map(r => [(r.t === 'coil' ? 'C:' : 'B:') + r.L, lbl(r)]));
   // ---- 1. each part as it will be on the print, at the circuit's own place for now (G: the circuit's grid)
   const parts0 = R.map(r => ({ r, ts: linkCbTerms(r.t === 'est' ? 'btn' : r.t, r.x, r.y, rotOf(r)) }));
   const wired = new Set(d.wires.flatMap(w => [w[0] + ',' + w[1], w[2] + ',' + w[3]]));
@@ -1435,13 +1513,13 @@ function circuitToPrint(d, env) {
       case 'tsw': t = (r.nc ? 'ts_nc' : 'ts_no') + (r.a[7] === 1 ? 'l' : ''); o.tag = 'TS' + r.L; break;
       case 'psw': t = r.nc ? 'ps_nc' : 'ps_no'; o.tag = 'PS' + r.L; break;
       case 'fsw': t = r.nc ? 'fls_nc' : 'fls_no'; o.tag = 'FLS' + r.L; break;
-      case 'coil': t = 'coil'; o.tag = tagOf.get('C:' + r.L); o.pre = (o.tag.match(/^[A-Z]+/) || ['CR'])[0]; if (isTimer(r)) { o.delay = Math.round(+r.a[7]); if (r.a[8] === 1) o.tof = true; } break;
+      case 'coil': t = 'coil'; o.tag = tagOf.get('C:' + r.L); o.desc = descOf.get('C:' + r.L) || ''; o.pre = R.some(q => q.t === 'mst' && q.L === r.L) ? 'M' : isTimer(r) ? 'TR' : 'CR'; if (isTimer(r)) { o.delay = Math.round(+r.a[7]); if (r.a[8] === 1) o.tof = true; } break;
       case 'con': { const c = coilBy.get(r.L); t = isTimer(c) && r.a[7] !== 1 ? (r.nc ? 'tc_nc' : 'tc_no') : (r.nc ? 'con_nc' : 'con_no'); o.tag = c ? tagOf.get('C:' + r.L) : r.L; if (isTimer(c) && r.a[7] === 1) o.inst = true; break; }
       case 'lamp': t = 'pl'; o.tag = 'PL' + (++plN); o.desc = COLN[(r.color || '').toUpperCase()] || ''; if (r.L && R.some(q => (q.t === 'btn' || q.t === 'est') && q.L === r.L)) o.inPB = tagOf.get('B:' + r.L); break;
       case 'sol': t = 'sol'; o.tag = 'SOL' + r.L; break;
       case 'htr': t = 'htr'; o.tag = 'HTR' + r.L; break;
       case 'mtr': t = 'motor'; o.tag = 'M' + r.L; o.x = r.x - 20; break;   // (its leads: 140 out on the print, 160 here)
-      case 'mst': t = 'mst3'; o.tag = tagOf.get('C:' + r.L) || ('M' + r.L); break;
+      case 'mst': t = 'mst3'; o.tag = tagOf.get('C:' + r.L) || r.L; break;
       case 'olc': t = 'olc'; o.tag = 'OL' + r.L; break;
       case 'olh': t = 'ol3'; o.tag = 'OL' + r.L; break;
       case 'dsc': t = 'dsc3'; o.tag = 'DS' + r.L; break;
@@ -1538,7 +1616,7 @@ function circuitToPrint(d, env) {
   const oneX = o => o.fold ? null : (() => { const ts = linkPbTerms(o); return ts.length && ts.every(q => q[0] === ts[0][0]) ? ts[0][0] : null; })();   // (a part whose terminals are all in one upright line: placed by them)
   // (how far a part's tag and the name under it reach out each side of its middle)
   const LIT = new Set(made.filter(({ o }) => o.inPB).map(({ o }) => o.inPB));
-  const noteOf = o => [o.desc, o.t === 'coil' && /^TR/.test(o.tag || '') ? `${o.tof ? 'OFF' : 'ON'}-DELAY ${o.delay || ''} s` : '', o.t === 'sel' ? 'CLOSED: ' + (o.pos || '') : '', o.inPB ? 'IN ' + o.inPB : '', LIT.has(o.tag) ? 'LIGHTED (PL00)' : ''].filter(Boolean).join(' · ');
+  const noteOf = o => [o.desc, o.t === 'coil' && o.pre === 'TR' ? `${o.tof ? 'OFF' : 'ON'}-DELAY ${o.delay || ''} s` : '', o.t === 'sel' ? 'CLOSED: ' + (o.pos || '') : '', o.inPB ? 'IN ' + o.inPB : '', LIT.has(o.tag) ? 'LIGHTED (PL00)' : ''].filter(Boolean).join(' · ');
   const halfW = o => Math.max(40, (o.tag || '').length * 8 + 6, noteOf(o).length * 5.6 + 6);
   // (a terminal joined only along its own row: placed with its part, not on its own. Its part's middle, and how far out it is)
   let derived = new Map(), PREP = new Map();   // (PREP: each rung's places and spacing rules, worked out once)
