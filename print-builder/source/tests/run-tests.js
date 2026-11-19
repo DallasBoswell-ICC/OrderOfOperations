@@ -876,6 +876,20 @@ let passed = 0, failed = 0;
   // ---- O³ link (Dallas, 16 Nov 2026): Circuit Builder and Print Builder open each other's work
   const SEAL = {"app":"order-of-operations-circuit-builder","v":1,"name":"Seal In","w":880,"parts":[["btn",120,200,"D",1,0,"FF9600"],["btn",300,200,"A",0,0,"FF0032"],["con",300,300,"X",0,1,""],["coil",700,200,"X",0,1,"FFDC00"]],"wires":[[0,200,80,200],[160,200,260,200],[340,200,640,200],[760,200,880,200],[220,300,260,300],[340,300,380,300],[220,200,220,300],[380,200,380,300]]};
 
+  await check('Check Print (Dallas, 19 Nov 2026): two symbols on top of each other, a wire through a symbol, and a wire over a junction it isn\'t joined to are each found and ringed; the templates have none', async p => {
+    return p.evaluate(() => { const out = [], W = /drawn on top of each other|runs through|runs over a junction/;
+      for (const t of ['blank', 'starter']) { loadDoc(withDrawnBy(template(t))); refresh(true); const w = checkPrint().filter(i => W.test(i.title)); if (w.length) out.push(t + ' template: ' + w.map(i => i.title).join('; ')); }
+      loadDoc(withDrawnBy(template('blank'))); const s = doc.sheets[0];
+      addPart(s, 'pb_no', 600, 600); addPart(s, 'pb_no', 620, 600); addPart(s, 'coil', 600, 900);
+      const nd = (x, y) => { const n = { id: uid('n'), x, y }; s.nodes.push(n); return n.id; };
+      s.wires.push({ id: uid('w'), a: { n: nd(400, 900) }, b: { n: nd(800, 900) }, pts: [] });
+      nd(600, 1200); s.wires.push({ id: uid('w'), a: { n: nd(400, 1200) }, b: { n: nd(800, 1200) }, pts: [] });
+      refresh(true); const got = checkPrint();
+      for (const [re, what] of [[/drawn on top of each other/, 'two buttons on each other'], [/runs through Coil|runs through CR|runs through/, 'a wire through the coil'], [/runs over a junction/, 'a wire over a junction']]) {
+        const i = got.find(i => re.test(i.title)); if (!i) out.push('not found: ' + what); else if (!i.at.length) out.push('not ringed: ' + what); }
+      if (got.some(i => /Nothing drawn on top/.test(i.title))) out.push('still says nothing is drawn on top of anything');
+      return out; });
+  });
   await check('Safe open (Dallas, 19 Nov 2026): a saved sheet given by its id (or out of range) opens on that sheet or sheet 1, never frozen; a file with a broken part, junction or wire is refused with the reason and the open print kept', async p => {
     return p.evaluate(() => { const out = [], base = () => JSON.parse(JSON.stringify(template('starter')));
       for (const [cur, want] of [[0, 0], [base().sheets[0].id, 0], ['zz', 0], [7, 0], [-1, 0], [null, 0]]) { const d = base(); d.cur = cur;

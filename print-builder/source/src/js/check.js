@@ -54,6 +54,27 @@ function checkPrint(A = analyse()) {
   for (const [r, ts] of TERMS) if (r !== A.n1 && r !== A.n2 && ts.length >= 2 && ts.every(t => isLoadKind(kindOf(t.p)))) {
     const ps = [...new Set(ts.map(t => t.p))]; if (ps.length >= 2) add('w', `${ps.map(name).join(' and ')} are in series`, 'Loads in series share the voltage, so neither gets enough. Put each across 1 and 2 (in parallel).', ts.map(t => ({ k: t.k, id: t.p.id, x: t.p.x, y: t.p.y })));
   }
+  // drawing: symbols on top of each other, a wire through a symbol, a wire over a junction or terminal it isn't joined to
+  // (Dallas, 19 Nov 2026: each looks joined, or hides a part, on paper)
+  let drawn = 0;
+  const symBox = p => { const e = extOf(p), c = [[e.x0, e.y0], [e.x1, e.y1]].map(q => turn(q, p.rot || 0));
+    return { x0: p.x + Math.min(c[0][0], c[1][0]) + 4, x1: p.x + Math.max(c[0][0], c[1][0]) - 4, y0: p.y + Math.min(c[0][1], c[1][1]) + 4, y1: p.y + Math.max(c[0][1], c[1][1]) - 4 }; };
+  const segIn = ([a, b], o) => Math.max(a[0], b[0]) > o.x0 && Math.min(a[0], b[0]) < o.x1 && Math.max(a[1], b[1]) > o.y0 && Math.min(a[1], b[1]) < o.y1;
+  const onSeg = ([a, b], q) => (a[0] === b[0] ? q[0] === a[0] && q[1] > Math.min(a[1], b[1]) && q[1] < Math.max(a[1], b[1])
+    : a[1] === b[1] && q[1] === a[1] && q[0] > Math.min(a[0], b[0]) && q[0] < Math.max(a[0], b[0]));
+  doc.sheets.forEach((s, k) => {
+    const ps = s.parts.filter(p => p.t !== 'rail' && LIB[p.t]), bx = new Map(ps.map(p => [p.id, symBox(p)]));
+    for (let i = 0; i < ps.length; i++) for (let j = i + 1; j < ps.length; j++) { const a = bx.get(ps[i].id), b = bx.get(ps[j].id);
+      if (a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0) { drawn++; add('w', `${name(ps[i])} and ${name(ps[j])} are drawn on top of each other${sheetName(k)}`, 'Move one clear of the other, so each can be read.', [{ k, id: ps[i].id, x: ps[i].x, y: ps[i].y }, { k, id: ps[j].id, x: ps[j].x, y: ps[j].y }]); } }
+    const pts = [...s.nodes.map(n => ({ q: [n.x, n.y], what: 'a junction', end: e => e.n === n.id })),
+      ...ps.flatMap(p => [...Array(termsN(p)).keys()].map(i => ({ q: termPos(p, i), what: `a terminal of ${name(p)}`, end: e => e.p === p.id && e.i === i })))];
+    for (const w of s.wires) { const P = wirePts(s, w), segs = P.slice(1).map((b, i) => [P[i], b]);
+      for (const p of ps) if (w.a.p !== p.id && w.b.p !== p.id) { const sg = segs.find(g => segIn(g, bx.get(p.id)));
+        if (sg) { drawn++; add('w', `A wire runs through ${name(p)}${sheetName(k)}`, 'It is not joined to it, but on paper it looks as if it were. Route the wire around the symbol.', [{ k, id: p.id, x: p.x, y: p.y }]); } }
+      for (const o of pts) if (!o.end(w.a) && !o.end(w.b) && segs.some(g => onSeg(g, o.q))) {
+        drawn++; add('w', `A wire runs over ${o.what} it is not joined to${sheetName(k)}`, 'On paper they look joined. Move the wire off it, or join them there.', [{ k, id: w.id, x: o.q[0], y: o.q[1] }]); }
+    }
+  });
   // wire numbers
   const byNum = new Map(); for (const [r, l] of label) if (WIRED.has(r)) { if (!byNum.has(l)) byNum.set(l, []); byNum.get(l).push(r); }
   let dupN = 0;
@@ -66,6 +87,7 @@ function checkPrint(A = analyse()) {
   if (!shorts && (A.n1 != null || parts.length)) okLine('No shorts', 'Every way from 1 to 2 goes through a load.');
   if (!dups) okLine('Every device has its own tag', 'Contacts share only their coil’s.');
   if (!dupN) okLine('No wire number is used twice', '');
+  if (!drawn) okLine('Nothing drawn on top of anything else', 'No symbol on another, no wire through a symbol or over a junction it isn’t joined to.');
   const rank = { e: 0, w: 1, ok: 2 }; out.sort((a, b) => rank[a.sev] - rank[b.sev]);
   return out;
 }
