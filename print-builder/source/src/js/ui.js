@@ -513,7 +513,7 @@ const isCircuit = d => d && !d.kind && Array.isArray(d.parts) && Array.isArray(d
 // (rungs too long for letter portrait: the person picks how they are drawn (Dallas, 17 Nov 2026); the choice remembered)
 const LONGKEY = 'oo-print-builder:long-rungs';
 function openCircuit(d, fname, long) {
-  let saved = 'tight'; try { const v = localStorage.getItem(LONGKEY); if (['land', 'tight', 'fold'].includes(v)) saved = v; } catch (_) {}
+  let saved = 'tight'; try { const v = localStorage.getItem(LONGKEY); if (['land', 'tight', 'wrap', 'cont'].includes(v)) saved = v; else if (v === 'fold') saved = 'cont'; } catch (_) {}   // (fold: the choice before 19 Nov 2026, now Continue on a New Rung)
   const r = circuitToPrint(d, { uid, defaultTB, tidy, long: long || saved });
   if (r.ask && !long) {
     const dl = $('long-dlg'); dl.querySelectorAll('.long-opt').forEach(b => { b.classList.toggle('last', b.dataset.long === saved); b.onclick = () => { dl.close(); try { localStorage.setItem(LONGKEY, b.dataset.long); } catch (_) {} openCircuit(d, fname, b.dataset.long); }; });

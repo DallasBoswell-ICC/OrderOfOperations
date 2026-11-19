@@ -694,7 +694,10 @@ function circuitToPrint(d, env) {
   const fitBest = (pap, mode = 'proper') => { const a = fitTo(pap, mode, true); if (env.debug) (env.debug.fb = env.debug.fb || []).push([mode, a.ok, a.tight, a.w]); if (a.ok && (mode !== 'tight' || a.tight <= fitTo(pap, mode).tight + 3)) return a; return fitTo(pap, mode); };
   // (fold: each rung too long for the paper broken where only its own wire crosses, the rest drawn on a line under it, a continuation each end)
   let foldN = 0;
-  const foldLong = pap => {
+  // (Dallas, 19 Nov 2026, his drawings "Ladder Edit 1" and "2": 'wrap' – the rung's wire turns down after the last part that fits, runs back
+  // left under the rung to just inside L1 and on along the next line, which keeps the rung's number; 'cont' – the rung ends on a
+  // continuation and goes on along a new rung under it, its own number, from a continuation: each named by the other's rung and wire, R19-W30)
+  const foldLong = (pap, style = 'cont') => {
     const room = roomFor(pap), { groups, BUS } = GR, pins = [...new Set([...BUS, ...rails.map(r => r.x)])].sort((a, b) => a - b);
     // (room left once whatever reaches out left of the first upright (the power section's lines in) is allowed for)
     const lp = pins[0], room2 = room - Math.max(0, ...groups.map(b => { const r = layBand(b, 'proper', .1, new Map(), pins); return r.m.has(lp) ? r.m.get(lp) - r.n[0] : 0; }));
@@ -728,14 +731,18 @@ function circuitToPrint(d, env) {
       const oldTerm = new Map(termAt), movedO = new Set(gm.filter(({ o }) => o.x > X && o.x < xR).map(({ o }) => o));
       E.clear(); const busNeed = [];
       const splits = new Set(best.es.map(([a, b]) => a < b ? a + '|' + b : b + '|' + a)), ends = [];
+      const fL = Math.min(...[...BUS].filter(x => x < Xl && (pts.some(k => XY(k)[0] === x) || rails.some(r => r.x === x)))), Xw = fL + 40;
+      const wrap = style === 'wrap' && best.es.length === 1 && Number.isFinite(fL) && Xw <= Xl - 40, ym = gb + 100;   // (two wires to carry over: continuations instead)
       for (const [a, b] of edges) {
-        if (splits.has(a < b ? a + '|' + b : b + '|' + a)) { const [ax0, sy] = XY(a), [bx0] = XY(b), sl = ax0 < bx0 ? a : b, sr = ax0 < bx0 ? b : a; link2(sl, K(X, sy)); link2(K(Xl, sy + H), F(sr)); ends.push(sy); continue; }
+        if (splits.has(a < b ? a + '|' + b : b + '|' + a)) { const [ax0, sy] = XY(a), [bx0] = XY(b), sl = ax0 < bx0 ? a : b, sr = ax0 < bx0 ? b : a; link2(sl, K(X, sy));
+          if (wrap) { link2(K(X, sy), K(X, ym)); link2(K(X, ym), K(Xw, ym)); link2(K(Xw, ym), K(Xw, sy + H)); link2(K(Xw, sy + H), K(Xl, sy + H)); link2(K(Xl, sy + H), F(sr)); continue; }
+          link2(K(Xl, sy + H), F(sr)); ends.push(sy); continue; }
         const fa = F(a), fb = F(b), [ax, ay] = XY(fa), [bx, by] = XY(fb);
         if (ax === bx || ay === by) { link2(fa, fb); continue; }
         const m = XY(a)[0] === xR ? fb : fa, yy = XY(m)[1]; link2(m, K(xR, yy)); busNeed.push(yy);
       }
       termAt.clear();
-      for (const { o } of made) { if (movedO.has(o)) { o.x = o.x - X + Xl; o.y += H; } else if (o.y > gb) o.y += H; }
+      for (const { o } of made) { if (movedO.has(o)) { o.x = o.x - X + Xl; o.y += H; if (wrap) o.rc = 1; } else if (o.y > gb) o.y += H; }   // (rc: on the line a rung wraps onto, numbered as its rung)
       for (const [k, tt] of oldTerm) for (const t of tt) { if (!movedO.has(t.o)) { addTerm(F(k), t.o, t.i); continue; }
         const nk = K(...linkPbTerms(t.o)[t.i]); addTerm(nk, t.o, t.i); if (F(k) !== nk) { link2(nk, K(xR, XY(nk)[1])); busNeed.push(XY(nk)[1]); } }
       { const r2 = [...runEnds].map(F); runEnds.clear(); for (const k of r2) runEnds.add(k); }
@@ -749,10 +756,9 @@ function circuitToPrint(d, env) {
       for (const [k, ns] of [...E]) for (const n of [...ns]) { const [x, y] = XY(k), [nx, ny] = XY(n); if (x !== nx || ny - y <= 20) continue;
         unlink(k, n); const along = [...E.keys()].filter(q => { const [qx, qy] = XY(q); return qx === x && qy > y && qy < ny; }).map(q => XY(q)[1]).sort((u, v) => u - v);
         let prev = y; for (let yy = y + 20; yy <= ny; yy += 20) { link2(K(x, prev), K(x, yy)); prev = yy; } void along; }
-      const fL = Math.min(...[...BUS].filter(x => x < Xl && (pts.some(k => XY(k)[0] === x) || rails.some(r => r.x === x))));
       for (const sy of ends.sort((u, v) => u - v)) { const tag = String(++foldN), oO = { id: uid('p'), t: 'cnt_out', x: X + 40, y: sy, rot: 0, desc: '', tag, fold: 1, foldR: xR }, oI = { id: uid('p'), t: 'cnt_in', x: Xl - 40, y: sy + H, rot: 0, desc: '', tag, fold: 1, foldL: fL };
         made.push({ r: null, o: oO }, { r: null, o: oI }); addTerm(K(X, sy), oO, 0); addTerm(K(Xl, sy + H), oI, 0); }
-      note(changed, 'Rungs too long for the paper: folded onto lines under them, a continuation at each end of each wire folded');
+      note(changed, wrap ? 'Rungs too long for the paper: wrapped onto lines under them (the wire runs back under the rung; the line keeps the rung\'s number)' : 'Rungs too long for the paper: carried on along new rungs under them, a continuation at each end, each named by the other\'s rung and wire (R19-W30)');
     }
     mkDerived(); GR = findGroups();
   };
@@ -762,7 +768,7 @@ function circuitToPrint(d, env) {
   else if (blank) { paper = P0; fit = fitBest(P0); }
   else { const f0 = fitBest(P0, 'proper'); ask = !f0.ok; paper = P0; fit = f0;
     if (ask && mode === 'tight') fit = fitBest(P0, 'tight');
-    else if (ask && mode === 'fold') { foldLong(P0); fit = fitBest(P0, 'proper'); if (!fit.ok) fit = fitBest(P0, 'tight'); }
+    else if (ask && (mode === 'wrap' || mode === 'cont' || mode === 'fold')) { foldLong(P0, mode === 'wrap' ? 'wrap' : 'cont'); fit = fitBest(P0, 'proper'); if (!fit.ok) fit = fitBest(P0, 'tight'); }
     else if (ask) for (const pap of [{ paper: 'letter', land: true }, { paper: 'tabloid', land: true }, { paper: 'ansic', land: true }]) { const f = fitBest(pap, 'proper'); paper = pap; fit = f; if (f.ok) break; }
   }
   // (centred: room the same each side of the uprights for the rung numbers (and anything out left of them) and the cross-references;

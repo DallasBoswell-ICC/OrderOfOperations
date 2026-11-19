@@ -504,7 +504,7 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
   <p class="cp-err" id="cp-err" hidden>Each side must be 4 to 48 inches (102 to 1219 mm).</p>
   <div class="acts"><button type="button" class="btn" id="cp-cancel">Cancel</button><button type="submit" class="btn primary">Use This Size</button></div>
 </form></dialog>
-<dialog id="long-dlg" class="dlg long-dlg" aria-labelledby="long-title"><h3 id="long-title">Some Rungs Are Too Long for Letter Portrait</h3><p class="sub" id="long-sub">With room for every tag, name and wire number, they won't fit across the sheet. How should they be drawn?</p><div class="long-opts"><button type="button" class="long-opt" data-long="land"><b>Landscape When Needed</b><span>The whole print on letter landscape, every rung spaced properly.</span></button><button type="button" class="long-opt" data-long="tight"><b>Stay Portrait, Tighter</b><span>Letter portrait; only the rungs that need it drawn closer together.</span></button><button type="button" class="long-opt" data-long="fold"><b>Fold Long Rungs</b><span>Letter portrait; a long rung breaks onto a line under it, with a continuation at each end. Rungs with many branches are drawn tighter instead.</span></button></div><div class="dlg-foot"><span class="long-note">Your choice is remembered for next time.</span><button class="btn" id="long-cancel">Cancel</button></div></dialog>
+<dialog id="long-dlg" class="dlg long-dlg" aria-labelledby="long-title"><h3 id="long-title">Some Rungs Are Too Long for Letter Portrait</h3><p class="sub" id="long-sub">With room for every tag, name and wire number, they won't fit across the sheet. How should they be drawn?</p><div class="long-opts"><button type="button" class="long-opt" data-long="land"><b>Landscape When Needed</b><span>The whole print on letter landscape, every rung spaced properly.</span></button><button type="button" class="long-opt" data-long="tight"><b>Stay Portrait, Tighter</b><span>Letter portrait; only the rungs that need it drawn closer together.</span></button><button type="button" class="long-opt" data-long="wrap"><b>Wrap Long Rungs</b><span>Letter portrait; a long rung's wire turns down after the last part that fits, runs back under it and carries on along the line below. That line keeps the rung's number. Rungs with many branches are drawn tighter instead.</span></button><button type="button" class="long-opt" data-long="cont"><b>Continue on a New Rung</b><span>Letter portrait; a long rung ends on a continuation and goes on along a new rung under it, its own number. Each continuation names the other's rung and wire (R19-W30).</span></button></div><div class="dlg-foot"><span class="long-note">Your choice is remembered for next time.</span><button class="btn" id="long-cancel">Cancel</button></div></dialog>
 <dialog id="link-dlg" class="dlg link-dlg" aria-labelledby="link-title"><h3 id="link-title">Opened from Circuit Builder</h3><div id="link-body"></div><div class="dlg-foot"><span></span><button class="btn" id="link-ok">OK</button></div></dialog>
 <dialog id="tb-dlg" class="dlg">
   <h3>Title Block</h3>
@@ -1238,7 +1238,10 @@ function circuitToPrint(d, env) {
   const fitBest = (pap, mode = 'proper') => { const a = fitTo(pap, mode, true); if (env.debug) (env.debug.fb = env.debug.fb || []).push([mode, a.ok, a.tight, a.w]); if (a.ok && (mode !== 'tight' || a.tight <= fitTo(pap, mode).tight + 3)) return a; return fitTo(pap, mode); };
   // (fold: each rung too long for the paper broken where only its own wire crosses, the rest drawn on a line under it, a continuation each end)
   let foldN = 0;
-  const foldLong = pap => {
+  // (Dallas, 19 Nov 2026, his drawings "Ladder Edit 1" and "2": 'wrap' – the rung's wire turns down after the last part that fits, runs back
+  // left under the rung to just inside L1 and on along the next line, which keeps the rung's number; 'cont' – the rung ends on a
+  // continuation and goes on along a new rung under it, its own number, from a continuation: each named by the other's rung and wire, R19-W30)
+  const foldLong = (pap, style = 'cont') => {
     const room = roomFor(pap), { groups, BUS } = GR, pins = [...new Set([...BUS, ...rails.map(r => r.x)])].sort((a, b) => a - b);
     // (room left once whatever reaches out left of the first upright (the power section's lines in) is allowed for)
     const lp = pins[0], room2 = room - Math.max(0, ...groups.map(b => { const r = layBand(b, 'proper', .1, new Map(), pins); return r.m.has(lp) ? r.m.get(lp) - r.n[0] : 0; }));
@@ -1272,14 +1275,18 @@ function circuitToPrint(d, env) {
       const oldTerm = new Map(termAt), movedO = new Set(gm.filter(({ o }) => o.x > X && o.x < xR).map(({ o }) => o));
       E.clear(); const busNeed = [];
       const splits = new Set(best.es.map(([a, b]) => a < b ? a + '|' + b : b + '|' + a)), ends = [];
+      const fL = Math.min(...[...BUS].filter(x => x < Xl && (pts.some(k => XY(k)[0] === x) || rails.some(r => r.x === x)))), Xw = fL + 40;
+      const wrap = style === 'wrap' && best.es.length === 1 && Number.isFinite(fL) && Xw <= Xl - 40, ym = gb + 100;   // (two wires to carry over: continuations instead)
       for (const [a, b] of edges) {
-        if (splits.has(a < b ? a + '|' + b : b + '|' + a)) { const [ax0, sy] = XY(a), [bx0] = XY(b), sl = ax0 < bx0 ? a : b, sr = ax0 < bx0 ? b : a; link2(sl, K(X, sy)); link2(K(Xl, sy + H), F(sr)); ends.push(sy); continue; }
+        if (splits.has(a < b ? a + '|' + b : b + '|' + a)) { const [ax0, sy] = XY(a), [bx0] = XY(b), sl = ax0 < bx0 ? a : b, sr = ax0 < bx0 ? b : a; link2(sl, K(X, sy));
+          if (wrap) { link2(K(X, sy), K(X, ym)); link2(K(X, ym), K(Xw, ym)); link2(K(Xw, ym), K(Xw, sy + H)); link2(K(Xw, sy + H), K(Xl, sy + H)); link2(K(Xl, sy + H), F(sr)); continue; }
+          link2(K(Xl, sy + H), F(sr)); ends.push(sy); continue; }
         const fa = F(a), fb = F(b), [ax, ay] = XY(fa), [bx, by] = XY(fb);
         if (ax === bx || ay === by) { link2(fa, fb); continue; }
         const m = XY(a)[0] === xR ? fb : fa, yy = XY(m)[1]; link2(m, K(xR, yy)); busNeed.push(yy);
       }
       termAt.clear();
-      for (const { o } of made) { if (movedO.has(o)) { o.x = o.x - X + Xl; o.y += H; } else if (o.y > gb) o.y += H; }
+      for (const { o } of made) { if (movedO.has(o)) { o.x = o.x - X + Xl; o.y += H; if (wrap) o.rc = 1; } else if (o.y > gb) o.y += H; }   // (rc: on the line a rung wraps onto, numbered as its rung)
       for (const [k, tt] of oldTerm) for (const t of tt) { if (!movedO.has(t.o)) { addTerm(F(k), t.o, t.i); continue; }
         const nk = K(...linkPbTerms(t.o)[t.i]); addTerm(nk, t.o, t.i); if (F(k) !== nk) { link2(nk, K(xR, XY(nk)[1])); busNeed.push(XY(nk)[1]); } }
       { const r2 = [...runEnds].map(F); runEnds.clear(); for (const k of r2) runEnds.add(k); }
@@ -1293,10 +1300,9 @@ function circuitToPrint(d, env) {
       for (const [k, ns] of [...E]) for (const n of [...ns]) { const [x, y] = XY(k), [nx, ny] = XY(n); if (x !== nx || ny - y <= 20) continue;
         unlink(k, n); const along = [...E.keys()].filter(q => { const [qx, qy] = XY(q); return qx === x && qy > y && qy < ny; }).map(q => XY(q)[1]).sort((u, v) => u - v);
         let prev = y; for (let yy = y + 20; yy <= ny; yy += 20) { link2(K(x, prev), K(x, yy)); prev = yy; } void along; }
-      const fL = Math.min(...[...BUS].filter(x => x < Xl && (pts.some(k => XY(k)[0] === x) || rails.some(r => r.x === x))));
       for (const sy of ends.sort((u, v) => u - v)) { const tag = String(++foldN), oO = { id: uid('p'), t: 'cnt_out', x: X + 40, y: sy, rot: 0, desc: '', tag, fold: 1, foldR: xR }, oI = { id: uid('p'), t: 'cnt_in', x: Xl - 40, y: sy + H, rot: 0, desc: '', tag, fold: 1, foldL: fL };
         made.push({ r: null, o: oO }, { r: null, o: oI }); addTerm(K(X, sy), oO, 0); addTerm(K(Xl, sy + H), oI, 0); }
-      note(changed, 'Rungs too long for the paper: folded onto lines under them, a continuation at each end of each wire folded');
+      note(changed, wrap ? 'Rungs too long for the paper: wrapped onto lines under them (the wire runs back under the rung; the line keeps the rung\'s number)' : 'Rungs too long for the paper: carried on along new rungs under them, a continuation at each end, each named by the other\'s rung and wire (R19-W30)');
     }
     mkDerived(); GR = findGroups();
   };
@@ -1306,7 +1312,7 @@ function circuitToPrint(d, env) {
   else if (blank) { paper = P0; fit = fitBest(P0); }
   else { const f0 = fitBest(P0, 'proper'); ask = !f0.ok; paper = P0; fit = f0;
     if (ask && mode === 'tight') fit = fitBest(P0, 'tight');
-    else if (ask && mode === 'fold') { foldLong(P0); fit = fitBest(P0, 'proper'); if (!fit.ok) fit = fitBest(P0, 'tight'); }
+    else if (ask && (mode === 'wrap' || mode === 'cont' || mode === 'fold')) { foldLong(P0, mode === 'wrap' ? 'wrap' : 'cont'); fit = fitBest(P0, 'proper'); if (!fit.ok) fit = fitBest(P0, 'tight'); }
     else if (ask) for (const pap of [{ paper: 'letter', land: true }, { paper: 'tabloid', land: true }, { paper: 'ansic', land: true }]) { const f = fitBest(pap, 'proper'); paper = pap; fit = f; if (f.ok) break; }
   }
   // (centred: room the same each side of the uprights for the rung numbers (and anything out left of them) and the cross-references;
@@ -2172,7 +2178,9 @@ function analyse(D = doc) {
       const ctl = isCtrlKind(kd) || (kd === 'fuse' && p !== x1fuse && [0, 1].every(i => !power.has(rootT(p, s, i))));
       if (ctl && [...Array(termsN(p)).keys()].some(i => wiresAt(s, { p: p.id, i }).length)) ys.add(p.y);   // (one not wired in yet takes no rung number)
     }
-    const sorted = [...ys].sort((a, b) => a - b), map = new Map(sorted.map(y => [y, ++rn]));
+    // (a line a long rung wraps onto (Dallas's "Ladder Edit 1", 19 Nov 2026: every control part on it marked rc) keeps the rung's number)
+    const wrapped = y => { const ps = s.parts.filter(p => p.t !== 'rail' && p.y === y && !((p.rot || 0) % 180) && isCtrlKind(kindOf(p))); return ps.length && ps.every(p => p.rc); };
+    const sorted = [...ys].sort((a, b) => a - b), map = new Map(sorted.map((y, i) => [y, i && wrapped(y) ? rn : ++rn]));
     rows.push(sorted.map(y => ({ y, n: map.get(y) })));
     for (const p of s.parts) if (p.t !== 'rail' && map.has(p.y) && !((p.rot || 0) % 180)) rung.set(p.id, map.get(p.y));
   });
@@ -2274,13 +2282,16 @@ let XREFS = [], RUNGNUMS = [], LINKS = [];     // (on the sheet on screen: each 
 // how far a part's name, label or one of its fuse numbers has been dragged (each on its own), and setting it
 const labOff = (p, which) => (which === 'tag' ? p.lt : which === 'desc' ? p.ld : (p.lf || {})[which]) || [0, 0];
 function setLabOff(p, which, v) { if (which === 'tag') p.lt = v; else if (which === 'desc') p.ld = v; else (p.lf ||= {})[which] = v; }
-// a continuation's note: TO / FROM the other sheet with its letter (or, on the same sheet, the rung)
+// a continuation's note: TO / FROM the other sheet with its letter; on the same sheet (Dallas's "Ladder Edit 2", 19 Nov 2026) the other
+// end's rung and the wire's number, R19-W30
 function contNote(p, k) {
   const other = p.t === 'cnt_out' ? 'cnt_in' : 'cnt_out', m = allParts().find(q => q.p.t === other && q.p.tag === p.tag);
   if (!m) return p.t === 'cnt_out' ? 'TO ?' : 'FROM ?';
   const w = p.t === 'cnt_out' ? 'TO' : 'FROM';
   if (m.k !== k) return `${w} SHEET ${m.k + 1}`;
-  const rn = A && A.rung && A.rung.get(m.p.id); return rn ? `${w} RUNG ${rn}` : `${w} ${m.p.tag}`;
+  const rn = A && A.rung && A.rung.get(m.p.id), s = doc.sheets[k], wn = A && A.label && s ? A.label.get(A.rootT(p, s, 0)) : null;
+  if (rn && wn && wn !== '?') return `R${rn}-W${wn}`;
+  return rn ? `${w} RUNG ${rn}` : `${w} ${m.p.tag}`;
 }
 /* ---------- what Circuit Builder's devices carry into the print ---------- */
 // one pushbutton (or selector switch) drawn in several rungs: the parts with its number are its contact blocks; the top
@@ -3510,7 +3521,7 @@ const isCircuit = d => d && !d.kind && Array.isArray(d.parts) && Array.isArray(d
 // (rungs too long for letter portrait: the person picks how they are drawn (Dallas, 17 Nov 2026); the choice remembered)
 const LONGKEY = 'oo-print-builder-demo:long-rungs';
 function openCircuit(d, fname, long) {
-  let saved = 'tight'; try { const v = localStorage.getItem(LONGKEY); if (['land', 'tight', 'fold'].includes(v)) saved = v; } catch (_) {}
+  let saved = 'tight'; try { const v = localStorage.getItem(LONGKEY); if (['land', 'tight', 'wrap', 'cont'].includes(v)) saved = v; else if (v === 'fold') saved = 'cont'; } catch (_) {}   // (fold: the choice before 19 Nov 2026, now Continue on a New Rung)
   const r = circuitToPrint(d, { uid, defaultTB, tidy, long: long || saved });
   if (r.ask && !long) {
     const dl = $('long-dlg'); dl.querySelectorAll('.long-opt').forEach(b => { b.classList.toggle('last', b.dataset.long === saved); b.onclick = () => { dl.close(); try { localStorage.setItem(LONGKEY, b.dataset.long); } catch (_) {} openCircuit(d, fname, b.dataset.long); }; });

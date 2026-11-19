@@ -3345,7 +3345,7 @@ const DEF_CIRCUIT = `
 
   await check('O³ link (Dallas, 17 Nov 2026): on the print every tag, name and cross-reference stays clear of the others and inside the border, landscape or tighter', async page => {
     const out = [], d = JSON.parse(require('fs').readFileSync(path.join(__dirname, 'fixtures', 'drill-station.json'), 'utf8'));
-    const r = await withPB(page, pb => pb.evaluate(d => ['land', 'tight', 'fold'].map(mode => { const res = circuitToPrint(d, { uid, defaultTB, long: mode }); loadDoc(JSON.parse(JSON.stringify(res.doc)));
+    const r = await withPB(page, pb => pb.evaluate(d => ['land', 'tight', 'wrap', 'cont'].map(mode => { const res = circuitToPrint(d, { uid, defaultTB, long: mode }); loadDoc(JSON.parse(JSON.stringify(res.doc)));
       let over = 0, outside = 0, labs = 0;
       doc.sheets.forEach((s, k) => { doc.cur = k; S = s; refresh(true); const L = PLABS.filter(l => l.x1 != null); labs += L.length;
         for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) { const a = L[i], c = L[j]; if (a.id !== c.id && a.x0 < c.x1 - 2 && c.x0 < a.x1 - 2 && a.y0 < c.y1 - 2 && c.y0 < a.y1 - 2) over++; }
@@ -3358,30 +3358,42 @@ const DEF_CIRCUIT = `
     return out;
   });
 
-  await check('O³ link (Dallas, 17 Nov 2026): a rung too long for letter portrait asks how to draw it (landscape, tighter, or folded onto a second line) and remembers; folded, it comes back to Circuit Builder joined the same way', async page => {
+  await check('O³ link (Dallas, 19 Nov 2026, his "Ladder Edit" drawings): a rung too long for letter portrait asks how to draw it (landscape, tighter, wrapped, or continued on a new rung) and remembers; wrapped, the wire runs back under the rung and the line keeps its number; continued, a new rung from continuations named R#-W#; either way it comes back to Circuit Builder joined the same way', async page => {
     const out = [], fs = require('fs'), d = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'long-rung.json'), 'utf8'));
-    // (folded, the parts come back on new lines: the nets compared by what each part is, not where it is)
+    // (the parts come back on new lines: the nets compared by what each part is, not where it is)
     await page.evaluate(NETSIG.replace("a[0] + '@' + a[1] + ',' + a[2] + '#' + i", "a[0] + ':' + a[3] + ':' + (a[4] ? 1 : 0) + '#' + i").replace('const netSig =', 'const netSigL =') + 'window.netSigL = netSigL;');
-    const r = await withPB(page, pb => pb.evaluate(d => { try { localStorage.removeItem('oo-print-builder:long-rungs'); } catch (_) {}
+    const r = await withPB(page, pb => pb.evaluate(d => { try { localStorage.removeItem(LONGKEY); } catch (_) {}
       const res = {}; openCircuit(d); res.asked = $('long-dlg').open; res.opts = [...document.querySelectorAll('#long-dlg .long-opt b')].map(b => b.textContent);
-      document.querySelector('#long-dlg .long-opt[data-long="fold"]').click(); res.closed = !$('long-dlg').open; $('link-dlg').close();
-      res.fold = { sheets: doc.sheets.length, land: !!doc.sheets[0].land, conts: doc.sheets[0].parts.filter(p => p.t === 'cnt_out' || p.t === 'cnt_in').length, rails: doc.sheets[0].parts.filter(p => p.t === 'rail').length };
+      const look = () => { refresh(true); const s = doc.sheets[0], ctl = s.parts.filter(p => p.t !== 'rail' && !/^cnt/.test(p.t)), ys = [...new Set(ctl.map(p => p.y))].sort((a, b) => a - b);
+        return { sheets: doc.sheets.length, land: !!s.land, conts: s.parts.filter(p => /^cnt/.test(p.t)).length, rails: s.parts.filter(p => p.t === 'rail').length, rows: ys.length, rungs: ys.map(y => A.rung.get(ctl.find(p => p.y === y).id)).join(','),
+          notes: s.parts.filter(p => /^cnt/.test(p.t)).map(p => contNote(p, 0)).join(' '), loose: checkPrint().filter(i => /without reaching|not wired/.test(i.title)).length }; };
+      document.querySelector('#long-dlg .long-opt[data-long="wrap"]').click(); res.closed = !$('long-dlg').open; $('link-dlg').close(); res.wrap = look();
       try { res.saved = localStorage.getItem('oo-print-builder:long-rungs'); } catch (_) {}
-      openCircuit(d); res.lastMarked = document.querySelector('#long-dlg .long-opt.last')?.dataset.long; document.querySelector('#long-dlg .long-opt[data-long="land"]').click(); $('link-dlg').close(); res.land = !!doc.sheets[0].land;
-      res.print = JSON.parse(JSON.stringify(circuitToPrint(d, { uid, defaultTB, long: 'fold' }).doc));
+      openCircuit(d); res.lastMarked = document.querySelector('#long-dlg .long-opt.last')?.dataset.long; document.querySelector('#long-dlg .long-opt[data-long="cont"]').click(); $('link-dlg').close(); res.cont = look();
+      openCircuit(d); document.querySelector('#long-dlg .long-opt[data-long="land"]').click(); $('link-dlg').close(); res.land = !!doc.sheets[0].land;
+      res.prints = ['wrap', 'cont'].map(m => JSON.parse(JSON.stringify(circuitToPrint(d, { uid, defaultTB, long: m }).doc)));
+      // (the choice saved before 19 Nov 2026, fold, is now Continue on a New Rung)
+      try { localStorage.setItem(LONGKEY, 'fold'); } catch (_) {} openCircuit(d); res.oldFold = document.querySelector('#long-dlg .long-opt.last')?.dataset.long; $('long-dlg').close();
       // (a rung that fits: no question)
       const short = JSON.parse(JSON.stringify(d)); short.parts = short.parts.filter(p => p[2] !== 200); short.wires = short.wires.filter(w => w[1] !== 200); openCircuit(short); res.askedShort = $('long-dlg').open; if (res.askedShort) $('long-dlg').close(); else $('link-dlg').close();
       return res; }, d));
     if (!r.asked) out.push('no question for a rung too long for portrait');
-    if (r.opts.join('|') !== 'Landscape When Needed|Stay Portrait, Tighter|Fold Long Rungs') out.push('choices: ' + r.opts.join(', '));
+    if (r.opts.join('|') !== 'Landscape When Needed|Stay Portrait, Tighter|Wrap Long Rungs|Continue on a New Rung') out.push('choices: ' + r.opts.join(', '));
     if (!r.closed) out.push('the question stayed open after a choice');
-    if (r.fold.land || r.fold.conts !== 2 || r.fold.rails !== 2) out.push('folded: ' + JSON.stringify(r.fold));
-    if (r.lastMarked !== 'fold') out.push('the choice not remembered (' + r.lastMarked + ')');
+    if (r.wrap.land || r.wrap.conts || r.wrap.rails !== 2 || r.wrap.loose) out.push('wrapped: ' + JSON.stringify(r.wrap));
+    { const n = r.wrap.rungs.split(','); if (n[0] !== n[1] || n[2] === n[1]) out.push('wrapped: the line under the rung should keep its number (rungs ' + r.wrap.rungs + ')'); }
+    if (r.cont.land || r.cont.conts !== 2 || r.cont.rails !== 2 || r.cont.loose) out.push('continued: ' + JSON.stringify(r.cont));
+    if (!/^R2-W\d+ R1-W\d+$/.test(r.cont.notes) || r.cont.notes.split(' ').map(x => x.split('-')[1]).reduce((a, b) => a === b ? a : '') === '') out.push('continued: notes ' + r.cont.notes + ' (want R2-Wn on the rung, R1-Wn on the new rung, one wire number)');
+    if (r.cont.rungs.split(',').slice(0, 2).join() !== '1,2') out.push('continued: the new rung should have its own number (rungs ' + r.cont.rungs + ')');
+    if (r.lastMarked !== 'wrap') out.push('the choice not remembered (' + r.lastMarked + ')');
+    if (r.oldFold !== 'cont') out.push('a saved Fold choice should now mean Continue on a New Rung (' + r.oldFold + ')');
     if (!r.land) out.push('landscape when needed: not landscape');
     if (r.askedShort) out.push('asked for a circuit that fits');
-    const back = await page.evaluate(([print, d]) => { const ch = JSON.parse(JSON.stringify(print)); ch.link.fp = 'changed'; const b = printToCircuit(ch); return [netSigL(d) === netSigL(b.data), printToCircuit(print).notes.same]; }, [r.print, d]);
-    if (!back[0]) out.push('folded print, changed, comes back joined differently');
-    if (!back[1]) out.push('folded print, unchanged, does not come back exactly');
+    for (const [i, m] of ['wrap', 'cont'].entries()) {
+      const back = await page.evaluate(([print, d]) => { const ch = JSON.parse(JSON.stringify(print)); ch.link.fp = 'changed'; const b = printToCircuit(ch); return [netSigL(d) === netSigL(b.data), printToCircuit(print).notes.same]; }, [r.prints[i], d]);
+      if (!back[0]) out.push(m + ' print, changed, comes back joined differently');
+      if (!back[1]) out.push(m + ' print, unchanged, does not come back exactly');
+    }
     return out;
   });
 

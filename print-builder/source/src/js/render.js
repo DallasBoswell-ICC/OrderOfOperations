@@ -10,13 +10,16 @@ let XREFS = [], RUNGNUMS = [], LINKS = [];     // (on the sheet on screen: each 
 // how far a part's name, label or one of its fuse numbers has been dragged (each on its own), and setting it
 const labOff = (p, which) => (which === 'tag' ? p.lt : which === 'desc' ? p.ld : (p.lf || {})[which]) || [0, 0];
 function setLabOff(p, which, v) { if (which === 'tag') p.lt = v; else if (which === 'desc') p.ld = v; else (p.lf ||= {})[which] = v; }
-// a continuation's note: TO / FROM the other sheet with its letter (or, on the same sheet, the rung)
+// a continuation's note: TO / FROM the other sheet with its letter; on the same sheet (Dallas's "Ladder Edit 2", 19 Nov 2026) the other
+// end's rung and the wire's number, R19-W30
 function contNote(p, k) {
   const other = p.t === 'cnt_out' ? 'cnt_in' : 'cnt_out', m = allParts().find(q => q.p.t === other && q.p.tag === p.tag);
   if (!m) return p.t === 'cnt_out' ? 'TO ?' : 'FROM ?';
   const w = p.t === 'cnt_out' ? 'TO' : 'FROM';
   if (m.k !== k) return `${w} SHEET ${m.k + 1}`;
-  const rn = A && A.rung && A.rung.get(m.p.id); return rn ? `${w} RUNG ${rn}` : `${w} ${m.p.tag}`;
+  const rn = A && A.rung && A.rung.get(m.p.id), s = doc.sheets[k], wn = A && A.label && s ? A.label.get(A.rootT(p, s, 0)) : null;
+  if (rn && wn && wn !== '?') return `R${rn}-W${wn}`;
+  return rn ? `${w} RUNG ${rn}` : `${w} ${m.p.tag}`;
 }
 /* ---------- what Circuit Builder's devices carry into the print ---------- */
 // one pushbutton (or selector switch) drawn in several rungs: the parts with its number are its contact blocks; the top

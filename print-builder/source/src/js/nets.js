@@ -133,7 +133,9 @@ function analyse(D = doc) {
       const ctl = isCtrlKind(kd) || (kd === 'fuse' && p !== x1fuse && [0, 1].every(i => !power.has(rootT(p, s, i))));
       if (ctl && [...Array(termsN(p)).keys()].some(i => wiresAt(s, { p: p.id, i }).length)) ys.add(p.y);   // (one not wired in yet takes no rung number)
     }
-    const sorted = [...ys].sort((a, b) => a - b), map = new Map(sorted.map(y => [y, ++rn]));
+    // (a line a long rung wraps onto (Dallas's "Ladder Edit 1", 19 Nov 2026: every control part on it marked rc) keeps the rung's number)
+    const wrapped = y => { const ps = s.parts.filter(p => p.t !== 'rail' && p.y === y && !((p.rot || 0) % 180) && isCtrlKind(kindOf(p))); return ps.length && ps.every(p => p.rc); };
+    const sorted = [...ys].sort((a, b) => a - b), map = new Map(sorted.map((y, i) => [y, i && wrapped(y) ? rn : ++rn]));
     rows.push(sorted.map(y => ({ y, n: map.get(y) })));
     for (const p of s.parts) if (p.t !== 'rail' && map.has(p.y) && !((p.rot || 0) % 180)) rung.set(p.id, map.get(p.y));
   });
