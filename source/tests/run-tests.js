@@ -2341,6 +2341,16 @@ const DEF_CIRCUIT = `
     if (r.label || /My Old/.test(r.title)) out.push('the old name still shows on the page');
     return out;
   });
+  await check('Dashed links (Dallas, 19 Nov 2026): a selector\'s blocks linked one above another step around a coil drawn between them; with nothing between, the link is straight', async page => {
+    const r = await page.evaluate(() => { const run = mid => { parts = []; wires = []; sel = null; const a = newPart('sel', 400, 200); parts.push(a); const b = newPart('sel', 400, 640); b.L = a.L; parts.push(b);
+        if (mid) { const c = newPart('coil', 400, 420); parts.push(c); } draw(); return [...document.querySelectorAll('path[stroke-dasharray="7 5"]')].map(p => p.getAttribute('d')); };
+      return [run(false), run(true)]; });
+    const out = [];
+    if (r[0].length !== 1 || !/^M400 [\d.]+V[\d.]+$/.test(r[0][0])) out.push('nothing between: ' + JSON.stringify(r[0]) + ' (want one straight link)');
+    if (r[1].length !== 1) out.push('coil between: ' + r[1].length + ' links');
+    else { const xs = [...r[1][0].matchAll(/H([\d.]+)/g)].map(m => +m[1]); if (!xs.some(x => Math.abs(x - 400) >= 40)) out.push('coil between: the link still runs straight through it: ' + r[1][0]); }
+    return out;
+  });
   await check('Print Diagram: wire numbers (control 1, 2, then reading order; power L1, L1A... and T1, T1A...), line numbers, cross-references, title block; printing puts the sheet alone on the page', async page => {
     const out = [];
     const d = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'fixtures', 'fwdrev.json'), 'utf8'));

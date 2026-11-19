@@ -4854,6 +4854,14 @@ function linkRoute([P0, d0], [P1, d1], dx, dy) {
   const q = pts.filter((p, i) => !i || p[0] !== pts[i - 1][0] || p[1] !== pts[i - 1][1]);
   return 'M' + q.map(p => `${Math.round(p[0] * 10) / 10} ${Math.round(p[1] * 10) / 10}`).join('L');
 }
+// (the upright nearest x, clear of every part's body from y0 to y1 but the drawings being linked; null if x itself is clear)
+function aside(x, y0, y1, own) {
+  const body = p => { const h = BODYH(p.t) / 2, w = Math.min(TERM(p) - 8, Math.max(BOX, BODYH(p.t)) / 2); return { x0: p.x - w, x1: p.x + w, y0: p.y - h, y1: p.y + h }; };
+  const bs = parts.filter(p => !own.includes(p) && !vert(p)).map(body), clear = X => !bs.some(o => X > o.x0 && X < o.x1 && y1 > o.y0 && y0 < o.y1);
+  if (clear(x)) return null;
+  for (let k = 1; k <= 8; k++) for (const X of [x + 40 * k, x - 40 * k]) if (X > BAR + 10 && X < W - BAR - 10 && clear(X)) return X;
+  return null;
+}
 function selLinks(B) {
   const by = {};
   for (const p of parts) if (p.t === 'btn' || p.t === 'sel') (by[p.t + p.L] = by[p.t + p.L] || []).push(p);
@@ -4869,6 +4877,9 @@ function selLinks(B) {
       else if (y1 - y0 >= 16) {
         const c = Math.max(y0 + 6, Math.min(y1 - 6, Math.round((y0 + y1) / 2) + dy)), X = Math.max(BAR + 10, Math.min(W - BAR - 10, a.x + dx));
         d = X === a.x ? (a.x === b.x ? `M${a.x} ${y0}V${y1}` : `M${a.x} ${y0}V${c}H${b.x}V${y1}`) : `M${a.x} ${y0}V${y0 + 8}H${X}V${c}H${b.x}V${y1}`;
+        // (Dallas, 19 Nov 2026: a straight link never runs through another part. Not moved by hand, it steps aside to the
+        // nearest clear upright, down past the part, and back in)
+        if (!b.lk && a.x === b.x) { const Xs = aside(a.x, y0 + 8, y1 - 8, ds); if (Xs != null) d = `M${a.x} ${y0}V${y0 + 8}H${Xs}V${y1 - 8}H${b.x}V${y1}`; }
         ends = [[a.x, y0], [b.x, y1]];
       } else { const lo = Math.max(y0 + 8, Math.max(bot(a), bot(b)) + 16 + dy); d = `M${a.x} ${y0}V${lo}H${b.x}V${bot(b)}`; ends = [[a.x, y0], [b.x, bot(b)]]; }
       if (B(a.y) !== B(b.y)) continue;   // (in columns, two drawings in different columns are not joined)

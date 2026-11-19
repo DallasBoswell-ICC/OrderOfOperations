@@ -2387,7 +2387,7 @@ function drawSheet(s, k, A) {
   // blocks of one pushbutton or selector, one above another: a dashed link from each to the next down. Each is routed
   // by linkRoute; dragged into another shape, it keeps that shape (see LINK_ in editor.js))
   for (const L of linksOf(s)) { linked.add(L.a.id); linked.add(L.b.id);
-    const P = linkRoute(L); LINKS.push({ ...L, pts: P });
+    const P = linkRoute(L, s); LINKS.push({ ...L, pts: P });
     g += `<polyline points="${P.map(q => q.join(',')).join(' ')}" fill="none" stroke-width="3" stroke-dasharray="12 10" stroke-linecap="butt" stroke-linejoin="miter"/>`; }
   // devices
   for (const p of s.parts) {
@@ -2563,8 +2563,21 @@ function linkEnds(L) {
 }
 // the link's line: straight when its ends line up and face each other; otherwise out of each end and across (an upright
 // pair of ends: across at a level between them, or over/under both; a side pair: down/up at an upright between them)
-function linkRoute(L) {
-  const k = L.own.lk || {}, [ea, eb] = linkEnds(L), A_ = linkEnd(L.a, ea), B = linkEnd(L.b, eb), va = vertEnd(ea.s), vb = vertEnd(eb.s);
+function linkRoute(L, s) {
+  const k0 = L.own.lk || {}, P = linkRouteK(L, k0);
+  // (Dallas, 19 Nov 2026: a link never runs through another symbol. Not dragged into a shape of its own, it steps
+  // around: across at another level, or out beside them, the nearest way that is clear)
+  if (!s || k0.jx != null || k0.dy || k0.dx) return P;
+  const boxes = s.parts.filter(p => p.t !== 'rail' && LIB[p.t] && p !== L.a && p !== L.b).map(p => { const b = PSYM[symOf(p)] ? linkBox(p) : partBox(p); return { x0: b.x0 + 2, x1: b.x1 - 2, y0: b.y0 + 2, y1: b.y1 - 2 }; });
+  const hits = Q => Q.slice(1).some((b, i) => { const a = Q[i]; return boxes.some(o => Math.max(a[0], b[0]) > o.x0 && Math.min(a[0], b[0]) < o.x1 && Math.max(a[1], b[1]) > o.y0 && Math.min(a[1], b[1]) < o.y1); });
+  if (!hits(P)) return P;
+  const [ea, eb] = linkEnds(L), va = vertEnd(ea.s), vb = vertEnd(eb.s), steps = [1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6];
+  const tries = va && vb ? [...steps.map(i => ({ dy: 40 * i })), ...steps.map(i => ({ jx: 60 * i }))] : !va && !vb ? steps.map(i => ({ dx: 40 * i })) : [];
+  for (const t of tries) { const Q = linkRouteK(L, { ...k0, ...t }); if (!hits(Q)) return Q; }
+  return P;
+}
+function linkRouteK(L, k) {
+  const [ea, eb] = linkEnds(L), A_ = linkEnd(L.a, ea), B = linkEnd(L.b, eb), va = vertEnd(ea.s), vb = vertEnd(eb.s);
   if (va && vb && k.jx != null) {   // (stepped out beside them: out of each end, across to the upright, back in)
     const out = e => e.s === 'top' ? -24 : 24, ya = A_[1] + out(ea), yb = B[1] + out(eb), x = snap((A_[0] + B[0]) / 2) + k.jx;
     return [A_, [A_[0], ya], [x, ya], [x, yb], [B[0], yb], B];

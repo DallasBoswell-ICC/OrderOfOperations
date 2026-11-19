@@ -890,6 +890,19 @@ let passed = 0, failed = 0;
       if (got.some(i => /Nothing drawn on top/.test(i.title))) out.push('still says nothing is drawn on top of anything');
       return out; });
   });
+  await check('Dashed links (Dallas, 19 Nov 2026): a link between a button\'s blocks steps around a symbol in its way instead of running through it; with nothing in the way it stays straight', async p => {
+    return p.evaluate(() => { const out = [];
+      const run = mid => { loadDoc(withDrawnBy(template('blank'))); const s = doc.sheets[0];
+        const a = addPart(s, 'pb_no', 600, 600), b = addPart(s, 'pb_nc', 600, 1000); a.tag = b.tag = 'PB-A'; if (mid) addPart(s, 'coil', 600, 800);
+        refresh(true); const L = LINKS.find(l => (l.a === a || l.a.id === a.id) && (l.b === b || l.b.id === b.id) || (l.a.id === b.id && l.b.id === a.id)); return [L, s]; };
+      let [L] = run(false); if (!L) return ['no link drawn between the blocks'];
+      if (L.pts.length !== 2) out.push('with nothing in the way the link is not straight: ' + JSON.stringify(L.pts));
+      let s; [L, s] = run(true); if (!L) return ['no link drawn with a coil between'];
+      const c = s.parts.find(q => q.t === 'coil'), o = linkBox(c);
+      const thru = L.pts.slice(1).some((q, i) => { const a = L.pts[i]; return Math.max(a[0], q[0]) > o.x0 + 2 && Math.min(a[0], q[0]) < o.x1 - 2 && Math.max(a[1], q[1]) > o.y0 + 2 && Math.min(a[1], q[1]) < o.y1 - 2; });
+      if (thru) out.push('the link runs through the coil: ' + JSON.stringify(L.pts));
+      return out; });
+  });
   await check('Safe open (Dallas, 19 Nov 2026): a saved sheet given by its id (or out of range) opens on that sheet or sheet 1, never frozen; a file with a broken part, junction or wire is refused with the reason and the open print kept', async p => {
     return p.evaluate(() => { const out = [], base = () => JSON.parse(JSON.stringify(template('starter')));
       for (const [cur, want] of [[0, 0], [base().sheets[0].id, 0], ['zz', 0], [7, 0], [-1, 0], [null, 0]]) { const d = base(); d.cur = cur;
