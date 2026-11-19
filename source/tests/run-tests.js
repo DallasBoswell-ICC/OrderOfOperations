@@ -3407,6 +3407,19 @@ const DEF_CIRCUIT = `
     if (back[2][2]) out.push('changed: the old print is carried inside the new one');
     return out;
   });
+  await check('O³ link (Dallas, 19 Nov 2026): no ink off the sheet: every ready-made circuit and test circuit, power sections too (FWD/REV), drawn as a print in each way a long rung can go, stays inside each sheet\'s border', async page => {
+    const fs = require('fs'), path = require('path'), FX = path.join(__dirname, 'fixtures');
+    const circs = (await page.evaluate(() => [...document.getElementById('preset').options].map(o => o.value).filter(v => v && v !== 'blank').map(n => { loadPreset(n); return [n, circuitData()]; })))
+      .concat(fs.readdirSync(path.join(FX, 'transfer')).map(f => [f, JSON.parse(fs.readFileSync(path.join(FX, 'transfer', f), 'utf8'))]))
+      .concat(fs.readdirSync(FX).filter(f => /\.json$/.test(f)).map(f => [f, JSON.parse(fs.readFileSync(path.join(FX, f), 'utf8'))]).filter(([, d]) => Array.isArray(d.parts)));
+    return withPB(page, pb => pb.evaluate(circs => { const out = [];
+      for (const [n, d] of circs) for (const m of ['land', 'tight', 'wrap', 'cont']) { const r = circuitToPrint(d, { uid, defaultTB, tidy, long: m }); loadDoc(JSON.parse(JSON.stringify(r.doc))); refresh(true);
+        doc.sheets.forEach((s, k) => { const W = drawW(s), H = drawH(s); let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; const grow = (a, b, c, e) => { x0 = Math.min(x0, a); x1 = Math.max(x1, b); y0 = Math.min(y0, c); y1 = Math.max(y1, e); };
+          for (const p of s.parts) { if (p.t === 'rail') { grow(p.x, p.x, p.y0, p.y1); continue; } const b = partBox(p); grow(b.x0, b.x1, b.y0, b.y1); }
+          for (const w of s.wires) for (const q of wirePts(s, w)) grow(q[0], q[0], q[1], q[1]);
+          if (x0 < 0 || y0 < 0 || x1 > W || y1 > H) out.push(`${n} (${m}), sheet ${k + 1}: ink from ${Math.round(x0)},${Math.round(y0)} to ${Math.round(x1)},${Math.round(y1)} on a ${W} by ${H} sheet`); }); }
+      return out; }, circs));
+  });
   await check('O³ link (Dallas, 19 Nov 2026, his "Ladder Edit" drawings): a rung too long for letter portrait asks how to draw it (landscape, tighter, wrapped, or continued on a new rung) and remembers; wrapped, the wire runs back under the rung and the line keeps its number; continued, a new rung from continuations named R#-W#; either way it comes back to Circuit Builder joined the same way', async page => {
     const out = [], fs = require('fs'), d = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'long-rung.json'), 'utf8'));
     // (the parts come back on new lines: the nets compared by what each part is, not where it is)

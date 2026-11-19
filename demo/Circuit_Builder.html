@@ -1683,6 +1683,9 @@ function circuitToPrint(d, env) {
   const fullWidth = (L, bands, pins, pap, tightB) => {
     if (pins.length < 2 || !L.res.length) return;
     const pl = pins[0], pr = pins[pins.length - 1], PL0 = L.P.get(pl), PR0 = L.P.get(pr); if (PL0 == null || PR0 == null) return;
+    // (only a ladder's own right upright is moved out: with parts beyond it (a power section's starters and motors to the
+    // right of a transformer's fuses, say) it is not the edge of anything, and moving it would carry them off the sheet)
+    if (L.res.some(r => r.n[r.n.length - 1] > PR0)) return;
     const info = L.res.map((r, i) => { const [a, b] = bands[i], inB = y => y >= a && y <= b;
       const loads = made.filter(({ o }) => inB(o.y) && LOADT.has(o.t) && oneX(o) == null && o.x > pl && o.x < pr).map(({ o }) => o.x);
       if (!loads.length) return null; const fl = Math.max(...loads);
@@ -1920,7 +1923,9 @@ function circuitToPrint(d, env) {
     const coilN = Math.max(0, ...made.filter(({ o }) => inS(o.y) && (o.t === 'coil' || o.t === 'mst3')).map(({ o }) => xrefN.get(o.tag) || 1));
     const xl = Math.min(...xs) - (rx.length && Math.min(...rx) - Math.min(...xs) < 120 ? 170 : 110), xr = Math.max(...xs) + (coilN ? xrefOf(coilN) : 60);
     // (the uprights' middle on the sheet's middle; moved over only as far as needed to keep everything inside the border)
-    const ups = fit.P && fit.P.size >= 2 ? [Math.min(...fit.P.values()), Math.max(...fit.P.values())] : null, DW = linkDrawW(sheet0);
+    const ups0 = fit.P && fit.P.size >= 2 ? [Math.min(...fit.P.values()), Math.max(...fit.P.values())] : null, DW = linkDrawW(sheet0);
+    // (a power section's own uprights, a transformer's fuses with starters and motors beyond them, are not the ladder's: centred on everything then)
+    const ups = ups0 && Math.max(...xs) <= ups0[1] + 20 ? ups0 : null;
     let ox = ups ? (DW - (ups[0] + ups[1])) / 2 : (DW - (xr - xl)) / 2 - xl;
     if (xl + ox < 40) ox = 40 - xl; else if (xr + ox > DW - 16) ox = Math.max(40 - xl, DW - 16 - xr);
     return linkSnap(ox); });
