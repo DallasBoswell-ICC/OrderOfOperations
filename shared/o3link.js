@@ -53,6 +53,8 @@ function linkMoveEnds(pts, a, b) {
   for (let k = r.length - 2; k >= 1; k--) { const [p0, p1, p2] = [r[k - 1], r[k], r[k + 1]]; if ((p0[0] === p1[0] && p1[0] === p2[0]) || (p0[1] === p1[1] && p1[1] === p2[1])) r.splice(k, 1); }
   return r;
 }
+// a circuit's fingerprint, for the print it was opened from (d.pr): its parts and wires as Circuit Builder saves them
+const linkCircuitFingerprint = d => JSON.stringify([d.pw || '', d.parts, d.wires]);
 // a print's own fingerprint: what it shows, in any order (to tell whether a print made from a circuit was changed)
 function linkFingerprint(doc) {
   const items = [];
@@ -435,6 +437,10 @@ function linkMerge(old, nu, cbi, ownCol = new Set()) {
 function circuitToPrint(d, env) {
   if (!d || typeof d !== 'object' || !Array.isArray(d.parts) || !Array.isArray(d.wires)) throw new Error('That is not a circuit from Circuit Builder.');
   const uid = env.uid, changed = [], left = [], note = (list, s) => { if (!list.includes(s)) list.push(s); };
+  // (opened in Circuit Builder from a print and not changed since: that print, exactly; Dallas, 19 Nov 2026)
+  if (d.pr && d.pr.pb && d.pr.fp && d.pr.fp === linkCircuitFingerprint(d)) {
+    const pb = JSON.parse(JSON.stringify(d.pr.pb)); if (pb && pb.kind === 'o3-print' && Array.isArray(pb.sheets) && pb.sheets.length) return { doc: pb, notes: { changed: [], left: [], same: true } }; }
+  if (d.pr) { d = { ...d }; delete d.pr; }   // (changed: drawn again; the old print is not carried inside the new one)
   const bars = d.pw !== 'boxes', d0 = d; let ylink = null;
   // (a ladder: its rungs spread out down the print as far as needed for the tags and names, up to twice as far)
   let sy = 1;

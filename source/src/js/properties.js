@@ -276,7 +276,7 @@ document.querySelectorAll('[data-cnc]').forEach(x => x.addEventListener('click',
 document.getElementById('preset').addEventListener('change', e => {
   const k = e.target.value; if (!k) return;
   const label = e.target.selectedOptions[0].textContent; e.target.value = '';
-  snapshot(); loadPreset(k); sel = null; say(''); circuitName = k === 'blank' ? '' : label; fitView(); fit(true); forgetFile();
+  snapshot(); loadPreset(k); sel = null; say(''); circuitName = k === 'blank' ? '' : label; LINK_PRINT = null; fitView(); fit(true); forgetFile();
   if (editing) draw(); else { NET = network(); draw(); startRun(); afterRunStart(); }
 });
 

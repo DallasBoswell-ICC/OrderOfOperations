@@ -1095,6 +1095,8 @@ function linkMoveEnds(pts, a, b) {
   for (let k = r.length - 2; k >= 1; k--) { const [p0, p1, p2] = [r[k - 1], r[k], r[k + 1]]; if ((p0[0] === p1[0] && p1[0] === p2[0]) || (p0[1] === p1[1] && p1[1] === p2[1])) r.splice(k, 1); }
   return r;
 }
+// a circuit's fingerprint, for the print it was opened from (d.pr): its parts and wires as Circuit Builder saves them
+const linkCircuitFingerprint = d => JSON.stringify([d.pw || '', d.parts, d.wires]);
 // a print's own fingerprint: what it shows, in any order (to tell whether a print made from a circuit was changed)
 function linkFingerprint(doc) {
   const items = [];
@@ -1477,6 +1479,10 @@ function linkMerge(old, nu, cbi, ownCol = new Set()) {
 function circuitToPrint(d, env) {
   if (!d || typeof d !== 'object' || !Array.isArray(d.parts) || !Array.isArray(d.wires)) throw new Error('That is not a circuit from Circuit Builder.');
   const uid = env.uid, changed = [], left = [], note = (list, s) => { if (!list.includes(s)) list.push(s); };
+  // (opened in Circuit Builder from a print and not changed since: that print, exactly; Dallas, 19 Nov 2026)
+  if (d.pr && d.pr.pb && d.pr.fp && d.pr.fp === linkCircuitFingerprint(d)) {
+    const pb = JSON.parse(JSON.stringify(d.pr.pb)); if (pb && pb.kind === 'o3-print' && Array.isArray(pb.sheets) && pb.sheets.length) return { doc: pb, notes: { changed: [], left: [], same: true } }; }
+  if (d.pr) { d = { ...d }; delete d.pr; }   // (changed: drawn again; the old print is not carried inside the new one)
   const bars = d.pw !== 'boxes', d0 = d; let ylink = null;
   // (a ladder: its rungs spread out down the print as far as needed for the tags and names, up to twice as far)
   let sy = 1;
@@ -7283,7 +7289,7 @@ document.getElementById('del').addEventListener('click', del);
 document.getElementById('undo').addEventListener('click', undo);
 document.getElementById('redo').addEventListener('click', redo);
 document.getElementById('p-del').addEventListener('click', del);
-document.getElementById('clear').addEventListener('click', () => { snapshot(); parts = []; wires = []; W_USER = null; sel = null; circuitName = ''; forgetFile(); draw(); });
+document.getElementById('clear').addEventListener('click', () => { snapshot(); parts = []; wires = []; W_USER = null; sel = null; circuitName = ''; LINK_PRINT = null; forgetFile(); draw(); });
 document.addEventListener('keydown', e => {
   if (!editing || /SELECT|INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;   // (typing in a box, such as the Faults tab's work order: its keys are its own)
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); del(); }
@@ -7791,7 +7797,7 @@ document.querySelectorAll('[data-cnc]').forEach(x => x.addEventListener('click',
 document.getElementById('preset').addEventListener('change', e => {
   const k = e.target.value; if (!k) return;
   const label = e.target.selectedOptions[0].textContent; e.target.value = '';
-  snapshot(); loadPreset(k); sel = null; say(''); circuitName = k === 'blank' ? '' : label; fitView(); fit(true); forgetFile();
+  snapshot(); loadPreset(k); sel = null; say(''); circuitName = k === 'blank' ? '' : label; LINK_PRINT = null; fitView(); fit(true); forgetFile();
   if (editing) draw(); else { NET = network(); draw(); startRun(); afterRunStart(); }
 });
 
@@ -8054,6 +8060,9 @@ function faultBadge(x, y, g, tip) {
      wires: [x1, y1, x2, y2]                                            (straight runs, on the grid)            */
 const APP_ID = 'order-of-operations-circuit-builder', AUTOSAVE_KEY = 'oo-circuit-builder-demo:current';
 let circuitName = '';
+// (the print this circuit was opened from, and the circuit's fingerprint then: while the circuit is not changed,
+// Open in Print Builder gives back that print exactly; Dallas, 19 Nov 2026)
+let LINK_PRINT = null;
 
 function circuitData() {
   if (typeof scenSync === 'function') scenSync();
@@ -8070,6 +8079,7 @@ function circuitData() {
     // (scenarios, when there are several: each one's faults on parts [part, fault] and wires [wire, fault] and its work
     // order (sn), the one in force (si), and what the Fault Finder offers (ffo: random, a number given); the fields above are the one in force)
     ...(SCEN_N > 1 ? { sn: [...Array(SCEN_N).keys()].map(s => ({ fl: parts.map((p, i) => p.fz && PART_FAULTS[p.fz[s]] && canFault(p) ? [i, p.fz[s]] : null).filter(Boolean), wl: wires.map((q, i) => q.fz && WIRE_FAULTS[q.fz[s]] ? [i, q.fz[s]] : null).filter(Boolean), ...((SCEN_WO[s] || '').trim() ? { wo: SCEN_WO[s] } : {}) })), si: SCEN } : {}),
+    ...(LINK_PRINT ? { pr: LINK_PRINT } : {}),
     ...(!FF_OFFER.r || !FF_OFFER.n ? { ffo: [FF_OFFER.r ? 1 : 0, FF_OFFER.n ? 1 : 0] } : {}),
     // (its process values: id, name, kind, unit, lowest, highest, start; and the switches they work: part, value, setting, reset, side)
     ...(PV.length ? { pv: PV.map(v => [v.id, v.name, v.kind, v.unit, v.min, v.max, v.start]), pd: parts.map((p, i) => isDrv(p) && pvOf(p) ? [i, p.pv, +p.rate || 0, +p.cool || 0, drvPer(p), p.dir === 'down' ? 'down' : 'up', drvOff(p)] : null).filter(Boolean), pl: parts.map((p, i) => pvLinked(p) ? [i, p.pv, +p.sp, +(p.rs ?? p.sp), p.side === 'lo' ? 'lo' : 'hi'] : null).filter(Boolean),
@@ -8137,11 +8147,12 @@ function readCircuit(d) {
     swo = S.map(s => s && typeof s.wo === 'string' ? s.wo.slice(0, 400) : '');
   }
   const ffo = Array.isArray(d.ffo) && (d.ffo[0] || d.ffo[1]) ? { r: !!d.ffo[0], n: !!d.ffo[1] } : null;
-  return { sn, si, swo, ffo, wo: swo ? swo[si] : typeof d.wo === 'string' ? d.wo.slice(0, 400) : '', w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', src: SRC_PAL.some(([, h]) => h === d.sc) ? d.sc : SRC_DEFAULT, ph: Array.isArray(d.pc) && d.pc.length === 3 && d.pc.every(hex) ? d.pc.map(hex) : [...PH_DEFAULT], pv, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
+  const pr = d.pr && typeof d.pr === 'object' && d.pr.pb && d.pr.pb.kind === 'o3-print' && typeof d.pr.fp === 'string' ? d.pr : null;
+  return { pr, sn, si, swo, ffo, wo: swo ? swo[si] : typeof d.wo === 'string' ? d.wo.slice(0, 400) : '', w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', src: SRC_PAL.some(([, h]) => h === d.sc) ? d.sc : SRC_DEFAULT, ph: Array.isArray(d.pc) && d.pc.length === 3 && d.pc.every(hex) ? d.pc.map(hex) : [...PH_DEFAULT], pv, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
 }
 function useCircuit(c, how) {
   snapshot();
-  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; scenFrom(c); normalize(); sel = null;
+  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; LINK_PRINT = c.pr || null; scenFrom(c); normalize(); sel = null;
   fitView(); fit(true);
   say(how);
   if (editing) draw(); else { NET = network(); draw(); startRun(); afterRunStart(); }
@@ -8241,6 +8252,7 @@ function openFromPrint(doc, fname) {
   const title = (((doc.tb || {}).fields || []).find(f => /title/i.test(f.label)) || {}).value;
   if (!c.name || (!r.notes.same && c.name === 'Print')) c.name = title || fname || 'Circuit';
   useCircuit(c, r.notes.same ? `Opened ${c.name}, back from Print Builder unchanged.` : `Opened ${c.name} from Print Builder.`);
+  LINK_PRINT = { pb: JSON.parse(JSON.stringify(doc)), fp: linkCircuitFingerprint(circuitData()) };
   showLinkNote(c, r.notes);
 }
 function showLinkNote(c, n) {
@@ -8274,7 +8286,7 @@ function scheduleAutosave() {
   autosaveTimer = setTimeout(() => { try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(circuitData())); } catch (_) {} }, 400);
 }
 function restoreAutosave() {
-  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; scenFrom(c); normalize(); return true; }
+  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; LINK_PRINT = c.pr || null; scenFrom(c); normalize(); return true; }
   catch (_) { return false; }
 }
 
@@ -8492,7 +8504,7 @@ window.addEventListener('resize', () => { if (fit(editing && !dragging())) { if 
 
 if (LOCKED) {
   // a locked simulator: its own circuit, straight into Run mode, with its name as the title
-  try { const c = readCircuit(LOCKED.circuit); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; scenFrom(c); normalize(); }
+  try { const c = readCircuit(LOCKED.circuit); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; LINK_PRINT = c.pr || null; scenFrom(c); normalize(); }
   catch (_) { loadPreset('blank'); }
   document.body.classList.add('locked');
   document.querySelector('h1 span').textContent = circuitName || 'Circuit';
@@ -8915,7 +8927,7 @@ function tsShowRibbon() {
 // ---- what is kept between visits (in this browser): the assignment, the test log, the steps ticked off
 function tsSave() { try { localStorage.setItem(TS_KEY, JSON.stringify({ circuit: circuitData(), log: TS.log, steps: TS.steps, t0: TS.t0, showSteps: TS.showSteps, blown: TS_BLOWN, scen: TS.scen, repairs: TS.repairs, signoff: TS.signoff })); } catch (_) {} }
 function tsUse(c, msg, fresh) {
-  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; scenFrom(c); normalize();
+  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; LINK_PRINT = c.pr || null; scenFrom(c); normalize();
   if (fresh) { TS.log = []; TS.steps = []; TS.t0 = Date.now(); TS_BLOWN = {}; TS.scen = c.pick || null; TS.repairs = []; TS.signoff = null; }
   LOCKOUT = false; TS_PUSHED = {}; TSM.push = false; TSM.repair = null; tsCardOff(); TSM.red = TSM.black = null; TSM.next = 'red'; TSM.lastLog = ''; TSM.sig = '';
   if (editing) { fit(true); fitView(); setMode(true); } else { fit(true); fitView(); NET = network(); draw(); startRun(); afterRunStart(); }

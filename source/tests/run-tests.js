@@ -3390,6 +3390,23 @@ const DEF_CIRCUIT = `
     if (pb !== 'L1,L1A,L1B,L1C') out.push('Print Builder: ' + pb + ' (want L1,L1A,L1B,L1C)');
     return out;
   });
+  await check('O³ link (Dallas, 19 Nov 2026): a print opened in Circuit Builder and sent back unchanged (even after saving and opening the circuit again) is the same print exactly; changed, it is drawn again with no old print inside it', async page => {
+    const pr = await withPB(page, pb => pb.evaluate(() => JSON.parse(JSON.stringify(withDrawnBy(template('starter'))))));
+    const ds = await page.evaluate(pr => { openFromPrint(pr, 'Starter'); document.getElementById('link-dlg').close(); const a = circuitData();
+      useCircuit(readCircuit(JSON.parse(JSON.stringify(a))), 'reopened'); const b = circuitData();
+      const p = parts.find(q => q.t === 'coil'); p.x += 40; draw(); const c = circuitData(); return [a, b, c]; }, pr);
+    const back = await withPB(page, pb => pb.evaluate(ds => ds.map(d => { const r = circuitToPrint(d, { uid, defaultTB, long: 'tight' }); return [!!r.notes.same, JSON.stringify(r.doc), JSON.stringify(r.doc).includes('"pr"')]; }), ds));
+    const opened = await withPB(page, pb => pb.evaluate(d => { openCircuit(d); const t = document.getElementById('link-body').textContent; document.getElementById('link-dlg').close(); const x = JSON.parse(JSON.stringify(doc)); return [JSON.stringify(x.sheets), t]; }, ds[0]));
+    const out = [], want = JSON.stringify(pr);
+    if (opened[0] !== JSON.stringify(pr.sheets)) out.push('opened in Print Builder: the sheets are not the print it was');
+    if (!/exactly as it was/.test(opened[1])) out.push('opened in Print Builder: no word that it is the print it was (' + opened[1].slice(0, 80) + ')');
+    if (!ds[0].pr) out.push('the circuit keeps no note of the print it came from');
+    if (!back[0][0] || back[0][1] !== want) out.push('sent straight back: not the same print');
+    if (!back[1][0] || back[1][1] !== want) out.push('saved and opened again, then sent back: not the same print');
+    if (back[2][0] || back[2][1] === want) out.push('changed, it still came back as the old print');
+    if (back[2][2]) out.push('changed: the old print is carried inside the new one');
+    return out;
+  });
   await check('O³ link (Dallas, 19 Nov 2026, his "Ladder Edit" drawings): a rung too long for letter portrait asks how to draw it (landscape, tighter, wrapped, or continued on a new rung) and remembers; wrapped, the wire runs back under the rung and the line keeps its number; continued, a new rung from continuations named R#-W#; either way it comes back to Circuit Builder joined the same way', async page => {
     const out = [], fs = require('fs'), d = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'long-rung.json'), 'utf8'));
     // (the parts come back on new lines: the nets compared by what each part is, not where it is)

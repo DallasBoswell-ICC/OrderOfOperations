@@ -532,13 +532,13 @@ function openCircuit(d, fname, long) {
     $('long-cancel').onclick = () => { dl.close(); say('Not opened.'); };
     dl.showModal(); dl.querySelector('.long-opt.last')?.focus(); return;
   }
-  if (fname && !d.name) { const tf = r.doc.tb.fields.find(f => /title/i.test(f.label)); if (tf) tf.value = fname; }
-  const dd = withDrawnBy(r.doc); dd.link = r.doc.link;
+  if (fname && !d.name && !r.notes.same) { const tf = r.doc.tb.fields.find(f => /title/i.test(f.label)); if (tf) tf.value = fname; }
+  const dd = r.notes.same ? r.doc : withDrawnBy(r.doc); dd.link = r.doc.link;   // (back from Circuit Builder unchanged: the print it was, exactly)
   snapshot(); const keep = UNDO.slice(); loadDoc(dd); UNDO.push(...keep); forgetFile(); refresh(true); fitZoom();
   const esc = t => String(t).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
   const n = r.notes, list = (h, xs) => xs.length ? `<h4>${h} (${xs.length})</h4><ul>${xs.map(x => '<li>' + esc(x) + '</li>').join('')}</ul>` : '';
   const np = dd.sheets.reduce((a, s) => a + s.parts.filter(p => p.t !== 'rail').length, 0);
-  $('link-body').innerHTML = `<p>“${esc(fileName())}”: ${np} parts on ${dd.sheets.length} sheet${dd.sheets.length > 1 ? 's' : ''}, drawn as a print. Tidy it up and print it; Save ▾ → Open in Circuit Builder takes it back.</p>` + list('Changed to fit Print Builder', n.changed) + list('Kept with the circuit, not drawn', n.left);
+  $('link-body').innerHTML = `<p>“${esc(fileName())}”: ${np} parts on ${dd.sheets.length} sheet${dd.sheets.length > 1 ? 's' : ''}, ${n.same ? 'exactly as it was before it went to Circuit Builder.' : 'drawn as a print.'} Tidy it up and print it; Save ▾ → Open in Circuit Builder takes it back.</p>` + list('Changed to fit Print Builder', n.changed) + list('Kept with the circuit, not drawn', n.left);
   $('link-dlg').showModal();
   say('Opened ' + fileName() + ' from Circuit Builder.');
 }
