@@ -3420,6 +3420,17 @@ const DEF_CIRCUIT = `
           if (x0 < 0 || y0 < 0 || x1 > W || y1 > H) out.push(`${n} (${m}), sheet ${k + 1}: ink from ${Math.round(x0)},${Math.round(y0)} to ${Math.round(x1)},${Math.round(y1)} on a ${W} by ${H} sheet`); }); }
       return out; }, circs));
   });
+  await check('O³ link (Dallas, 19 Nov 2026): no near-empty sheets: in every ready-made and test circuit drawn as a print, no sheet with nothing on it; in portrait each sheet but the last at least half full (the stress test\'s first sheet held one rung of 17)', async page => {
+    const fs = require('fs'), path = require('path'), FX = path.join(__dirname, 'fixtures');
+    const circs = (await page.evaluate(() => [...document.getElementById('preset').options].map(o => o.value).filter(v => v && v !== 'blank').map(n => { loadPreset(n); return [n, circuitData()]; })))
+      .concat(fs.readdirSync(path.join(FX, 'transfer')).map(f => [f, JSON.parse(fs.readFileSync(path.join(FX, 'transfer', f), 'utf8'))]))
+      .concat(fs.readdirSync(FX).filter(f => /\.json$/.test(f)).map(f => [f, JSON.parse(fs.readFileSync(path.join(FX, f), 'utf8'))]).filter(([, d]) => Array.isArray(d.parts)));
+    return withPB(page, pb => pb.evaluate(circs => { const out = [];
+      for (const [n, d] of circs) for (const m of ['tight', 'land']) { const r = circuitToPrint(d, { uid, defaultTB, tidy, long: m }); const sh = r.doc.sheets;
+        sh.slice(0, -1).forEach((s, k) => { const ys = s.parts.filter(p => p.t !== 'rail' && !/^cnt_/.test(p.t)).map(p => p.y); if (!ys.length) { out.push(`${n} (${m}), sheet ${k + 1} of ${sh.length}: nothing on it`); return; }
+          const used = (Math.max(...ys) - Math.min(...ys) + 160) / (drawH(s) - 280); if (used < .5 && m === 'tight') out.push(`${n} (${m}), sheet ${k + 1} of ${sh.length}: ${Math.round(used * 100)}% full`); }); }
+      return out; }, circs));
+  });
   await check('O³ link (Dallas, 19 Nov 2026, his "Ladder Edit" drawings): a rung too long for letter portrait asks how to draw it (landscape, tighter, wrapped, or continued on a new rung) and remembers; wrapped, the wire runs back under the rung and the line keeps its number; continued, a new rung from continuations named R#-W#; either way it comes back to Circuit Builder joined the same way', async page => {
     const out = [], fs = require('fs'), d = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'long-rung.json'), 'utf8'));
     // (the parts come back on new lines: the nets compared by what each part is, not where it is)
