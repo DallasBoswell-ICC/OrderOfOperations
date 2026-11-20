@@ -3392,7 +3392,7 @@ const DEF_CIRCUIT = `
   });
   await check('Export (Dallas, 19 Nov 2026): the Export button opens a window with Print Builder in it (its icon, what it does); its button hands the circuit over in a new tab and closes the window', async page => {
     const out = [];
-    const h = await page.evaluate(() => { let url = null; window.open = u => { url = u; return {}; }; document.getElementById('export-btn').click(); const d = document.getElementById('export-dlg'), opened = d.open;
+    const h = await page.evaluate(() => { let url = null; const k0 = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () { if (/from=link/.test(this.href)) url = this.target === '_blank' && this.rel === 'noopener' ? this.getAttribute('href') : 'not a new-tab noopener link: ' + this.href; else k0.call(this); }; document.getElementById('export-btn').click(); const d = document.getElementById('export-dlg'), opened = d.open;
       const card = d.querySelector('.xcard'), icon = card && card.querySelector('img').getAttribute('src'), txt = card ? card.textContent : '';
       document.getElementById('export-pb').click(); const s = JSON.parse(localStorage.getItem('o3-link:handoff')); return [opened, /^data:image\/svg\+xml,/.test(icon || ''), /Print Builder/.test(txt), url, s && s.kind, d.open]; });
     if (!h[0]) out.push('the window did not open');
@@ -3652,7 +3652,7 @@ const DEF_CIRCUIT = `
     if (!r[3]) out.push('the proximity switch did not come in as a stand-in (Dallas, 19 Nov 2026)');
     await page.evaluate(() => document.getElementById('link-dlg').close());
     // the Save box: Open in Print Builder (the new tab stubbed: just where it goes and what is handed over)
-    const h = await page.evaluate(() => { let url = null; window.open = u => { url = u; return {}; }; document.getElementById('save-more').click(); document.getElementById('save-pb').click(); const s = JSON.parse(localStorage.getItem('o3-link:handoff')); return [url, s && s.kind, s && s.data.parts.length === parts.length, document.getElementById('save-dlg').open]; });
+    const h = await page.evaluate(() => { let url = null; const k0 = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () { if (/from=link/.test(this.href)) url = this.target === '_blank' && this.rel === 'noopener' ? this.getAttribute('href') : 'not a new-tab noopener link: ' + this.href; else k0.call(this); }; document.getElementById('save-more').click(); document.getElementById('save-pb').click(); const s = JSON.parse(localStorage.getItem('o3-link:handoff')); return [url, s && s.kind, s && s.data.parts.length === parts.length, document.getElementById('save-dlg').open]; });
     if (!/print-builder\/(demo\/)?\?from=link$/.test(h[0] || '')) out.push('opens: ' + h[0]);
     if (h[1] !== 'circuit' || !h[2]) out.push('handed over: ' + h.slice(1, 3));
     if (h[3]) out.push('the Save box stayed open');

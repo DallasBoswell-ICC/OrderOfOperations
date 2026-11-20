@@ -2119,8 +2119,11 @@ function linkPrune(s) {
 // ---- handing work over: into this site's storage, then the other program opened in a new tab
 function linkHandOff(kind, data, url) {
   try { localStorage.setItem(LINK_KEY, JSON.stringify({ kind, t: Date.now(), data })); } catch (e) { return 'This browser would not let the work be handed over (storage is full or turned off). Save it as a file, then open that file in the other program.'; }
-  const w = window.open(url + (url.includes('?') ? '&' : '?') + 'from=link', '_blank');
-  return w ? '' : 'The browser stopped the new tab opening: allow pop-ups for this site, or save the file and open it there.';
+  // (opened as a plain link would be, no tie back to this page (the work goes over in storage): so where the other program is
+  // installed as an app, Chrome opens it in its app window, not a browser tab (Dallas, 20 Nov 2026))
+  const a = document.createElement('a'); a.href = url + (url.includes('?') ? '&' : '?') + 'from=link'; a.target = '_blank'; a.rel = 'noopener';
+  document.body.append(a); a.click(); a.remove();
+  return '';
 }
 // the work handed over, if this page was opened for it (once: it is taken out of storage)
 function linkTake() {

@@ -939,7 +939,7 @@ let passed = 0, failed = 0;
 
   await check('Export (Dallas, 19 Nov 2026): the Export button opens a window with Circuit Builder in it (its icon, what it does); its button hands the print over in a new tab and closes the window', async p => {
     const out = [];
-    const h = await p.evaluate(() => { let url = null; window.open = u => { url = u; return {}; }; $('export-btn').click(); const d = $('export-dlg'), opened = d.open;
+    const h = await p.evaluate(() => { let url = null; const k0 = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () { if (/from=link/.test(this.href)) url = this.target === '_blank' && this.rel === 'noopener' ? this.getAttribute('href') : 'not a new-tab noopener link: ' + this.href; else k0.call(this); }; $('export-btn').click(); const d = $('export-dlg'), opened = d.open;
       const card = d.querySelector('.xcard'), icon = card && card.querySelector('img').getAttribute('src'), txt = card ? card.textContent : '';
       $('export-cb').click(); const s = JSON.parse(localStorage.getItem('o3-link:handoff')); return [opened, /^data:image\/svg\+xml,/.test(icon || ''), /Circuit Builder/.test(txt), url, s && s.kind, d.open]; });
     if (!h[0]) out.push('the window did not open');
@@ -951,7 +951,7 @@ let passed = 0, failed = 0;
   });
   await check('O³ link: Save ▾ → Open in Circuit Builder hands the print over in a new tab; a page opened for a circuit draws it, once', async p => {
     const out = [];
-    const h = await p.evaluate(() => { let url = null; window.open = u => { url = u; return {}; }; $('save-more').click(); const shown = !$('save-menu').hidden && !!$('open-cb-btn'); $('open-cb-btn').click(); const s = JSON.parse(localStorage.getItem('o3-link:handoff')); return [url, shown, s && s.kind, s && s.data.kind, $('save-menu').hidden]; });
+    const h = await p.evaluate(() => { let url = null; const k0 = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () { if (/from=link/.test(this.href)) url = this.target === '_blank' && this.rel === 'noopener' ? this.getAttribute('href') : 'not a new-tab noopener link: ' + this.href; else k0.call(this); }; $('save-more').click(); const shown = !$('save-menu').hidden && !!$('open-cb-btn'); $('open-cb-btn').click(); const s = JSON.parse(localStorage.getItem('o3-link:handoff')); return [url, shown, s && s.kind, s && s.data.kind, $('save-menu').hidden]; });
     if (!/Circuit_Builder\.html\?from=link$/.test(h[0] || '')) out.push('opens: ' + h[0]);
     if (!h[1]) out.push('not in the Save menu');
     if (h[2] !== 'print' || h[3] !== 'o3-print') out.push('handed over: ' + h.slice(2, 4));
