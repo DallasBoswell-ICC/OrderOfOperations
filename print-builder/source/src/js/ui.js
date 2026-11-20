@@ -544,6 +544,10 @@ function openCircuit(d, fname, long) {
   say('Opened ' + fileName() + ' from Circuit Builder.');
 }
 $('link-ok').addEventListener('click', () => $('link-dlg').close());
+// Export: a window with each other O³ program this print can open in
+$('export-btn').addEventListener('click', () => { $('export-msg').textContent = ''; $('export-dlg').showModal(); });
+$('export-close').addEventListener('click', () => $('export-dlg').close());
+$('export-cb').addEventListener('click', () => { const m = linkHandOff('print', doc, CB_URL); if (m) $('export-msg').textContent = m; else { $('export-dlg').close(); say('Opened in Circuit Builder, in a new tab.'); } });
 $('open-cb-btn').addEventListener('click', e => { e.stopPropagation(); closeMenus(); say(linkHandOff('print', doc, CB_URL) || 'Opened in Circuit Builder, in a new tab.'); });
 async function openFile(f, handle) {
   try { const d = JSON.parse(await f.text());

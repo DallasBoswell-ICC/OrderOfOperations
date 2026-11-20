@@ -42,6 +42,9 @@ SHARED = ["o3link-tables.js", "o3link.js"]
 
 def build() -> Path:
     page = (SRC / "index.html").read_text(encoding="utf-8")
+    # (Export: the other O³ program's icon on its card)
+    from urllib.parse import quote as _q
+    page = page.replace("{{O3_CB_ICON}}", "data:image/svg+xml," + _q(" ".join((SRC.parent.parent.parent / "source" / "src" / "icons" / "icon.svg").read_text(encoding="utf-8").split()), safe=" =:/'(),"))
     css = (SRC / "style.css").read_text(encoding="utf-8")
     present = sorted(p.name for p in (SRC / "js").glob("*.js"))
     missing = sorted(set(present) - set(MODULES))

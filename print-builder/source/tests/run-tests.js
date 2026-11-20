@@ -937,6 +937,18 @@ let passed = 0, failed = 0;
     return out;
   });
 
+  await check('Export (Dallas, 19 Nov 2026): the Export button opens a window with Circuit Builder in it (its icon, what it does); its button hands the print over in a new tab and closes the window', async p => {
+    const out = [];
+    const h = await p.evaluate(() => { let url = null; window.open = u => { url = u; return {}; }; $('export-btn').click(); const d = $('export-dlg'), opened = d.open;
+      const card = d.querySelector('.xcard'), icon = card && card.querySelector('img').getAttribute('src'), txt = card ? card.textContent : '';
+      $('export-cb').click(); const s = JSON.parse(localStorage.getItem('o3-link:handoff')); return [opened, /^data:image\/svg\+xml,/.test(icon || ''), /Circuit Builder/.test(txt), url, s && s.kind, d.open]; });
+    if (!h[0]) out.push('the window did not open');
+    if (!h[1] || !h[2]) out.push('the Circuit Builder card: icon ' + h[1] + ', named ' + h[2]);
+    if (!/Circuit_Builder\.html\?from=link$/.test(h[3] || '')) out.push('opens: ' + h[3]);
+    if (h[4] !== 'print') out.push('handed over: ' + h[4]);
+    if (h[5]) out.push('the window stayed open');
+    return out;
+  });
   await check('O³ link: Save ▾ → Open in Circuit Builder hands the print over in a new tab; a page opened for a circuit draws it, once', async p => {
     const out = [];
     const h = await p.evaluate(() => { let url = null; window.open = u => { url = u; return {}; }; $('save-more').click(); const shown = !$('save-menu').hidden && !!$('open-cb-btn'); $('open-cb-btn').click(); const s = JSON.parse(localStorage.getItem('o3-link:handoff')); return [url, shown, s && s.kind, s && s.data.kind, $('save-menu').hidden]; });

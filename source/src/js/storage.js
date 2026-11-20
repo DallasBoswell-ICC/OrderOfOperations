@@ -222,6 +222,13 @@ function showLinkNote(c, n) {
     + (n.same ? '' : '<p class="hint" style="margin-top:8px">Check the timers’ times and the lights’ colours on each part’s tab before running it.</p>');
   document.getElementById('link-dlg').showModal();
 }
+// Export: a window with each other O³ program this circuit can open in
+const exportDlg = document.getElementById('export-dlg');
+document.getElementById('export-btn').addEventListener('click', () => { document.getElementById('export-msg').textContent = ''; exportDlg.showModal(); });
+document.getElementById('export-pb').addEventListener('click', () => {
+  const m = linkHandOff('circuit', circuitData(), PB_URL);
+  if (m) document.getElementById('export-msg').textContent = m; else { exportDlg.close(); toast('Opened in Print Builder, in a new tab.'); }
+});
 document.getElementById('save-pb').addEventListener('click', () => {
   const m = linkHandOff('circuit', circuitData(), PB_URL);
   document.getElementById('copy-msg').textContent = m || 'Opened in Print Builder, in a new tab.';

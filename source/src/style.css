@@ -593,3 +593,11 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
 .link-dlg h3 { margin: 8px 0 2px; font-size: .92rem; color: #fff; }
 .link-dlg ul { margin: 0 0 4px 18px; padding: 0; font-size: .86rem; color: #cfcfcf; max-height: 34vh; overflow: auto; }
 .link-dlg p { margin: 0; font-size: .88rem; }
+
+/* Export (Dallas, 19 Nov 2026): open the work in another O³ program, one card each */
+.export-dlg { width: min(560px, calc(100vw - 32px)); }
+.xcard { display: grid; grid-template-columns: 58px 1fr; gap: 6px 14px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #1f2022; }
+.xcard img { border-radius: 12px; grid-row: span 2; }
+.xtext { display: grid; gap: 3px; } .xtext b { font-size: 1rem; } .xtext span { font-size: .85rem; color: #b9bdc2; line-height: 1.35; }
+.xcard button { grid-column: 2; justify-self: start; }
+@media (max-width: 1360px) { #export-btn .xlbl, #print-btn .xlbl { display: none; } #export-btn, #print-btn { padding-inline: 9px; } }

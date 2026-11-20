@@ -339,3 +339,12 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .link-dlg h4 { margin: 10px 0 2px; font-size: 14px; }
 .link-dlg ul { margin: 0 0 4px 18px; padding: 0; font-size: 13px; color: #cfd3d8; max-height: 34vh; overflow: auto; }
 .link-dlg p { margin: 0; font-size: 13.5px; }
+
+/* Export (Dallas, 19 Nov 2026): open the work in another O³ program, one card each */
+.xbtn { display: inline-flex; align-items: center; gap: 6px; }
+.export-dlg { width: min(560px, calc(100vw - 32px)); }
+.xcard { display: grid; grid-template-columns: 58px 1fr; gap: 6px 14px; align-items: center; padding: 12px; margin: 10px 0 4px; border: 1px solid var(--line2); border-radius: 10px; background: #1d2024; }
+.xcard img { border-radius: 12px; grid-row: span 2; }
+.xtext { display: grid; gap: 3px; } .xtext b { font-size: 1rem; } .xtext span { font-size: .85rem; color: #aab2bb; line-height: 1.35; }
+.xcard .btn { grid-column: 2; justify-self: start; }
+@media (max-width: 1360px) { #export-btn .xlbl { display: none; } }

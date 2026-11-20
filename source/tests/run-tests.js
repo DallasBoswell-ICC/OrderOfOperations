@@ -3390,6 +3390,18 @@ const DEF_CIRCUIT = `
     if (pb !== 'L1,L1A,L1B,L1C') out.push('Print Builder: ' + pb + ' (want L1,L1A,L1B,L1C)');
     return out;
   });
+  await check('Export (Dallas, 19 Nov 2026): the Export button opens a window with Print Builder in it (its icon, what it does); its button hands the circuit over in a new tab and closes the window', async page => {
+    const out = [];
+    const h = await page.evaluate(() => { let url = null; window.open = u => { url = u; return {}; }; document.getElementById('export-btn').click(); const d = document.getElementById('export-dlg'), opened = d.open;
+      const card = d.querySelector('.xcard'), icon = card && card.querySelector('img').getAttribute('src'), txt = card ? card.textContent : '';
+      document.getElementById('export-pb').click(); const s = JSON.parse(localStorage.getItem('o3-link:handoff')); return [opened, /^data:image\/svg\+xml,/.test(icon || ''), /Print Builder/.test(txt), url, s && s.kind, d.open]; });
+    if (!h[0]) out.push('the window did not open');
+    if (!h[1] || !h[2]) out.push('the Print Builder card: icon ' + h[1] + ', named ' + h[2]);
+    if (!/print-builder\/(demo\/)?\?from=link$/.test(h[3] || '')) out.push('opens: ' + h[3]);
+    if (h[4] !== 'circuit') out.push('handed over: ' + h[4]);
+    if (h[5]) out.push('the window stayed open');
+    return out;
+  });
   await check('Turned parts (Dallas, 19 Nov 2026): a part turned on the print is turned in Circuit Builder (its terminals where the print\'s wires reach them), saved so, and turned again on the way back; one turned in Circuit Builder is turned on the print', async page => {
     const SPEC = [['pb_no', 90], ['coil', 90], ['con_no', 270], ['ls_no', 180], ['pl', 90], ['sol', 270]];
     const pr = await withPB(page, pb => pb.evaluate(SPEC => { loadDoc(withDrawnBy(template('blank'))); const L1 = S.parts.find(q => q.label === 'L1'); let x = 500;
