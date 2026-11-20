@@ -196,18 +196,18 @@ function renderProps() {
     document.querySelectorAll('[data-cinst]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.cinst === +!!p.inst)));
   }
   if (p && p.t === 'btn') {
-    const ls = document.getElementById('p-letter'), others = new Set(parts.filter(q => q.t === 'btn' && q !== p).map(q => q.L)), coils = new Set([...coilLetters(), ...selLetters()]);
-    ls.innerHTML = '';
-    for (const c of letterChoices()) if (!coils.has(c)) ls.add(new Option(others.has(c) && c !== p.L ? `${c} (same button as the other ${c})` : c, c, false, c === p.L));
+    const ls = document.getElementById('p-letter-list'), others = new Set(parts.filter(q => q.t === 'btn' && q !== p).map(q => q.L)), coils = new Set([...coilLetters(), ...selLetters()]);
+    ls.innerHTML = ''; if (document.activeElement !== document.getElementById('p-letter')) document.getElementById('p-letter').value = p.L;
+    for (const c of new Set([...letterChoices(), ...others])) if (!coils.has(c)) ls.append(new Option(others.has(c) && c !== p.L ? `same button as the other ${c}` : '', c));
     document.querySelectorAll('[data-nc]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.nc === +p.nc)));
     document.querySelectorAll('[data-maint]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.maint === +p.maint)));
     swatches(document.getElementById('p-colour'), p.color, hex => each(q => blocksOf(q.L).forEach(k => k.color = hex)));
     showLabel(document.getElementById('p-label'), p);
   }
   if (p && p.t === 'coil') {
-    const os = document.getElementById('o-letter'), used = new Set([...opLetters(), ...coilLetters()]);
-    os.innerHTML = '';
-    for (const c of letterChoices()) if (c === p.L || !used.has(c)) os.add(new Option(c, c, false, c === p.L));
+    const os = document.getElementById('o-letter-list'), used = new Set([...opLetters(), ...coilLetters()]);
+    os.innerHTML = ''; if (document.activeElement !== document.getElementById('o-letter')) document.getElementById('o-letter').value = p.L;
+    for (const c of letterChoices()) if (c === p.L || !used.has(c)) os.append(new Option('', c));
     swatches(document.getElementById('o-colour'), p.color, hex => each(q => q.color = hex));
     showLabel(document.getElementById('o-label'), p);
     document.getElementById('o-delay-group').hidden = !G.every(isTimer);
@@ -232,8 +232,17 @@ for (const id of ['p-label', 'o-label']) {
     draw();
   });
 }
+/* A letter picked or typed (Dallas, 19 Nov 2026: a name of his own, as Print Builder takes one, so the two programs need not
+   name a part differently): up to six letters and digits, starting with a letter, not one another kind of part already has.
+   Anything else is put back as it was, with the reason. */
+function letterIn(e, p, taken) {
+  const v = String(e.target.value).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+  for (const [set, what] of taken) if (v !== p.L && set.has(v)) { e.target.value = p.L; say(`${v} is already ${what}: pick another.`); return false; }
+  if (!/^[A-Z][A-Z0-9]{0,5}$/.test(v)) { e.target.value = p.L; say('A name is up to six letters and digits, starting with a letter.'); return false; }
+  e.target.value = v; return v !== p.L;
+}
 document.getElementById('p-letter').addEventListener('change', e => {
-  const p = selPart(); if (!p) return; snapshot();
+  const p = selPart(); if (!p || !letterIn(e, p, [[coilLetters(), 'a relay coil’s letter'], [selLetters(), 'a selector switch’s letter']])) return; snapshot();
   const mate = blocksOf(e.target.value).find(q => q !== p), old = p.L;
   p.L = e.target.value;
   // a light built into this button goes with it (unless the old letter is still on another button)
@@ -259,7 +268,7 @@ document.getElementById('o-delay').addEventListener('change', e => {
   each(p => p.delay = n);
 });
 document.getElementById('o-letter').addEventListener('change', e => {
-  const p = selPart(); if (!p) return; snapshot();
+  const p = selPart(); if (!p || !letterIn(e, p, [[coilLetters(), 'another coil’s letter'], [btnLetters(), 'a pushbutton’s letter'], [selLetters(), 'a selector switch’s letter']])) return; snapshot();
   const old = p.L; p.L = e.target.value; p.color = COIL_COL[p.L] || p.color;
   // its contacts go with it (unless another coil still has the old letter)
   const n = parts.filter(q => q.t === 'con' && q.L === old).length;
@@ -294,9 +303,9 @@ const LIM_SHARED = ['pv', 'sp', 'rs', 'side', 'color'];
 function syncLim(p, from = p) { for (const q of limGroup(p)) if (q !== from) for (const f of LIM_SHARED) { if (from[f] === undefined) delete q[f]; else q[f] = from[f]; } }
 const SEL_NAME_MAX = 5;
 function renderSelProps(p, multi) {
-  const ls = document.getElementById('s-letter'), mine = selsOf(p.L).length, others = new Set(parts.filter(q => q.t === 'sel' && q !== p).map(q => q.L)), taken = new Set([...coilLetters(), ...btnLetters()]);
-  ls.innerHTML = '';
-  for (const c of letterChoices()) if (!taken.has(c)) ls.add(new Option(others.has(c) && c !== p.L ? `${c} (same switch as the other ${c})` : c, c, false, c === p.L));
+  const ls = document.getElementById('s-letter-list'), mine = selsOf(p.L).length, others = new Set(parts.filter(q => q.t === 'sel' && q !== p).map(q => q.L)), taken = new Set([...coilLetters(), ...btnLetters()]);
+  ls.innerHTML = ''; if (document.activeElement !== document.getElementById('s-letter')) document.getElementById('s-letter').value = p.L;
+  for (const c of new Set([...letterChoices(), ...others])) if (!taken.has(c)) ls.append(new Option(others.has(c) && c !== p.L ? `same switch as the other ${c}` : '', c));
   const n = selN(p);
   document.querySelectorAll('[data-sn]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.sn === n)));
   const names = p.names || [], tag = i => names[i] || String(i + 1);
@@ -335,7 +344,7 @@ document.getElementById('s-names').addEventListener('input', e => {
   draw();
 });
 document.getElementById('s-letter').addEventListener('change', e => {
-  const p = selPart(); if (!p) return; snapshot();
+  const p = selPart(); if (!p || !letterIn(e, p, [[coilLetters(), 'a relay coil’s letter'], [btnLetters(), 'a pushbutton’s letter']])) return; snapshot();
   const mate = selsOf(e.target.value).find(q => q !== p);
   p.L = e.target.value;
   if (mate) {   // it joins that switch: takes its positions and colour, and is closed in a position none of its other drawings use

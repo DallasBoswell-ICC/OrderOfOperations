@@ -140,7 +140,7 @@
       <div class="props">
       <div class="tgroup" hidden><span class="label">Selected</span><span class="selname" id="selname">Nothing</span></div>
       <div class="props" id="props-btn" hidden>
-        <div class="tgroup"><span class="label">Letter</span><select id="p-letter" aria-label="Button letter"></select></div>
+        <div class="tgroup"><span class="label">Letter</span><input type="text" id="p-letter" class="labelbox letterbox" list="p-letter-list" maxlength="6" autocomplete="off" spellcheck="false" aria-label="Button letter" data-tip="Pick a letter, or type a name of your own: up to six letters and digits, starting with a letter (Print Builder keeps it as its tag)"><datalist id="p-letter-list"></datalist></div>
         <div class="tgroup"><span class="label">Label</span><input type="text" id="p-label" class="labelbox" maxlength="8" autocomplete="off" aria-label="Button label" data-tip="What is written on the button instead of its letter, such as Start or Stop (8 characters at most). Leave it empty to show the letter."></div>
         <div class="tgroup notestop"><span class="label">Contact</span>
           <div class="seg" role="group" aria-label="Normally open or closed"><button type="button" data-nc="0" data-tip="Normally open: passes current only while pressed">NO</button><button type="button" data-nc="1" data-tip="Normally closed: passes current until pressed">NC</button></div></div>
@@ -150,7 +150,7 @@
         <button type="button" class="tool plain" id="p-main" hidden data-tip="This drawing becomes the pushbutton itself, drawn as normal; the others with its letter are drawn as its extra contact blocks">Make Main</button>
       </div>
       <div class="props" id="props-sel" hidden>
-        <div class="tgroup"><span class="label">Letter</span><select id="s-letter" aria-label="Selector switch letter"></select></div>
+        <div class="tgroup"><span class="label">Letter</span><input type="text" id="s-letter" class="labelbox letterbox" list="s-letter-list" maxlength="6" autocomplete="off" spellcheck="false" aria-label="Selector switch letter" data-tip="Pick a letter, or type a name of your own: up to six letters and digits, starting with a letter (Print Builder keeps it as its tag)"><datalist id="s-letter-list"></datalist></div>
         <div class="tgroup"><span class="label">Positions</span>
           <div class="seg" role="group" aria-label="Number of positions"><button type="button" data-sn="2">2</button><button type="button" data-sn="3">3</button><button type="button" data-sn="4">4</button></div></div>
         <div class="tgroup"><span class="label">Names</span><input type="text" id="s-names" class="labelbox namesbox" maxlength="27" autocomplete="off" aria-label="Position names" placeholder="1 / 2 / 3" data-tip="Names for the positions, such as HAND / OFF / AUTO (5 characters each at most). Leave it empty to number them."></div>
@@ -216,7 +216,7 @@
         <div class="tgroup" id="d-pic-group"><span class="label">Picture</span><select id="d-pic" aria-label="Its process picture on the panel" data-tip="A small picture of the value under this output, following it while the circuit runs (drag it off to put it anywhere on the panel)"><option value="1">Under It</option><option value="0">Hidden</option></select></div>
       </div>
       <div class="props" id="props-coil" hidden>
-        <div class="tgroup"><span class="label">Letter</span><select id="o-letter" aria-label="Coil letter"></select></div>
+        <div class="tgroup"><span class="label">Letter</span><input type="text" id="o-letter" class="labelbox letterbox" list="o-letter-list" maxlength="6" autocomplete="off" spellcheck="false" aria-label="Coil letter" data-tip="Pick a letter, or type a name of your own: up to six letters and digits, starting with a letter (Print Builder keeps it as its tag)"><datalist id="o-letter-list"></datalist></div>
         <div class="tgroup"><span class="label">Label</span><input type="text" id="o-label" class="labelbox" maxlength="8" autocomplete="off" aria-label="Coil label" data-tip="What is written on the coil instead of its letter, such as Motor or Run (8 characters at most). Leave it empty to show the letter."></div>
         <div class="tgroup" id="o-type-group" hidden><span class="label">Timer</span>
           <div class="seg" role="group" aria-label="On-delay or off-delay"><button type="button" data-ttype="on" data-tip="On-delay: its timed contacts change once it has been energized for its set time">On-Delay</button><button type="button" data-ttype="off" data-tip="Off-delay: its timed contacts change as soon as it is energized, and go back once its set time has run out after it loses power">Off-Delay</button></div></div>

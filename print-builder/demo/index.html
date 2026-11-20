@@ -774,9 +774,12 @@ function linkBuild(doc, back) {
   const cbOld = doc.link && doc.link.cb && Array.isArray(doc.link.cb.parts) ? doc.link.cb : null;
   const FAM = { btn: 'op', est: 'op', sel: 'op', coil: 'coil', mst: 'coil' }, famOf = p => /^(pbm?_|estop|spst)/.test(p.t) || p.t === 'sel' ? 'op' : p.t === 'coil' || p.t === 'mst3' ? 'coil' : '';
   const tagLetter = p => { const t = String(p.tag || '').toUpperCase(); let m;
-    if (/^(pbm?_|estop)/.test(p.t) && (m = /^(?:PB|ES)-([A-Z]{1,2})$/.exec(t))) return m[1];
-    if (p.t === 'sel' && (m = /^SS-([A-Z]{1,2})$/.exec(t))) return m[1];
-    if ((p.t === 'coil' || p.t === 'mst3') && /^[A-Z]{1,2}$/.test(t)) return t;
+    // (Dallas, 19 Nov 2026: Circuit Builder takes a name typed in, up to six letters and digits, so a print's own names come across as
+    // they are: PB-START is START, CR1 is CR1; a tag CB couldn't hold (too long, or other marks in it) gets a letter, the tag on its cap)
+    const OWN = /^[A-Z][A-Z0-9]{0,5}$/;
+    if (/^(pbm?_|estop)/.test(p.t)) { if ((m = /^(?:PB|ES)-([A-Z0-9]{1,6})$/.exec(t))) return m[1]; if (OWN.test(t)) return t; }
+    if (p.t === 'sel') { if ((m = /^SS-([A-Z0-9]{1,6})$/.exec(t))) return m[1]; if (OWN.test(t)) return t; }
+    if ((p.t === 'coil' || p.t === 'mst3') && OWN.test(t)) return t;
     return null; };
   const oldLetter = p => { if (!cbOld || p.cbi == null) return null; const a = cbOld.parts[p.cbi]; return a && FAM[a[0]] && FAM[a[0]] === famOf(p) && a[3] ? String(a[3]) : null; };
   const prefOf = p => tagLetter(p) || oldLetter(p);
@@ -1053,7 +1056,7 @@ function circuitToPrint(d, env) {
   const tagOf = new Map();
   const lbl = r => typeof r.a[9] === 'string' && r.a[9].trim() ? r.a[9].trim().toUpperCase() : '';
   for (const r of R.filter(r => r.t === 'coil')) if (!tagOf.has('C:' + r.L)) tagOf.set('C:' + r.L, r.L);
-  for (const r of R.filter(r => r.t === 'btn' || r.t === 'est' || r.t === 'sel')) { const k = (r.t === 'sel' ? 'S:' : 'B:') + r.L; if (!tagOf.has(k)) tagOf.set(k, (r.t === 'sel' ? 'SS-' : r.t === 'est' ? 'ES-' : 'PB-') + r.L); }
+  for (const r of R.filter(r => r.t === 'btn' || r.t === 'est' || r.t === 'sel')) { const k = (r.t === 'sel' ? 'S:' : 'B:') + r.L; if (!tagOf.has(k)) { const pre = r.t === 'sel' ? 'SS' : r.t === 'est' ? 'ES' : 'PB'; tagOf.set(k, new RegExp('^' + (r.t === 'sel' ? 'SS' : 'PB|ES')).test(r.L) ? r.L : pre + '-' + r.L); } }
   const descOf = new Map(R.filter(r => (r.t === 'btn' || r.t === 'est' || r.t === 'coil') && lbl(r)).map(r => [(r.t === 'coil' ? 'C:' : 'B:') + r.L, lbl(r)]));
   // ---- 1. each part as it will be on the print, at the circuit's own place for now (G: the circuit's grid)
   const parts0 = R.map(r => ({ r, ts: linkRowTerms(r.a) }));

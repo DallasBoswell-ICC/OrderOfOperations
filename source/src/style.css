@@ -125,6 +125,7 @@ body.locked .top-right, body.locked .modeseg, body.locked #toolbar, body.locked 
 /* a part's label */
 .labelbox { width: 7.2em; font: inherit; font-size: .9rem; color: var(--ink); background: #1f2022; border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
 .labelbox:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+.letterbox { width: 6.6em; text-transform: uppercase; }
 .namesbox { width: 11em; }
 
 .link-hit { cursor: move; pointer-events: stroke; }

@@ -704,7 +704,7 @@ const DEF_CIRCUIT = `
     // renaming the button takes its light with it
     const bA = await page.evaluate(L => { const p = parts.find(q => q.t === 'btn' && q.L === L); return [p.x, p.y]; }, A);
     await page.mouse.click(...await scr(page, ...bA)); await page.waitForTimeout(60);
-    await page.selectOption('#p-letter', 'Q');
+    await page.fill('#p-letter', 'Q'); await page.dispatchEvent('#p-letter', 'change');
     if ((await page.evaluate(() => parts.filter(p => p.t === 'lamp').map(p => p.L).join(','))) !== ',Q') out.push('renaming the button lost its light');
     return out;
   });
@@ -755,7 +755,7 @@ const DEF_CIRCUIT = `
     await page.selectOption('#preset', 'abc');   // X has three contacts (seal-in and two interlocks)
     const xy = await page.evaluate(() => { const p = parts.find(q => q.t === 'coil' && q.L === 'X'); return [p.x, p.y]; });
     await page.mouse.click(...await scr(page, ...xy)); await page.waitForTimeout(60);
-    await page.selectOption('#o-letter', 'Q');
+    await page.fill('#o-letter', 'Q'); await page.dispatchEvent('#o-letter', 'change');
     const L = await page.evaluate(() => parts.filter(p => p.t === 'con').map(p => p.L).sort().join(''));
     if (L !== 'QQQYYZ') out.push('contacts after renaming X to Q: ' + L);
     await page.click('#tab-run');
@@ -2450,7 +2450,7 @@ const DEF_CIRCUIT = `
     if (Ls.length !== 27 || Ls[26] !== 'AA' || new Set(Ls).size !== 27) out.push('letters for 27 buttons: ' + Ls.join(''));
     const kept = await page.evaluate(() => readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts[26].L);
     if (kept !== 'AA') out.push('AA saved and read back as ' + kept);
-    const opts = await page.evaluate(() => { sel = selOne('p', parts[26].id); draw(); renderProps(); return [...document.getElementById('p-letter').options].map(o => o.value); });
+    const opts = await page.evaluate(() => { sel = selOne('p', parts[26].id); draw(); renderProps(); return [...document.getElementById('p-letter-list').options].map(o => o.value); });
     if (!opts.includes('AA') || !opts.includes('AB')) out.push('the letter list after Z: ' + opts.slice(24, 30).join(','));
     // a label of its own: the caption goes by it; the same label on two, by their letters
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
@@ -3390,6 +3390,26 @@ const DEF_CIRCUIT = `
     if (pb !== 'L1,L1A,L1B,L1C') out.push('Print Builder: ' + pb + ' (want L1,L1A,L1B,L1C)');
     return out;
   });
+  await check('Names typed in (Dallas, 19 Nov 2026): a button, selector or coil takes a name of its own (up to six letters and digits), a name another kind of part has is refused, and names cross to Print Builder and back as they are (START is PB-START; CR1 is CR1)', async page => {
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    const ids = await page.evaluate(() => { const b = P('btn', 200, 160, { L: 'A' }), c = P('coil', 600, 160, { L: 'X' }), k = P('con', 400, 320, { L: 'X' }); parts.push(b, c, k); normalize(); draw(); return [b.id, c.id]; });
+    const type = (kind, id, box, v) => page.evaluate(([id, box, v]) => { sel = selOne('p', id); draw(); renderProps(); const e = document.querySelector(box); e.value = v; e.dispatchEvent(new Event('change'));
+      return [parts.find(p => p.id === id).L, e.value]; }, [id, box, v]);
+    const out = [];
+    let r = await type('p', ids[0], '#p-letter', 'start'); if (r[0] !== 'START') out.push('button typed "start": ' + r.join(' / '));
+    r = await type('p', ids[0], '#p-letter', 'X'); if (r[0] !== 'START' || r[1] !== 'START') out.push('button given the coil\'s letter X: ' + r.join(' / '));
+    r = await type('p', ids[0], '#p-letter', '1AB'); if (r[0] !== 'START') out.push('button typed "1AB": ' + r.join(' / '));
+    r = await type('o', ids[1], '#o-letter', 'CR1'); if (r[0] !== 'CR1') out.push('coil typed CR1: ' + r.join(' / '));
+    const con = await page.evaluate(() => parts.find(p => p.t === 'con').L); if (con !== 'CR1') out.push('its contact went to ' + con);
+    const cap = await page.evaluate(id => view.parts.get(id).text && view.parts.get(id).text.textContent, ids[0]); if (!/START/.test(cap || '')) out.push('the button\'s cap: ' + cap);
+    const d = await page.evaluate(() => circuitData());
+    const back = await withPB(page, pb => pb.evaluate(d => { const r = circuitToPrint(d, { uid, defaultTB, long: 'tight' }); const tags = r.doc.sheets.flatMap(s => s.parts.map(p => p.t + ':' + (p.tag || ''))).filter(t => !/^rail/.test(t)).sort().join(' ');
+      const doc2 = JSON.parse(JSON.stringify(r.doc)); delete doc2.link; return [tags, doc2]; }, d));
+    if (!/^coil:CR1 con_no:CR1 pbm?_no:PB-START$/.test(back[0])) out.push('in Print Builder: ' + back[0]);
+    const again = await page.evaluate(doc => { openFromPrint(doc, 'x'); document.getElementById('link-dlg').close(); return parts.filter(p => ['btn', 'coil', 'con'].includes(p.t)).map(p => p.t + ':' + p.L).sort().join(' '); }, back[1]);
+    if (again !== 'btn:START coil:CR1 con:CR1') out.push('drawn again in Circuit Builder from that print: ' + again);
+    return out;
+  });
   await check('Stand-ins (Dallas, 19 Nov 2026): every Print Builder part Circuit Builder has none of comes in as a stand-in (its symbol in a box, terminals as the print joins them), draws, runs (passing nothing) and prints, and goes back to the print as the same part, tag and name', async page => {
     const TYPES = ['spst', 'prs_no', 'fs_nc', 'cb', 'cb2', 'cb3', 'fdsc3', 'ol', 'gnd', 'spdt', 'dpst', 'dpdt', 'xover'];
     const pr = await withPB(page, pb => pb.evaluate(TYPES => { loadDoc(withDrawnBy(template('blank'))); const L1 = S.parts.find(q => q.label === 'L1'); let y = 260;
@@ -3424,7 +3444,7 @@ const DEF_CIRCUIT = `
     const out = [], want = JSON.stringify(pr.sheets.map(s => [s.parts.map(p => [p.id, p.x, p.y]), s.wires.map(w => [w.id, w.pts]), s.nodes, s.texts]));
     if (!r.wire.kept || r.wire.layout !== want) out.push('a wire redrawn in Circuit Builder: the print came back laid out differently (' + r.wire.note + ')');
     if (!r.letter.kept || r.letter.layout !== want) out.push('a letter changed: the print came back laid out differently (' + r.letter.note + ')');
-    if (!r.letter.tags.includes('Q') || r.letter.tags.includes(ds.was)) out.push('a letter changed: tags on the print not brought up to date: ' + r.letter.tags.filter(Boolean).join(' '));
+    if (r.letter.tags.filter(t => t === 'Q').length !== 1 + ds.letter.parts.filter(a => a[0] === 'con' && a[3] === 'Q').length) out.push('a letter changed: tags on the print not brought up to date: ' + r.letter.tags.filter(Boolean).join(' '));
     if (r.cut.kept) out.push('a wire taken away: still the old print (it is joined differently now)');
     return out;
   });

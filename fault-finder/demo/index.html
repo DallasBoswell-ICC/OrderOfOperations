@@ -148,6 +148,7 @@ body.locked .top-right, body.locked .modeseg, body.locked #toolbar, body.locked 
 /* a part's label */
 .labelbox { width: 7.2em; font: inherit; font-size: .9rem; color: var(--ink); background: #1f2022; border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
 .labelbox:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+.letterbox { width: 6.6em; text-transform: uppercase; }
 .namesbox { width: 11em; }
 
 .link-hit { cursor: move; pointer-events: stroke; }
@@ -735,7 +736,7 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
       <div class="props">
       <div class="tgroup" hidden><span class="label">Selected</span><span class="selname" id="selname">Nothing</span></div>
       <div class="props" id="props-btn" hidden>
-        <div class="tgroup"><span class="label">Letter</span><select id="p-letter" aria-label="Button letter"></select></div>
+        <div class="tgroup"><span class="label">Letter</span><input type="text" id="p-letter" class="labelbox letterbox" list="p-letter-list" maxlength="6" autocomplete="off" spellcheck="false" aria-label="Button letter" data-tip="Pick a letter, or type a name of your own: up to six letters and digits, starting with a letter (Print Builder keeps it as its tag)"><datalist id="p-letter-list"></datalist></div>
         <div class="tgroup"><span class="label">Label</span><input type="text" id="p-label" class="labelbox" maxlength="8" autocomplete="off" aria-label="Button label" data-tip="What is written on the button instead of its letter, such as Start or Stop (8 characters at most). Leave it empty to show the letter."></div>
         <div class="tgroup notestop"><span class="label">Contact</span>
           <div class="seg" role="group" aria-label="Normally open or closed"><button type="button" data-nc="0" data-tip="Normally open: passes current only while pressed">NO</button><button type="button" data-nc="1" data-tip="Normally closed: passes current until pressed">NC</button></div></div>
@@ -745,7 +746,7 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
         <button type="button" class="tool plain" id="p-main" hidden data-tip="This drawing becomes the pushbutton itself, drawn as normal; the others with its letter are drawn as its extra contact blocks">Make Main</button>
       </div>
       <div class="props" id="props-sel" hidden>
-        <div class="tgroup"><span class="label">Letter</span><select id="s-letter" aria-label="Selector switch letter"></select></div>
+        <div class="tgroup"><span class="label">Letter</span><input type="text" id="s-letter" class="labelbox letterbox" list="s-letter-list" maxlength="6" autocomplete="off" spellcheck="false" aria-label="Selector switch letter" data-tip="Pick a letter, or type a name of your own: up to six letters and digits, starting with a letter (Print Builder keeps it as its tag)"><datalist id="s-letter-list"></datalist></div>
         <div class="tgroup"><span class="label">Positions</span>
           <div class="seg" role="group" aria-label="Number of positions"><button type="button" data-sn="2">2</button><button type="button" data-sn="3">3</button><button type="button" data-sn="4">4</button></div></div>
         <div class="tgroup"><span class="label">Names</span><input type="text" id="s-names" class="labelbox namesbox" maxlength="27" autocomplete="off" aria-label="Position names" placeholder="1 / 2 / 3" data-tip="Names for the positions, such as HAND / OFF / AUTO (5 characters each at most). Leave it empty to number them."></div>
@@ -811,7 +812,7 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
         <div class="tgroup" id="d-pic-group"><span class="label">Picture</span><select id="d-pic" aria-label="Its process picture on the panel" data-tip="A small picture of the value under this output, following it while the circuit runs (drag it off to put it anywhere on the panel)"><option value="1">Under It</option><option value="0">Hidden</option></select></div>
       </div>
       <div class="props" id="props-coil" hidden>
-        <div class="tgroup"><span class="label">Letter</span><select id="o-letter" aria-label="Coil letter"></select></div>
+        <div class="tgroup"><span class="label">Letter</span><input type="text" id="o-letter" class="labelbox letterbox" list="o-letter-list" maxlength="6" autocomplete="off" spellcheck="false" aria-label="Coil letter" data-tip="Pick a letter, or type a name of your own: up to six letters and digits, starting with a letter (Print Builder keeps it as its tag)"><datalist id="o-letter-list"></datalist></div>
         <div class="tgroup"><span class="label">Label</span><input type="text" id="o-label" class="labelbox" maxlength="8" autocomplete="off" aria-label="Coil label" data-tip="What is written on the coil instead of its letter, such as Motor or Run (8 characters at most). Leave it empty to show the letter."></div>
         <div class="tgroup" id="o-type-group" hidden><span class="label">Timer</span>
           <div class="seg" role="group" aria-label="On-delay or off-delay"><button type="button" data-ttype="on" data-tip="On-delay: its timed contacts change once it has been energized for its set time">On-Delay</button><button type="button" data-ttype="off" data-tip="Off-delay: its timed contacts change as soon as it is energized, and go back once its set time has run out after it loses power">Off-Delay</button></div></div>
@@ -1272,9 +1273,12 @@ function linkBuild(doc, back) {
   const cbOld = doc.link && doc.link.cb && Array.isArray(doc.link.cb.parts) ? doc.link.cb : null;
   const FAM = { btn: 'op', est: 'op', sel: 'op', coil: 'coil', mst: 'coil' }, famOf = p => /^(pbm?_|estop|spst)/.test(p.t) || p.t === 'sel' ? 'op' : p.t === 'coil' || p.t === 'mst3' ? 'coil' : '';
   const tagLetter = p => { const t = String(p.tag || '').toUpperCase(); let m;
-    if (/^(pbm?_|estop)/.test(p.t) && (m = /^(?:PB|ES)-([A-Z]{1,2})$/.exec(t))) return m[1];
-    if (p.t === 'sel' && (m = /^SS-([A-Z]{1,2})$/.exec(t))) return m[1];
-    if ((p.t === 'coil' || p.t === 'mst3') && /^[A-Z]{1,2}$/.test(t)) return t;
+    // (Dallas, 19 Nov 2026: Circuit Builder takes a name typed in, up to six letters and digits, so a print's own names come across as
+    // they are: PB-START is START, CR1 is CR1; a tag CB couldn't hold (too long, or other marks in it) gets a letter, the tag on its cap)
+    const OWN = /^[A-Z][A-Z0-9]{0,5}$/;
+    if (/^(pbm?_|estop)/.test(p.t)) { if ((m = /^(?:PB|ES)-([A-Z0-9]{1,6})$/.exec(t))) return m[1]; if (OWN.test(t)) return t; }
+    if (p.t === 'sel') { if ((m = /^SS-([A-Z0-9]{1,6})$/.exec(t))) return m[1]; if (OWN.test(t)) return t; }
+    if ((p.t === 'coil' || p.t === 'mst3') && OWN.test(t)) return t;
     return null; };
   const oldLetter = p => { if (!cbOld || p.cbi == null) return null; const a = cbOld.parts[p.cbi]; return a && FAM[a[0]] && FAM[a[0]] === famOf(p) && a[3] ? String(a[3]) : null; };
   const prefOf = p => tagLetter(p) || oldLetter(p);
@@ -1551,7 +1555,7 @@ function circuitToPrint(d, env) {
   const tagOf = new Map();
   const lbl = r => typeof r.a[9] === 'string' && r.a[9].trim() ? r.a[9].trim().toUpperCase() : '';
   for (const r of R.filter(r => r.t === 'coil')) if (!tagOf.has('C:' + r.L)) tagOf.set('C:' + r.L, r.L);
-  for (const r of R.filter(r => r.t === 'btn' || r.t === 'est' || r.t === 'sel')) { const k = (r.t === 'sel' ? 'S:' : 'B:') + r.L; if (!tagOf.has(k)) tagOf.set(k, (r.t === 'sel' ? 'SS-' : r.t === 'est' ? 'ES-' : 'PB-') + r.L); }
+  for (const r of R.filter(r => r.t === 'btn' || r.t === 'est' || r.t === 'sel')) { const k = (r.t === 'sel' ? 'S:' : 'B:') + r.L; if (!tagOf.has(k)) { const pre = r.t === 'sel' ? 'SS' : r.t === 'est' ? 'ES' : 'PB'; tagOf.set(k, new RegExp('^' + (r.t === 'sel' ? 'SS' : 'PB|ES')).test(r.L) ? r.L : pre + '-' + r.L); } }
   const descOf = new Map(R.filter(r => (r.t === 'btn' || r.t === 'est' || r.t === 'coil') && lbl(r)).map(r => [(r.t === 'coil' ? 'C:' : 'B:') + r.L, lbl(r)]));
   // ---- 1. each part as it will be on the print, at the circuit's own place for now (G: the circuit's grid)
   const parts0 = R.map(r => ({ r, ts: linkRowTerms(r.a) }));
@@ -7814,18 +7818,18 @@ function renderProps() {
     document.querySelectorAll('[data-cinst]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.cinst === +!!p.inst)));
   }
   if (p && p.t === 'btn') {
-    const ls = document.getElementById('p-letter'), others = new Set(parts.filter(q => q.t === 'btn' && q !== p).map(q => q.L)), coils = new Set([...coilLetters(), ...selLetters()]);
-    ls.innerHTML = '';
-    for (const c of letterChoices()) if (!coils.has(c)) ls.add(new Option(others.has(c) && c !== p.L ? `${c} (same button as the other ${c})` : c, c, false, c === p.L));
+    const ls = document.getElementById('p-letter-list'), others = new Set(parts.filter(q => q.t === 'btn' && q !== p).map(q => q.L)), coils = new Set([...coilLetters(), ...selLetters()]);
+    ls.innerHTML = ''; if (document.activeElement !== document.getElementById('p-letter')) document.getElementById('p-letter').value = p.L;
+    for (const c of new Set([...letterChoices(), ...others])) if (!coils.has(c)) ls.append(new Option(others.has(c) && c !== p.L ? `same button as the other ${c}` : '', c));
     document.querySelectorAll('[data-nc]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.nc === +p.nc)));
     document.querySelectorAll('[data-maint]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.maint === +p.maint)));
     swatches(document.getElementById('p-colour'), p.color, hex => each(q => blocksOf(q.L).forEach(k => k.color = hex)));
     showLabel(document.getElementById('p-label'), p);
   }
   if (p && p.t === 'coil') {
-    const os = document.getElementById('o-letter'), used = new Set([...opLetters(), ...coilLetters()]);
-    os.innerHTML = '';
-    for (const c of letterChoices()) if (c === p.L || !used.has(c)) os.add(new Option(c, c, false, c === p.L));
+    const os = document.getElementById('o-letter-list'), used = new Set([...opLetters(), ...coilLetters()]);
+    os.innerHTML = ''; if (document.activeElement !== document.getElementById('o-letter')) document.getElementById('o-letter').value = p.L;
+    for (const c of letterChoices()) if (c === p.L || !used.has(c)) os.append(new Option('', c));
     swatches(document.getElementById('o-colour'), p.color, hex => each(q => q.color = hex));
     showLabel(document.getElementById('o-label'), p);
     document.getElementById('o-delay-group').hidden = !G.every(isTimer);
@@ -7850,8 +7854,17 @@ for (const id of ['p-label', 'o-label']) {
     draw();
   });
 }
+/* A letter picked or typed (Dallas, 19 Nov 2026: a name of his own, as Print Builder takes one, so the two programs need not
+   name a part differently): up to six letters and digits, starting with a letter, not one another kind of part already has.
+   Anything else is put back as it was, with the reason. */
+function letterIn(e, p, taken) {
+  const v = String(e.target.value).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+  for (const [set, what] of taken) if (v !== p.L && set.has(v)) { e.target.value = p.L; say(`${v} is already ${what}: pick another.`); return false; }
+  if (!/^[A-Z][A-Z0-9]{0,5}$/.test(v)) { e.target.value = p.L; say('A name is up to six letters and digits, starting with a letter.'); return false; }
+  e.target.value = v; return v !== p.L;
+}
 document.getElementById('p-letter').addEventListener('change', e => {
-  const p = selPart(); if (!p) return; snapshot();
+  const p = selPart(); if (!p || !letterIn(e, p, [[coilLetters(), 'a relay coil’s letter'], [selLetters(), 'a selector switch’s letter']])) return; snapshot();
   const mate = blocksOf(e.target.value).find(q => q !== p), old = p.L;
   p.L = e.target.value;
   // a light built into this button goes with it (unless the old letter is still on another button)
@@ -7877,7 +7890,7 @@ document.getElementById('o-delay').addEventListener('change', e => {
   each(p => p.delay = n);
 });
 document.getElementById('o-letter').addEventListener('change', e => {
-  const p = selPart(); if (!p) return; snapshot();
+  const p = selPart(); if (!p || !letterIn(e, p, [[coilLetters(), 'another coil’s letter'], [btnLetters(), 'a pushbutton’s letter'], [selLetters(), 'a selector switch’s letter']])) return; snapshot();
   const old = p.L; p.L = e.target.value; p.color = COIL_COL[p.L] || p.color;
   // its contacts go with it (unless another coil still has the old letter)
   const n = parts.filter(q => q.t === 'con' && q.L === old).length;
@@ -7912,9 +7925,9 @@ const LIM_SHARED = ['pv', 'sp', 'rs', 'side', 'color'];
 function syncLim(p, from = p) { for (const q of limGroup(p)) if (q !== from) for (const f of LIM_SHARED) { if (from[f] === undefined) delete q[f]; else q[f] = from[f]; } }
 const SEL_NAME_MAX = 5;
 function renderSelProps(p, multi) {
-  const ls = document.getElementById('s-letter'), mine = selsOf(p.L).length, others = new Set(parts.filter(q => q.t === 'sel' && q !== p).map(q => q.L)), taken = new Set([...coilLetters(), ...btnLetters()]);
-  ls.innerHTML = '';
-  for (const c of letterChoices()) if (!taken.has(c)) ls.add(new Option(others.has(c) && c !== p.L ? `${c} (same switch as the other ${c})` : c, c, false, c === p.L));
+  const ls = document.getElementById('s-letter-list'), mine = selsOf(p.L).length, others = new Set(parts.filter(q => q.t === 'sel' && q !== p).map(q => q.L)), taken = new Set([...coilLetters(), ...btnLetters()]);
+  ls.innerHTML = ''; if (document.activeElement !== document.getElementById('s-letter')) document.getElementById('s-letter').value = p.L;
+  for (const c of new Set([...letterChoices(), ...others])) if (!taken.has(c)) ls.append(new Option(others.has(c) && c !== p.L ? `same switch as the other ${c}` : '', c));
   const n = selN(p);
   document.querySelectorAll('[data-sn]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.sn === n)));
   const names = p.names || [], tag = i => names[i] || String(i + 1);
@@ -7953,7 +7966,7 @@ document.getElementById('s-names').addEventListener('input', e => {
   draw();
 });
 document.getElementById('s-letter').addEventListener('change', e => {
-  const p = selPart(); if (!p) return; snapshot();
+  const p = selPart(); if (!p || !letterIn(e, p, [[coilLetters(), 'a relay coil’s letter'], [btnLetters(), 'a pushbutton’s letter']])) return; snapshot();
   const mate = selsOf(e.target.value).find(q => q !== p);
   p.L = e.target.value;
   if (mate) {   // it joins that switch: takes its positions and colour, and is closed in a position none of its other drawings use
@@ -8195,7 +8208,7 @@ function readCircuit(d) {
     // (a stand-in for a Print Builder part Circuit Builder has none of: its symbol in a box, its terminals as the print had them)
     if (a[0] === 'stand') { const q = a[10] || {}, st = Array.isArray(q.o) ? q.o.slice(0, 12).filter(o => Array.isArray(o) && o.every(n => Number.isFinite(+n) && Math.abs(+n) <= 400)).map(o => [snap(+o[0]), snap(+o[1])]) : [];
       if (typeof q.t === 'string' && st.length) { const p = P('stand', snap(num(a[1])), snap(num(a[2])), { L: String(a[3] ?? '').slice(0, 12) }); p.sym = q.t.slice(0, 16); p.srot = [0, 90, 180, 270].includes(+q.r) ? +q.r : 0; p.st = st; p.desc = typeof a[9] === 'string' ? a[9].slice(0, 40) : ''; delete p.color; return p; } }
-    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'htr' ? 'htr' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw', 'fsw'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
+    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'htr' ? 'htr' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw', 'fsw'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
     const p = P(t, snap(num(a[1])), snap(num(a[2])), {   // (on the grid: a part saved off it, by an older version, could never be wired)
       L: ['dsc', 'fus', 'fu1', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw', 'fsw'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1))) : t === 'sol' || t === 'htr' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'htr' ? HTR_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : t === 'lsw' ? LSW_COL : t === 'tsw' ? TSW_COL : t === 'psw' ? PSW_COL : t === 'fsw' ? FSW_COL : BTN_COL[L] || '#FF0032') });
     if (t === 'lsw') { p.nc = !!a[4]; if (a[7] === 1) p.held = true; }
