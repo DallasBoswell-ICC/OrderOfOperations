@@ -256,7 +256,7 @@ function pvVisSet(s, v, x) {
   else if (s._k === 'temperature') {
     q.inside.setAttribute('fill', mixRgb('#1e1e1e', '#ff7a1f', f * .85)); q.element.setAttribute('stroke', mixRgb('#555555', '#ff5a1f', Math.min(1, f * 1.6)));
     const h = 30 * f + 1; q.col.setAttribute('y', (44 - h).toFixed(2)); q.col.setAttribute('height', h.toFixed(2));
-  } else if (s._k === 'level') { const y = (51 - 44 * f).toFixed(2); q.liquid.setAttribute('d', `M24 ${y} q5.5 -2 11 0 t11 0 t11 0 t11 0 V52 H24 Z`); }
+  } else if (s._k === 'level') { const y = (51 - 44 * f).toFixed(2); q.liquid.setAttribute('d', `M19 ${y} q5.5 -2 11 0 t11 0 t11 0 t11 0 t11 0 V52 H19 Z`); }   // (wider than the tank, so the liquid meets both sides; Dallas, 20 Nov 2026)
   else if (s._k === 'other') q.bar.setAttribute('width', (76 * f).toFixed(2));
 }
 // (flow and speed: moving with the value, by the clock, while the circuit runs)

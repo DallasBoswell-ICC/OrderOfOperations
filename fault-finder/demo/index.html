@@ -4754,18 +4754,28 @@ function drawFloat(p, g, x, y, v) {
   el('rect', { x: 76, y: 24, width: 170, height: 80, rx: 4, fill: '#1d1f22', stroke: '#111', 'stroke-width': 1.4 }, t);
   const cid = 'fltc' + (++FSW_N), cp = el('clipPath', { id: cid }, t); el('rect', { x: 77, y: 25, width: 168, height: 78, rx: 3.5 }, cp);
   const wg = el('g', { 'clip-path': `url(#${cid})` }, t);
+  // (Dallas, 20 Nov 2026: the water one shape, its top the ripple itself, so no dark shows under a crest; wider than the glass,
+  // so it meets both sides)
   v.water = el('g', {}, wg);
-  el('rect', { x: 76, y: 0, width: 170, height: 110, fill: 'url(#gWater)' }, v.water);
-  let wave = 'M76 0'; for (let xx = 76; xx < 246; xx += 17) wave += 'q4.25 -2.6 8.5 0t8.5 0';
+  let wave = 'M70 0'; for (let xx = 70; xx < 252; xx += 17) wave += 'q4.25 -2.6 8.5 0t8.5 0';
+  el('path', { d: wave + 'V110H70Z', fill: 'url(#gWater)' }, v.water);
   el('path', { d: wave, fill: 'none', stroke: '#cfe6ff', 'stroke-width': 1.6, opacity: .85 }, v.water);
-  // the float on its arm, hinged on the tank's left wall
+  // the float on its arm, hinged on the tank's left wall: the arm and its pivot behind the block that holds them, the block
+  // running on under the wall (Dallas, 20 Nov 2026), as if mounted on it
   const [ax, ay] = FLT_PIV;
-  el('rect', { x: 77, y: ay - 10, width: 13, height: 20, rx: 2, fill: '#5d636a', stroke: '#111', 'stroke-width': 1.2 }, wg);
   v.armSh = el('line', { x1: ax, y1: ay, stroke: '#111', 'stroke-width': 5.5, 'stroke-linecap': 'round' }, wg);
   v.arm = el('line', { x1: ax, y1: ay, stroke: '#c9ced4', 'stroke-width': 3, 'stroke-linecap': 'round' }, wg);
+  el('circle', { cx: ax, cy: ay, r: 4, fill: '#5d636a', stroke: '#111', 'stroke-width': 1 }, wg);
+  el('rect', { x: 62, y: ay - 10, width: 26, height: 20, rx: 2, fill: '#5d636a', stroke: '#111', 'stroke-width': 1.2 }, wg);
   v.fball = el('g', {}, wg);
   el('circle', { r: 12.2, fill: '#111' }, v.fball); el('circle', { r: 11, fill: '#ff9a2e' }, v.fball); el('circle', { r: 11, fill: 'url(#gDome)' }, v.fball);
-  el('circle', { cx: ax, cy: ay, r: 4, fill: '#5d636a', stroke: '#111', 'stroke-width': 1 }, wg);
+  // the mark on the glass where the float makes the switch act (Dallas, 20 Nov 2026): its Acts At, when a Level value works it;
+  // worked by hand, near the top
+  { const pv = pvOf(p), fa = pv && Number.isFinite(+p.sp) ? clamp01((+p.sp - pv.min) / ((pv.max - pv.min) || 1)) : .8, my = lerp(FLT_LOW, FLT_HIGH, fa);
+    v.mark = el('g', { 'pointer-events': 'none' }, t);
+    el('path', { d: `M245.5 ${my.toFixed(2)}H231`, stroke: '#111', 'stroke-width': 3.6, 'stroke-linecap': 'round' }, v.mark);
+    el('path', { d: `M245.5 ${my.toFixed(2)}H231`, stroke: '#FFC000', 'stroke-width': 2, 'stroke-linecap': 'round' }, v.mark);
+    el('path', { d: `M246 ${(my - 4.5).toFixed(2)}L239.5 ${my.toFixed(2)}L246 ${(my + 4.5).toFixed(2)}Z`, fill: '#FFC000', stroke: '#111', 'stroke-width': .9, 'stroke-linejoin': 'round' }, v.mark); }
   el('path', { d: 'M96 30L116 30L104 98L92 98Z', fill: '#fff', opacity: .06 }, t);   // (the glass's glint)
   // the body
   framed('rect', { x: x - hw, y: top, width: LSW_W, height: LSW_TOP + LSW_BOT, rx: 15, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
@@ -6009,7 +6019,7 @@ function pvVisSet(s, v, x) {
   else if (s._k === 'temperature') {
     q.inside.setAttribute('fill', mixRgb('#1e1e1e', '#ff7a1f', f * .85)); q.element.setAttribute('stroke', mixRgb('#555555', '#ff5a1f', Math.min(1, f * 1.6)));
     const h = 30 * f + 1; q.col.setAttribute('y', (44 - h).toFixed(2)); q.col.setAttribute('height', h.toFixed(2));
-  } else if (s._k === 'level') { const y = (51 - 44 * f).toFixed(2); q.liquid.setAttribute('d', `M24 ${y} q5.5 -2 11 0 t11 0 t11 0 t11 0 V52 H24 Z`); }
+  } else if (s._k === 'level') { const y = (51 - 44 * f).toFixed(2); q.liquid.setAttribute('d', `M19 ${y} q5.5 -2 11 0 t11 0 t11 0 t11 0 t11 0 V52 H19 Z`); }   // (wider than the tank, so the liquid meets both sides; Dallas, 20 Nov 2026)
   else if (s._k === 'other') q.bar.setAttribute('width', (76 * f).toFixed(2));
 }
 // (flow and speed: moving with the value, by the clock, while the circuit runs)
