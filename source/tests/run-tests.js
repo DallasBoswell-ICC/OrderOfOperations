@@ -1964,7 +1964,8 @@ const DEF_CIRCUIT = `
     const tags = await page.evaluate(() => parts.filter(p => p.t === 'fsw').map(p => captionOf(p) + '/' + p.color).join());
     if (tags !== 'FLS1 Flow Switch (NO)/#9B6BFF,FLS2 Flow Switch (NC)/#9B6BFF') out.push('placed as: ' + tags);
     // (the paddle's top, upright, clear of the pipe's top inside wall, 71.5 in Dallas's units)
-    const clear = await page.evaluate(() => { const v = view.parts.get(parts.find(p => p.t === 'fsw').id); return +v.padEnd.getAttribute('y'); });
+    const clear = await page.evaluate(() => { const v = view.parts.get(parts.find(p => p.t === 'fsw').id), pipe = v.pad.parentNode, b = v.padEnd.getBBox(), m = pipe.getCTM().inverse().multiply(v.padEnd.getCTM());
+      return +Math.min(...[[b.x, b.y], [b.x + b.width, b.y], [b.x, b.y + b.height], [b.x + b.width, b.y + b.height]].map(([x, y]) => m.b * x + m.d * y + m.f)).toFixed(2); });
     if (!(clear > 74)) out.push('the paddle reaches up to ' + clear + ' (the pipe\'s top inside is at 71.5)');
     const st = () => page.evaluate(() => { const v = view.parts.get(parts.find(p => p.t === 'fsw').id), w = FLOW[v.p ? v.p.id : parts.find(p => p.t === 'fsw').id];
       return [parts.filter(p => p.t === 'lamp').map(p => +!!coilOn[p.id]).join(''), v.water.getAttribute('opacity') === null ? 'full' : 'not', (+(v.streaks.getAttribute('opacity') || 0)).toFixed(2), v.padStrip.getAttribute('d').includes('A') ? 'bent' : 'up', v.stem.getAttribute('fill'), v.flag.getAttribute('fill'), v.stem.parentNode.parentNode === v.blade].join('|'); });
@@ -3389,6 +3390,21 @@ const DEF_CIRCUIT = `
     if (cb !== 'L1A,L1B,L1C') out.push('Circuit Builder print: ' + cb + ' (want L1A,L1B,L1C past the fuses)');
     if (pb !== 'L1,L1A,L1B,L1C') out.push('Print Builder: ' + pb + ' (want L1,L1A,L1B,L1C)');
     return out;
+  });
+  await check('Flow switch (Dallas, 20 Nov 2026): its sensing arm, at rest, bent any way by the water either way, never touches the pipe\'s walls but at its foot; it is shaded, with a cupped vane on its end', async page => {
+    return page.evaluate(() => { const out = [];
+      const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg'); document.body.appendChild(svg); const g = document.createElementNS(NS, 'g'); svg.appendChild(g);
+      const p = P('fsw', 300, 300, { L: '1' }); p.color = '#9B6BFF'; const v = {}; drawFlow(p, g, 300, 300, v); const pipe = v.pad.parentNode;
+      if (!v.padLit || !v.padEnd.querySelector('path[fill="url(#gPaddle)"]')) out.push('no shading or vane');
+      const toPipe = (el, x, y) => { const m = pipe.getCTM().inverse().multiply(el.getCTM()); return [m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f]; };
+      const TOP = 71.5, BOT = 103.5, HALF = 3.75;
+      for (const dir of [1, -1]) for (let i = 0; i <= 20; i++) { v.pos = i / 20; v.fd = dir; v.bk = null; fswPaddle(v);
+        const L = v.padSh.getTotalLength();
+        for (let l = 0; l <= L; l += .5) { const q = v.padSh.getPointAtLength(l), foot = Math.abs(q.x - 160) <= HALF + .01 && q.y >= BOT - HALF - .5;
+          if (q.y - HALF < TOP + .5 || (!foot && q.y + HALF > BOT - .3)) { out.push(`arm at ${(dir * i / 20).toFixed(2)}: (${q.x.toFixed(1)}, ${q.y.toFixed(1)}) touches a wall`); break; } }
+        const b = v.padEnd.getBBox(), cs = [[b.x, b.y], [b.x + b.width, b.y], [b.x, b.y + b.height], [b.x + b.width, b.y + b.height]].map(([x, y]) => toPipe(v.padEnd, x, y)), ys = cs.map(c => c[1]);
+        if (Math.min(...ys) - .65 < TOP + .5 || Math.max(...ys) + .65 > BOT - .3) out.push(`vane at ${(dir * i / 20).toFixed(2)}: from y ${Math.min(...ys).toFixed(1)} to ${Math.max(...ys).toFixed(1)} touches a wall`); }
+      svg.remove(); return out.slice(0, 6); });
   });
   await check('Default speed (Dallas, 20 Nov 2026): Set as Default ▾ keeps the speed for this circuit (saved in its file, undone with Undo) or for this computer; a circuit starts at its own speed, else this computer\'s, else 1×; each can be cleared; it goes to Print Builder and back', async page => {
     const r = await page.evaluate(() => { const out = {}, click = id => { document.getElementById('speed-def').click(); document.getElementById(id).click(); };
