@@ -86,8 +86,8 @@ function renderProps() {
     // its number (one no other switch of its kind has), its kind and its colour (a temperature switch: NO or NC only)
     const ns = document.getElementById('ls-num'), taken = new Set(parts.filter(q => q.t === p.t && q !== p).map(q => q.L));
     groupOf('ls-num').hidden = multi; ns.innerHTML = '';
-    for (const o of document.querySelectorAll('#ls-kind option')) { o.hidden = p.t === 'tsw' ? o.value.endsWith('h') : p.t === 'psw' || p.t === 'fsw' || p.t === 'flt' ? o.value.length > 2 : o.value.endsWith('l');
-      if (p.t === 'tsw') o.textContent = { no: 'High temp., NO', nc: 'High temp., NC', nol: 'Low temp., NO', ncl: 'Low temp., NC' }[o.value] || o.textContent;
+    for (const o of document.querySelectorAll('#ls-kind option')) { o.hidden = HILO(p.t) ? o.value.endsWith('h') : o.value.endsWith('l');
+      if (HILO(p.t)) { const w = { tsw: 'temp.', psw: 'pressure', fsw: 'flow', flt: 'level' }[p.t]; o.textContent = { no: `High ${w}, NO`, nc: `High ${w}, NC`, nol: `Low ${w}, NO`, ncl: `Low ${w}, NC` }[o.value] || o.textContent; }
       else o.textContent = { no: 'Normally open', nc: 'Normally closed' }[o.value] || o.textContent; }
     for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n)) || String(n) === p.L) ns.add(new Option(({ tsw: 'TS', psw: 'PS', fsw: 'FLS', flt: 'FS' }[p.t] || 'LS') + n + (String(n) === p.L && limGroup(p)[0] !== p ? ' (another contact)' : ''), String(n), false, String(n) === p.L));   // (its own number: "(another contact)" after it if it is not the main one)
     for (const n of [...taken].filter(n => n !== p.L).sort((a, b) => a - b)) ns.add(new Option(`${({ tsw: 'TS', psw: 'PS', fsw: 'FLS', flt: 'FS' }[p.t] || 'LS')}${n} (another contact)`, n));
@@ -397,4 +397,4 @@ for (const [id, f] of [['ls-sp', 'sp'], ['ls-rs', 'rs']]) document.getElementByI
   each(p => { if (!pvOf(p)) return; p[f] = x; if (p.t === 'lsw') { p.rs = p.sp; return; } const fall = pvFalls(p); if (fall ? p.rs < p.sp : p.rs > p.sp) { if (f === 'sp') p.rs = p.sp; else p.sp = p.rs; } }); limSync();
 });
 for (const id of ['ls-sp', 'ls-rs']) document.getElementById(id).addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') e.target.blur(); });
-document.getElementById('ls-kind').addEventListener('change', e => { const k = e.target.value; if (selGroup().every(isLim)) each(p => { p.nc = k.startsWith('nc'); if (k.endsWith('h') && p.t === 'lsw') p.held = true; else delete p.held; if (k.endsWith('l') && p.t === 'tsw') p.low = true; else delete p.low; }); });
+document.getElementById('ls-kind').addEventListener('change', e => { const k = e.target.value; if (selGroup().every(isLim)) each(p => { p.nc = k.startsWith('nc'); if (k.endsWith('h') && p.t === 'lsw') p.held = true; else delete p.held; if (k.endsWith('l') && HILO(p.t)) p.low = true; else delete p.low; }); });

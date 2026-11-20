@@ -190,9 +190,9 @@ function printSheet(drawnBy, fit = false) {
       case 'htr': two(q, 'Heating Element'); break;
       case 'fu1': two(q, 'Fuse'); break;
       case 'tsw': two(q, `${p.nc ? 'NC' : 'NO'} Temperature Switch`, p.low ? 'LOW TEMP' : 'HIGH TEMP'); break;
-      case 'psw': two(q, `${p.nc ? 'NC' : 'NO'} Pressure Switch`); break;
-      case 'fsw': two(q, `${p.nc ? 'NC' : 'NO'} Flow Switch`); break;
-      case 'flt': two(q, `${p.nc ? 'NC' : 'NO'} Float Switch`); break;
+      case 'psw': two(q, `${p.nc ? 'NC' : 'NO'} Pressure Switch`, p.low ? 'LOW PRESS' : 'HIGH PRESS'); break;
+      case 'fsw': two(q, `${p.nc ? 'NC' : 'NO'} Flow Switch`, p.low ? 'LOW FLOW' : 'HIGH FLOW'); break;
+      case 'flt': two(q, `${p.nc ? 'NC' : 'NO'} Float Switch`, p.low ? 'LOW LEVEL' : 'HIGH LEVEL'); break;
       case 'lsw': two(q, p.held ? (p.nc ? 'NC HO Limit Switch' : 'NO HC Limit Switch') : `${p.nc ? 'NC' : 'NO'} Limit Switch`); break;
       case 'dsc': three(q, '3PH Disconnect'); break;
       case 'fus': { // (each fuse its own number: FU1, FU2, FU3 down the block)

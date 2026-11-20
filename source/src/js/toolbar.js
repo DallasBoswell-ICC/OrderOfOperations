@@ -143,6 +143,36 @@ document.querySelectorAll('[data-power]').forEach(b => b.addEventListener('click
   fitView(); fit(true); draw();
 }));
 
+/* the menus laid out as Print Builder's are (Dallas, 20 Nov 2026): a list down the menu, one row for each kind of part (its
+   picture and name); a kind with several parts, its row opens a list of them out to its side (on hover, or a click or tap).
+   A kind with one part is that part's own row (and the supply boxes, shown only with Boxes, two rows of their own). Power's Bars, Boxes and source colour stay as they were, on top. The parts'
+   buttons are the same buttons, moved: dragging or clicking one places it as before. */
+function listMenus() {
+  const row = b => { b.classList.remove('big'); b.classList.add('tl-row'); b.setAttribute('role', 'menuitem');
+    const sp = b.querySelector('span'); if (!sp) return; sp.querySelectorAll('br').forEach(br => br.replaceWith(' ')); if (b.dataset.name) sp.textContent = b.dataset.name; };
+  for (const box of document.querySelectorAll('.tp-menu')) {
+    if (!box.querySelector(':scope > .rgrp')) continue;
+    const list = document.createElement('div'); list.className = 'tl-list';
+    for (const g of [...box.querySelectorAll(':scope > .rgrp')]) {
+      const name = g.querySelector('.gname')?.textContent || '', stack = g.querySelector('.stack');
+      if (stack) { const d = document.createElement('div'); d.className = 'tl-block'; d.append(stack); list.append(d); continue; }
+      const bs = [...g.querySelectorAll('.tool[data-part]')];
+      if (bs.length === 1 && !g.id) { row(bs[0]); list.append(bs[0]); continue; }
+      if (g.id) { const d = document.createElement('div'); d.className = 'tl-flat'; d.id = g.id; for (const b of bs) { row(b); d.append(b); } list.append(d); continue; }   // (the supply boxes: their own rows, shown with Boxes)
+      const it = document.createElement('div'); it.className = 'tl-sub'; if (g.id) it.id = g.id;
+      const hd = document.createElement('button'); hd.type = 'button'; hd.className = 'tool tl-row tl-hd'; hd.setAttribute('aria-haspopup', 'menu');
+      hd.innerHTML = (bs[0].querySelector('svg')?.outerHTML || '') + `<span class="tl-n"></span><span class="tl-c">${bs.length}</span><span class="tl-car" aria-hidden="true">▸</span>`;
+      hd.querySelector('.tl-n').textContent = name;
+      hd.addEventListener('click', () => { const on = !it.classList.contains('open'); for (const o of box.querySelectorAll('.tl-sub.open')) o.classList.remove('open'); it.classList.toggle('open', on); });
+      it.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') for (const o of box.querySelectorAll('.tl-sub.open')) if (o !== it) o.classList.remove('open'); });
+      const fly = document.createElement('div'); fly.className = 'tl-fly'; fly.setAttribute('role', 'menu'); fly.setAttribute('aria-label', name);
+      for (const b of bs) { row(b); fly.append(b); }
+      it.append(hd, fly); list.append(it);
+    }
+    box.textContent = ''; box.append(list); box.classList.add('tl');
+  }
+}
+listMenus();
 /* drop-down menus of parts (Buttons, Switches, Outputs, Contacts, Protection, Power): the button drops its parts down under it; picking one (or
    dragging it out onto the panel) places it, as from the ribbon, and closes the menu. A press anywhere else, or Esc,
    closes it too. */
@@ -151,11 +181,11 @@ function tpMenu(open, id) {
     const btn = document.querySelector(`[aria-controls="${box.id}"]`), on = open && box.id === id;
     if (box.hidden === !on) continue;
     box.hidden = !on; if (btn) btn.setAttribute('aria-expanded', String(on));
-    if (on) placeMenu(box);
+    if (on) placeMenu(box); else for (const o of box.querySelectorAll('.tl-sub.open')) o.classList.remove('open');
   }
 }
 // (under its button, kept inside the window)
-function placeMenu(box) { const r = document.querySelector(`[aria-controls="${box.id}"]`).getBoundingClientRect(), w = box.offsetWidth; box.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + 'px'; box.style.top = (r.bottom + 6) + 'px'; }
+function placeMenu(box) { const r = document.querySelector(`[aria-controls="${box.id}"]`).getBoundingClientRect(), w = box.offsetWidth; box.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + 'px'; box.style.top = (r.bottom + 6) + 'px'; box.classList.toggle('flip', box.getBoundingClientRect().right + 280 > innerWidth); }   // (flip: its side lists open to the left, near the window's right edge)
 document.querySelectorAll('[aria-controls]').forEach(b => { const id = b.getAttribute('aria-controls'); if (document.getElementById(id)?.classList.contains('tp-menu')) b.addEventListener('click', () => { if (editing) tpMenu(document.getElementById(id).hidden, id); }); });
 document.addEventListener('pointerdown', e => { if (![...document.querySelectorAll('.tp-menu, [aria-controls]')].some(m => m.contains(e.target))) tpMenu(false); }, true);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') tpMenu(false); });

@@ -17,7 +17,7 @@ let PV = [], PVV = {}, PVACT = {}, PVDIR = {};   // (PVDIR: a flow value's direc
 const pvOf = p => p && p.pv ? PV.find(v => v.id === p.pv) || null : null;
 const pvLinked = p => isLim(p) && !!pvOf(p);
 // (a switch that acts as its value falls: a low temperature switch, or a limit switch set to act at or below its setting)
-const pvFalls = p => p.t === 'tsw' ? !!p.low : p.t === 'lsw' ? p.side === 'lo' : false;
+const pvFalls = p => HILO(p.t) ? !!p.low : p.t === 'lsw' ? p.side === 'lo' : false;
 const pvStep = v => { const r = Math.abs(v.max - v.min) || 1; return Math.pow(10, Math.floor(Math.log10(r)) - 2); };
 const pvFmt = (v, x) => { const s = pvStep(v); return (s >= 1 ? Math.round(x) : +x.toFixed(Math.min(3, Math.round(-Math.log10(s))))).toString(); };   // (to the slider's step: 0.1 in on a 12 in stroke, 1 psi on 150 psi)
 const pvFrac = p => { const v = isLim(p) ? pvOf(p) : null; if (!v) return null; const x = editing ? v.start : PVV[v.id] ?? v.start; return clamp01((x - v.min) / ((v.max - v.min) || 1)); };

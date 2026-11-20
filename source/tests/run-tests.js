@@ -65,6 +65,14 @@ async function mouseDrag(page, a, b, opts = {}) {
   if (opts.shift) await page.keyboard.up('Shift');
   await page.waitForTimeout(40);
 }
+// (a part in a kind's list out to the side of its menu (Dallas, 20 Nov 2026): the pointer over its kind's row shows it)
+async function revealSub(page, kind) {
+  if (await page.locator(`[data-part="${kind}"]`).isVisible()) return;
+  const n = await page.evaluate(k => { const s = document.querySelector(`[data-part="${k}"]`)?.closest('.tl-sub'); return s ? [...s.parentNode.children].indexOf(s) : -1; }, kind);
+  if (n < 0) return;
+  const m = await page.evaluate(k => document.querySelector(`[data-part="${k}"]`).closest('.tp-menu').id, kind);
+  await page.hover(`#${m} .tl-list > :nth-child(${n + 1}) > .tl-hd`); await page.waitForTimeout(30);
+}
 async function toolbarDrop(page, kind, x, y) {
   // (the kinds older checks name, as they were placed then: a pushbutton was maintained; a contact, instantaneous)
   kind = { 'btn-no': 'btn-no-mnt', 'btn-nc': 'btn-nc-mnt', 'con-no': 'con-no-i', 'con-nc': 'con-nc-i' }[kind] || kind;
@@ -74,6 +82,7 @@ async function toolbarDrop(page, kind, x, y) {
     const menu = await page.evaluate(k => { const m = document.querySelector(`[data-part="${k}"]`).closest('.tp-menu'); return m ? m.id : null; }, kind);
     if (menu && !(await page.locator(`[data-part="${kind}"]`).isVisible())) await page.click(`[aria-controls="${menu}"]`);
   }
+  await revealSub(page, kind);
   const bx = await page.locator(`[data-part="${kind}"]`).boundingBox(), B = await scr(page, x, y);
   await page.mouse.move(bx.x + 10, bx.y + 10); await page.mouse.down();
   await page.mouse.move(bx.x + 40, bx.y + 60, { steps: 3 }); await page.mouse.move(...B, { steps: 6 }); await page.mouse.up();
@@ -1962,7 +1971,7 @@ const DEF_CIRCUIT = `
       normalize(); draw(); return [...wiringIssues(network()).keys()].join(); });
     if (iss) out.push('wiring issues: ' + iss);
     const tags = await page.evaluate(() => parts.filter(p => p.t === 'fsw').map(p => captionOf(p) + '/' + p.color).join());
-    if (tags !== 'FLS1 Flow Switch (NO)/#9B6BFF,FLS2 Flow Switch (NC)/#9B6BFF') out.push('placed as: ' + tags);
+    if (tags !== 'FLS1 High Flow Switch (NO)/#9B6BFF,FLS2 High Flow Switch (NC)/#9B6BFF') out.push('placed as: ' + tags);
     // (the paddle's top, upright, clear of the pipe's top inside wall, 71.5 in Dallas's units)
     const clear = await page.evaluate(() => { const v = view.parts.get(parts.find(p => p.t === 'fsw').id), pipe = v.pad.parentNode, b = v.padEnd.getBBox(), m = pipe.getCTM().inverse().multiply(v.padEnd.getCTM());
       return +Math.min(...[[b.x, b.y], [b.x + b.width, b.y], [b.x, b.y + b.height], [b.x + b.width, b.y + b.height]].map(([x, y]) => m.b * x + m.d * y + m.f)).toFixed(2); });
@@ -2552,7 +2561,7 @@ const DEF_CIRCUIT = `
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
     for (const [btn, kinds] of [['bt', ['btn-no-mom', 'btn-nc-mom', 'btn-no-mnt', 'btn-nc-mnt']], ['sw', ['sel', 'lsw-no', 'lsw-nch', 'tsw-no', 'tsw-nc', 'tsw-nol', 'tsw-ncl', 'psw-no', 'psw-nc', 'fsw-no', 'fsw-nc']], ['out', ['coil', 'timer', 'timer-off', 'lamp', 'sol', 'htr']], ['ct', ['con-no-i', 'con-nc-i', 'con-no-t', 'con-nc-t']]]) {
       await page.click(`#${btn}-btn`);
-      for (const k of kinds) if (!(await page.isVisible(`#${btn}-menu [data-part="${k}"]`))) out.push(`${k} not in the ${btn} menu`);
+      for (const k of kinds) { await revealSub(page, k); if (!(await page.isVisible(`#${btn}-menu [data-part="${k}"]`))) out.push(`${k} not in the ${btn} menu`); }
       await page.keyboard.press('Escape');
       if (!(await page.evaluate(id => document.getElementById(id).hidden, btn + '-menu'))) out.push(`Esc did not close the ${btn} menu`);
     }
@@ -2567,7 +2576,7 @@ const DEF_CIRCUIT = `
     const out = [];
     await page.selectOption('#preset', page.evaluate ? await page.evaluate(() => document.querySelector('#preset option:nth-child(2)').value) : 'blank'); await page.waitForTimeout(100);
     for (const [m, k] of [['out', 'coil'], ['bt', 'btn-no-mom'], ['ct', 'con-no-i'], ['sw', 'lsw-no'], ['out', 'mtr'], ['pr', 'fu1'], ['pw', 'xfm'], [null, 'jmp'], ['out', 'lamp']]) {
-      if (m) await page.click(`#${m}-btn`); await page.click(`[data-part="${k}"]`); await page.waitForTimeout(60);
+      if (m) await page.click(`#${m}-btn`); await revealSub(page, k); await page.click(`[data-part="${k}"]`); await page.waitForTimeout(60);
       const r = await page.evaluate(() => { const p = parts[parts.length - 1];
         const touching = terms(p).some(([x, y]) => { const i = pointInfo(x, y, new Set(), p); return i.ends > 0 || i.interior || i.bar; });
         const clash = parts.some(q => q !== p && Math.abs(q.x - p.x) < halfW(q.t) + halfW(p.t) && Math.abs(q.y - p.y) < halfH(q.t) + halfH(p.t));
@@ -3453,7 +3462,7 @@ const DEF_CIRCUIT = `
       normalize(); draw(); return [...wiringIssues(network()).keys()].join(); });
     if (iss) out.push('wiring issues: ' + iss);
     const caps = await page.evaluate(() => parts.filter(p => p.t === 'flt').map(p => captionOf(p) + '/' + p.color).join());
-    if (caps !== 'FS1 Float Switch (NO)/#16C1E8,FS2 Float Switch (NC)/#16C1E8') out.push('placed as: ' + caps);
+    if (caps !== 'FS1 High Level Float Switch (NO)/#16C1E8,FS2 High Level Float Switch (NC)/#16C1E8') out.push('placed as: ' + caps);
     const st = () => page.evaluate(() => parts.filter(p => p.t === 'flt').map(p => { const v = view.parts.get(p.id), w = v.water.getAttribute('transform').match(/translate\(0 ([\d.]+)\)/)[1], l = v.dg.getAttribute('transform').match(/translate\(0 (-?[\d.]+)\)/)[1];
       return [lswClosed(p) ? 'C' : 'o', +(+w).toFixed(0), +(+v.arm.getAttribute('x2') > FLT_PIV[0]), (+l).toFixed(0) < 0 ? 'up' : 'down', v.dome.getAttribute('fill')].join(' '); }).join(' | ') + ' | lamps ' + parts.filter(p => p.t === 'lamp').map(p => +!!coilOn[p.id]).join(''));
     await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
@@ -3480,6 +3489,35 @@ const DEF_CIRCUIT = `
     if (pb[0] !== 'fs_nc:FS2,fs_no:FS1') out.push('in Print Builder: ' + pb[0]);
     delete pb[1].link; const again = await page.evaluate(doc => { openFromPrint(doc, 'x'); document.getElementById('link-dlg').close(); return parts.filter(p => p.t === 'flt').map(p => p.L + (p.nc ? 'nc' : 'no')).sort().join() + '|' + parts.filter(p => p.t === 'stand').length; }, pb[1]);
     if (again !== '1no,2nc|0') out.push('drawn again in Circuit Builder from the print: ' + again);
+    return out;
+  });
+  await check('High and low switches (Dallas, 20 Nov 2026): pressure, flow and float switches come high or low, as temperature switches do; a low one placed from the Switches menu (its kind in a list out to the side), captioned and badged as low, its instrument up at rest and falling as it is worked, acting as its value falls, saved, printed LOW, and crossing to Print Builder and back as low', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    for (const [i, k] of ['psw-ncl', 'fsw-ncl', 'flt-nol', 'psw-no'].entries()) await toolbarDrop(page, k, 200 + (i % 2) * 400, 200 + Math.floor(i / 2) * 300);
+    const caps = await page.evaluate(() => parts.map(p => captionOf(p) + (p.low ? '/low' : '')).join());
+    if (caps !== 'PS1 Low Pressure Switch (NC)/low,FLS1 Low Flow Switch (NC)/low,FS1 Low Level Float Switch (NO)/low,PS2 High Pressure Switch (NO)') out.push('placed as: ' + caps);
+    const lab = await page.evaluate(() => [...document.querySelectorAll('#svg text')].map(t => t.textContent).filter(t => /^N[OC][↑↓]$/.test(t)).sort().join());
+    if (lab !== 'NC↓,NC↓,NO↑,NO↓') out.push('labels: ' + lab);
+    // by hand: a low float switch's water well up at rest and down when worked; a low pressure switch's needle up, then down
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(300);
+    const st = () => page.evaluate(() => { const f = parts.find(p => p.t === 'flt'), ps = parts.find(p => p.t === 'psw' && p.low), vf = view.parts.get(f.id), vp = view.parts.get(ps.id);
+      return [+(+vf.water.getAttribute('transform').match(/translate\(0 ([\d.]+)\)/)[1]).toFixed(0), +(+vp.needle.getAttribute('transform').match(/rotate\(([\d.]+)/)[1]).toFixed(0), fswRate(parts.find(p => p.t === 'fsw'))].join(' '); });
+    let s = await st(); if (s !== '57 310 0.6') out.push('at rest (water up, needle up, water flowing): ' + s);
+    await page.evaluate(() => { press('#F1', true); press('P1', true); press('W1', true); }); await page.waitForTimeout(500);
+    s = await st(); if (s !== '84 168 0') out.push('worked (water down, needle down, flow stopped): ' + s);
+    await page.evaluate(() => { press('#F1', false); press('P1', false); press('W1', false); setSpeed(1); }); await page.click('#tab-edit');
+    const pf = await page.evaluate(() => parts.map(p => pvFalls(p) ? 'f' : 'r').join(''));
+    if (pf !== 'fffr') out.push('acting as its value falls: ' + pf);
+    const back = await page.evaluate(() => readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.map(p => p.t + (p.nc ? 'nc' : 'no') + (p.low ? 'l' : '')).join());
+    if (back !== 'pswncl,fswncl,fltnol,pswno') out.push('read back: ' + back);
+    const pr = await page.evaluate(() => { const h = document.createElement('div'); h.innerHTML = printSheet('x', true).html; return [...h.querySelectorAll('text')].map(t => t.textContent).filter(t => /^(LOW|HIGH) /.test(t)).sort().join(); });
+    if (pr !== 'HIGH PRESS,LOW FLOW,LOW LEVEL,LOW PRESS') out.push('printed notes: ' + pr);
+    const d = await page.evaluate(() => circuitData());
+    const pb = await withPB(page, pb => pb.evaluate(d => { const r = circuitToPrint(d, { uid, defaultTB, long: 'tight' }); const ps = r.doc.sheets.flatMap(s => s.parts).filter(p => /^(ps|fs|fls)_/.test(p.t)); return [ps.map(p => p.t + ':' + p.tag).sort().join(), JSON.parse(JSON.stringify(r.doc))]; }, d));
+    if (pb[0] !== 'fls_ncl:FLS1,fs_nol:FS1,ps_ncl:PS1,ps_no:PS2') out.push('in Print Builder: ' + pb[0]);
+    delete pb[1].link; const again = await page.evaluate(doc => { openFromPrint(doc, 'x'); document.getElementById('link-dlg').close(); return parts.map(p => p.t + (p.nc ? 'nc' : 'no') + (p.low ? 'l' : '')).sort().join(); }, pb[1]);
+    if (again !== 'fltnol,fswncl,pswncl,pswno') out.push('drawn again in Circuit Builder from the print: ' + again);
     return out;
   });
   await check('Turned parts (Dallas, 19 Nov 2026): a part turned on the print is turned in Circuit Builder (its terminals where the print\'s wires reach them), saved so, and turned again on the way back; one turned in Circuit Builder is turned on the print', async page => {

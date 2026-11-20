@@ -24,9 +24,9 @@ function newPart(kind, x, y) {
     const lone = Object.keys(n).filter(k => n[k] === 1).sort((a, b) => a - b)[0];
     return P('jmp', x, y, { L: lone || nextNum(new Set(Object.keys(n))) });
   }
-  if (kind.startsWith('flt')) return P('flt', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'flt').map(q => q.L))), nc: kind === 'flt-nc', color: FLT_COL });   // a float switch: the next number
-  if (kind.startsWith('fsw')) return P('fsw', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'fsw').map(q => q.L))), nc: kind === 'fsw-nc', color: FSW_COL });   // a flow switch: the next number
-  if (kind.startsWith('psw')) return P('psw', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'psw').map(q => q.L))), nc: kind === 'psw-nc', color: PSW_COL });
+  if (kind.startsWith('flt')) return P('flt', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'flt').map(q => q.L))), nc: kind.startsWith('flt-nc'), ...(kind.endsWith('l') ? { low: true } : {}), color: FLT_COL });   // a float switch: the next number
+  if (kind.startsWith('fsw')) return P('fsw', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'fsw').map(q => q.L))), nc: kind.startsWith('fsw-nc'), ...(kind.endsWith('l') ? { low: true } : {}), color: FSW_COL });   // a flow switch: the next number
+  if (kind.startsWith('psw')) return P('psw', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'psw').map(q => q.L))), nc: kind.startsWith('psw-nc'), ...(kind.endsWith('l') ? { low: true } : {}), color: PSW_COL });
   if (kind.startsWith('tsw')) return P('tsw', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'tsw').map(q => q.L))), nc: kind.startsWith('tsw-nc'), ...(kind.endsWith('l') ? { low: true } : {}), color: TSW_COL });   // (tsw-no, tsw-nc: high temperature; tsw-nol, tsw-ncl: low)
   if (kind.startsWith('lsw')) return P('lsw', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'lsw').map(q => q.L))), nc: kind === 'lsw-nc' || kind === 'lsw-nch', held: kind.endsWith('h'), color: LSW_COL });   // a limit switch: the next number
   if (kind === 'fus' || kind === 'fu1') return P(kind, x, y, { L: nextFuse(kind === 'fus' ? 3 : 1) });   // (fuses: one count, a block taking three numbers)

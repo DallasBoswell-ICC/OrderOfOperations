@@ -301,6 +301,25 @@ body.fs .wrap { padding-top: 8px; }
 /* a ribbon button that opens a menu of parts: a small arrow after its name */
 .menu-btn span::after { content: ""; display: inline-block; width: 0; height: 0; margin-left: 5px; vertical-align: 2px; border: 4px solid transparent; border-top: 5px solid currentColor; border-bottom: 0; }
 .tp-menu .gbody { justify-content: center; }
+/* the menus as lists, as Print Builder's (Dallas, 20 Nov 2026): a row for each kind, its parts in a list out to its side */
+.tp-menu.tl { display: block; padding: 6px; min-width: 250px; }
+.tl-list, .tl-fly { display: flex; flex-direction: column; gap: 2px; }
+.tool.tl-row { width: 100%; min-height: 0; gap: 11px; padding: 4px 10px 4px 5px; background: transparent; border-color: transparent; font-size: .9rem; text-align: left; justify-content: flex-start; white-space: nowrap; }
+.tool.tl-row svg { width: 38px; height: 32px; padding: 3px 4px; background: #1a1b1d; border: 1px solid #3a3b3f; border-radius: 6px; box-sizing: border-box; }
+.tool.tl-row:hover:not(:disabled), .tl-sub:hover > .tl-hd, .tl-sub.open > .tl-hd { background: #3a3b40; }
+.tool.tl-row[hidden] { display: none; }
+.tl-n { flex: 1; }
+.tl-c { color: var(--faint); font-size: .8rem; margin-left: 14px; }
+.tl-car { color: var(--faint); font-size: .72rem; }
+.tl-sub { position: relative; }
+.tl-sub:not(:has(.tl-fly > .tool:not([hidden]))) { display: none; }
+.tl-fly { display: none; position: absolute; left: calc(100% + 4px); top: -7px; z-index: 41; min-width: 240px; padding: 6px; background: var(--chip); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 16px 34px rgba(0,0,0,.55); }
+.tl-fly::before { content: ""; position: absolute; left: -10px; top: 0; bottom: 0; width: 10px; }
+.tp-menu.flip .tl-fly { left: auto; right: calc(100% + 4px); }
+.tp-menu.flip .tl-fly::before { left: auto; right: -10px; }
+.tl-sub:hover > .tl-fly, .tl-sub.open > .tl-fly { display: flex; }
+.tl-flat { display: flex; flex-direction: column; gap: 2px; }
+.tl-block { padding: 2px 4px 8px; margin-bottom: 4px; border-bottom: 1px solid var(--line); }
 
 /* the speed on the operator station: a plate, the preset speeds, and the slider with the speed beside it */
 .st-speed { margin-top: 14px; padding-top: 10px; border-top: 1px solid #9a9ea2; display: grid; justify-items: center; gap: 7px; }
