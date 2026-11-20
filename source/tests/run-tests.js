@@ -3445,6 +3445,43 @@ const DEF_CIRCUIT = `
     if (h[5]) out.push('the window stayed open');
     return out;
   });
+  await check('Float switches (Dallas, 20 Nov 2026, design A): NO and NC, tank low at rest and full when worked (the float on its arm hinged on the left wall riding the water; the upright stem and float pushed up under the blade), worked by hand or by a Level value, saved, printed as his float symbol, and crossing to Print Builder and back as float switches', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    const iss = await page.evaluate(() => { W = 760; W_USER = 760;
+      ['flt-no', 'flt-nc'].forEach((k, i) => { const y = 200 + i * 300, h = TERM({ t: kindOf(k) }); parts.push(newPart(k, 280, y), P('lamp', 560, y, { L: '', color: '#00B050' })); wires.push(Wr(0, y, 280 - h, y), Wr(280 + h, y, 500, y), Wr(620, y, W, y)); });
+      normalize(); draw(); return [...wiringIssues(network()).keys()].join(); });
+    if (iss) out.push('wiring issues: ' + iss);
+    const caps = await page.evaluate(() => parts.filter(p => p.t === 'flt').map(p => captionOf(p) + '/' + p.color).join());
+    if (caps !== 'FS1 Float Switch (NO)/#16C1E8,FS2 Float Switch (NC)/#16C1E8') out.push('placed as: ' + caps);
+    const st = () => page.evaluate(() => parts.filter(p => p.t === 'flt').map(p => { const v = view.parts.get(p.id), w = v.water.getAttribute('transform').match(/translate\(0 ([\d.]+)\)/)[1], l = v.dg.getAttribute('transform').match(/translate\(0 (-?[\d.]+)\)/)[1];
+      return [lswClosed(p) ? 'C' : 'o', +(+w).toFixed(0), +(+v.arm.getAttribute('x2') > FLT_PIV[0]), (+l).toFixed(0) < 0 ? 'up' : 'down', v.dome.getAttribute('fill')].join(' '); }).join(' | ') + ' | lamps ' + parts.filter(p => p.t === 'lamp').map(p => +!!coilOn[p.id]).join(''));
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    let s = await st(); if (s !== 'o 88 1 down #a6a6a6 | C 88 1 up #16C1E8 | lamps 01') out.push('at rest (tank low): ' + s);
+    await page.evaluate(() => { press('#F1', true); press('#F2', true); }); await page.waitForTimeout(500);
+    s = await st(); if (s !== 'C 46 1 up #16C1E8 | o 46 1 up #a6a6a6 | lamps 10') out.push('worked (tank full): ' + s);
+    await page.evaluate(() => { press('#F1', false); press('#F2', false); }); await page.waitForTimeout(500);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    const back = await page.evaluate(() => readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.filter(p => p.t === 'flt').map(p => p.L + (p.nc ? 'nc' : 'no') + p.color).join());
+    if (back !== '1no#16C1E8,2nc#16C1E8') out.push('read back: ' + back);
+    // worked by a Level value: the water at the value, the switch acting at its set point and resetting at its reset point
+    const pv = await page.evaluate(() => { const v = { id: 'lv', name: 'Sump', kind: 'level', unit: 'in', min: 0, max: 40, start: 0 }; PV.push(v);
+      const f = parts.find(p => p.t === 'flt' && p.L === '1'); Object.assign(f, { pv: 'lv', sp: 30, rs: 10 }); draw(); return PV_FOR.flt; });
+    if (pv !== 'level') out.push('worked by a ' + pv + ' value');
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(300);
+    const at = async x => { await page.evaluate(x => pvSet('lv', x), x); await page.waitForTimeout(350); return page.evaluate(() => { const p = parts.find(p => p.t === 'flt' && p.L === '1'), v = view.parts.get(p.id); return (lswClosed(p) ? 'C' : 'o') + Math.round(+v.water.getAttribute('transform').match(/translate\(0 ([\d.]+)\)/)[1]); }); };
+    const seq = [await at(0), await at(20), await at(35), await at(20), await at(5)].join(' ');
+    if (seq !== 'o88 o67 C51 C67 o83') out.push('Level 0, 20, 35, 20, 5 in (closed, water): ' + seq);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    const pr = await page.evaluate(() => { const h = document.createElement('div'); h.innerHTML = printSheet('x', true).html; return [...h.querySelectorAll('text')].map(t => t.textContent).filter(t => /^FS\d/.test(t)).join(); });
+    if (pr !== 'FS1,FS2') out.push('printed tags: ' + pr);
+    const d = await page.evaluate(() => circuitData());
+    const pb = await withPB(page, pb => pb.evaluate(d => { const r = circuitToPrint(d, { uid, defaultTB, long: 'tight' }); const ps = r.doc.sheets.flatMap(s => s.parts).filter(p => /^fs_/.test(p.t)); return [ps.map(p => p.t + ':' + p.tag).sort().join(), JSON.parse(JSON.stringify(r.doc))]; }, d));
+    if (pb[0] !== 'fs_nc:FS2,fs_no:FS1') out.push('in Print Builder: ' + pb[0]);
+    delete pb[1].link; const again = await page.evaluate(doc => { openFromPrint(doc, 'x'); document.getElementById('link-dlg').close(); return parts.filter(p => p.t === 'flt').map(p => p.L + (p.nc ? 'nc' : 'no')).sort().join() + '|' + parts.filter(p => p.t === 'stand').length; }, pb[1]);
+    if (again !== '1no,2nc|0') out.push('drawn again in Circuit Builder from the print: ' + again);
+    return out;
+  });
   await check('Turned parts (Dallas, 19 Nov 2026): a part turned on the print is turned in Circuit Builder (its terminals where the print\'s wires reach them), saved so, and turned again on the way back; one turned in Circuit Builder is turned on the print', async page => {
     const SPEC = [['pb_no', 90], ['coil', 90], ['con_no', 270], ['ls_no', 180], ['pl', 90], ['sol', 270]];
     const pr = await withPB(page, pb => pb.evaluate(SPEC => { loadDoc(withDrawnBy(template('blank'))); const L1 = S.parts.find(q => q.label === 'L1'); let x = 500;
@@ -3490,7 +3527,7 @@ const DEF_CIRCUIT = `
     return out;
   });
   await check('Stand-ins (Dallas, 19 Nov 2026): every Print Builder part Circuit Builder has none of comes in as a stand-in (its symbol in a box, terminals as the print joins them), draws, runs (passing nothing) and prints, and goes back to the print as the same part, tag and name', async page => {
-    const TYPES = ['spst', 'prs_no', 'fs_nc', 'cb', 'cb2', 'cb3', 'fdsc3', 'ol', 'gnd', 'spdt', 'dpst', 'dpdt', 'xover'];
+    const TYPES = ['spst', 'prs_no', 'cb', 'cb2', 'cb3', 'fdsc3', 'ol', 'gnd', 'spdt', 'dpst', 'dpdt', 'xover'];
     const pr = await withPB(page, pb => pb.evaluate(TYPES => { loadDoc(withDrawnBy(template('blank'))); const L1 = S.parts.find(q => q.label === 'L1'); let y = 260;
       for (const t of TYPES) { const p = addPart(S, t, 900, y); p.tag = t.toUpperCase().replace(/_/g, '') + '1'; p.desc = 'D' + t; const tm = linkPbTerms(p)[0]; addWire(S, [[L1.x, tm[1]], tm]); y += 340; }
       refresh(true); return JSON.parse(JSON.stringify(doc)); }, TYPES));

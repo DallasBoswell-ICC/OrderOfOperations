@@ -12,7 +12,7 @@ const PV_KINDS = {
   position: ['Position', ['in', 'ft', '%']], pressure: ['Pressure', ['psi', 'inHg', 'inH₂O']], temperature: ['Temperature', ['°F']],
   level: ['Level', ['in', 'ft', 'gal', '%']], flow: ['Flow', ['gpm', 'cfm']], speed: ['Speed', ['rpm', 'ft/min']], other: ['Other', []],
 };
-const PV_FOR = { lsw: 'position', psw: 'pressure', fsw: 'flow', tsw: 'temperature' };   // (the kind of value each switch is worked by)
+const PV_FOR = { lsw: 'position', psw: 'pressure', fsw: 'flow', flt: 'level', tsw: 'temperature' };   // (the kind of value each switch is worked by)
 let PV = [], PVV = {}, PVACT = {}, PVDIR = {};   // (PVDIR: a flow value's direction while running, 1 forward or -1 reverse)   // the values (with the circuit); while running, each one's value now, and which switches they are working
 const pvOf = p => p && p.pv ? PV.find(v => v.id === p.pv) || null : null;
 const pvLinked = p => isLim(p) && !!pvOf(p);
@@ -107,7 +107,7 @@ function pvStartRun() {
 }
 const pvDrvText = v => parts.filter(p => isDrv(p) && p.pv === v.id).sort((a, b) => a.t.localeCompare(b.t) || a.L - b.L).map(p => drvText(p, v)).join(', ');
 const pvLinksText = v => parts.filter(p => isLim(p) && p.pv === v.id).sort((a, b) => a.t.localeCompare(b.t) || a.L - b.L).map(p => {
-  const tag = (p.t === 'tsw' ? 'TS' : p.t === 'psw' ? 'PS' : p.t === 'fsw' ? 'FLS' : 'LS') + p.L, u = v.unit ? ' ' + v.unit : '';
+  const tag = (p.t === 'tsw' ? 'TS' : p.t === 'psw' ? 'PS' : p.t === 'fsw' ? 'FLS' : p.t === 'flt' ? 'FS' : 'LS') + p.L, u = v.unit ? ' ' + v.unit : '';
   if (p.t === 'lsw') return `${tag} at ${p.side === 'lo' ? '≤' : '≥'} ${pvFmt(v, +p.sp)}${u}`;
   return `${tag} at ${pvFalls(p) ? '≤' : '≥'} ${pvFmt(v, +p.sp)}${u}, resets at ${pvFmt(v, +p.rs)}${u}`;
 }).join(' · ');

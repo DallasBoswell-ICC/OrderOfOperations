@@ -92,7 +92,7 @@ function drawEstop(p, v, x, y, g) {
     el('path', { d: `M ${P1[0] + tx * L} ${P1[1] + ty * L} L ${P1[0] + nx * w} ${P1[1] + ny * w} L ${P1[0] - nx * w} ${P1[1] - ny * w} Z`, fill: ESTOP_PLATE }, v.twist);
   }
 }
-const captionOf = p => p.t === 'stand' ? `${p.L ? p.L + ' ' : ''}${LINK_PB_SYMN[p.sym] || p.sym} (stand-in)` : p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'stand' ? `${p.L ? p.L + ' ' : ''}${LINK_PB_SYMN[p.sym] || p.sym} (stand-in)` : p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'flt' ? `FS${p.L} Float Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -121,7 +121,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => p.t === 'stand' ? standBox(p).hh + 11 : (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => p.t === 'stand' ? standBox(p).hh + 11 : (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'flt' ? FLT_UP + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -261,6 +261,8 @@ function drawPart(p, g, x, y, chan, onStation) {
     drawPress(p, g, x, y, v);
   } else if (p.t === 'fsw') {
     drawFlow(p, g, x, y, v);
+  } else if (p.t === 'flt') {
+    drawFloat(p, g, x, y, v);
   } else if (p.t === 'xfm') {
     drawXfm(p, g, x, y, v, chan);
   } else if (p.t === 'fu1') {
@@ -943,6 +945,78 @@ function drawFlow(p, g, x, y, v) {
   el('text', { x: x + hw - 22, y: bot - 11.8, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = p.nc ? 'NC' : 'NO';
   setFlow(v, p, editing ? 0 : lswPos(p), editing ? !!p.nc : lswClosed(p));
   if (editing) delete FLOW[p.id]; else if (FLOW[p.id]) FLOW[p.id].k = '';   // (Build: an empty pipe; running: painted afresh on the next frame)
+}
+/* A float switch (Dallas's design A, 20 Nov 2026): drawn as the flow switch is, its tank (in his units) where the pipe is.
+   In the tank, water to a level (low at rest, high worked; or a Level value's), a float on an arm hinged on the tank's left
+   wall, riding the water. Under the blade, upright as the pressure switch's diaphragm and stem are, the NEMA float switch's
+   short stem and round float (radius 12), rising to push the blade. */
+const FLT_LOW = 88, FLT_HIGH = 46, FLT_PIV = [90, 74], FLT_ARM = 70;
+function drawFloat(p, g, x, y, v) {
+  const k = FSW_K, col = p.color, r = BOX * .105, sy = BOX * .045, hw = LSW_W / 2, top = y - LSW_TOP, bot = y + LSW_BOT, px1 = x - 30, px2 = x + 30;
+  const t = el('g', { transform: `translate(${(x - 161 * k).toFixed(2)} ${(y - 208.6 * k).toFixed(2)}) scale(${k})` }, g);
+  for (const sx of [105.5, 195.5]) el('rect', { x: sx, y: 107, width: 20, height: 32, fill: 'url(#gFlange)', stroke: '#111', 'stroke-width': 1.4 }, t);
+  el('path', { d: 'M130 140L135 102H185L190 140Z', fill: '#242424' }, t);
+  el('path', { d: 'M135 136L139 106.7H181L185 136', fill: 'none', stroke: col, 'stroke-width': 2.6 }, t);
+  // the tank: steel, a glass front; the water, its surface rippled
+  el('rect', { x: 66, y: 14, width: 190, height: 100, rx: 9, fill: 'url(#gPipe)', stroke: '#111', 'stroke-width': 1.4, filter: 'url(#fShadow)' }, t);
+  el('rect', { x: 76, y: 24, width: 170, height: 80, rx: 4, fill: '#1d1f22', stroke: '#111', 'stroke-width': 1.4 }, t);
+  const cid = 'fltc' + (++FSW_N), cp = el('clipPath', { id: cid }, t); el('rect', { x: 77, y: 25, width: 168, height: 78, rx: 3.5 }, cp);
+  const wg = el('g', { 'clip-path': `url(#${cid})` }, t);
+  v.water = el('g', {}, wg);
+  el('rect', { x: 76, y: 0, width: 170, height: 110, fill: 'url(#gWater)' }, v.water);
+  let wave = 'M76 0'; for (let xx = 76; xx < 246; xx += 17) wave += 'q4.25 -2.6 8.5 0t8.5 0';
+  el('path', { d: wave, fill: 'none', stroke: '#cfe6ff', 'stroke-width': 1.6, opacity: .85 }, v.water);
+  // the float on its arm, hinged on the tank's left wall
+  const [ax, ay] = FLT_PIV;
+  el('rect', { x: 77, y: ay - 10, width: 13, height: 20, rx: 2, fill: '#5d636a', stroke: '#111', 'stroke-width': 1.2 }, wg);
+  v.armSh = el('line', { x1: ax, y1: ay, stroke: '#111', 'stroke-width': 5.5, 'stroke-linecap': 'round' }, wg);
+  v.arm = el('line', { x1: ax, y1: ay, stroke: '#c9ced4', 'stroke-width': 3, 'stroke-linecap': 'round' }, wg);
+  v.fball = el('g', {}, wg);
+  el('circle', { r: 12.2, fill: '#111' }, v.fball); el('circle', { r: 11, fill: '#ff9a2e' }, v.fball); el('circle', { r: 11, fill: 'url(#gDome)' }, v.fball);
+  el('circle', { cx: ax, cy: ay, r: 4, fill: '#5d636a', stroke: '#111', 'stroke-width': 1 }, wg);
+  el('path', { d: 'M96 30L116 30L104 98L92 98Z', fill: '#fff', opacity: .06 }, t);   // (the glass's glint)
+  // the body
+  framed('rect', { x: x - hw, y: top, width: LSW_W, height: LSW_TOP + LSW_BOT, rx: 15, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
+  // the stem and float (they rise together; the stem reaches up to the blade's underside)
+  const by = y + 46, sw = 12 * k;
+  v.dg = el('g', {}, g);
+  v.stemSh = el('line', { x1: x, y1: y, x2: x, y2: by - 10, stroke: '#111', 'stroke-width': sw, 'stroke-linecap': 'round', filter: 'url(#fShadow)' }, v.dg);
+  el('circle', { cx: x, cy: by, r: 13, fill: '#111', filter: 'url(#fShadow)' }, v.dg);
+  v.stem = el('line', { x1: x, y1: y, x2: x, y2: by - 10, stroke: BLADE_GREY, 'stroke-width': sw, 'stroke-linecap': 'round' }, v.dg);
+  v.dome = el('circle', { cx: x, cy: by, r: 12, fill: BLADE_GREY }, v.dg);
+  el('circle', { cx: x, cy: by, r: 12, fill: 'url(#gDome)' }, v.dg);
+  // the blade, hinged on the left post, and the posts
+  v.blade = el('g', {}, g); const len = 60 + r * .6;
+  v.bladeShape = el('rect', { x: px1, y: y - 3.5, width: len, height: 7, rx: 3.5, fill: BLADE_GREY, stroke: 'rgba(0,0,0,.35)', 'stroke-width': .6 }, v.blade);
+  el('rect', { x: px1, y: y - 3.5, width: len, height: 7, rx: 3.5, fill: 'url(#gGloss)' }, v.blade);
+  v.hinge = [px1, y];
+  v.posts = el('g', { fill: GREY }, g);
+  el('rect', { x: x - hw + 4.5, y: y - sy, width: px1 - (x - hw + 4.5), height: 2 * sy }, v.posts); el('circle', { cx: px1, cy: y, r }, v.posts);
+  el('rect', { x: px2, y: y - sy, width: x + hw - 4.5 - px2, height: 2 * sy }, v.posts); el('circle', { cx: px2, cy: y, r }, v.posts);
+  for (const cx of [px1, px2]) el('circle', { cx, cy: y, r, fill: 'url(#gDome)' }, g);
+  el('rect', { x: x - hw + 7, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('text', { x: x - hw + 23, y: bot - 11.8, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = 'FS' + p.L;
+  el('rect', { x: x + hw - 37, y: bot - 25, width: 30, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('text', { x: x + hw - 22, y: bot - 11.8, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = p.nc ? 'NC' : 'NO';
+  setFloat(v, p, editing ? 0 : lswPos(p), editing ? !!p.nc : lswClosed(p));
+}
+// a float switch pos of the way from at rest (0) to worked (1): the water up the tank (or at its Level value), the float riding
+// it on its arm; the stem and float pushed up, the blade turned as the limit switch's; lit in its colour while closed
+function setFloat(v, p, pos, cl) {
+  const f = pvFrac(p), k = pos.toFixed(3) + (cl ? 'c' : 'o') + (f === null ? '' : f.toFixed(3));
+  if (v.k === k) return; v.k = k;
+  const [hx, hy] = v.hinge, [a0, a1] = lswAngles(p), ba = lerp(a0, a1, pos), at = a => Math.tan(a * Math.PI / 180) * 30;
+  v.blade.setAttribute('transform', `rotate(${ba.toFixed(2)} ${hx} ${hy})`);
+  const lift = Math.max(0, at(lswAngles({ nc: false })[0]) - at(ba)), sTop = hy + at(ba) + 2 + lift;
+  v.dg.setAttribute('transform', `translate(0 ${(-lift).toFixed(2)})`);
+  for (const s of [v.stem, v.stemSh]) s.setAttribute('y1', sTop.toFixed(2));
+  const c = cl ? p.color : BLADE_GREY;
+  v.bladeShape.setAttribute('fill', c); v.stem.setAttribute('stroke', c); v.dome.setAttribute('fill', c); v.posts.setAttribute('fill', cl ? p.color : GREY);
+  // the water and the float on its arm
+  const lv = lerp(FLT_LOW, FLT_HIGH, f === null ? pos : f), [ax, ay] = FLT_PIV, dy = lv - ay, bx = ax + Math.sqrt(Math.max(0, FLT_ARM * FLT_ARM - dy * dy));
+  v.water.setAttribute('transform', `translate(0 ${lv.toFixed(2)})`);
+  for (const l of [v.arm, v.armSh]) { l.setAttribute('x2', bx.toFixed(2)); l.setAttribute('y2', lv.toFixed(2)); }
+  v.fball.setAttribute('transform', `translate(${bx.toFixed(2)} ${lv.toFixed(2)})`);
 }
 // a flow switch pos of the way from at rest (0) to worked (1): the paddle bent over, the blade turned as the limit
 // switch's (its stem and flag with it), the water in the pipe (by hand: fading in as it is worked; linked to a Flow
