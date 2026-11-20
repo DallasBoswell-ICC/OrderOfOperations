@@ -1015,7 +1015,17 @@ function linkKeepPrint(d, env) {
     return { doc: pb, notes: { changed: [`Kept as you drew it: the circuit is still joined just as it was (only moved about)${n ? `; ${n} part${n > 1 ? 's' : ''} brought up to date (letters, names or contacts)` : ''}`], left: [], kept: true } };
   } catch (e) { return null; }
 }
+// (how full a print's sheets are: for each sheet but the last, the share of its height its parts take; 1 for a single sheet)
+const linkThin = doc => doc.sheets.slice(0, -1).map(s => { const ys = s.parts.filter(p => p.t !== 'rail' && !/^cnt_/.test(p.t)).map(p => p.y);
+  return ys.length ? (Math.max(...ys) - Math.min(...ys) + 160) / (linkDrawH(s) - 280) : 0; }).filter(f => f < .5).length;
 function circuitToPrint(d, env) {
+  // (Dallas, 19 Nov 2026: landscape that leaves a sheet less than half full (its rungs too many to share a shorter sheet) is not
+  // worth it: kept portrait, its long rungs wrapped instead)
+  if (env.long === 'land' && !env.landTried) { const r = circuitToPrint(d, { ...env, landTried: 1 });
+    if (r.notes.same || r.notes.kept || !linkThin(r.doc)) return r;
+    const w = circuitToPrint(d, { ...env, long: 'wrap', landTried: 1 }); if (linkThin(w.doc) >= linkThin(r.doc)) return r;
+    w.notes.changed.unshift('Kept portrait: drawn landscape, a sheet was left less than half full (its rungs too tall to share a shorter sheet), so the long rungs are wrapped instead');
+    return w; }
   if (!d || typeof d !== 'object' || !Array.isArray(d.parts) || !Array.isArray(d.wires)) throw new Error('That is not a circuit from Circuit Builder.');
   const uid = env.uid, changed = [], left = [], note = (list, s) => { if (!list.includes(s)) list.push(s); };
   // (opened in Circuit Builder from a print and not changed since: that print, exactly; Dallas, 19 Nov 2026)

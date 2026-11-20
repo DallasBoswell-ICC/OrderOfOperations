@@ -3371,9 +3371,9 @@ const DEF_CIRCUIT = `
         for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) { const a = L[i], c = L[j]; if (a.id !== c.id && a.x0 < c.x1 - 2 && c.x0 < a.x1 - 2 && a.y0 < c.y1 - 2 && c.y0 < a.y1 - 2) over++; }
         for (const x of XREFS) if (x.x1 > drawW(s) - 4) outside++;
         for (const p of s.parts) if (p.t !== 'rail' && (p.x < 0 || p.x > drawW(s))) outside++; });
-      return { mode, land: !!doc.sheets[0].land, over, outside, labs }; }), d));
+      return { mode, land: !!doc.sheets[0].land, kept: res.notes.changed.some(t => /^Kept portrait/.test(t)), over, outside, labs }; }), d));
     for (const x of r) { if (x.over) out.push(x.mode + ': ' + x.over + ' tags or names on top of each other'); if (x.outside) out.push(x.mode + ': ' + x.outside + ' things past the border'); if (x.labs < 300) out.push(x.mode + ': only ' + x.labs + ' labels'); }
-    if (!r[0].land) out.push('landscape when needed: not landscape');
+    if (!r[0].land && !r[0].kept) out.push('landscape when needed: neither landscape nor kept portrait with a note');
     if (r[1].land || r[2].land) out.push('tighter and fold should stay portrait');
     return out;
   });
@@ -3438,7 +3438,7 @@ const DEF_CIRCUIT = `
           if (x0 < 0 || y0 < 0 || x1 > W || y1 > H) out.push(`${n} (${m}), sheet ${k + 1}: ink from ${Math.round(x0)},${Math.round(y0)} to ${Math.round(x1)},${Math.round(y1)} on a ${W} by ${H} sheet`); }); }
       return out; }, circs));
   });
-  await check('O³ link (Dallas, 19 Nov 2026): no near-empty sheets: in every ready-made and test circuit drawn as a print, no sheet with nothing on it; in portrait each sheet but the last at least half full (the stress test\'s first sheet held one rung of 17)', async page => {
+  await check('O³ link (Dallas, 19 Nov 2026): no near-empty sheets: in every ready-made and test circuit drawn as a print, each sheet but the last at least half full (landscape that would leave one thin stays portrait, its long rungs wrapped) (the stress test\'s first sheet held one rung of 17)', async page => {
     const fs = require('fs'), path = require('path'), FX = path.join(__dirname, 'fixtures');
     const circs = (await page.evaluate(() => [...document.getElementById('preset').options].map(o => o.value).filter(v => v && v !== 'blank').map(n => { loadPreset(n); return [n, circuitData()]; })))
       .concat(fs.readdirSync(path.join(FX, 'transfer')).map(f => [f, JSON.parse(fs.readFileSync(path.join(FX, 'transfer', f), 'utf8'))]))
@@ -3446,7 +3446,7 @@ const DEF_CIRCUIT = `
     return withPB(page, pb => pb.evaluate(circs => { const out = [];
       for (const [n, d] of circs) for (const m of ['tight', 'land']) { const r = circuitToPrint(d, { uid, defaultTB, tidy, long: m }); const sh = r.doc.sheets;
         sh.slice(0, -1).forEach((s, k) => { const ys = s.parts.filter(p => p.t !== 'rail' && !/^cnt_/.test(p.t)).map(p => p.y); if (!ys.length) { out.push(`${n} (${m}), sheet ${k + 1} of ${sh.length}: nothing on it`); return; }
-          const used = (Math.max(...ys) - Math.min(...ys) + 160) / (drawH(s) - 280); if (used < .5 && m === 'tight') out.push(`${n} (${m}), sheet ${k + 1} of ${sh.length}: ${Math.round(used * 100)}% full`); }); }
+          const used = (Math.max(...ys) - Math.min(...ys) + 160) / (drawH(s) - 280); if (used < .5) out.push(`${n} (${m}), sheet ${k + 1} of ${sh.length}: ${Math.round(used * 100)}% full`); }); }
       return out; }, circs));
   });
   await check('O³ link (Dallas, 19 Nov 2026, his "Ladder Edit" drawings): a rung too long for letter portrait asks how to draw it (landscape, tighter, wrapped, or continued on a new rung) and remembers; wrapped, the wire runs back under the rung and the line keeps its number; continued, a new rung from continuations named R#-W#; either way it comes back to Circuit Builder joined the same way', async page => {
