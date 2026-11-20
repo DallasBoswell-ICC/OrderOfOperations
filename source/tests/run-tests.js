@@ -3390,6 +3390,33 @@ const DEF_CIRCUIT = `
     if (pb !== 'L1,L1A,L1B,L1C') out.push('Print Builder: ' + pb + ' (want L1,L1A,L1B,L1C)');
     return out;
   });
+  await check('Default speed (Dallas, 20 Nov 2026): Set as Default ▾ keeps the speed for this circuit (saved in its file, undone with Undo) or for this computer; a circuit starts at its own speed, else this computer\'s, else 1×; each can be cleared; it goes to Print Builder and back', async page => {
+    const r = await page.evaluate(() => { const out = {}, click = id => { document.getElementById('speed-def').click(); document.getElementById(id).click(); };
+      try { localStorage.removeItem(SPEED_KEY); } catch (_) {}
+      loadPreset('andor'); CIRC_SPEED = null; startSpeed(); out.start = speed;
+      setSpeed(2); document.getElementById('speed-def').click(); out.menu = !document.getElementById('speed-menu').hidden && /starts at 2×/.test(document.getElementById('spd-circ-sub').textContent); document.getElementById('spd-circ').click();
+      out.saved = circuitData().sp; out.menuShut = document.getElementById('speed-menu').hidden;
+      undo(); out.undone = CIRC_SPEED; redo();
+      const d = circuitData(); setSpeed(1); useCircuit(readCircuit(JSON.parse(JSON.stringify(d))), 'x'); out.reopened = speed;
+      setSpeed(5); click('spd-here'); out.here = localStorage.getItem(SPEED_KEY);
+      document.getElementById('preset').value = 'traffic'; document.getElementById('preset').dispatchEvent(new Event('change')); out.preset = [speed, CIRC_SPEED];
+      useCircuit(readCircuit(JSON.parse(JSON.stringify(d))), 'x'); out.own = speed; out.data = circuitData();
+      click('spd-circ-clr'); out.cleared = [CIRC_SPEED, circuitData().sp];
+      click('spd-here-clr'); out.hereCleared = localStorage.getItem(SPEED_KEY); loadPreset('andor'); startSpeed(); out.back1 = speed;
+      return out; });
+    const rt = await withPB(page, pb => pb.evaluate(d => { const p = circuitToPrint(d, { uid, defaultTB, long: 'tight' }).doc; const q = p.sheets[0].parts.find(x => x.t !== 'rail'); q.desc = (q.desc || '') + ' X'; return p; }, r.data));   // (changed in Print Builder on the way)
+    const back = await page.evaluate(doc => { openFromPrint(doc, 'x'); document.getElementById('link-dlg').close(); return [CIRC_SPEED, speed]; }, rt);
+    const out = [];
+    if (r.start !== 1) out.push('starts at ' + r.start + ' with nothing set');
+    if (!r.menu || !r.menuShut) out.push('the menu: shown with the speed ' + r.menu + ', shut after ' + r.menuShut);
+    if (r.saved !== 2 || r.reopened !== 2) out.push('for this circuit: saved ' + r.saved + ', opened again at ' + r.reopened);
+    if (r.undone !== null) out.push('Undo left the circuit\'s speed at ' + r.undone);
+    if (r.here !== '5' || r.preset[0] !== 5 || r.preset[1] !== null) out.push('for this computer: kept ' + r.here + ', a circuit with none of its own starts at ' + r.preset);
+    if (r.own !== 2) out.push('a circuit with its own speed (2×) started at ' + r.own + ' (this computer: 5×)');
+    if (r.cleared.join() !== ',' || r.hereCleared !== null || r.back1 !== 1) out.push('cleared: circuit ' + r.cleared + ', computer ' + r.hereCleared + ', then starts at ' + r.back1);
+    if (back[0] !== 2 || back[1] !== 2) out.push('to Print Builder and back: its speed ' + back[0] + ', starts at ' + back[1]);
+    return out;
+  });
   await check('Export (Dallas, 19 Nov 2026): the Export button opens a window with Print Builder in it (its icon, what it does); its button hands the circuit over in a new tab and closes the window', async page => {
     const out = [];
     const h = await page.evaluate(() => { let url = null; const k0 = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () { if (/from=link/.test(this.href)) url = this.target === '_blank' && this.rel === 'noopener' ? this.getAttribute('href') : 'not a new-tab noopener link: ' + this.href; else k0.call(this); }; document.getElementById('export-btn').click(); const d = document.getElementById('export-dlg'), opened = d.open;

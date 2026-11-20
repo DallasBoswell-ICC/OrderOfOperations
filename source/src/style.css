@@ -278,7 +278,7 @@ body.fs .wrap { padding-top: 8px; }
 .ov-view { position: absolute; border: 1.5px solid var(--gold); background: rgba(255,192,0,.12); border-radius: 2px; pointer-events: none; box-sizing: border-box; }
 #pane1.with-ov .zoombar { right: 82px; }
 /* the Simulation tab kept compact: the slider under the speed buttons, the two-way choices one above the other */
-#speed-group { max-width: 290px; }
+#speed-group { max-width: 320px; }
 #speed-group #speed-slider { width: 170px; }
 #speed-group #speed-out { min-width: 0; width: 4em; padding: 1px 2px; }
 #timer-group .seg, #mode-group .seg { flex-direction: column; }
@@ -601,3 +601,13 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
 .xtext { display: grid; gap: 3px; } .xtext b { font-size: 1rem; } .xtext span { font-size: .85rem; color: #b9bdc2; line-height: 1.35; }
 .xcard button { grid-column: 2; justify-self: start; }
 @media (max-width: 1360px) { #export-btn .xlbl, #print-btn .xlbl { display: none; } #export-btn, #print-btn { padding-inline: 9px; } }
+
+/* Set as Default ▾ (Dallas, 20 Nov 2026): the speed a circuit starts at, for this circuit or for this computer */
+.spd-menu { position: fixed; z-index: 60; display: grid; min-width: 290px; padding: 5px; background: #26272a; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
+.spd-menu[hidden] { display: none; }
+.spd-menu button { display: grid; gap: 2px; text-align: left; font: inherit; font-size: .86rem; color: var(--ink); background: none; border: 0; border-radius: 7px; padding: 7px 10px; cursor: pointer; }
+.spd-menu button:hover, .spd-menu button:focus-visible { background: var(--chip-on); outline: none; }
+.spd-menu button span { font-size: .78rem; color: #aab0b6; }
+.spd-menu .clr { color: #c9cdd2; font-size: .8rem; border-top: 1px solid var(--line); border-radius: 0 0 7px 7px; }
+.spd-menu .clr[hidden] { display: none; }
+.spd-def button { padding: 4px 9px; white-space: nowrap; }

@@ -46,7 +46,7 @@ document.getElementById('del').addEventListener('click', del);
 document.getElementById('undo').addEventListener('click', undo);
 document.getElementById('redo').addEventListener('click', redo);
 document.getElementById('p-del').addEventListener('click', del);
-document.getElementById('clear').addEventListener('click', () => { snapshot(); parts = []; wires = []; W_USER = null; sel = null; circuitName = ''; LINK_PRINT = null; forgetFile(); draw(); });
+document.getElementById('clear').addEventListener('click', () => { snapshot(); parts = []; wires = []; W_USER = null; sel = null; circuitName = ''; LINK_PRINT = null; CIRC_SPEED = null; startSpeed(); forgetFile(); draw(); });
 document.addEventListener('keydown', e => {
   if (!editing || /SELECT|INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;   // (typing in a box, such as the Faults tab's work order: its keys are its own)
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); del(); }

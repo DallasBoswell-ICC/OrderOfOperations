@@ -15,6 +15,8 @@ let circuitName = '';
 // (the print this circuit was opened from, and the circuit's fingerprint then: while the circuit is not changed,
 // Open in Print Builder gives back that print exactly; Dallas, 19 Nov 2026)
 let LINK_PRINT = null;
+// (the speed this circuit starts at, kept in its file; null: none of its own. Dallas, 20 Nov 2026)
+let CIRC_SPEED = null;
 
 function circuitData() {
   if (typeof scenSync === 'function') scenSync();
@@ -34,6 +36,7 @@ function circuitData() {
     // order (sn), the one in force (si), and what the Fault Finder offers (ffo: random, a number given); the fields above are the one in force)
     ...(SCEN_N > 1 ? { sn: [...Array(SCEN_N).keys()].map(s => ({ fl: parts.map((p, i) => p.fz && PART_FAULTS[p.fz[s]] && canFault(p) ? [i, p.fz[s]] : null).filter(Boolean), wl: wires.map((q, i) => q.fz && WIRE_FAULTS[q.fz[s]] ? [i, q.fz[s]] : null).filter(Boolean), ...((SCEN_WO[s] || '').trim() ? { wo: SCEN_WO[s] } : {}) })), si: SCEN } : {}),
     ...(LINK_PRINT ? { pr: LINK_PRINT } : {}),
+    ...(CIRC_SPEED ? { sp: CIRC_SPEED } : {}),
     ...(!FF_OFFER.r || !FF_OFFER.n ? { ffo: [FF_OFFER.r ? 1 : 0, FF_OFFER.n ? 1 : 0] } : {}),
     // (its process values: id, name, kind, unit, lowest, highest, start; and the switches they work: part, value, setting, reset, side)
     ...(PV.length ? { pv: PV.map(v => [v.id, v.name, v.kind, v.unit, v.min, v.max, v.start]), pd: parts.map((p, i) => isDrv(p) && pvOf(p) ? [i, p.pv, +p.rate || 0, +p.cool || 0, drvPer(p), p.dir === 'down' ? 'down' : 'up', drvOff(p)] : null).filter(Boolean), pl: parts.map((p, i) => pvLinked(p) ? [i, p.pv, +p.sp, +(p.rs ?? p.sp), p.side === 'lo' ? 'lo' : 'hi'] : null).filter(Boolean),
@@ -106,11 +109,12 @@ function readCircuit(d) {
   }
   const ffo = Array.isArray(d.ffo) && (d.ffo[0] || d.ffo[1]) ? { r: !!d.ffo[0], n: !!d.ffo[1] } : null;
   const pr = d.pr && typeof d.pr === 'object' && d.pr.pb && d.pr.pb.kind === 'o3-print' && typeof d.pr.fp === 'string' ? d.pr : null;
-  return { pr, sn, si, swo, ffo, wo: swo ? swo[si] : typeof d.wo === 'string' ? d.wo.slice(0, 400) : '', w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', src: SRC_PAL.some(([, h]) => h === d.sc) ? d.sc : SRC_DEFAULT, ph: Array.isArray(d.pc) && d.pc.length === 3 && d.pc.every(hex) ? d.pc.map(hex) : [...PH_DEFAULT], pv, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
+  const sp = Number.isFinite(+d.sp) && +d.sp >= 0.1 && +d.sp <= 300 ? +d.sp : null;
+  return { sp, pr, sn, si, swo, ffo, wo: swo ? swo[si] : typeof d.wo === 'string' ? d.wo.slice(0, 400) : '', w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', src: SRC_PAL.some(([, h]) => h === d.sc) ? d.sc : SRC_DEFAULT, ph: Array.isArray(d.pc) && d.pc.length === 3 && d.pc.every(hex) ? d.pc.map(hex) : [...PH_DEFAULT], pv, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
 }
 function useCircuit(c, how) {
   snapshot();
-  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; LINK_PRINT = c.pr || null; scenFrom(c); normalize(); sel = null;
+  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize(); sel = null;
   fitView(); fit(true);
   say(how);
   if (editing) draw(); else { NET = network(); draw(); startRun(); afterRunStart(); }
@@ -252,7 +256,7 @@ function scheduleAutosave() {
   autosaveTimer = setTimeout(() => { try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(circuitData())); } catch (_) {} }, 400);
 }
 function restoreAutosave() {
-  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; LINK_PRINT = c.pr || null; scenFrom(c); normalize(); return true; }
+  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize(); return true; }
   catch (_) { return false; }
 }
 

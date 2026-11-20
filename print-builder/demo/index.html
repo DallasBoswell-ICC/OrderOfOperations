@@ -1010,6 +1010,7 @@ function linkMerge(old, nu, cbi, ownCol = new Set()) {
   if (old.pl) nu.pl = old.pl.map(a => [map(a[0]), ...a.slice(1)]).filter(a => a[0] >= 0);
   if (old.ph) nu.ph = old.ph.map(a => [map(a[0]), ...a.slice(1)]).filter(a => a[0] >= 0);
   if (old.pn) nu.pn = old.pn.map(map).filter(i => i >= 0);
+  if (old.sp) nu.sp = old.sp;   // (the speed the circuit starts at)
   if (old.fl) nu.fl = old.fl.map(([i, f]) => [map(i), f]).filter(a => a[0] >= 0);
   // (a fault on a wire: kept where the same run of wire is there still)
   const wi = new Map(nu.wires.map((w, i) => [w.slice(0, 4).join(','), i])), wmap = i => { const w = old.wires[i]; if (!w) return -1; const k = w.slice(0, 4).join(','), r = [w[2], w[3], w[0], w[1]].join(','); return wi.has(k) ? wi.get(k) : wi.has(r) ? wi.get(r) : -1; };

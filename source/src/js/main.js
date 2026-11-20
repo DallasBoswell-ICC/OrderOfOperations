@@ -27,6 +27,32 @@ function setSpeed(s, fromSlider) {
   document.querySelectorAll('[data-speed]').forEach(x => x.setAttribute('aria-pressed', String(Math.abs(+x.dataset.speed - s) < 1e-9)));
 }
 document.querySelectorAll('[data-speed]').forEach(b => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
+/* The speed a circuit starts at (Dallas, 20 Nov 2026): its own, saved in its file (CIRC_SPEED), or else this computer's (kept in this
+   browser), or else 1×. Set as Default ▾ keeps the speed it is set to now as either. */
+const SPEED_KEY = 'oo-circuit-builder:speed';
+const okSpeed = v => Number.isFinite(+v) && +v >= SPEED_MIN && +v <= SPEED_MAX ? +v : null;
+function speedHere() { try { return okSpeed(localStorage.getItem(SPEED_KEY)); } catch (_) { return null; } }
+function startSpeed() { setSpeed(CIRC_SPEED || speedHere() || 1); }
+const spdMenu = document.getElementById('speed-menu'), spdBtn = document.getElementById('speed-def');
+function spdShow(on) {
+  spdMenu.hidden = !on; spdBtn.setAttribute('aria-expanded', String(on)); if (!on) return;
+  const s = fmtSpeed(speed), here = speedHere();
+  document.getElementById('spd-circ-sub').textContent = `Saved in its file: anyone who opens it starts at ${s}`;
+  document.getElementById('spd-here-sub').textContent = `Circuits with no speed of their own start at ${s} here`;
+  const cc = document.getElementById('spd-circ-clr'), hc = document.getElementById('spd-here-clr');
+  cc.hidden = !CIRC_SPEED; cc.textContent = CIRC_SPEED ? `Clear This Circuit’s Speed (${fmtSpeed(CIRC_SPEED)})` : '';
+  hc.hidden = !here; hc.textContent = here ? `Back to 1× on This Computer (now ${fmtSpeed(here)})` : '';
+  const r = spdBtn.getBoundingClientRect(); spdMenu.style.left = Math.max(8, Math.min(r.left, innerWidth - spdMenu.offsetWidth - 8)) + 'px';
+  spdMenu.style.top = (r.top - spdMenu.offsetHeight - 6 > 8 && r.bottom + spdMenu.offsetHeight + 6 > innerHeight ? r.top - spdMenu.offsetHeight - 6 : r.bottom + 6) + 'px';
+  spdMenu.querySelector('button').focus();
+}
+spdBtn.addEventListener('click', () => spdShow(spdMenu.hidden));
+document.addEventListener('pointerdown', e => { if (!spdMenu.hidden && !spdMenu.contains(e.target) && e.target !== spdBtn) spdShow(false); }, true);
+spdMenu.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); spdShow(false); spdBtn.focus(); } });
+document.getElementById('spd-circ').addEventListener('click', () => { snapshot(); CIRC_SPEED = speed; spdShow(false); scheduleAutosave(); say(`This circuit now starts at ${fmtSpeed(speed)} (saved in its file).`); });
+document.getElementById('spd-here').addEventListener('click', () => { try { localStorage.setItem(SPEED_KEY, String(speed)); } catch (_) {} spdShow(false); say(`Circuits with no speed of their own now start at ${fmtSpeed(speed)} on this computer.`); });
+document.getElementById('spd-circ-clr').addEventListener('click', () => { snapshot(); CIRC_SPEED = null; spdShow(false); scheduleAutosave(); say('This circuit no longer has a speed of its own.'); });
+document.getElementById('spd-here-clr').addEventListener('click', () => { try { localStorage.removeItem(SPEED_KEY); } catch (_) {} spdShow(false); say('Circuits with no speed of their own start at 1× on this computer again.'); });
 // how timers count: at the simulation's speed, or in real time (remembered in this browser)
 function setTimersReal(v) {
   timersReal = v; retimeTimers();
@@ -94,13 +120,14 @@ window.addEventListener('resize', () => { if (fit(editing && !dragging())) { if 
 
 if (LOCKED) {
   // a locked simulator: its own circuit, straight into Run mode, with its name as the title
-  try { const c = readCircuit(LOCKED.circuit); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; LINK_PRINT = c.pr || null; scenFrom(c); normalize(); }
+  try { const c = readCircuit(LOCKED.circuit); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize(); }
   catch (_) { loadPreset('blank'); }
   document.body.classList.add('locked');
   document.querySelector('h1 span').textContent = circuitName || 'Circuit';
   fit(true); fitView(); setMode(true);
 } else if (!TS_MODE) {   // (the Troubleshooter starts itself: see troubleshooter.js)
   if (!restoreAutosave()) loadPreset('andor');   // carry on with the circuit from last time, if there is one
+  startSpeed();   // (at the circuit's own speed, or this computer's)
   fit(true); draw();
   // (opened by Print Builder's Open in Circuit Builder: its print, built as a circuit)
   const h = linkTake();
