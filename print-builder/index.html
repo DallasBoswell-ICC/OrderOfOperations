@@ -349,6 +349,27 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 .shd { padding: 6px 8px; background: transparent; color: #dfe4e8; font-size: 12px; border-radius: 6px; } .shd:hover { background: #2d3136; }
 .psub .pg { padding: 0 5px 6px; } .pg[hidden] { display: none; }
 .pcat .phd .pc { color: #9aa3ab; }
+
+/* the note on a circuit opened from Circuit Builder */
+.link-dlg { width: min(560px, 94vw); }
+.long-dlg { width: min(560px, 94vw); }
+.long-opts { display: flex; flex-direction: column; gap: 8px; }
+.long-opt { display: flex; flex-direction: column; gap: 2px; text-align: left; background: #2b2e32; color: var(--ink); border: 1px solid var(--line2); border-radius: 8px; padding: 10px 12px; cursor: pointer; font: inherit; }
+.long-opt b { font-size: 14px; } .long-opt span { font-size: 12.5px; color: var(--muted); }
+.long-opt:hover { background: #33373c; } .long-opt.last { border-color: var(--acc); box-shadow: inset 3px 0 0 var(--acc); }
+.long-note { font-size: 12px; color: var(--muted); align-self: center; }
+.link-dlg h4 { margin: 10px 0 2px; font-size: 14px; }
+.link-dlg ul { margin: 0 0 4px 18px; padding: 0; font-size: 13px; color: #cfd3d8; max-height: 34vh; overflow: auto; }
+.link-dlg p { margin: 0; font-size: 13.5px; }
+
+/* Export (Dallas, 19 Nov 2026): open the work in another O³ program, one card each */
+.xbtn { display: inline-flex; align-items: center; gap: 6px; }
+.export-dlg { width: min(560px, calc(100vw - 32px)); }
+.xcard { display: grid; grid-template-columns: 58px 1fr; gap: 6px 14px; align-items: center; padding: 12px; margin: 10px 0 4px; border: 1px solid var(--line2); border-radius: 10px; background: #1d2024; }
+.xcard img { border-radius: 12px; grid-row: span 2; }
+.xtext { display: grid; gap: 3px; } .xtext b { font-size: 1rem; } .xtext span { font-size: .85rem; color: #aab2bb; line-height: 1.35; }
+.xcard .btn { grid-column: 2; justify-self: start; }
+@media (max-width: 1360px) { #export-btn .xlbl { display: none; } }
 </style>
 <style id="print-page"></style>
 </head>
@@ -367,8 +388,9 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
                   </div></div>
       <button class="btn" id="open-btn">Open</button>
       <div class="menuwrap split"><button class="btn" id="save-btn">Save</button><button class="btn more" id="save-more" title="More ways to save" aria-haspopup="menu">▾</button>
-        <div class="dmenu" id="save-menu" hidden><button id="saveas-btn">Save As a New File… <span class="k">Ctrl+Shift+S</span></button></div></div>
+        <div class="dmenu" id="save-menu" hidden><button id="saveas-btn">Save As a New File… <span class="k">Ctrl+Shift+S</span></button><button id="open-cb-btn" title="Opens Circuit Builder in a new tab with this print built as a circuit you can run">Open in Circuit Builder</button></div></div>
       <button class="btn" id="print-btn">Print</button>
+      <button class="btn xbtn" id="export-btn" aria-label="Export" title="Export: open this print in another O³ program, in a new tab"><svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><path d="M8 4H4.5A1.5 1.5 0 0 0 3 5.5v10A1.5 1.5 0 0 0 4.5 17h10a1.5 1.5 0 0 0 1.5-1.5V12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M11 3h6v6M17 3l-7.5 7.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="xlbl">Export</span></button>
       <label class="uisz" title="How big the buttons, menus and writing are (the sheet has its own zoom)">Size
         <select id="ui-size"><option value="1">Small</option><option value="1.15" selected>Medium</option><option value="1.3">Large</option><option value="1.5">Extra Large</option></select></label>
       <button class="btn icon" id="undo-btn" title="Undo (Ctrl+Z)">↶</button>
@@ -490,6 +512,13 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
   <p class="cp-err" id="cp-err" hidden>Each side must be 4 to 48 inches (102 to 1219 mm).</p>
   <div class="acts"><button type="button" class="btn" id="cp-cancel">Cancel</button><button type="submit" class="btn primary">Use This Size</button></div>
 </form></dialog>
+<dialog id="long-dlg" class="dlg long-dlg" aria-labelledby="long-title"><h3 id="long-title">Some Rungs Are Too Long for Letter Portrait</h3><p class="sub" id="long-sub">With room for every tag, name and wire number, they won't fit across the sheet. How should they be drawn?</p><div class="long-opts"><button type="button" class="long-opt" data-long="land"><b>Landscape When Needed</b><span>The whole print on letter landscape, every rung spaced properly.</span></button><button type="button" class="long-opt" data-long="tight"><b>Stay Portrait, Tighter</b><span>Letter portrait; only the rungs that need it drawn closer together.</span></button><button type="button" class="long-opt" data-long="wrap"><b>Wrap Long Rungs</b><span>Letter portrait; a long rung's wire turns down after the last part that fits, runs back under it and carries on along the line below. That line keeps the rung's number. Rungs with many branches are drawn tighter instead.</span></button><button type="button" class="long-opt" data-long="cont"><b>Continue on a New Rung</b><span>Letter portrait; a long rung ends on a continuation and goes on along a new rung under it, its own number. Each continuation names the other's rung and wire (R19-W30).</span></button></div><div class="dlg-foot"><span class="long-note">Your choice is remembered for next time.</span><button class="btn" id="long-cancel">Cancel</button></div></dialog>
+<dialog id="export-dlg" class="dlg export-dlg" aria-labelledby="export-title"><h3 id="export-title">Export</h3><p class="sub">Open this print in another O³ program. It opens in a new tab; this one stays just as it is.</p>
+  <div class="xcard"><img src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22%3E%3Crect width=%22512%22 height=%22512%22 rx=%2296%22 fill=%22%231F2328%22/%3E%3Cellipse cx=%22221.61%22 cy=%22187.05%22 rx=%2294.12%22 ry=%22108.6%22 fill=%22none%22 stroke=%22%23FFC000%22 stroke-width=%2248.87%22/%3E%3Cpath fill=%22%23FFC000%22 d=%22M371.50857910156253 159.41568359375C395.70230468750003 159.41568359375 412.60477050781253 147.1531103515625 412.60477050781253 129.72037109375C412.60477050781253 117.656650390625 404.65066894531253 109.1059912109375 388.74246582031253 107.316318359375V106.6534765625C400.47476562500003 105.32779296875 409.02542480468753 97.771396484375 409.02542480468753 86.76822265625C409.02542480468753 70.1308935546875 393.64749511718753 58.000888671875 371.77371582031253 58.000888671875C349.36966308593753 58.000888671875 333.32889160156253 70.7937353515625 333.32889160156253 88.88931640625H359.04715332031253C359.04715332031253 82.8574560546875 364.34988769531253 78.681552734375 371.77371582031253 78.681552734375C378.46841796875003 78.681552734375 383.17459472656253 82.7248876953125 383.17459472656253 88.491611328125C383.17459472656253 94.4571875 377.60672363281253 98.699375 369.65262207031253 98.699375H359.57742675781253V117.2589453125H369.65262207031253C378.33584960937503 117.2589453125 384.23514160156253 121.4348486328125 384.23514160156253 127.466708984375C384.23514160156253 133.564853515625 379.19754394531253 137.807041015625 371.77371582031253 137.807041015625C364.01846679687503 137.807041015625 358.38431152343753 133.7637060546875 358.38431152343753 127.996982421875H331.47293457031253C331.47293457031253 146.423984375 348.17654785156253 159.41568359375 371.50857910156253 159.41568359375Z%22/%3E%3Cpath d=%22M0 350H512V416a96 96 0 0 1-96 96H96a96 96 0 0 1-96-96Z%22 fill=%22%23FFC000%22/%3E%3Cpath fill=%22%231F2328%22 d=%22M96.90380859375 458.36265625C111.53759765625 458.36265625 119.73974609375 448.24546875 120.71533203125 438.634140625H107.81591796875C106.91259765625 443.8733984375 102.93798828125 447.161484375 97.15673828125 447.161484375C89.42431640625 447.161484375 84.47412109375 441.5608984375 84.47412109375 430.7571875C84.47412109375 420.3148046875 89.31591796875 414.280625 97.22900390625 414.280625C103.01025390625 414.280625 106.94873046875 417.5687109375 107.77978515625 422.80796875H120.67919921875C119.19775390625 410.2698828125 109.69482421875 403.079453125 96.90380859375 403.079453125C82.55908203125 403.079453125 71.43017578125 412.97984375 71.43017578125 430.7571875C71.43017578125 448.4261328125 82.34228515625 458.36265625 96.90380859375 458.36265625ZM143.44384765625 403.802109375H130.68896484375V457.64H143.44384765625ZM154.82666015625 457.64H167.58154296875V439.1038671875H174.51904296875L184.38330078125 457.64H198.36669921875L187.12939453125 437.0804296875C193.09130859375 434.4066015625 196.48779296875 429.1312109375 196.48779296875 421.6878515625C196.48779296875 410.7034765625 189.00830078125 403.802109375 176.86767578125 403.802109375H154.82666015625ZM167.58154296875 429.0228125V414.13609375H174.15771484375C180.15576171875 414.13609375 183.26318359375 416.665390625 183.26318359375 421.6878515625C183.26318359375 426.7103125 180.15576171875 429.0228125 174.19384765625 429.0228125ZM231.06787109375 458.36265625C245.70166015625 458.36265625 253.90380859375 448.24546875 254.87939453125 438.634140625H241.97998046875C241.07666015625 443.8733984375 237.10205078125 447.161484375 231.32080078125 447.161484375C223.58837890625 447.161484375 218.63818359375 441.5608984375 218.63818359375 430.7571875C218.63818359375 420.3148046875 223.47998046875 414.280625 231.39306640625 414.280625C237.17431640625 414.280625 241.11279296875 417.5687109375 241.94384765625 422.80796875H254.84326171875C253.36181640625 410.2698828125 243.85888671875 403.079453125 231.06787109375 403.079453125C216.72314453125 403.079453125 205.59423828125 412.97984375 205.59423828125 430.7571875C205.59423828125 448.4261328125 216.50634765625 458.36265625 231.06787109375 458.36265625ZM287.54443359375 458.3265234375C301.09423828125 458.3265234375 310.27197265625 450.55796875 310.27197265625 438.5257421875V403.802109375H297.51708984375V437.477890625C297.51708984375 443.1507421875 293.50634765625 447.1976171875 287.54443359375 447.1976171875C281.65478515625 447.1976171875 277.60791015625 443.1507421875 277.60791015625 437.477890625V403.802109375H264.85302734375V438.5257421875C264.85302734375 450.55796875 273.92236328125 458.3265234375 287.54443359375 458.3265234375ZM334.40966796875 403.802109375H321.65478515625V457.64H334.40966796875ZM343.98583984375 414.208359375H360.28173828125V457.64H373.00048828125V414.208359375H389.29638671875V403.802109375H343.98583984375ZM419.64892578125 458.36265625C432.98193359375 458.36265625 440.93115234375 452.2562109375 440.93115234375 442.030625C440.93115234375 433.431015625 434.89697265625 428.227890625 424.49072265625 425.9515234375L419.82958984375 424.8675390625C415.02392578125 423.7835546875 411.88037109375 422.1937109375 411.88037109375 418.8694921875C411.88037109375 415.87046875 414.51806640625 413.6663671875 419.61279296875 413.6663671875C424.74365234375 413.6663671875 427.59814453125 415.942734375 427.95947265625 419.845078125H440.20849609375C440.06396484375 409.872421875 432.11474609375 403.079453125 419.64892578125 403.079453125C407.43603515625 403.079453125 398.69189453125 409.7640234375 398.69189453125 419.7366796875C398.69189453125 427.8304296875 404.32861328125 432.4915625 413.61474609375 434.6233984375L419.32373046875 435.9603125C425.21337890625 437.2972265625 428.03173828125 438.923203125 428.03173828125 441.9944921875C428.03173828125 445.427109375 424.77978515625 447.7757421875 419.50439453125 447.7757421875C413.68701171875 447.7757421875 409.82080078125 445.1019140625 409.53173828125 439.86265625H397.28271484375C397.49951171875 452.29234375 406.17138671875 458.36265625 419.64892578125 458.36265625Z%22/%3E%3C/svg%3E" alt="" width="58" height="58"><div class="xtext"><b>Circuit Builder</b><span>Builds this print as a circuit you can run: press its buttons and watch the current flow. Any part Circuit Builder doesn’t have comes in as a stand-in.</span></div>
+    <button class="btn primary" id="export-cb">Open in Circuit Builder</button></div>
+  <p class="sub" id="export-msg" role="status"></p>
+  <div class="dlg-foot"><span></span><button class="btn" id="export-close">Close</button></div></dialog>
+<dialog id="link-dlg" class="dlg link-dlg" aria-labelledby="link-title"><h3 id="link-title">Opened from Circuit Builder</h3><div id="link-body"></div><div class="dlg-foot"><span></span><button class="btn" id="link-ok">OK</button></div></dialog>
 <dialog id="tb-dlg" class="dlg">
   <h3>Title Block</h3>
   <p class="sub">Change any box, add your own, or take one away. Widths are out of 12 across the sheet. Type <code>{sheet}</code> for “1 of 2”, <code>{date}</code> for today.</p>
@@ -516,7 +545,1091 @@ h1 { margin: 0; font-size: 1.25rem; font-weight: 700; white-space: nowrap; } h1 
 <div class="drop" id="drop" hidden><div>Drop a print here to open it</div></div>
 <input type="file" id="file-in" accept=".json,application/json" hidden>
 <div id="print-host"></div>
-<script>/* ---- js/psym.js ---- */
+<script>/* ---- shared/o3link-tables.js ---- */
+/* =====================================================================
+   O³ link: where each part's wires join it, in Circuit Builder and in Print Builder (taken from the programs
+   themselves; a check in each program's tests makes sure they still match). Points are from the part's middle, unturned
+   (Circuit Builder: a turned fuse, supply box or continuation has its own entry, "type@turns").
+   ===================================================================== */
+const LINK_CB_TERMS = {"btn":[[-40,0],[40,0]],"est":[[-40,0],[40,0]],"sel":[[-60,0],[60,0]],"lsw":[[-60,0],[60,0]],"tsw":[[-80,0],[80,0]],"psw":[[-60,0],[60,0]],"fsw":[[-60,0],[60,0]],"coil":[[-60,0],[60,0]],"lamp":[[-60,0],[60,0]],"sol":[[-60,0],[60,0]],"htr":[[-60,0],[60,0]],"mtr":[[-160,-120],[-160,0],[-160,120]],"con":[[-40,0],[40,0]],"mst":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"olc":[[-40,0],[40,0]],"olh":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"dsc":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"fus":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"fu1":[[-40,0],[40,0]],"fu1@1":[[0,-40],[0,40]],"fu1@2":[[40,0],[-40,0]],"fu1@3":[[0,40],[0,-40]],"xfm":[[-60,-80],[60,-80],[-60,80],[60,80]],"ph":[[-40,0],[40,0],[0,40]],"ph@1":[[0,-40],[0,40],[-40,0]],"ph@2":[[40,0],[-40,0],[0,-40]],"ph@3":[[0,40],[0,-40],[40,0]],"l1":[[-40,0],[40,0],[0,40]],"l1@1":[[0,-40],[0,40],[-40,0]],"l1@2":[[40,0],[-40,0],[0,-40]],"l1@3":[[0,40],[0,-40],[40,0]],"l2":[[-40,0],[40,0],[0,40]],"l2@1":[[0,-40],[0,40],[-40,0]],"l2@2":[[40,0],[-40,0],[0,-40]],"l2@3":[[0,40],[0,-40],[40,0]],"jmp":[[-40,0],[40,0],[0,40],[0,-40]],"jmp@1":[[0,-40],[0,40],[-40,0],[40,0]],"jmp@2":[[40,0],[-40,0],[0,-40],[0,40]],"jmp@3":[[0,40],[0,-40],[40,0],[-40,0]]};
+const LINK_PB_TERMS = {"pb_no":[[-40,0],[40,0]],"pb_nc":[[-40,0],[40,0]],"pbm_no":[[-40,0],[40,0]],"pbm_nc":[[-40,0],[40,0]],"estop":[[-40,0],[40,0]],"sel":[[-40,0],[40,0]],"ls_no":[[-40,0],[40,0]],"ls_nc":[[-40,0],[40,0]],"ls_hc":[[-40,0],[40,0]],"ls_ho":[[-40,0],[40,0]],"ts_no":[[-40,0],[40,0]],"ts_nc":[[-40,0],[40,0]],"ts_nol":[[-40,0],[40,0]],"ts_ncl":[[-40,0],[40,0]],"ps_no":[[-40,0],[40,0]],"ps_nc":[[-40,0],[40,0]],"fs_no":[[-40,0],[40,0]],"fs_nc":[[-40,0],[40,0]],"fls_no":[[-40,0],[40,0]],"fls_nc":[[-40,0],[40,0]],"prs_no":[[-64,0],[64,0]],"prs_nc":[[-64,0],[64,0]],"spst":[[-40,0],[40,0]],"spdt":[[-40,0],[40,-40],[40,40]],"dpst":[[-40,-60],[40,-60],[-40,60],[40,60]],"dpdt":[[-40,-60],[40,-100],[40,-20],[-40,60],[40,20],[40,100]],"xover":[[-40,-40],[40,-40],[-40,40],[40,40]],"coil":[[-40,0],[40,0]],"tmr_on":[[-40,0],[40,0]],"tmr_off":[[-40,0],[40,0]],"pl":[[-40,0],[40,0]],"sol":[[-40,0],[40,0]],"htr":[[-40,0],[40,0]],"motor":[[-140,-120],[-140,0],[-140,120]],"con_no":[[-40,0],[40,0]],"con_nc":[[-40,0],[40,0]],"tc_no":[[-40,0],[40,0]],"tc_nc":[[-40,0],[40,0]],"mst3":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"olc":[[-40,0],[40,0]],"dsc3":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"fdsc3":[[-80,-120],[80,-120],[-80,0],[80,0],[-80,120],[80,120]],"fus3":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"fuse":[[-40,0],[40,0]],"cb":[[-40,0],[40,0]],"cb2":[[-40,-60],[40,-60],[-40,60],[40,60]],"cb3":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"ol3":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"ol":[[-40,0],[40,0]],"sup":[[0,0]],"src_l1":[[0,0]],"src_l2":[[0,0]],"xfmr":[[-60,-60],[60,-60],[-60,60],[60,60]],"gnd":[[0,-40]],"cnt_out":[[-40,0]],"cnt_in":[[40,0]]};
+// Print Builder's symbol for each of its parts (a stand-in in Circuit Builder draws it), and the symbols Circuit Builder's
+// print-symbols.js lacks (taken from Print Builder's symbols.js and psym.js; a check in Print Builder's tests makes sure they still match)
+const LINK_PB_SYMN = {"pb_no":"NO Pushbutton","pb_nc":"NC Pushbutton","pbm_no":"NO Pushbutton","pbm_nc":"NC Pushbutton","estop":"NC EStop Pushbutton","sel":"Selector Switch Operator","ls_no":"NO Limit Switch","ls_nc":"NC Limit Switch","ls_hc":"NO HC Limit Switch","ls_ho":"NC HO Limit Switch","ts_no":"NO Temperature Switch","ts_nc":"NC Temperature Switch","ts_nol":"NO Temperature Switch","ts_ncl":"NC Temperature Switch","ps_no":"NO Pressure Switch","ps_nc":"NC Pressure Switch","fs_no":"NO Float Switch","fs_nc":"NC Float Switch","fls_no":"NO Flow Switch","fls_nc":"NC Flow Switch","prs_no":"NO Proximity Switch","prs_nc":"NC Proximity Switch","spst":"SPST Switch","spdt":"SPDT Switch","dpst":"DPST Switch","dpdt":"DPDT Switch","xover":"DPDT Crossover Switch","coil":"Relay","tmr_on":"Relay","tmr_off":"Relay","pl":"Pilot Light","sol":"Solenoid","htr":"Heating Element","motor":"Motor Leads","con_no":"NO Contact","con_nc":"NC Contact","tc_no":"NO ND Switch","tc_nc":"NC ND Switch","mst3":"3PH Starter Contacts","olc":"NC Contact","dsc3":"3PH Disconnect","fdsc3":"3PH Fusible Disconnect","fus3":"3PH Fuses","fuse":"Fuse","cb":"Circuit Breaker","cb2":"DPST Circuit Breaker","cb3":"3PST Circuit Breaker","ol3":"3PH Thermal Overload","ol":"Thermal Overload","xfmr":"Control Transformer","gnd":"Ground","cnt_out":"Continuation Out","cnt_in":"Continuation In"};
+const LINK_PB_PSYM = {"SPDT Switch":{"b":"<path d=\"M-30 0L36 -30\" fill=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,-40],[40,40]],"y0":-50,"y1":50},"DPST Switch":{"b":"<path d=\"M0 45V-73\" fill=\"none\" stroke-dasharray=\"12 12\"/><path d=\"M-30 -60L30 -90\" fill=\"none\"/><circle cx=\"-30\" cy=\"-60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"-60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><path d=\"M-30 60L30 30\" fill=\"none\"/><circle cx=\"-30\" cy=\"60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,-60],[40,-60],[-40,60],[40,60]],"y0":-92,"y1":70},"DPDT Switch":{"b":"<path d=\"M0 46V-74\" fill=\"none\" stroke-dasharray=\"12 12\"/><path d=\"M-30 -60L36 -90\" fill=\"none\"/><circle cx=\"-30\" cy=\"-60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"-60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-100\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-100\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-20\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-20\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><path d=\"M-30 60L36 30\" fill=\"none\"/><circle cx=\"-30\" cy=\"60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"20\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"20\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"100\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"100\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,-60],[40,-100],[40,-20],[-40,60],[40,20],[40,100]],"y0":-110,"y1":110},"DPDT Crossover Switch":{"b":"<path d=\"M-30 -40H30M-30 40H30\" fill=\"none\" stroke-dasharray=\"12 12\"/><path d=\"M-30 -40L30 40M-30 40L30 -40\" fill=\"none\"/><circle cx=\"-30\" cy=\"-40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"-40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"-30\" cy=\"40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,-40],[40,-40],[-40,40],[40,40]],"y0":-50,"y1":50},"Motor Leads":{"b":"<path d=\"M-140 -120H-120L-56.569 -56.569M-140 0H-80M-140 120H-120L-56.569 56.569\" fill=\"none\"/><circle cx=\"0\" cy=\"0\" r=\"80\" fill=\"#fff\"/>","t":[[-140,-120],[-140,0],[-140,120]],"y0":-124,"y1":124},"Circuit Breaker":{"b":"<path d=\"M-29.42 -14.34C-26.62 -22.26 -14.36 -27.98 -0.08 -28C14.18 -28.02 26.5 -22.36 29.38 -14.44\" fill=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"0\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"0\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-30,"y1":10},"DPST Circuit Breaker":{"b":"<path d=\"M0 32V-86\" fill=\"none\" stroke-dasharray=\"12 12\"/><path d=\"M-29.42 -74.34C-26.62 -82.26 -14.36 -87.98 -0.08 -88C14.18 -88.02 26.5 -82.36 29.38 -74.44\" fill=\"none\"/><circle cx=\"-30\" cy=\"-60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"-60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><path d=\"M-29.42 45.66C-26.62 37.74 -14.36 32.02 -0.08 32C14.18 31.98 26.5 37.64 29.38 45.56\" fill=\"none\"/><circle cx=\"-30\" cy=\"60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,-60],[40,-60],[-40,60],[40,60]],"y0":-90,"y1":70},"3PST Circuit Breaker":{"b":"<path d=\"M0 92V-146\" fill=\"none\" stroke-dasharray=\"12 12\"/><path d=\"M-29.42 -134.34C-26.62 -142.26 -14.36 -147.98 -0.08 -148C14.18 -148.02 26.5 -142.36 29.38 -134.44\" fill=\"none\"/><circle cx=\"-30\" cy=\"-120\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"-120\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-120\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-120\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><path d=\"M-29.42 -14.34C-26.62 -22.26 -14.36 -27.98 -0.08 -28C14.18 -28.02 26.5 -22.36 29.38 -14.44\" fill=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"0\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"0\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><path d=\"M-29.42 105.66C-26.62 97.74 -14.36 92.02 -0.08 92C14.18 91.98 26.5 97.64 29.38 105.56\" fill=\"none\"/><circle cx=\"-30\" cy=\"120\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"120\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"120\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"120\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"y0":-150,"y1":130},"Ground":{"b":"<path d=\"M0 -40V-8M-30 -8H30M-20 8H20M-10 24H10\" fill=\"none\"/>","t":[[0,-40]],"y0":-40,"y1":28},"Continuation Out":{"b":"<path d=\"M-40 0H-26\" fill=\"none\"/><path d=\"M-26 -22H14L36 0L14 22H-26Z\" fill=\"#fff\"/>","t":[[-40,0]],"y0":-22,"y1":22},"Continuation In":{"b":"<path d=\"M26 0H40\" fill=\"none\"/><path d=\"M-36 -22H4L26 0L4 22H-36Z\" fill=\"#fff\"/>","t":[[40,0]],"y0":-22,"y1":22}};
+
+/* ---- shared/o3link.js ---- */
+/* =====================================================================
+   O³ link (Dallas, 16 Nov 2026): Circuit Builder and Print Builder open each other's work.
+     printToCircuit(doc)  a Print Builder print -> a Circuit Builder circuit (its saved form), and notes on what changed
+     circuitToPrint(d)    a Circuit Builder circuit (its saved form) -> a Print Builder print, and notes
+   Both work on the drawings as they are: the two programs share a grid and nearly the same scale, so each part keeps
+   its place, takes the other program's nearest part (the notes list every swap and anything left out), and each wire
+   keeps its path, with its ends moved onto the new part's terminals where the two differ (a coil's ends are 60 out in
+   Circuit Builder, 40 on the print). A print made from a circuit carries the circuit with it: back unchanged, the
+   circuit comes back exactly; changed, each part made from the circuit gets back what only Circuit Builder knows
+   (its colour, label, process values and links, planted faults, scenarios, the work order).
+   This file is in both programs (each build takes it from shared/); where each conversion runs: printToCircuit in
+   Circuit Builder (a print opened there, or sent with Open in Circuit Builder), circuitToPrint in Print Builder.
+   ===================================================================== */
+const LINK_KEY = 'o3-link:handoff';   // (the work handed from one program to the other, in this site's storage)
+// Print Builder's papers, for laying sheets one under another (its own model.js has the same)
+const LINK_PAPERS = { letter: [8.5, 11], legal: [8.5, 14], tabloid: [11, 17], ansic: [17, 22], a4: [8.27, 11.69], a3: [11.69, 16.54] };
+const LINK_U_IN = 312.5;
+const LINK_W_MIN = 880;   // (Circuit Builder's narrowest sheet: its W_MIN)
+const linkPaper = s => { const k = s.paper && (LINK_PAPERS[s.paper] || s.paper === 'custom') ? s.paper : 'letter'; const [w, h] = k === 'custom' ? [s.pw, s.ph] : LINK_PAPERS[k]; return s.land ? [h, w] : [w, h]; };
+const linkDrawH = s => Math.round((linkPaper(s)[1] - .8 - .24 - 1.25) * LINK_U_IN);
+const linkDrawW = s => Math.round((linkPaper(s)[0] - .8 - .24) * LINK_U_IN);
+const linkSnap = v => Math.round(v / 20) * 20;
+const linkDigits = (s, d) => { const m = String(s || '').match(/\d+/); return m ? String(+m[0]) : d; };
+
+// ---- a print's terminals: where each part's wires join it (turned and flipped as the part is)
+function linkTurn([a, b], r) { return r === 90 ? [-b, a] : r === 180 ? [-a, -b] : r === 270 ? [b, -a] : [a, b]; }
+function linkPbTerms(p) { const ts = LINK_PB_TERMS[p.t] || []; return ts.map(([a, b]) => { const [u, v] = linkTurn(p.fx ? [-a, b] : [a, b], p.rot || 0); return [p.x + u, p.y + v]; }); }
+function linkPbPos(s, e) {
+  if (e.p) { const p = s.parts.find(q => q.id === e.p); return p ? linkPbTerms(p)[e.i] || [p.x, p.y] : null; }
+  if (e.n) { const n = (s.nodes || []).find(q => q.id === e.n); return n ? [n.x, n.y] : null; }
+  if (e.r) { const r = s.parts.find(q => q.id === e.r); return r ? [r.x, Math.max(r.y0, Math.min(r.y1, e.y))] : null; }
+  return null;
+}
+// a Circuit Builder part's terminals (from its saved row's type, place and turn)
+function linkCbTerms(t, x, y, rot) { const own = rot && LINK_CB_TERMS[t + '@' + rot]; if (own) return own.map(([a, b]) => [x + a, y + b]);
+  // (no turned entry of its own: a two-ended part turned, its terminals turned about its middle, a quarter turn clockwise each)
+  return (LINK_CB_TERMS[t] || []).map(([a, b]) => { for (let k = 0; k < (rot || 0); k++) [a, b] = [-b, a]; return [x + a, y + b]; }); }
+
+// a Circuit Builder part's terminals, from its row as saved (a stand-in carries its own: a[10] = { t: the Print Builder part, r: its turn,
+// o: its terminals from its middle })
+const linkStandOK = a => a[0] === 'stand' && a[10] && Array.isArray(a[10].o);
+function linkRowTerms(a) { if (a[0] === 'stand') return linkStandOK(a) ? a[10].o.map(([u, v]) => [+a[1] + u, +a[2] + v]) : [];
+  const r = ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(a[0]) ? (Math.round(+a[7]) || 0) : a[15] && typeof a[15] === 'object' && [1, 2, 3].includes(+a[15].r) ? +a[15].r : 0;
+  return linkCbTerms(a[0] === 'est' ? 'btn' : a[0], +a[1], +a[2], r); }
+
+// a wire's points, its ends moved to new places (new ends: a run across or up and down, as the wire went)
+function linkMoveEnds(pts, a, b) {
+  const out = pts.map(q => [q[0], q[1]]);
+  const fix = (end, to) => {
+    if (!to) return;
+    const i = end ? out.length - 1 : 0, j = end ? out.length - 2 : 1, q = out[i], nb = out[j];
+    if (to[0] === q[0] && to[1] === q[1]) return;
+    // (in line with the wire's last run: just longer or shorter)
+    if (nb && ((q[1] === nb[1] && to[1] === q[1]) || (q[0] === nb[0] && to[0] === q[0]))) { out[i] = [to[0], to[1]]; return; }
+    // (otherwise a short bend: from the new end, across (or up) to where the old end was)
+    const mid = q[1] === (nb || q)[1] ? [q[0], to[1]] : [to[0], q[1]];
+    if (end) out.splice(i, 1, q, mid, to); else out.splice(0, 1, to, mid, q);
+  };
+  fix(false, a); fix(true, b);
+  // (no two points the same, and no point in the middle of a straight run)
+  const r = []; for (const q of out) { const l = r[r.length - 1]; if (!l || l[0] !== q[0] || l[1] !== q[1]) r.push(q); }
+  for (let k = r.length - 2; k >= 1; k--) { const [p0, p1, p2] = [r[k - 1], r[k], r[k + 1]]; if ((p0[0] === p1[0] && p1[0] === p2[0]) || (p0[1] === p1[1] && p1[1] === p2[1])) r.splice(k, 1); }
+  return r;
+}
+// a circuit's fingerprint, for the print it was opened from (d.pr): its parts and wires as Circuit Builder saves them
+const linkCircuitFingerprint = d => JSON.stringify([d.pw || '', d.parts, d.wires]);
+// a print's own fingerprint: what it shows, in any order (to tell whether a print made from a circuit was changed)
+function linkFingerprint(doc) {
+  const items = [];
+  doc.sheets.forEach((s, k) => {
+    for (const p of s.parts) items.push([k, p.t, p.x, p.y, p.rot || 0, p.fx ? 1 : 0, p.tag || '', p.desc || '', p.delay || 0, p.tof ? 1 : 0, (p.closedIn || []).join('.'), p.pos || '', p.inPB || '', p.inst ? 1 : 0, p.label || '', p.y0 || 0, p.y1 || 0].join('|'));
+    for (const w of s.wires) { const pts = [linkPbPos(s, w.a), ...(w.pts || []), linkPbPos(s, w.b)].filter(Boolean); items.push(k + '|w|' + pts.map(q => q.join(',')).join(';')); }
+  });
+  return items.sort().join('\n');
+}
+
+/* =====================================================================
+   A print -> a circuit
+   ===================================================================== */
+const LINK_LAMP_COL = { GREEN: '00B050', GRN: '00B050', RED: 'FF0032', AMBER: 'FF9600', AMB: 'FF9600', ORANGE: 'FF9600', YELLOW: 'FFDC00', YLW: 'FFDC00', BLUE: '0070C0', BLU: '0070C0', WHITE: 'FFFFFF', WHT: 'FFFFFF', CLEAR: 'FFFFFF', VIOLET: '7030A0', PURPLE: '7030A0', PINK: 'EC008C', MAGENTA: 'EC008C', TEAL: '00D2BE' };
+// a print's timer coil: its kind TR (or, on older prints, a tag starting TR), or a delay set on it
+const linkTimer = c => (c.pre ? c.pre === 'TR' : /^TR/i.test(c.tag || '')) || !!c.delay || !!c.tof;
+const LINK_PAL = ['FFDC00', 'EC008C', '7030A0', '00D2BE', 'FF9600', '0070C0', '00B050', 'FF0032'];
+function printToCircuit(doc) {
+  if (!doc || doc.kind !== 'o3-print' || !Array.isArray(doc.sheets)) throw new Error('That is not a print from Print Builder.');
+  // (made from a circuit and not changed since: the circuit itself, exactly)
+  if (doc.link && doc.link.cb && doc.link.fp && doc.link.fp === linkFingerprint(doc)) {
+    const idx = doc.link.cb.parts.map(() => null); doc.sheets.forEach((s, k) => s.parts.forEach(p => { if (p.cbi != null && p.cbi < idx.length && !idx[p.cbi]) idx[p.cbi] = { k, id: p.id }; }));
+    return { data: JSON.parse(JSON.stringify(doc.link.cb)), notes: { changed: [], left: [], same: true }, idx }; }
+  // (made from a circuit and changed on the print: first each part back at the circuit's own places. That is checked against the print:
+  // joined just as the print joins it, no part on another, no wire through a part. If not (Dallas, 19 Nov 2026: a contact moved on the print
+  // came back with a loose end; rungs drawn closer came back on top of each other), the circuit is drawn again from the print itself, its
+  // rows and parts spread out as far as Circuit Builder's parts need)
+  if (doc.link && doc.link.cb) {
+    const a = linkBuild(doc, true), ca = linkCheck(doc, a);
+    if (ca.ok) return linkOut(a);
+    const b = linkBuild(doc, false), cb = linkCheck(doc, b);
+    if (!cb.ok && cb.score > ca.score) return linkOut(a);
+    b.notes.changed.unshift('Drawn again from the print (it was changed too much to put each part back where it was in the circuit)');
+    return linkOut(b);
+  }
+  return linkOut(linkBuild(doc, false));
+}
+const linkOut = r => ({ data: r.data, notes: r.notes, idx: r.idx });
+// a print turned into a circuit. back: each part at the circuit's own places (a print made from a circuit); otherwise as the print draws it
+function linkBuild(doc, back) {
+  const changed = [], left = [], note = (list, s) => { if (!list.includes(s)) list.push(s); };
+  // (drawn closer across to fit its paper: spread back out first. What is where it was put goes back exactly; anything moved since,
+  // in proportion between the parts on either side of it)
+  if (back && doc.link && doc.link.xk && doc.link.v !== 2) {   // (prints made before 17 Nov 2026 kept their places this way)
+    doc = JSON.parse(JSON.stringify(doc));
+    const K = doc.link.xk, N = doc.link.xn, n = K.length, un = v => { if (v <= N[0]) return v - N[0] + K[0]; for (let i = 1; i < n; i++) if (v <= N[i]) return linkSnap(K[i - 1] + (v - N[i - 1]) * (K[i] - K[i - 1]) / ((N[i] - N[i - 1]) || 1)); return v - N[n - 1] + K[n - 1]; };
+    for (const s of doc.sheets) {
+      for (const q of [...s.parts, ...s.nodes]) { q.x = q._x && q._x[0] === q.x ? q._x[1] : un(q.x); delete q._x; }
+      for (const w of s.wires) { w.pts = w._x && w._x[0] === JSON.stringify(w.pts) ? JSON.parse(w._x[1]) : w.pts.map(q => [un(q[0]), q[1]]); delete w._x; }
+    }
+    delete doc.link.xk; delete doc.link.xn;
+  }
+  // (each sheet centred on its own (from 17 Nov 2026): back to one place across first)
+  if (back && doc.link && Array.isArray(doc.link.oxs)) { doc = JSON.parse(JSON.stringify(doc)); const ox = doc.link.ox;
+    doc.sheets.forEach((s, k) => { const d = ox - (doc.link.oxs[k] ?? ox); if (!d) return;
+      for (const p of s.parts) p.x += d; for (const q of s.nodes) q.x += d; for (const w of s.wires) w.pts = (w.pts || []).map(q => [q[0] + d, q[1]]); });
+    delete doc.link.oxs; }
+  // (laid out rung by rung (from 17 Nov 2026): each place back through its own rung's layout; the uprights between rungs by the pins)
+  if (back && doc.link && doc.link.v === 2 && Array.isArray(doc.link.xb) && Array.isArray(doc.link.oy)) {
+    doc = JSON.parse(JSON.stringify(doc));
+    const xb = doc.link.xb, ox = doc.link.ox, oy = doc.link.oy;
+    const un = (keys, n, v) => { let i = 0; while (i < n.length && n[i] < v) i++; if (i < n.length && n[i] === v) return keys[i]; if (i === 0) return v - n[0] + keys[0]; if (i === n.length) return v - n[i - 1] + keys[i - 1]; return linkSnap(keys[i - 1] + (v - n[i - 1]) * (keys[i] - keys[i - 1]) / ((n[i] - n[i - 1]) || 1)); };
+    const at = (k, x, y) => { const gy = y - (oy[Math.min(k, oy.length - 1)] || 0); let b = xb.find(([a, c]) => gy >= a && gy <= c);
+      if (!b) b = xb.reduce((best, q) => { const d = gy < q[0] ? q[0] - gy : gy - q[1]; return !best || d < best[0] ? [d, q] : best; }, null)[1];
+      return un(b[2], b[3], x - ox) + ox; };
+    // (drawn closer down where a rung was too tall for a sheet: back down first)
+    if (Array.isArray(doc.link.ym)) { const [G, N] = doc.link.ym, uy = (k, y) => { const o = oy[Math.min(k, oy.length - 1)] || 0; return un(G, N, y - o) + o; };
+      doc.sheets.forEach((s, k) => {
+        for (const p of s.parts) { if (p.t === 'rail') { p.y0 = uy(k, p.y0); p.y1 = uy(k, p.y1); continue; } const ts = linkPbTerms(p); p.y = ts.length ? uy(k, ts[0][1]) - (ts[0][1] - p.y) : uy(k, p.y); }
+        for (const q of s.nodes) q.y = uy(k, q.y);
+        for (const w of s.wires) { w.pts = (w.pts || []).map(q => [q[0], uy(k, q[1])]); for (const e of [w.a, w.b]) if (e.r != null && e.y != null) e.y = uy(k, e.y); }
+      }); delete doc.link.ym; }
+    doc.sheets.forEach((s, k) => {
+      for (const p of s.parts) { if (p.t === 'rail') { p.x = at(k, p.x, p.y0); continue; }
+        // (a part placed by its terminals, all in one upright line (a motor, a line in): back by them)
+        const ts = linkPbTerms(p); if (ts.length && ts.every(q => q[0] === ts[0][0])) p.x = at(k, ts[0][0], ts[0][1]) + (p.x - ts[0][0]); else p.x = at(k, p.x, p.y); }
+      for (const q of s.nodes) q.x = at(k, q.x, q.y);
+      for (const w of s.wires) w.pts = (w.pts || []).map(q => [at(k, q[0], q[1]), q[1]]);
+    });
+    delete doc.link.xb;
+  }
+  // (sheets drawn each centred on its own: where every continuation pair between two sheets is shifted alike, the later sheet moved
+  // back in line, so a wire running on over the break comes out straight)
+  if (!(back && doc.link && doc.link.cb)) { let moved = false; const d2 = JSON.parse(JSON.stringify(doc)); let acc = 0;
+    for (let k = 1; k < d2.sheets.length; k++) { const prev = d2.sheets[k - 1], cur = d2.sheets[k];
+      const ds = prev.parts.filter(p => p.t === 'cnt_out').map(a => { const b = cur.parts.find(q => q.t === 'cnt_in' && q.tag === a.tag); return b ? Math.round(linkPbTerms(a)[0][0] - linkPbTerms(b)[0][0]) : null; }).filter(v => v != null);
+      const dx = ds.length && ds.every(v => v === ds[0]) ? ds[0] : 0; void acc;
+      if (dx) { moved = true; for (const p of cur.parts) p.x += dx; for (const q of cur.nodes) q.x += dx; for (const w of cur.wires) w.pts = (w.pts || []).map(q => [q[0] + dx, q[1]]); } }
+    if (moved) doc = d2; }
+  const all = []; doc.sheets.forEach((s, k) => { for (const p of s.parts) all.push({ s, k, p }); });
+  const LK = back && doc.link && doc.link.cb && Array.isArray(doc.link.oy) ? doc.link : null;
+  const CB0 = doc.link && doc.link.cb ? doc.link.cb : null;   // (the circuit it was made from, if any: what only Circuit Builder knows)   // (made from a circuit: its own places, to map back to)
+  const power = CB0 ? CB0.pw === 'boxes' : all.some(({ p }) => ['sup', 'xfmr', 'dsc3', 'fdsc3', 'fus3', 'mst3', 'ol3', 'motor', 'src_l1', 'src_l2', 'cb3', 'cb2'].includes(p.t));
+  // where each sheet goes: one under another; across, the L1 rail at Circuit Builder's L1 bar (or, with power, a margin)
+  const rails = all.filter(({ p }) => p.t === 'rail');
+  const rL1 = rails.find(({ p }) => p.label === 'L1'), rL2 = rails.find(({ p }) => p.label === 'L2');
+  const xs = all.filter(({ p }) => p.t !== 'rail').flatMap(({ p }) => linkPbTerms(p).map(q => q[0]).concat(p.x));
+  const minX = Math.min(...xs, rL1 ? rL1.p.x : Infinity);
+  const DX = power ? linkSnap(140 - minX) : -(rL1 ? rL1.p.x : 200);
+  // (a print's rungs can sit closer than Circuit Builder's parts are tall: rows nearer than 160 are spread to 160, the rest kept as drawn)
+  const F = doc.sheets.map(sh => {
+    const keys = [...new Set(sh.parts.filter(p => p.t !== 'rail').flatMap(p => { const ts = linkPbTerms(p); return ts.length > 1 && ts.every(q => q[1] === ts[0][1]) ? [p.y] : ts.length > 2 ? ts.map(q => q[1]) : []; }))].sort((a, b) => a - b);
+    if (LK || keys.length < 2) return y => y;
+    // (between the lines of a three-phase part, a transformer or a motor, rows keep their spacing, so its terminals stay on its lines)
+    const rigid = sh.parts.filter(p => p.t !== 'rail' && linkPbTerms(p).length > 2).map(p => { const ys = linkPbTerms(p).map(q => q[1]); return [Math.min(...ys), Math.max(...ys)]; });
+    const to = [keys[0]]; for (let i = 1; i < keys.length; i++) { const g = keys[i] - keys[i - 1]; to.push(to[i - 1] + (rigid.some(([a, b]) => keys[i - 1] >= a && keys[i] <= b) ? g : Math.max(g, 160))); }
+    return y => { if (y <= keys[0]) return y; for (let i = 1; i < keys.length; i++) if (y <= keys[i]) return to[i - 1] + (y - keys[i - 1]) * (to[i] - to[i - 1]) / (keys[i] - keys[i - 1]); return y - keys[keys.length - 1] + to[to.length - 1]; };
+  });
+  const DY = []; let y0 = 0; doc.sheets.forEach((s, k) => { const ys = s.parts.filter(p => p.t !== 'rail').map(p => p.y).concat(s.parts.filter(p => p.t === 'rail').map(p => p.y0)); const top = ys.length ? Math.min(...ys) : 0;
+    const bot = Math.max(linkDrawH(s), ...s.parts.map(p => p.t === 'rail' ? p.y1 : p.y + 140), ...s.wires.flatMap(w => (w.pts || []).map(q => q[1])));
+    DY[k] = linkSnap(y0 + 160 - top); y0 = DY[k] + F[k](bot) - 100; });
+  // (Circuit Builder's parts are wider than the print's symbols: along each row, things drawn close on the print are spread apart
+  // as far as they need, so no part lands on another or on a wire; nothing is moved closer)
+  const FX = (() => {
+    if (LK) return x => x;
+    const CBW = { coil: 60, pl: 60, sol: 60, htr: 60, sel: 60, ls_no: 60, ls_nc: 60, ls_hc: 60, ls_ho: 60, ps_no: 60, ps_nc: 60, fls_no: 60, fls_nc: 60, prs_no: 60, prs_nc: 60, fs_no: 60, fs_nc: 60, ts_no: 80, ts_nc: 80, ts_nol: 80, ts_ncl: 80 };
+    const keySet = new Set(), items = new Map(), cons = [];
+    const row = (k, y) => { const key = k + ':' + y; if (!items.has(key)) items.set(key, []); return items.get(key); };
+    doc.sheets.forEach((s, k) => {
+      for (const p of s.parts) { if (p.t === 'rail') { keySet.add(p.x); continue; }
+        const ts = linkPbTerms(p); keySet.add(p.x); ts.forEach(q => keySet.add(q[0]));
+        const two = ts.length === 2 && ts[0][1] === ts[1][1] && ts[0][0] !== ts[1][0];
+        if (two) { const [l, r] = ts[0][0] < ts[1][0] ? [ts[0], ts[1]] : [ts[1], ts[0]], w = CBW[p.t] || 40;
+          if (w > p.x - l[0]) cons.push([l[0], p.x, w]); if (w > r[0] - p.x) cons.push([p.x, r[0], w]);
+          row(k, p.y).push({ a: l[0], b: r[0], ea: 0, eb: 0, part: 1 }); continue; }
+        const one = ts.length && ts.every(q => q[0] === ts[0][0]) ? ts[0][0] : null;
+        const [ea, eb] = p.t === 'motor' ? [0, 300] : p.t === 'xfmr' ? [105, 105] : one != null && ts.length === 1 ? [80, 80] : [40, 40];
+        const anchor = p.t === 'motor' && one != null ? one : p.x; keySet.add(anchor);
+        for (const y of new Set(ts.map(q => q[1]).concat(ts.length ? [] : [p.y]))) row(k, y).push({ a: anchor, b: anchor, ea, eb, part: 1 }); }
+      for (const n of s.nodes || []) keySet.add(n.x);
+      for (const w of s.wires) { const ps = [linkPbPos(s, w.a), ...(w.pts || []), linkPbPos(s, w.b)].filter(Boolean);
+        ps.forEach(q => keySet.add(q[0]));
+        // (a wire's corners and joins on a row, and an upright wire crossing a row: things a part must not land on)
+        ps.forEach((q, i) => { if (i && i < ps.length - 1) row(k, q[1]).push({ a: q[0], b: q[0], ea: 0, eb: 0 }); });
+        for (const e of [w.a, w.b]) if (e.n) { const q = linkPbPos(s, e); if (q) row(k, q[1]).push({ a: q[0], b: q[0], ea: 0, eb: 0 }); }
+        for (let i = 0; i + 1 < ps.length; i++) if (ps[i][0] === ps[i + 1][0]) for (const [key, list] of items) { const [kk, yy] = key.split(':').map(Number); if (kk === k && yy > Math.min(ps[i][1], ps[i + 1][1]) && yy < Math.max(ps[i][1], ps[i + 1][1])) list.push({ a: ps[i][0], b: ps[i][0], ea: 0, eb: 0 }); } }
+    });
+    for (const list of items.values()) { list.sort((u, v) => (u.a - u.ea) - (v.a - v.ea)); for (let i = 0; i + 1 < list.length; i++) { const u = list[i], v = list[i + 1]; if (v.a <= u.b) continue; const gap = u.part && v.part ? 40 : u.part || v.part ? 20 : 0; cons.push([u.b, v.a, u.eb + v.ea + gap]); } }
+    const keys = [...keySet].sort((a, b) => a - b), idx = new Map(keys.map((k, i) => [k, i])), need = keys.map(() => []);
+    for (const [lo, hi, r] of cons) { const i = idx.get(lo), j = idx.get(hi); if (i != null && j != null && j > i) need[j].push([i, r]); }
+    const n = [keys[0]]; for (let j = 1; j < keys.length; j++) { let v = n[j - 1] + keys[j] - keys[j - 1]; for (const [i, r] of need[j]) v = Math.max(v, n[i] + r); n.push(v); }
+    const m = new Map(keys.map((k, i) => [k, n[i]]));
+    return x => { if (m.has(x)) return m.get(x); let i = 0; while (i < keys.length && keys[i] < x) i++; if (i === 0) return x - keys[0] + n[0]; if (i === keys.length) return x - keys[i - 1] + n[i - 1]; return n[i - 1] + (x - keys[i - 1]) * (n[i] - n[i - 1]) / (keys[i] - keys[i - 1]); };
+  })();
+  let X = (x) => linkSnap(FX(x) + DX), Y = (k, y) => linkSnap(F[k](y) + DY[k]);
+  if (LK) {   // (back to the circuit's own places: across as it was, down as it was before the print spread its rungs out)
+    const oy = LK.oy, n = oy.length, step = n > 1 ? oy[n - 2] - oy[n - 1] : 3000, sy = LK.sy || 1;
+    X = x => linkSnap(x - LK.ox);
+    if (LK.v === 2 && LK.xk) { const Kk = LK.xk, N = LK.xn, n2 = Kk.length, un = v => { if (v <= N[0]) return v - N[0] + Kk[0]; for (let i = 1; i < n2; i++) if (v <= N[i]) return Kk[i - 1] + (v - N[i - 1]) * (Kk[i] - Kk[i - 1]) / ((N[i] - N[i - 1]) || 1); return v - N[n2 - 1] + Kk[n2 - 1]; }; X = x => linkSnap(un(x - LK.ox)); }   // (drawn closer across: spread back out)
+    Y = (k, y) => linkSnap((y - (k < n ? oy[k] : oy[n - 1] - (k - n + 1) * step)) / sy);
+  }
+  // (Circuit Builder's sheet is never narrower than LINK_W_MIN (its W_MIN): the L2 bar is there, so the wires reach it there)
+  const W = !power && rL1 && rL2 ? Math.max(LK && LK.cb.fw ? 400 : LINK_W_MIN, LK ? +LK.cb.w || 0 : linkSnap(FX(rL2.p.x) - FX(rL1.p.x))) : 0;
+
+  // letters: pushbuttons and selectors first (A, B...), then coils; M kept for a starter's coil
+  const LET = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].concat([...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].flatMap(a => [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(b => a + b)));
+  const used = new Set(), take = pref => { if (pref && !used.has(pref)) { used.add(pref); return pref; } const l = LET.find(c => !used.has(c)); used.add(l); return l; };
+  const opKey = p => (/^pbm?_/.test(p.t) ? 'PB' : p.t === 'estop' ? 'ES' : p.t === 'sel' ? 'SS' : p.t) + ':' + (p.tag || p.id);
+  const opL = new Map(), coilL = new Map();
+  // (each part's own letter where the print has it: a tag as Circuit Builder's prints write it (PB-A, ES-A, SS-S, a coil's X), or, for a
+  // part made from the circuit, the letter it had there (Dallas, 19 Nov 2026: an edited print came back with every coil re-lettered).
+  // Those are kept first; parts new on the print get the next free letters)
+  const cbOld = doc.link && doc.link.cb && Array.isArray(doc.link.cb.parts) ? doc.link.cb : null;
+  const FAM = { btn: 'op', est: 'op', sel: 'op', coil: 'coil', mst: 'coil' }, famOf = p => /^(pbm?_|estop|spst)/.test(p.t) || p.t === 'sel' ? 'op' : p.t === 'coil' || p.t === 'mst3' ? 'coil' : '';
+  const tagLetter = p => { const t = String(p.tag || '').toUpperCase(); let m;
+    // (Dallas, 19 Nov 2026: Circuit Builder takes a name typed in, up to six letters and digits, so a print's own names come across as
+    // they are: PB-START is START, CR1 is CR1; a tag CB couldn't hold (too long, or other marks in it) gets a letter, the tag on its cap)
+    const OWN = /^[A-Z][A-Z0-9]{0,5}$/;
+    if (/^(pbm?_|estop)/.test(p.t)) { if ((m = /^(?:PB|ES)-([A-Z0-9]{1,6})$/.exec(t))) return m[1]; if (OWN.test(t)) return t; }
+    if (p.t === 'sel') { if ((m = /^SS-([A-Z0-9]{1,6})$/.exec(t))) return m[1]; if (OWN.test(t)) return t; }
+    if ((p.t === 'coil' || p.t === 'mst3') && OWN.test(t)) return t;
+    return null; };
+  const oldLetter = p => { if (!cbOld || p.cbi == null) return null; const a = cbOld.parts[p.cbi]; return a && FAM[a[0]] && FAM[a[0]] === famOf(p) && a[3] ? String(a[3]) : null; };
+  const prefOf = p => tagLetter(p) || oldLetter(p);
+  const starters = new Set(all.filter(({ p }) => p.t === 'mst3').map(({ p }) => p.tag));
+  for (const pass of [0, 1]) {   // (pass 0: the parts that have a letter of their own; pass 1: the rest)
+    for (const { p } of all) if (p.t === 'coil' && !coilL.has(p.tag)) { const pr = prefOf(p); if (pass === 0 && pr) coilL.set(p.tag, take(pr)); else if (pass === 1 && starters.has(p.tag)) coilL.set(p.tag, take('M')); }
+    for (const { p } of all) if (/^(pbm?_|estop|sel|spst)/.test(p.t) && !opL.has(opKey(p))) { const pr = prefOf(p); if (pass === 0 ? pr : true) opL.set(opKey(p), take(pass === 0 ? pr : null)); }
+    for (const { p } of all) if (p.t === 'coil' && !coilL.has(p.tag) && pass === 1) coilL.set(p.tag, take());
+  }
+  for (const { p } of all) if (p.t === 'mst3' && !coilL.has(p.tag) && tagLetter(p)) coilL.set(p.tag, take(tagLetter(p)));
+  const lab = s => String(s || '').replace(/\s+/g, ' ').trim().toUpperCase().slice(0, 8);
+  // (a label for the cap: the print's own words under the tag; or the tag itself where it is the print's own (PB1, CR1), not a letter)
+  const capLab = p => lab(p.desc) || (tagLetter(p) ? '' : lab(p.tag));
+  // numbers for limit switches (a print's proximity and float switches become limit switches too: the next free ones)
+  const lsN = new Set(all.filter(({ p }) => /^ls_/.test(p.t)).map(({ p }) => linkDigits(p.tag, '')).filter(Boolean)), nextLS = () => { let n = 1; while (lsN.has(String(n))) n++; lsN.add(String(n)); return String(n); };
+  const swapLS = new Map();
+  const jmpN = new Map();   // (a continuation's name -> its number)
+
+  const parts = [], fromIdx = [], terms = new Map();   // (terms: a print part -> [its terminals here, in its own order])
+  const add = (src, row, ts) => { parts.push(row); fromIdx.push(src); if (ts) terms.set(src.p, ts); return row; };
+  // (a continuation at the foot of a sheet and its partner at the top of the next, in the same column: in Circuit Builder the sheets
+  // are one under another, so the wire just runs on down)
+  const pairDown = new Set();
+  for (const a of all) if (a.p.t === 'cnt_out') { const b = all.find(q => q.p.t === 'cnt_in' && q.p.tag === a.p.tag && q.k === a.k + 1); if (!b) continue;
+    const ta = linkPbTerms(a.p)[0], tb = linkPbTerms(b.p)[0]; if (ta && tb && Math.abs(ta[0] - tb[0]) < 1) { pairDown.add(a.p); pairDown.add(b.p); } }
+  let coilN = 0; const noCoil = [], ownCol = new Set();   // (ownCol: lights whose colour the print names)
+  // (Dallas, 19 Nov 2026: a part Circuit Builder has none of comes in as a stand-in: its symbol in a box, its terminals where the
+  // print's are (two: a button's; more: just outside the symbol's). Drawn, not run; it goes back to the print as it was)
+  const standIn = (it, p, pb, x, y, name) => { x = linkSnap(x); y = linkSnap(y); const up = (p.rot || 0) % 180 !== 0;
+    const o = pb.length === 2 && (pb[0][1] === pb[1][1] || pb[0][0] === pb[1][0])
+      ? pb.map((q, i) => pb[0][1] === pb[1][1] ? [(Math.sign(q[0] - pb[1 - i][0]) || (i ? 1 : -1)) * 40, 0] : [0, (Math.sign(q[1] - pb[1 - i][1]) || (i ? 1 : -1)) * 40])
+      : pb.map(q => { let u = linkSnap(q[0] - x), v = linkSnap(q[1] - y); if (!up && u) u += Math.sign(u) * 20; else if (up && v) v += Math.sign(v) * 20; else if (v) v += Math.sign(v) * 20; else u += Math.sign(u || 1) * 20; return [u, v]; });
+    add(it, ['stand', x, y, String(p.tag || ''), 0, 1, '', null, null, String(p.desc || ''), { t: p.t, r: p.rot || 0, o }], o.map(([u, v]) => [x + u, y + v]));
+    note(changed, `${name}: a stand-in in Circuit Builder (its symbol in a box: drawn, not run; it comes back to the print as it is)`); };
+  for (const it of all) {
+    const { p, k } = it, x = X(p.x), y = Y(k, p.y), pb = linkPbTerms(p).map(q => [X(q[0]), Y(k, q[1])]), name = p.tag || (LIB_NAME_FOR[p.t] || p.t);
+    // (a part turned on the print is turned in Circuit Builder too, Dallas 19 Nov 2026: its turn at a[15]; its terminals matched to the print's in order)
+    const two = (t, row) => { const q = t === 'fu1' ? 0 : Math.round(((+p.rot || 0) % 360 + 360) % 360 / 90) % 4;
+      if (q) { while (row.length < 15) row.push(null); row[15] = { r: q }; }
+      const ts = linkCbTerms(t, x, y, q), d = (u, v) => Math.hypot(u[0] - v[0], u[1] - v[1]);
+      add(it, row, pb.length === 2 && ts.length === 2 && d(ts[0], pb[0]) + d(ts[1], pb[1]) > d(ts[1], pb[0]) + d(ts[0], pb[1]) ? [ts[1], ts[0]] : ts); };
+    if (p.t === 'rail') continue;
+    if ((p.brk && CB0) || pairDown.has(p)) { it.brk = pb[0]; continue; }   // (a continuation the print put where a wire ran over onto the next sheet: the wire joins up again)
+    if (/^pbm?_/.test(p.t) || p.t === 'estop') {
+      const est = p.t === 'estop', row = [est ? 'est' : 'btn', x, y, opL.get(opKey(p)), est || /_nc$/.test(p.t) ? 1 : 0, est || /^pbm/.test(p.t) ? 1 : 0, est ? 'FF0032' : /_nc$/.test(p.t) ? 'FF0032' : '00B050'];
+      const l = capLab(p); if (l) { while (row.length < 9) row.push(null); row.push(l); }
+      two('btn', row);
+    } else if (p.t === 'sel') {
+      const names = (p.pos || 'OFF/ON').split(/[\/,]+/).map(s => s.trim().toUpperCase().slice(0, 5)).filter(Boolean).slice(0, 4), n = Math.max(2, names.length);
+      two('sel', ['sel', x, y, opL.get(opKey(p)), 0, 1, '0070C0', n, (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, names.join('/'), 0]);
+    } else if (p.t === 'spst' || /^(prs_|fs_)/.test(p.t)) standIn(it, p, pb, x, y, name);
+    else if (/^ls_/.test(p.t)) {
+      let n = linkDigits(p.tag, '1');
+      if (!/^ls_/.test(p.t)) { const key = p.t.split('_')[0] + ':' + p.tag; if (!swapLS.has(key)) swapLS.set(key, nextLS()); n = swapLS.get(key); note(changed, `${p.tag || ''} ${/^prs/.test(p.t) ? 'proximity' : 'float'} switch → limit switch LS${n} (Circuit Builder has none yet)`.trim()); }
+      const nc = /_nc$|_ho$/.test(p.t), held = /_hc$|_ho$/.test(p.t);
+      two('lsw', ['lsw', x, y, n, nc ? 1 : 0, 1, '0070C0', ...(held ? [1] : [])]);
+    } else if (/^ts_/.test(p.t)) {
+      two('tsw', ['tsw', x, y, linkDigits(p.tag, '1'), /_ncl?$/.test(p.t) ? 1 : 0, 1, 'FF0032', ...(/l$/.test(p.t) ? [1] : [])]);
+    } else if (/^ps_/.test(p.t)) two('psw', ['psw', x, y, linkDigits(p.tag, '1'), /_nc$/.test(p.t) ? 1 : 0, 1, 'FF9C37']);
+    else if (/^fls_/.test(p.t)) two('fsw', ['fsw', x, y, linkDigits(p.tag, '1'), /_nc$/.test(p.t) ? 1 : 0, 1, '9B6BFF']);
+    else if (p.t === 'coil') {
+      const timer = linkTimer(p), row = ['coil', x, y, coilL.get(p.tag), 0, 1, LINK_PAL[coilN++ % LINK_PAL.length]];
+      if (timer) { if (!p.delay) note(changed, 'Timers with no delay on the print start at 5 s: check them on each timer’s tab'); row.push(Math.max(1, Math.min(999, Math.round(p.delay || 5)))); if (p.tof) row.push(1); }
+      const l = capLab(p); if (l) { while (row.length < 9) row.push(null); row.push(l); }
+      two('coil', row);
+    } else if (/^(con|tc)_/.test(p.t)) {
+      if (!coilL.has(p.tag)) { noCoil.push(p.tag || '?'); coilL.set(p.tag, take()); } const L = coilL.get(p.tag);
+      const timer = all.some(({ p: c }) => c.t === 'coil' && c.tag === p.tag && linkTimer(c));
+      const row = ['con', x, y, L, /_nc$/.test(p.t) ? 1 : 0, 1, '']; if (timer && /^con_/.test(p.t)) row.push(1);
+      two('con', row);
+    } else if (p.t === 'olc') two('olc', ['olc', x, y, linkDigits(p.tag, '1'), 1, 1, '']);
+    else if (p.t === 'pl' || p.t === 'sol' || p.t === 'htr') {
+      if (p.t === 'pl') { const w0 = LINK_LAMP_COL[(p.desc || '').toUpperCase().split(/\s+/)[0]], c = w0 || '00B050'; if (w0) ownCol.add(parts.length); const pbL = p.inPB ? [...opL.entries()].find(([k]) => k === 'PB:' + p.inPB) : null; two('lamp', ['lamp', x, y, pbL ? pbL[1] : '', 0, 1, c]); }
+      else two(p.t, [p.t, x, y, linkDigits(p.tag, '1'), 0, 1, p.t === 'sol' ? '00D2BE' : 'FF0032']);
+    } else if (p.t === 'motor') add(it, ['mtr', x + (pb[1] ? pb[1][0] - x + 160 : 0), y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('mtr', x + (pb[1] ? pb[1][0] - x + 160 : 0), y, 0));
+    else if (p.t === 'mst3') { if (!coilL.has(p.tag)) { noCoil.push(p.tag || '?'); coilL.set(p.tag, take()); } add(it, ['mst', x, y, coilL.get(p.tag), 0, 1, ''], linkCbTerms('mst', x, y, 0)); }
+    else if (p.t === 'ol3') add(it, ['olh', x, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('olh', x, y, 0));
+    else if (p.t === 'dsc3') add(it, ['dsc', x, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('dsc', x, y, 0));
+    else if (p.t === 'cb3' || p.t === 'fdsc3' || p.t === 'cb' || p.t === 'cb2') standIn(it, p, pb, x, y, name);
+    else if (p.t === 'fus3') { add(it, ['fus', x, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('fus', x, y, 0)); }
+    else if (p.t === 'fuse') {
+      const up = pb[0] && pb[1] && pb[0][0] === pb[1][0], cx = LK ? x : up ? pb[0][0] : linkSnap((pb[0][0] + pb[1][0]) / 2), cy = LK ? y : up ? linkSnap((pb[0][1] + pb[1][1]) / 2) : pb[0][1], rot = up ? 1 : 0;   // (made from a circuit: back at its own middle)
+      const ts = linkCbTerms('fu1', cx, cy, rot), first = up ? (pb[0][1] < pb[1][1] ? 0 : 1) : (pb[0][0] < pb[1][0] ? 0 : 1);
+      const sorted = up ? ts.slice().sort((a, b) => a[1] - b[1]) : ts.slice().sort((a, b) => a[0] - b[0]);
+      add(it, ['fu1', cx, cy, linkDigits(p.tag, '1'), 0, 1, '', ...(rot ? [rot] : [])], first === 0 ? sorted : [sorted[1], sorted[0]]);
+    } else if (p.t === 'xfmr') add(it, ['xfm', x, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('xfm', x, y, 0));
+    else if (p.t === 'sup' || p.t === 'src_l1' || p.t === 'src_l2' || p.t === 'cnt_out' || p.t === 'cnt_in') {
+      // (one terminal on the print: a Circuit Builder box with one of its terminals there, facing the way its wire goes)
+      const at = pb[0], t = p.t === 'sup' ? 'ph' : p.t === 'src_l1' ? 'l1' : p.t === 'src_l2' ? 'l2' : 'jmp';
+      const w = (doc.sheets[k].wires || []).map(w0 => [linkPbPos(doc.sheets[k], w0.a), ...(w0.pts || []), linkPbPos(doc.sheets[k], w0.b)].filter(Boolean)).find(ps => ps.length > 1 && ((X(ps[0][0]) === at[0] && Y(k, ps[0][1]) === at[1]) || (X(ps[ps.length - 1][0]) === at[0] && Y(k, ps[ps.length - 1][1]) === at[1])));
+      let dir = [1, 0];
+      if (w) { const ps = w.map(q => [X(q[0]), Y(k, q[1])]); const i = ps[0][0] === at[0] && ps[0][1] === at[1] ? 1 : ps.length - 2; const nb = ps[i] || at; dir = [Math.sign(nb[0] - at[0]), Math.sign(nb[1] - at[1])]; }
+      // (the box sits behind its terminal: its right terminal there if the wire goes right, and so on)
+      const cx = at[0] - dir[0] * 40, cy = at[1] - dir[1] * 40, rot = 0;
+      let row;
+      if (t === 'ph') row = ['ph', cx, cy, linkDigits(p.tag, '1'), 0, 1, ''];
+      else if (t === 'jmp') { const key = (p.tag || '').toUpperCase() || '?'; if (!jmpN.has(key)) jmpN.set(key, jmpN.size + 1); row = ['jmp', cx, cy, String(jmpN.get(key)), 0, 1, '']; }
+      else row = [t, cx, cy, '', 0, 1, ''];
+      add(it, row, [at]);
+      if (dir[1] === -1 && t !== 'jmp') { /* (a box wired from above: its bottom terminal is the nearest Circuit Builder has) */ }
+    } else if (LINK_PB_TERMS[p.t] && pb.length) standIn(it, p, pb, x, y, name);   // (a ground, a one-line overload, SPDT, DPST, DPDT, crossover, and any other)
+  }
+  // wires: each keeps its path; ends on a part's terminal move onto that part's terminal here
+  const wires = [];
+  const seg = (a, b) => { if (a[0] === b[0] && a[1] === b[1]) return; if (a[0] !== b[0] && a[1] !== b[1]) { wires.push([a[0], a[1], b[0], a[1]]); wires.push([b[0], a[1], b[0], b[1]]); } else wires.push([a[0], a[1], b[0], b[1]]); };
+  const poly = ps => { for (let i = 0; i + 1 < ps.length; i++) seg(ps[i], ps[i + 1]); };
+  doc.sheets.forEach((s, k) => {
+    for (const w of s.wires || []) {
+      const ends = [w.a, w.b], raw = [linkPbPos(s, w.a), ...(w.pts || []), linkPbPos(s, w.b)];
+      if (raw.some(q => !q)) continue;
+      const ps = raw.map(q => [X(q[0]), Y(k, q[1])]);
+      // (a bar: an end on the L1 or L2 rail sits on Circuit Builder's bar)
+      if (!power) ends.forEach((e, n) => { if (e.r) { const r = s.parts.find(q => q.id === e.r); const q = n ? ps[ps.length - 1] : ps[0]; if (r) q[0] = r.label === 'L2' ? W : 0; } });
+      const to = ends.map(e => { if (!e.p) return null; const p = s.parts.find(q => q.id === e.p), ts = p && terms.get(p); return ts ? ts[e.i] || null : null; });
+      poly(linkMoveEnds(ps, to[0], to[1]));
+    }
+    // (with power, the rails are wires: up and down the side, as the print draws them)
+    if (power) for (const r of s.parts.filter(p => p.t === 'rail')) seg([X(r.x), Y(k, r.y0)], [X(r.x), Y(k, r.y1)]);
+  });
+  for (const it of all) { if (it.extra) for (const [a, b] of it.extra) seg(a, b); if (it.through) seg(it.through[0], it.through[1]); }
+  { const outs = all.filter(it => it.brk && it.p.t === 'cnt_out'); for (const o of outs) { const i = all.find(it => it.brk && it.p.t === 'cnt_in' && it.p.tag === o.p.tag && it.k > o.k); if (i) seg(o.brk, i.brk); } }
+  // (rails continued from one sheet to the next: in bars mode the bars run on; with power, the rail wires join up)
+  if (power) for (let k = 0; k + 1 < doc.sheets.length; k++) for (const lb of ['L1', 'L2']) {
+    const a = doc.sheets[k].parts.find(p => p.t === 'rail' && p.label === lb), b = doc.sheets[k + 1].parts.find(p => p.t === 'rail' && p.label === lb);
+    if (a && b && X(a.x) === X(b.x)) seg([X(a.x), Y(k, a.y1)], [X(b.x), Y(k + 1, b.y0)]);
+  }
+  // (a plain ladder with no supply drawn: Circuit Builder's bars are its supply; with power and rails fed by nothing, supply boxes on top)
+  if (power) for (const r of rails) {
+    const fed = parts.some(row => { const ts = linkRowTerms(row); return ts.some(q => q[0] === X(r.p.x) && q[1] === Y(r.k, r.p.y0)); })
+      || wires.some(w => (w[0] === X(r.p.x) && w[1] === Y(r.k, r.p.y0) && !(w[2] === X(r.p.x) && w[3] > w[1])) || (w[2] === X(r.p.x) && w[3] === Y(r.k, r.p.y0) && !(w[0] === X(r.p.x) && w[1] > w[3])));
+    if (!fed && r.k === 0) { parts.push([r.p.label === 'L2' ? 'l2' : 'l1', X(r.p.x), Y(r.k, r.p.y0) - 40, '', 0, 1, '']); fromIdx.push(null); }
+  }
+  const name = (((doc.tb || {}).fields || []).find(f => /title/i.test(f.label)) || {}).value || 'Print';
+  let data = { app: 'order-of-operations-circuit-builder', v: 1, name, w: power ? linkSnap(Math.max(...parts.map(r => r[1]), ...wires.flatMap(w => [w[0], w[2]])) + 200) : W || LINK_W_MIN, ...(power ? { pw: 'boxes' } : {}), parts, wires };
+  // (made from a circuit, then changed on the print: what only Circuit Builder knows comes back, part by part)
+  if (doc.link && doc.link.cb) data = linkMerge(doc.link.cb, data, fromIdx.map(it => it && it.p.cbi != null ? it.p.cbi : null), ownCol);
+  if (noCoil.length) note(left, `The coil${noCoil.length > 1 ? 's' : ''} for ${noCoil.join(', ')}: not on the print (${noCoil.length > 1 ? 'their contacts are there, worked by nothing' : 'its contacts are there, worked by nothing'}: put ${noCoil.length > 1 ? 'the coils' : 'the coil'} in to run it)`);
+  return { data, notes: { changed, left }, idx: fromIdx.map(it => it && it.p ? { k: it.k, id: it.p.id } : null), map: all.filter(it => terms.has(it.p)).map(it => ({ k: it.k, id: it.p.id, t: it.p.t, ts: terms.get(it.p) })), through: all.filter(it => it.through || it.brk).map(it => ({ k: it.k, id: it.p.id, t: it.p.t })) };
+}
+const LIB_NAME_FOR = { fuse: 'A fuse', cb: 'A circuit breaker', cb2: 'A circuit breaker', cb3: 'A circuit breaker', ol: 'An overload heater', fdsc3: 'A fused disconnect', spst: 'A switch', spdt: 'A switch', dpst: 'A switch', dpdt: 'A switch', xover: 'A switch' };
+// Circuit Builder's joins, as it makes them: where a wire ends, or at a terminal (only crossing, not joined); its bars; jumpers by number
+const linkRotOf = a => ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(a[0]) ? (Math.round(+a[7]) || 0) : 0;
+function linkCbJoin(d, C) {
+  const bars = d.pw !== 'boxes', W = +d.w, at = new Map(), ends = new Set();
+  d.wires.forEach((w, wi) => { const [x1, y1, x2, y2] = w.map(Number), n = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) / 20; C.f('w' + wi);
+    for (const q of [[x1, y1], [x2, y2]]) { ends.add(q.join(',')); if (bars && q[0] === 0) C.u('w' + wi, 'BAR:L1'); if (bars && q[0] === W) C.u('w' + wi, 'BAR:L2'); }
+    for (let i = 0; i <= n; i++) { const k = (x1 + (x2 - x1) * i / (n || 1)) + ',' + (y1 + (y2 - y1) * i / (n || 1)); if (!at.has(k)) at.set(k, []); at.get(k).push('w' + wi); } });
+  const J = new Map();
+  for (const a of d.parts) linkRowTerms(a).forEach(q => { const k = q.join(','); ends.add(k); C.f('t' + k); if (a[0] === 'jmp') { if (J.has(a[3])) C.u('t' + k, J.get(a[3])); else J.set(a[3], 't' + k); } });
+  for (const k of ends) { const ws = at.get(k) || []; for (const w of ws) C.u('t' + k, w); }
+  return C;
+}
+// how a circuit's parts are joined, whatever their places: each part's type, and for each of its terminals the first terminal (part,
+// terminal) in its net. Two circuits with the same are the same circuit drawn differently
+function linkCbShape(d) {
+  const par = new Map(), f = k => { if (!par.has(k)) par.set(k, k); let x = k; while (par.get(x) !== x) x = par.get(x); par.set(k, x); return x; };
+  const C = linkCbJoin(d, { f, u: (a, b) => { const A = f(a), B = f(b); if (A !== B) par.set(A, B); } }), first = new Map();
+  return JSON.stringify(d.parts.map((a, i) => [a[0], linkRowTerms(a).map((q, j) => {
+    const root = C.f('t' + q.join(',')), bar = ['BAR:L1', 'BAR:L2'].find(b => par.has(b) && C.f(b) === root);
+    if (bar) return bar; if (!first.has(root)) first.set(root, i + ':' + j); return first.get(root); })]));
+}
+// does a circuit made from a print join what the print joins, and only that, with no part on another and no wire through a part?
+// (each print terminal against the circuit terminal it became: two joined on the print must be joined in the circuit, and the other way)
+function linkCheck(doc, r) {
+  const mk = () => { const par = new Map(); const f = k => { if (!par.has(k)) par.set(k, k); let x = k; while (par.get(x) !== x) x = par.get(x); par.set(k, x); return x; }; return { f, u: (a, b) => { const A = f(a), B = f(b); if (A !== B) par.set(A, B); } }; };
+  // the print: wires, junctions, the rails (one each, L1 and L2, on every sheet), continuations of one name, a one-line overload heater (joined through)
+  const P = mk(), cnt = new Map();
+  doc.sheets.forEach((s, k) => { const rail = {}; for (const p of s.parts) if (p.t === 'rail') rail[p.id] = p.label;
+    const key = e => e.r != null ? 'R:' + rail[e.r] : e.n != null ? k + ':n:' + e.n : k + ':p:' + e.p + ':' + e.i;
+    for (const w of s.wires) P.u(key(w.a), key(w.b));
+    for (const p of s.parts) { if (p.t === 'ol') P.u(k + ':p:' + p.id + ':0', k + ':p:' + p.id + ':1');
+      if (p.t === 'cnt_out' || p.t === 'cnt_in') { const t = String(p.tag || ''), q = k + ':p:' + p.id + ':0'; if (cnt.has(t)) P.u(q, cnt.get(t)); else cnt.set(t, q); } } });
+  // the circuit: as Circuit Builder joins wires (where one ends, or at a terminal; only crossing, not joined), its bars, continuations by number
+  const d = r.data, C = linkCbJoin(d, mk()), rotOf = linkRotOf;
+  // each mapped terminal: its group on the print and in the circuit must pair up one to one
+  const pToC = new Map(), cToP = new Map(); let bad = 0; const problems = [];
+  for (const m of r.map) m.ts.forEach((q, i) => { if (!q) return; const pk = P.f(m.k + ':p:' + m.id + ':' + i), ck = C.f('t' + q.join(','));
+    if (pToC.has(pk) && pToC.get(pk) !== ck) { bad++; if (problems.length < 6) problems.push(m.t + ' ' + i + ': joined on the print, not in the circuit'); } else pToC.set(pk, ck);
+    if (cToP.has(ck) && cToP.get(ck) !== pk) { bad++; if (problems.length < 6) problems.push(m.t + ' ' + i + ': joined in the circuit, not on the print'); } else cToP.set(ck, pk); });
+  // parts on top of each other, and wires through a part (Circuit Builder's sizes: a switch with a head is taller above its wire)
+  const TALL = new Set(['lsw', 'psw', 'fsw', 'tsw']);
+  const box = a => { const ts = linkRowTerms(a); if (!ts.length) return null; const xs = ts.map(q => q[0]), ys = ts.map(q => q[1]);
+    if (ts.length === 2 && ys[0] === ys[1]) return { x0: Math.min(...xs), x1: Math.max(...xs), y0: ys[0] - (TALL.has(a[0]) ? 41 : 34), y1: ys[0] + (TALL.has(a[0]) ? 82 : 34), two: 1 };
+    if (ts.length === 2 && xs[0] === xs[1]) return { x0: xs[0] - 34, x1: xs[0] + 34, y0: Math.min(...ys), y1: Math.max(...ys), two: 1 };
+    return { x0: Math.min(...xs, +a[1]) - 20, x1: Math.max(...xs, +a[1]) + 20, y0: Math.min(...ys, +a[2]) - 20, y1: Math.max(...ys, +a[2]) + 20 }; };
+  const B = d.parts.map(box); let over = 0, thru = 0;
+  for (let i = 0; i < B.length; i++) for (let j = i + 1; j < B.length; j++) { const a = B[i], b = B[j]; if (!a || !b) continue;
+    if (Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0) > 4 && Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) > 4) { over++; if (problems.length < 8) problems.push(d.parts[i][0] + ' ' + d.parts[i][3] + ' on ' + d.parts[j][0] + ' ' + d.parts[j][3]); } }
+  for (const w of d.wires) { const [x1, y1, x2, y2] = w.map(Number); for (const b of B) { if (!b || !b.two) continue; const X0 = b.x0 + 8, X1 = b.x1 - 8, Y0 = b.y0 + 8, Y1 = b.y1 - 8;
+    if ((y1 === y2 && y1 > Y0 && y1 < Y1 && Math.max(x1, x2) > X0 && Math.min(x1, x2) < X1) || (x1 === x2 && x1 > X0 && x1 < X1 && Math.max(y1, y2) > Y0 && Math.min(y1, y2) < Y1)) thru++; } }
+  const score = bad * 10 + over * 3 + thru;
+  return { ok: !score, score, bad, over, thru, problems };
+}
+// a circuit rebuilt from its print, given back what the print could not carry (cbi: each new part's place in the old circuit)
+function linkMerge(old, nu, cbi, ownCol = new Set()) {
+  const oi = new Map(); cbi.forEach((o, n) => { if (o != null && old.parts[o] && old.parts[o][0] === (nu.parts[n][0] === 'est' ? 'est' : nu.parts[n][0])) oi.set(o, n); });
+  for (const [o, n] of oi) {
+    const a = old.parts[o], b = nu.parts[n];
+    if (!ownCol.has(n)) b[6] = a[6];   // (its colour, unless the print names a light's colour)
+    if (['ph', 'l1', 'l2', 'jmp', 'fu1'].includes(b[0]) && a[1] === b[1] && a[2] === b[2] && a[7]) { while (b.length < 7) b.push(''); b[7] = a[7]; }   // (a supply box or continuation where it was: turned as it was)
+    if ((b[0] === 'btn' || b[0] === 'coil') && typeof a[9] === 'string') { while (b.length < 9) b.push(null); b[9] = a[9]; }
+    if (b[0] === 'btn' || b[0] === 'coil' || b[0] === 'sel' || b[0] === 'con' || b[0] === 'mst' || b[0] === 'lamp') { /* (letters: as the print made them) */ }
+    if (a.length > 12 && (b[0] === 'btn' || b[0] === 'sel' || b[0] === 'lamp')) { while (b.length < 12) b.push(null); b.push(...a.slice(12)); }   // (its dashed link line)
+  }
+  const map = o => oi.has(o) ? oi.get(o) : -1;
+  const keep = ['name', 'sc', 'pc', 'wo', 'ffo', 'pv', 'pp'];
+  for (const k of keep) if (old[k] !== undefined) nu[k] = old[k];
+  if (old.pw === 'boxes') nu.pw = 'boxes';
+  if (old.pd) nu.pd = old.pd.map(a => [map(a[0]), ...a.slice(1)]).filter(a => a[0] >= 0);
+  if (old.pl) nu.pl = old.pl.map(a => [map(a[0]), ...a.slice(1)]).filter(a => a[0] >= 0);
+  if (old.ph) nu.ph = old.ph.map(a => [map(a[0]), ...a.slice(1)]).filter(a => a[0] >= 0);
+  if (old.pn) nu.pn = old.pn.map(map).filter(i => i >= 0);
+  if (old.sp) nu.sp = old.sp;   // (the speed the circuit starts at)
+  if (old.fl) nu.fl = old.fl.map(([i, f]) => [map(i), f]).filter(a => a[0] >= 0);
+  // (a fault on a wire: kept where the same run of wire is there still)
+  const wi = new Map(nu.wires.map((w, i) => [w.slice(0, 4).join(','), i])), wmap = i => { const w = old.wires[i]; if (!w) return -1; const k = w.slice(0, 4).join(','), r = [w[2], w[3], w[0], w[1]].join(','); return wi.has(k) ? wi.get(k) : wi.has(r) ? wi.get(r) : -1; };
+  old.wires.forEach((w, i) => { if (w[4]) { const j = wmap(i); if (j >= 0) nu.wires[j][4] = w[4]; } });
+  if (old.sn) { nu.sn = old.sn.map(s => ({ ...s, fl: (s.fl || []).map(([i, f]) => [map(i), f]).filter(a => a[0] >= 0), wl: (s.wl || []).map(([i, f]) => [wmap(i), f]).filter(a => a[0] >= 0) })); if (old.si !== undefined) nu.si = old.si; }
+  return nu;
+}
+
+/* =====================================================================
+   A circuit -> a print (runs in Print Builder: uses its uid, defaultTB, nextTag-free tags of its own)
+   ===================================================================== */
+// the print a circuit was opened from, kept as drawn while the circuit is the same parts joined the same way (null: draw it again)
+function linkKeepPrint(d, env) {
+  const c0 = d.pr.c0, ix = d.pr.ix;
+  try {
+    if (!Array.isArray(c0.parts) || c0.parts.length !== d.parts.length || ix.length !== d.parts.length || (c0.pw || '') !== (d.pw || '')) return null;
+    if (linkCbShape(c0) !== linkCbShape(d)) return null;
+    const pb = JSON.parse(JSON.stringify(d.pr.pb)), own = a => JSON.stringify([a[0], a[3], a[4], a[5], a[8], a[9], a[10], a[11]]);
+    const diff = d.parts.map((a, i) => own(a) !== own(c0.parts[i])).map((x, i) => x ? i : -1).filter(i => i >= 0);
+    if (diff.length) {
+      const bare = { ...d }; delete bare.pr; const fresh = circuitToPrint(bare, env).doc;
+      const freshOf = i => { for (const s of fresh.sheets) for (const p of s.parts) if (p.cbi === i) return p; return null; };
+      for (const i of diff) { const at = ix[i], nw = freshOf(i); if (!at) continue; const old = (pb.sheets[at.k] || { parts: [] }).parts.find(p => p.id === at.id);
+        if (!old || !nw) return null;
+        if (old.t !== nw.t && linkPbTerms(old).length !== linkPbTerms({ ...old, t: nw.t }).length) return null;
+        for (const key of ['t', 'tag', 'desc', 'pre', 'delay', 'tof']) { if (nw[key] === undefined) delete old[key]; else old[key] = nw[key]; } }
+    }
+    const n = diff.filter(i => ix[i]).length;
+    return { doc: pb, notes: { changed: [`Kept as you drew it: the circuit is still joined just as it was (only moved about)${n ? `; ${n} part${n > 1 ? 's' : ''} brought up to date (letters, names or contacts)` : ''}`], left: [], kept: true } };
+  } catch (e) { return null; }
+}
+// (how full a print's sheets are: for each sheet but the last, the share of its height its parts take; 1 for a single sheet)
+const linkThin = doc => doc.sheets.slice(0, -1).map(s => { const ys = s.parts.filter(p => p.t !== 'rail' && !/^cnt_/.test(p.t)).map(p => p.y);
+  return ys.length ? (Math.max(...ys) - Math.min(...ys) + 160) / (linkDrawH(s) - 280) : 0; }).filter(f => f < .5).length;
+function circuitToPrint(d, env) {
+  // (Dallas, 19 Nov 2026: landscape that leaves a sheet less than half full (its rungs too many to share a shorter sheet) is not
+  // worth it: kept portrait, its long rungs wrapped instead)
+  if (env.long === 'land' && !env.landTried) { const r = circuitToPrint(d, { ...env, landTried: 1 });
+    if (r.notes.same || r.notes.kept || !linkThin(r.doc)) return r;
+    const w = circuitToPrint(d, { ...env, long: 'wrap', landTried: 1 }); if (linkThin(w.doc) >= linkThin(r.doc)) return r;
+    w.notes.changed.unshift('Kept portrait: drawn landscape, a sheet was left less than half full (its rungs too tall to share a shorter sheet), so the long rungs are wrapped instead');
+    return w; }
+  if (!d || typeof d !== 'object' || !Array.isArray(d.parts) || !Array.isArray(d.wires)) throw new Error('That is not a circuit from Circuit Builder.');
+  const uid = env.uid, changed = [], left = [], note = (list, s) => { if (!list.includes(s)) list.push(s); };
+  // (opened in Circuit Builder from a print and not changed since: that print, exactly; Dallas, 19 Nov 2026)
+  if (d.pr && d.pr.pb && d.pr.fp && d.pr.fp === linkCircuitFingerprint(d)) {
+    const pb = JSON.parse(JSON.stringify(d.pr.pb)); if (pb && pb.kind === 'o3-print' && Array.isArray(pb.sheets) && pb.sheets.length) return { doc: pb, notes: { changed: [], left: [], same: true } }; }
+  // (changed in Circuit Builder, but only moved about: still the same parts, joined just as they were. Dallas, 19 Nov 2026: moving one
+  // wire redrew his whole print. Then the print as he drew it, each part whose letter, name or contacts changed brought up to date)
+  if (d.pr && d.pr.pb && d.pr.c0 && Array.isArray(d.pr.ix)) { const k = linkKeepPrint(d, env); if (k) return k; }
+  if (d.pr) { d = { ...d }; delete d.pr; }   // (changed: drawn again; the old print is not carried inside the new one)
+  const bars = d.pw !== 'boxes', d0 = d; let ylink = null;
+  // (a ladder: its rungs spread out down the print as far as needed for the tags and names, up to twice as far)
+  let sy = 1;
+  if (bars) { const ys = [...new Set(d.parts.map(a => +a[2]))].sort((a, b) => a - b), gaps = ys.slice(1).map((y, i) => y - ys[i]).filter(g => g > 0);
+    if (gaps.length) sy = Math.max(1, Math.min(2, 160 / Math.min(...gaps)));
+    if (sy > 1) d = { ...d, parts: d.parts.map(a => { const b = a.slice(); b[2] = linkSnap(+a[2] * sy); return b; }), wires: d.wires.map(w => { const b = w.slice(); b[1] = linkSnap(+w[1] * sy); b[3] = linkSnap(+w[3] * sy); return b; }) }; }
+  const R = d.parts.map((a, i) => ({ i, t: a[0], x: +a[1], y: +a[2], L: String(a[3] ?? ''), nc: !!a[4], maint: a[5] !== 0, color: a[6] || '', a }));
+  const rotOf = r => ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(r.t) ? (Math.round(+r.a[7]) || 0) : 0;
+  const coilBy = new Map(R.filter(r => r.t === 'coil').map(r => [r.L, r]));
+  const isTimer = r => r && r.t === 'coil' && +r.a[7] >= 1;
+  const W = Math.max(d.fw ? 400 : LINK_W_MIN, +d.w || 0);   // (as Circuit Builder reads it: never under its W_MIN unless its bars were set by hand)
+  // tags as Circuit Builder's own prints have them (Dallas, 19 Nov 2026): buttons PB-A (an E-stop ES-A), selectors SS-S, coils and
+  // their contacts by the coil's letter (a timer T, a starter M); a label goes under the tag. So the print and the circuit on the
+  // screen name every part alike, and the letters come back to Circuit Builder as they were
+  const tagOf = new Map();
+  const lbl = r => typeof r.a[9] === 'string' && r.a[9].trim() ? r.a[9].trim().toUpperCase() : '';
+  for (const r of R.filter(r => r.t === 'coil')) if (!tagOf.has('C:' + r.L)) tagOf.set('C:' + r.L, r.L);
+  for (const r of R.filter(r => r.t === 'btn' || r.t === 'est' || r.t === 'sel')) { const k = (r.t === 'sel' ? 'S:' : 'B:') + r.L; if (!tagOf.has(k)) { const pre = r.t === 'sel' ? 'SS' : r.t === 'est' ? 'ES' : 'PB'; tagOf.set(k, new RegExp('^' + (r.t === 'sel' ? 'SS' : 'PB|ES')).test(r.L) ? r.L : pre + '-' + r.L); } }
+  const descOf = new Map(R.filter(r => (r.t === 'btn' || r.t === 'est' || r.t === 'coil') && lbl(r)).map(r => [(r.t === 'coil' ? 'C:' : 'B:') + r.L, lbl(r)]));
+  // ---- 1. each part as it will be on the print, at the circuit's own place for now (G: the circuit's grid)
+  const parts0 = R.map(r => ({ r, ts: linkRowTerms(r.a) }));
+  const wired = new Set(d.wires.flatMap(w => [w[0] + ',' + w[1], w[2] + ',' + w[3]]));
+  const made = [];   // ({ r, o }: a circuit part and its print part, o.x/o.y in G for now)
+  const COLN = { 'FF0032': 'RED', '00B050': 'GREEN', 'FFDC00': 'YELLOW', 'FF9600': 'AMBER', '0070C0': 'BLUE', 'FFFFFF': 'WHITE', '7030A0': 'VIOLET', 'EC008C': 'MAGENTA', '00D2BE': 'TEAL' };
+  let plN = 0; const jmpSeen = new Map();
+  for (const { r, ts } of parts0) {
+    const o = { id: uid('p'), x: r.x, y: r.y, rot: 0, desc: '', cbi: r.i };
+    let t = null;
+    switch (r.t) {
+      case 'btn': t = r.nc ? (r.maint ? 'pbm_nc' : 'pb_nc') : (r.maint ? 'pbm_no' : 'pb_no'); o.tag = tagOf.get('B:' + r.L); o.desc = descOf.get('B:' + r.L) || ''; break;
+      case 'est': t = 'estop'; o.tag = tagOf.get('B:' + r.L); o.desc = descOf.get('B:' + r.L) || ''; break;
+      case 'sel': { t = 'sel'; o.tag = tagOf.get('S:' + r.L); const n = Math.round(+r.a[7]) || 3, m = Math.round(+r.a[8]) || 0, names = typeof r.a[10] === 'string' && r.a[10] ? r.a[10].split('/') : [...Array(n).keys()].map(i => String(i + 1)); o.pos = names.slice(0, n).join('/'); o.closedIn = [...Array(n).keys()].filter(i => m >> i & 1); break; }
+      case 'lsw': t = r.a[7] === 1 ? (r.nc ? 'ls_ho' : 'ls_hc') : (r.nc ? 'ls_nc' : 'ls_no'); o.tag = 'LS' + r.L; break;
+      case 'tsw': t = (r.nc ? 'ts_nc' : 'ts_no') + (r.a[7] === 1 ? 'l' : ''); o.tag = 'TS' + r.L; break;
+      case 'psw': t = r.nc ? 'ps_nc' : 'ps_no'; o.tag = 'PS' + r.L; break;
+      case 'fsw': t = r.nc ? 'fls_nc' : 'fls_no'; o.tag = 'FLS' + r.L; break;
+      case 'coil': t = 'coil'; o.tag = tagOf.get('C:' + r.L); o.desc = descOf.get('C:' + r.L) || ''; o.pre = R.some(q => q.t === 'mst' && q.L === r.L) ? 'M' : isTimer(r) ? 'TR' : 'CR'; if (isTimer(r)) { o.delay = Math.round(+r.a[7]); if (r.a[8] === 1) o.tof = true; } break;
+      case 'con': { const c = coilBy.get(r.L); t = isTimer(c) && r.a[7] !== 1 ? (r.nc ? 'tc_nc' : 'tc_no') : (r.nc ? 'con_nc' : 'con_no'); o.tag = c ? tagOf.get('C:' + r.L) : r.L; if (isTimer(c) && r.a[7] === 1) o.inst = true; break; }
+      case 'lamp': t = 'pl'; o.tag = 'PL' + (++plN); o.desc = COLN[(r.color || '').toUpperCase()] || ''; if (r.L && R.some(q => (q.t === 'btn' || q.t === 'est') && q.L === r.L)) o.inPB = tagOf.get('B:' + r.L); break;
+      case 'sol': t = 'sol'; o.tag = 'SOL' + r.L; break;
+      case 'htr': t = 'htr'; o.tag = 'HTR' + r.L; break;
+      case 'mtr': t = 'motor'; o.tag = 'M' + r.L; o.x = r.x - 20; break;   // (its leads: 140 out on the print, 160 here)
+      case 'mst': t = 'mst3'; o.tag = tagOf.get('C:' + r.L) || r.L; break;
+      case 'olc': t = 'olc'; o.tag = 'OL' + r.L; break;
+      case 'olh': t = 'ol3'; o.tag = 'OL' + r.L; break;
+      case 'dsc': t = 'dsc3'; o.tag = 'DS' + r.L; break;
+      case 'fus': t = 'fus3'; o.tag = 'FU' + r.L; break;
+      case 'fu1': t = 'fuse'; o.tag = 'FU' + r.L; o.rot = [0, 90, 180, 270][rotOf(r)]; break;
+      case 'xfm': t = 'xfmr'; o.tag = 'CPT' + r.L; break;
+      case 'ph': t = 'sup'; o.tag = 'L' + r.L; break;
+      case 'l1': t = 'src_l1'; break;
+      case 'l2': t = 'src_l2'; break;
+      case 'stand': { const q = r.a[10]; if (!q || !LINK_PB_TERMS[q.t]) break; t = q.t; o.rot = +q.r || 0; o.tag = r.L; o.desc = typeof r.a[9] === 'string' ? r.a[9] : ''; break; }
+      case 'jmp': { const seen = jmpSeen.get(r.L) || 0; jmpSeen.set(r.L, seen + 1); t = seen ? 'cnt_in' : 'cnt_out'; o.tag = String(r.L); break; }
+    }
+    if (!t) { note(left, `A ${r.t} part: Print Builder has nothing like it`); continue; }
+    o.t = t; if (o.tag == null) o.tag = '';
+    if (r.a[15] && typeof r.a[15] === 'object' && [1, 2, 3].includes(+r.a[15].r) && !o.rot) o.rot = +r.a[15].r * 90;   // (a two-ended part turned in Circuit Builder: turned on the print too)
+    // (one terminal on the print: the part sits on the circuit box's terminal that a wire goes to, its terminal facing the wire)
+    o.cbT = ts;   // (the circuit part's terminals, in G)
+    if (['sup', 'src_l1', 'src_l2', 'cnt_out', 'cnt_in'].includes(t)) {
+      const hits = ts.filter(q => wired.has(q.join(','))), hit = hits[0] || ts[0], dir = [Math.sign(hit[0] - r.x), Math.sign(hit[1] - r.y)];
+      const pt = LINK_PB_TERMS[t][0];
+      if (t === 'cnt_out' || t === 'cnt_in') { o.rot = [0, 90, 180, 270].find(q => { const [u, v] = linkTurn(pt, q); return Math.sign(u) === dir[0] && Math.sign(v) === dir[1]; }) || 0; const [u, v] = linkTurn(pt, o.rot); o.x = hit[0] - u; o.y = hit[1] - v; }
+      else { o.x = hit[0] - pt[0]; o.y = hit[1] - pt[1]; }
+      o.one = hits.length ? hits : [hit];   // (every wired circuit terminal joins the print's one terminal)
+      if (hits.length > 1) note(changed, `${o.tag ? o.tag + ' ' : ''}${t === 'sup' ? 'phase box' : t.startsWith('cnt') ? 'continuation' : 'supply box'} wired on more than one side: drawn with one terminal, the wires joined to it`);
+    }
+    made.push({ r, o });
+  }
+
+  // ---- 2. the wiring as a grid of short steps (20 each), so wires lying on top of each other become one
+  const E = new Map();   // ("x,y" -> Set of neighbouring "x,y")
+  const K = (x, y) => x + ',' + y, XY = k => k.split(',').map(Number);
+  const link2 = (a, b) => { if (a === b) return; if (!E.has(a)) E.set(a, new Set()); if (!E.has(b)) E.set(b, new Set()); E.get(a).add(b); E.get(b).add(a); };
+  const unlink = (a, b) => { E.get(a)?.delete(b); E.get(b)?.delete(a); };
+  const runEnds = new Set();   // (where a wire starts or ends: a wire crossing another anywhere else hops over it, as in Circuit Builder)
+  const run = (x1, y1, x2, y2) => { x1 = linkSnap(x1); y1 = linkSnap(y1); x2 = linkSnap(x2); y2 = linkSnap(y2);
+    if (x1 !== x2 && y1 !== y2) { run(x1, y1, x2, y1); run(x2, y1, x2, y2); return; }
+    runEnds.add(K(x1, y1)); runEnds.add(K(x2, y2));
+    const n = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) / 20, dx = Math.sign(x2 - x1) * 20, dy = Math.sign(y2 - y1) * 20;
+    for (let i = 0; i < n; i++) link2(K(x1 + dx * i, y1 + dy * i), K(x1 + dx * (i + 1), y1 + dy * (i + 1))); };
+  for (const w of d.wires) run(+w[0], +w[1], +w[2], +w[3]);
+  const deg = k => (E.get(k) || new Set()).size;
+  // (a stub ending inside a part, short of its terminal: joined nothing in Circuit Builder, so it goes)
+  const cbTerm = new Set(made.flatMap(({ o }) => o.cbT.map(q => q.join(','))));
+  const inside = (x, y) => made.some(({ o }) => { const ts = o.cbT; if (ts.length !== 2 || ts[0][1] !== ts[1][1] || y !== ts[0][1]) return false; const [u, v] = [Math.min(ts[0][0], ts[1][0]), Math.max(ts[0][0], ts[1][0])]; return x > u && x < v; });
+  for (let again = true; again;) { again = false; for (const k of [...E.keys()]) if (deg(k) === 1 && !cbTerm.has(k) && inside(...XY(k))) { for (const n of [...E.get(k)]) unlink(k, n); E.delete(k); again = true; } }
+  // (each circuit terminal joined to where the print's terminal is: Print Builder's parts are a little narrower)
+  const termAt = new Map();   // ("x,y" -> [{ o, i }]: the print terminals there)
+  const addTerm = (k, o, i) => { if (!termAt.has(k)) termAt.set(k, []); termAt.get(k).push({ o, i }); };
+  for (const { o } of made) {
+    const pts = linkPbTerms(o);
+    if (o.one) { const k = K(...pts[0]); addTerm(k, o, 0); for (const q of o.one) { const qk = q.join(','); if (qk !== k && deg(qk)) run(q[0], q[1], pts[0][0], pts[0][1]); } continue; }
+    o.cbT.forEach((c, j) => { const q = pts[j]; if (!q) return; const ck = c.join(','), qk = K(...q); addTerm(qk, o, j); if (ck !== qk && deg(ck)) run(c[0], c[1], q[0], q[1]); });
+  }
+
+  // ---- 3. the L1 and L2 rails: the bars (a ladder on bars), or the two long wires every rung comes off (on supply boxes)
+  const rails = [];   // ({ label, x, from, to }: the stretch of the rail line the rungs come off, in G)
+  if (bars) for (const [label, x, out] of [['L1', 0, -60], ['L2', W, 60]]) {
+    // (the bar set a little out from the rungs, so a part that touches it in Circuit Builder gets a short wire to its rail on the print)
+    const ys = [...new Set([...E.keys(), ...termAt.keys()].map(XY).filter(([px]) => px === x).map(q => q[1]))];
+    for (const y of ys) run(x, y, x + out, y);
+    rails.push({ label, x: x + out, from: ys.length ? Math.min(...ys) : 0, to: ys.length ? Math.max(...ys) : 200 }); }   // (a ladder always has its rails, even with nothing on it yet)
+  // (on supply boxes: no rails. The two long uprights every rung comes off are wires like any other, numbered as they are
+  // (Dallas, 17 Nov 2026: the drill station's are wires 3 and 2, not L1 and L2), and carried from sheet to sheet by continuations)
+  // (the rail lines' own wire between their first and last rung is the rail now; past the last rung, nothing)
+  const railAt = new Map();   // ("x,y" -> rail index: a point where a wire joins a rail)
+  rails.forEach((rl, n) => {
+    for (let y = rl.from; y < rl.to; y += 20) unlink(K(rl.x, y), K(rl.x, y + 20));
+    for (let y = rl.to; deg(K(rl.x, y + 20)) && E.get(K(rl.x, y + 20)).has(K(rl.x, y)) && deg(K(rl.x, y + 20)) <= 2 && !termAt.has(K(rl.x, y + 20)); y += 20) unlink(K(rl.x, y), K(rl.x, y + 20));
+    for (let y = rl.from; y <= rl.to; y += 20) if (deg(K(rl.x, y)) || termAt.has(K(rl.x, y))) railAt.set(K(rl.x, y), n);
+  });
+  // (wire left joined to nothing at either end, and overhangs running past a junction to nowhere: in Circuit Builder they joined nothing)
+  const keyPt = k => termAt.has(k) || railAt.has(k);
+  const isCross = k => deg(k) === 4 && !runEnds.has(k) && !keyPt(k);   // (two wires crossing, neither ending there: not joined)
+  const through = k => !keyPt(k) && (deg(k) === 2 || isCross(k));
+  const onward = (prev, cur) => { if (deg(cur) === 2) return [...E.get(cur)].find(n => n !== prev); const [px, py] = XY(prev), [cx, cy] = XY(cur); return [...E.get(cur)].find(n => { const [nx, ny] = XY(n); return n !== prev && (px === cx ? nx === cx : ny === cy); }); };
+  for (let again = true; again;) { again = false; for (const k of [...E.keys()]) if (deg(k) === 0 && !keyPt(k)) E.delete(k); else if (deg(k) === 1 && !keyPt(k)) {
+    // (walk back to where it joins something; drop it if that is a junction (an overhang), keep it if it leads to a terminal: a loose wire to show)
+    let prev = k, cur = [...E.get(k)][0], path = [k]; while (cur && through(cur)) { path.push(cur); const nx = onward(prev, cur); prev = cur; cur = nx; }
+    if (cur && ((deg(cur) >= 3 && !keyPt(cur)) || (deg(cur) === 1 && !keyPt(cur)))) { if (deg(cur) === 1) { path.push(cur); for (let i = 0; i + 1 < path.length; i++) unlink(path[i], path[i + 1]); for (const q of path) if (!deg(q)) E.delete(q); again = true; continue; } path.push(cur); for (let i = 0; i + 1 < path.length; i++) unlink(path[i], path[i + 1]); for (const q of path.slice(0, -1)) if (!deg(q)) E.delete(q); again = true; } } }
+
+  // (points along a level run of wire that join nothing: taken out, so only the places that matter set how close things can be drawn)
+  for (const k of [...E.keys()]) { if (deg(k) !== 2 || keyPt(k)) continue; const [x, y] = XY(k), [a, b] = [...E.get(k)];
+    if (XY(a)[1] !== y || XY(b)[1] !== y) continue; unlink(k, a); unlink(k, b); E.delete(k); link2(a, b); }
+  // ---- 4. the paper: letter portrait unless asked otherwise, each part its own size with room for its tag, its name and the wire numbers.
+  // A long rung that won't fit across portrait that way (Dallas, 17 Nov 2026, his choice each time): letter landscape ('land'),
+  // portrait drawn tighter ('tight'), or the rung folded onto a second line with a continuation ('fold')
+  const spanOf = o => { const xs = linkPbTerms(o).map(q => q[0]); const half = o.t === 'motor' ? 60 : 40; return [Math.min(...xs, o.x - half), Math.max(...xs, o.x + half)]; };
+  const allX = () => [...E.keys()].map(k => XY(k)[0]).concat(made.flatMap(({ o }) => [o.x, ...linkPbTerms(o).map(q => q[0])]), rails.map(r => r.x));
+  const leftM = () => { const xs = allX(), m = Math.min(...xs); return 160 + (rails.length && Math.min(...rails.map(r => r.x)) - m < 120 ? 120 : 0); };   // (in from the left edge; more when the L1 rail is the leftmost thing, for its rung numbers)
+  // (room on the right for the coils' cross-references: up to three numbers a line, Print Builder wraps the rest)
+  const xrefN = new Map(); for (const { o } of made) if (/^(con|tc)_/.test(o.t) || o.t === 'mst3') xrefN.set(o.tag, (xrefN.get(o.tag) || 0) + 1);
+  const xrefOf = n => 36 + Math.min(250, n * 54);   // (Print Builder wraps them at 250 across)
+  const xrefW = xrefOf(Math.max(1, ...xrefN.values()));
+  let ROOMCUT = 0;   // (taken off so the ladder can sit centred: see below)
+  const roomFor = pap => linkDrawW(pap) - Math.max(leftM(), 140) - xrefW - 40 - ROOMCUT;   // (a margin each side, the rung numbers on the left, the cross-references on the right)
+  const oneX = o => o.fold ? null : (() => { const ts = linkPbTerms(o); return ts.length && ts.every(q => q[0] === ts[0][0]) ? ts[0][0] : null; })();   // (a part whose terminals are all in one upright line: placed by them)
+  // (how far a part's tag and the name under it reach out each side of its middle)
+  const LIT = new Set(made.filter(({ o }) => o.inPB).map(({ o }) => o.inPB));
+  const noteOf = o => [o.desc, o.t === 'coil' && o.pre === 'TR' ? `${o.tof ? 'OFF' : 'ON'}-DELAY ${o.delay || ''} s` : '', o.t === 'sel' ? 'CLOSED: ' + (o.pos || '') : '', o.inPB ? 'IN ' + o.inPB : '', LIT.has(o.tag) ? 'LIGHTED (PL00)' : ''].filter(Boolean).join(' · ');
+  const halfW = o => Math.max(40, (o.tag || '').length * 8 + 6, noteOf(o).length * 5.6 + 6);
+  // (a terminal joined only along its own row: placed with its part, not on its own. Its part's middle, and how far out it is)
+  let derived = new Map(), PREP = new Map();   // (PREP: each rung's places and spacing rules, worked out once)
+  const mkDerived = () => { PREP = new Map(); derived = new Map(); for (const { o } of made) { if (oneX(o) != null) continue; linkPbTerms(o).forEach((q, i) => { const k = K(...q), ns = [...(E.get(k) || [])]; if (ns.some(n => XY(n)[0] === q[0])) return; derived.set(k, { o, off: q[0] - o.x }); }); } };
+  mkDerived();
+  // (the rungs: groups of rows between lines that nothing crosses but the uprights every rung comes off (or the rails). Each is laid out
+  // across on its own, so one rung's spacing never pushes another's; the uprights (the pins) stay in one line down the sheet)
+  const findGroups = () => {
+    const horiz = new Set(); for (const [k, ns] of E) { const [, y] = XY(k); for (const n of ns) if (XY(n)[1] === y) horiz.add(y); }
+    const partY = new Set(); for (const { o } of made) { const ys = linkPbTerms(o).map(q => q[1]).concat(o.y); for (let y = linkSnap(Math.min(...ys) - 20); y <= Math.max(...ys) + 20; y += 20) partY.add(y); }
+    const vx = new Map(); for (const [k, ns] of E) { const [x, y] = XY(k); if (ns.has(K(x, y + 20))) { if (!vx.has(y)) vx.set(y, []); vx.get(y).push(x); } }
+    const ys = [...E.keys()].map(k => XY(k)[1]).concat(made.flatMap(({ o }) => linkPbTerms(o).map(q => q[1]).concat(o.y))); if (!ys.length) return { groups: [], BUS: new Set(rails.map(r => r.x)) };
+    const y0 = linkSnap(Math.min(...ys)) - 60, y1 = Math.max(...ys) + 60;
+    const free = []; for (let y = y0; y <= y1; y += 20) if (!horiz.has(y) && !partY.has(y)) free.push(y);
+    const cnt = new Map(); for (const y of free) for (const x of vx.get(y) || []) cnt.set(x, (cnt.get(x) || 0) + 1);
+    const top = Math.max(0, ...cnt.values()), BUS = new Set([...cnt].filter(([, n]) => n >= top * .5).map(([x]) => x));
+    for (const r of rails) BUS.add(r.x);
+    const cut = y => !horiz.has(y) && !partY.has(y) && (vx.get(y) || []).every(x => BUS.has(x));
+    const groups = []; let g = null;
+    for (let y = y0; y <= y1; y += 20) { if (cut(y)) { if (g) { groups.push(g); g = null; } } else if (!g) g = [y, y]; else g[1] = y; }
+    if (g) groups.push(g);
+    return { groups, BUS };
+  };
+  let GR = findGroups();
+  // (one rung laid out across: 'proper' keeps the tags, names and wire numbers clear of each other; 'tight' lets parts come as close as
+  // their terminals allow. c: how much of the circuit's own gaps is kept. P: where the pins are already)
+  const layBand = (band, mode, c, P, pins) => {
+    const ck = band.join('-') + mode + pins.join(','); let pr = PREP.get(ck);
+    if (!pr) { pr = prepBand(band, mode, pins); PREP.set(ck, pr); }
+    const { keys, need } = pr;
+    const n = [P.has(keys[0]) ? Math.max(keys[0], P.get(keys[0])) : keys[0]];
+    for (let j = 1; j < keys.length; j++) { let v = n[j - 1] + Math.max(20, linkSnap((keys[j] - keys[j - 1]) * c)); for (const [i, r] of need[j]) v = Math.max(v, n[i] + r); if (P.has(keys[j])) v = Math.max(v, P.get(keys[j])); n.push(Math.ceil(v / 20 - 1e-9) * 20); }   // (on the grid, never closer than asked)
+    return { keys, n, m: new Map(keys.map((k, i) => [k, n[i]])) };
+  };
+  const prepBand = (band, mode, pins) => {
+    const inB = y => y >= band[0] && y <= band[1], M = made.filter(({ o }) => inB(o.y)), PR = mode === 'proper';
+    const keySet = new Set(M.map(({ o }) => o.x).concat(pins));
+    for (const k of E.keys()) if (!derived.has(k) && inB(XY(k)[1])) keySet.add(XY(k)[0]);
+    for (const [k] of termAt) if (!derived.has(k) && inB(XY(k)[1])) keySet.add(XY(k)[0]);
+    const keys = [...keySet].sort((a, b) => a - b), idx = new Map(keys.map((k, i) => [k, i]));
+    const need = keys.map(() => []), req = (lo, hi, r) => { const i = idx.get(lo), j = idx.get(hi); if (i == null || j == null) return; if (j > i) need[j].push([i, r]); };
+    // (along each part's own row: whatever its terminals join stays outside the part)
+    const nb = (k, away) => [...(E.get(k) || [])].filter(n => { const [x, y] = XY(n), [kx, ky] = XY(k); return y === ky && Math.sign(x - kx) === away; });
+    for (const { o } of M) { if (oneX(o) != null) continue; const hw = halfW(o);
+      if (o.foldL != null) req(o.foldL, o.x, 100); if (o.foldR != null) req(o.x, o.foldR, 220);
+      linkPbTerms(o).forEach(q => { const k = K(...q), off = q[0] - o.x, away = Math.sign(off) || 1;
+        const outs = derived.has(k) ? nb(k, away) : [k];
+        for (const n of outs) { const d2 = derived.get(n);
+          if (d2 && d2.o !== o) { const sep = PR ? Math.max(Math.abs(off - d2.off) + 60, hw + halfW(d2.o) + 30) : Math.max(Math.abs(off - d2.off) + 20, hw + halfW(d2.o) + 12);   // (tighter: the names still clear of each other)
+            if (away > 0) req(o.x, d2.o.x, sep); else req(d2.o.x, o.x, sep); continue; }
+          const nx = XY(n)[0], gap = n === k ? 0 : railAt.has(n) ? (PR ? 80 : 60) : (PR ? 60 : 20), r = n === k ? Math.abs(off) : PR ? Math.max(Math.abs(off) + gap, hw + 20) : Math.max(Math.abs(off) + gap, hw + 8);
+          if (away > 0) req(o.x, nx, r); else req(nx, o.x, r); } }); }
+    return { keys, need };
+  };
+  // (the ladder across the whole sheet, as Dallas draws it (17 Nov 2026): the uprights out near the edges, each rung's contacts from the
+  // left, and the loads (coils, lights, solenoids) in one column on the right, whatever comes after a load kept beside it)
+  const LOADT = new Set(['coil', 'pl', 'sol', 'htr']);
+  const fullWidth = (L, bands, pins, pap, tightB) => {
+    if (pins.length < 2 || !L.res.length) return;
+    const pl = pins[0], pr = pins[pins.length - 1], PL0 = L.P.get(pl), PR0 = L.P.get(pr); if (PL0 == null || PR0 == null) return;
+    // (only a ladder's own right upright is moved out: with parts beyond it (a power section's starters and motors to the
+    // right of a transformer's fuses, say) it is not the edge of anything, and moving it would carry them off the sheet)
+    if (L.res.some(r => r.n[r.n.length - 1] > PR0)) return;
+    const info = L.res.map((r, i) => { const [a, b] = bands[i], inB = y => y >= a && y <= b;
+      const loads = made.filter(({ o }) => inB(o.y) && LOADT.has(o.t) && oneX(o) == null && o.x > pl && o.x < pr).map(({ o }) => o.x);
+      if (!loads.length) return null; const fl = Math.max(...loads);
+      const before = made.filter(({ o }) => inB(o.y) && !LOADT.has(o.t) && o.x < fl && o.x > pl).map(({ o }) => o.x), S = Math.max(pl, ...before, ...pins.filter(x => x < fl));   // (never past an upright: those stay in line)
+      if (pins.some(x => x > fl && x < pr)) return null;
+      // (from the last contact on: the loads and what follows them as close together as they can be; the long wire goes before them)
+      const mr = layBand(bands[i], tightB.has(i) ? 'tight' : 'proper', .1, new Map(), pins), m0 = mr.m.get(fl);
+      return { S, rel: k => mr.m.get(k) - m0, tail: mr.m.get(pr) - m0, lx: r.m.get(S) + (m0 - mr.m.get(S)) }; });
+    // (the column set by what most rungs have after their loads; a rung with more after its load has it a little further left)
+    const tails = info.filter(Boolean).map(q => q.tail).sort((a, b) => a - b), base = tails.length ? tails[Math.floor(tails.length * .75)] : 0, tail = Math.max(0, ...tails.filter(t => t <= base + 40));   // (lights a little wider than coils: still one column)
+    // (Dallas, 17 Nov 2026: the ladder centred on the sheet's middle line, so its uprights as far in from each edge: room each side for
+    // the wider of the rung numbers and the cross-references)
+    const lo = Math.min(...L.res.map(r => r.n[0])), side = Math.max(130 + Math.max(0, PL0 - lo), xrefW) + 30,   // (and for whatever the power section has out left of the first upright)
+       want = Math.min(lo + roomFor(pap), PL0 + linkDrawW(pap) - 2 * side);
+    // (the right upright as far out as the paper allows, never closer than any rung needs)
+    const need = Math.max(...L.res.map((r, i) => info[i] ? info[i].lx + info[i].tail : r.m.get(pr)));   // (a rung too full for the column: its loads a little further right)
+    const BR = Math.max(need, linkSnap(want) - 20), LX = BR - tail;
+    L.res.forEach((r, i) => { const q = info[i];
+      const nn = r.keys.map((k, j) => { const v = r.n[j];
+        if (k >= pr) return v - r.m.get(pr) + BR;
+        if (!q || k <= q.S) return v;
+        return (q.tail > tail ? BR - q.tail : Math.max(LX, q.lx)) + q.rel(k); });
+      r.n = nn; r.m = new Map(r.keys.map((k, j) => [k, nn[j]])); });
+    L.P.set(pr, BR); for (const [k, v] of L.P) if (k > pr) L.P.set(k, v - PR0 + BR);
+    L.w = BR - lo + Math.max(0, ...L.res.map(r => r.n[r.n.length - 1] - BR));
+  };
+  // (every rung laid out, the pins lined up: [rungs' layouts, the pins' places, how much of the gaps was kept, whether it fits])
+  // ('tight': only the rungs that need it drawn tighter, the widest first, until it fits)
+  // (align: every column the circuit has in more than one rung kept in one line down the sheet (Dallas, 17 Nov 2026: the parts
+  // weren't lined up), when the paper has room for it)
+  const fitTo = (pap, mode = 'proper', align = false) => {
+    // (pins: the uprights, and buttons and switches drawn more than once one above another (their dashed link stays straight))
+    const seen = new Map(); for (const { o } of made) if (o.tag && /^(pbm?_|sel|estop|ls_|ts_|ps_|fls_)/.test(o.t)) { const k = o.tag + '@' + o.x; seen.set(k, (seen.get(k) || 0) + 1); }
+    const bands = GR.groups, tightB = new Set(), bandOfY = y => bands.findIndex(([a, b]) => y >= a && y <= b);
+    const linkedIn = new Map(), mech = new Set();   // (x -> the rungs it is lined up across; mech: a button's or switch's own, always)
+    for (const [k, n] of seen) if (n > 1) { const [tg, x] = [k.slice(0, k.lastIndexOf('@')), +k.slice(k.lastIndexOf('@') + 1)];
+      const bs = new Set(made.filter(({ o }) => o.tag === tg && o.x === x).map(({ o }) => bandOfY(o.y)).filter(i => i >= 0)); if (bs.size > 1) { mech.add(x); if (!linkedIn.has(x)) linkedIn.set(x, new Set()); for (const i of bs) linkedIn.get(x).add(i); } }
+    const pins = [...new Set([...GR.BUS, ...rails.map(r => r.x)])].sort((a, b) => a - b), pinSet = new Set(pins);
+    if (align) { const inBands = new Map(); bands.forEach((b, i) => { for (const k of layBand(b, 'proper', 1, new Map(), pins).keys) if (!pinSet.has(k)) { if (!inBands.has(k)) inBands.set(k, new Set()); inBands.get(k).add(i); } });
+      for (const [x, bs] of inBands) if (bs.size > 1) { if (!linkedIn.has(x)) linkedIn.set(x, new Set()); for (const i of bs) linkedIn.get(x).add(i); } }
+    const layAt = c => { let P = new Map(), PL = new Map(), res = [];
+      for (let it = 0; it < 8; it++) { res = bands.map((b, i) => { const P2 = new Map(P); for (const [x, bs] of linkedIn) if (bs.has(i) && PL.has(x) && (!tightB.has(i) || mech.has(x))) P2.set(x, PL.get(x)); return layBand(b, tightB.has(i) ? 'tight' : 'proper', c, P2, pins); }); let moved = false;
+        res.forEach((r, bi) => r.keys.forEach((k, i) => { if (pinSet.has(k) && !(P.get(k) >= r.n[i])) { P.set(k, r.n[i]); moved = true; }
+          if (linkedIn.has(k) && linkedIn.get(k).has(bi) && (!tightB.has(bi) || mech.has(k)) && !pinSet.has(k) && !(PL.get(k) >= r.n[i])) { PL.set(k, r.n[i]); moved = true; } }));
+        if (!moved) break; }
+      const all = res.flatMap(r => [r.n[0], r.n[r.n.length - 1]]).concat([...P.values()]);
+      return { res, P, w: all.length ? Math.max(...all) - Math.min(...all) : 0 }; };
+    if (mode === 'tight') { const iso = bands.map((b, i) => { const r = layBand(b, 'proper', .1, new Map(), pins); return [r.n[r.n.length - 1] - r.n[0], i]; }).sort((u, v) => v[0] - u[0]);
+      for (const [, i] of iso) { if (layAt(.1).w <= roomFor(pap)) break; tightB.add(i); } }
+    // (as much of the circuit's own spacing kept as fits: found by halving)
+    let c = 1, L = layAt(1);
+    if (L.w > roomFor(pap)) { let lo = .1, hi = 1, Lo = layAt(.1); c = .1; L = Lo;
+      if (Lo.w <= roomFor(pap)) for (let i = 0; i < 7; i++) { const m = (lo + hi) / 2, Lm = layAt(m); if (Lm.w <= roomFor(pap)) { lo = m; c = m; L = Lm; } else hi = m; } }
+    const ok = L.w <= roomFor(pap); if (ok) fullWidth(L, bands, pins, pap, tightB);
+    return { ...L, c, ok, bands, pins, tight: tightB.size, align };
+  };
+  const fitBest = (pap, mode = 'proper') => { const a = fitTo(pap, mode, true); if (env.debug) (env.debug.fb = env.debug.fb || []).push([mode, a.ok, a.tight, a.w]); if (a.ok && (mode !== 'tight' || a.tight <= fitTo(pap, mode).tight + 3)) return a; return fitTo(pap, mode); };
+  // (fold: each rung too long for the paper broken where only its own wire crosses, the rest drawn on a line under it, a continuation each end)
+  let foldN = 0;
+  // (Dallas, 19 Nov 2026, his drawings "Ladder Edit 1" and "2": 'wrap' – the rung's wire turns down after the last part that fits, runs back
+  // left under the rung to just inside L1 and on along the next line, which keeps the rung's number; 'cont' – the rung ends on a
+  // continuation and goes on along a new rung under it, its own number, from a continuation: each named by the other's rung and wire, R19-W30)
+  const foldLong = (pap, style = 'cont') => {
+    const room = roomFor(pap), { groups, BUS } = GR, pins = [...new Set([...BUS, ...rails.map(r => r.x)])].sort((a, b) => a - b);
+    // (room left once whatever reaches out left of the first upright (the power section's lines in) is allowed for)
+    const lp = pins[0], room2 = room - Math.max(0, ...groups.map(b => { const r = layBand(b, 'proper', .1, new Map(), pins); return r.m.has(lp) ? r.m.get(lp) - r.n[0] : 0; }));
+    const DBG = env.debug ? (env.debug.fold = []) : null; if (DBG) DBG.push({ room, BUS: [...BUS], groups: groups.map(x => x.join('-')).join(' ') });
+    const POWER = new Set(['mst3', 'dsc3', 'fus3', 'ol3', 'motor', 'sup', 'xfmr']);
+    for (const [ga, gb] of groups.slice().reverse()) {
+      const inB = y => y >= ga && y <= gb, gm = made.filter(({ o }) => inB(o.y));
+      if (!gm.length || gm.some(({ o }) => POWER.has(o.t))) continue;
+      const f = layBand([ga, gb], 'proper', .1, new Map(), pins), wd = f.n[f.n.length - 1] - f.n[0]; const wd2 = f.m.has(lp) ? f.n[f.n.length - 1] - f.m.get(lp) : wd; if (DBG) DBG.push([ga, gb, wd2]); if (wd2 <= room2) continue;
+      const { keys, n: nn } = f, pos = x => { let i = 0; while (i + 1 < keys.length && keys[i + 1] <= x) i++; return nn[i] + (x - keys[i]); };
+      const pts = [...E.keys()].filter(k => inB(XY(k)[1]));
+      const xR = Math.max(...[...BUS].filter(x => pts.some(k => XY(k)[0] === x)).concat(rails.filter(r => r.label === 'L2').map(r => r.x)), -Infinity);
+      if (!Number.isFinite(xR)) continue;
+      const tx = gm.flatMap(({ o }) => linkPbTerms(o).map(q => q[0])), Xl = Math.min(...tx) + 80;
+      const spans = gm.filter(({ o }) => !o.fold).map(({ o }) => { const xs = linkPbTerms(o).map(q => q[0]).concat(o.x); return [Math.min(...xs) - 20, Math.max(...xs) + 20]; });
+      const edgesIn = []; for (const k of pts) for (const n of E.get(k)) if (k < n) edgesIn.push([k, n]);
+      let best = null;
+      for (let X = linkSnap(Math.min(...tx)) + 60; X < xR - 60; X += 20) {
+        if (spans.some(([u, v]) => X >= u && X <= v) || pts.some(k => XY(k)[0] === X)) continue;
+        const hs = edgesIn.filter(([a, b]) => { const [ax, ay] = XY(a), [bx, by] = XY(b); return ay === by && Math.min(ax, bx) < X && Math.max(ax, bx) > X; });
+        if (!hs.length || hs.length > 2) continue;   // (a rung with more than two wires to fold (nested branches) is drawn tighter instead)
+        // (what moves must keep to the rung: nothing of it running up or down out of the rung's rows)
+        if (pts.some(k => { const [x] = XY(k); return x > X && x < xR && [...E.get(k)].some(n => !inB(XY(n)[1])); })) continue;
+        const x0 = f.m.has(lp) ? f.m.get(lp) : nn[0], lw = pos(X) - x0 + 300, rw = pos(Xl) - x0 + nn[nn.length - 1] - pos(X) + 60, sc = (lw <= room2 && rw <= room2 ? -lw : 1e6 + Math.max(lw, rw)) + hs.length * 4000;
+        if (!best || sc < best.sc) best = { X, sc, es: hs };
+      }
+      if (DBG) DBG.push({ best: best && [best.X, best.sc], xR, Xl }); if (!best) continue;
+      const { X } = best, H = gb - ga + 200, moves = (x, y) => inB(y) && x > X && x < xR;
+      const F = k => { const [x, y] = XY(k); return y > gb ? K(x, y + H) : moves(x, y) ? K(x - X + Xl, y + H) : k; };
+      const edges = []; for (const [k, ns] of E) for (const n of ns) if (k < n) edges.push([k, n]);
+      const oldTerm = new Map(termAt), movedO = new Set(gm.filter(({ o }) => o.x > X && o.x < xR).map(({ o }) => o));
+      E.clear(); const busNeed = [];
+      const splits = new Set(best.es.map(([a, b]) => a < b ? a + '|' + b : b + '|' + a)), ends = [];
+      const fL = Math.min(...[...BUS].filter(x => x < Xl && (pts.some(k => XY(k)[0] === x) || rails.some(r => r.x === x)))), Xw = fL + 40;
+      const wrap = style === 'wrap' && best.es.length === 1 && Number.isFinite(fL) && Xw <= Xl - 40, ym = gb + 100;   // (two wires to carry over: continuations instead)
+      for (const [a, b] of edges) {
+        if (splits.has(a < b ? a + '|' + b : b + '|' + a)) { const [ax0, sy] = XY(a), [bx0] = XY(b), sl = ax0 < bx0 ? a : b, sr = ax0 < bx0 ? b : a; link2(sl, K(X, sy));
+          if (wrap) { link2(K(X, sy), K(X, ym)); link2(K(X, ym), K(Xw, ym)); link2(K(Xw, ym), K(Xw, sy + H)); link2(K(Xw, sy + H), K(Xl, sy + H)); link2(K(Xl, sy + H), F(sr)); continue; }
+          link2(K(Xl, sy + H), F(sr)); ends.push(sy); continue; }
+        const fa = F(a), fb = F(b), [ax, ay] = XY(fa), [bx, by] = XY(fb);
+        if (ax === bx || ay === by) { link2(fa, fb); continue; }
+        const m = XY(a)[0] === xR ? fb : fa, yy = XY(m)[1]; link2(m, K(xR, yy)); busNeed.push(yy);
+      }
+      termAt.clear();
+      for (const { o } of made) { if (movedO.has(o)) { o.x = o.x - X + Xl; o.y += H; if (wrap) o.rc = 1; } else if (o.y > gb) o.y += H; }   // (rc: on the line a rung wraps onto, numbered as its rung)
+      for (const [k, tt] of oldTerm) for (const t of tt) { if (!movedO.has(t.o)) { addTerm(F(k), t.o, t.i); continue; }
+        const nk = K(...linkPbTerms(t.o)[t.i]); addTerm(nk, t.o, t.i); if (F(k) !== nk) { link2(nk, K(xR, XY(nk)[1])); busNeed.push(XY(nk)[1]); } }
+      { const r2 = [...runEnds].map(F); runEnds.clear(); for (const k of r2) runEnds.add(k); }
+      { const m2 = new Map(); for (const [k, v] of railAt) m2.set(F(k), v); railAt.clear(); for (const [k, v] of m2) railAt.set(k, v); }
+      for (const rl of rails) { if (rl.from > gb) rl.from += H; if (rl.to > gb) rl.to += H; }
+      const rR = rails.find(r => r.x === xR);
+      for (const y of busNeed) { if (rR) { railAt.set(K(xR, y), rails.indexOf(rR)); rR.to = Math.max(rR.to, y); continue; }
+        const ky = [...E.keys()].filter(k => XY(k)[0] === xR && k !== K(xR, y) && [...E.get(k)].some(n => XY(n)[0] === xR)).map(k => XY(k)[1]);
+        if (ky.length && Math.max(...ky) < y) link2(K(xR, Math.max(...ky)), K(xR, y)); }
+      // (long uprights back into short steps, so the sheet breaks can find them)
+      for (const [k, ns] of [...E]) for (const n of [...ns]) { const [x, y] = XY(k), [nx, ny] = XY(n); if (x !== nx || ny - y <= 20) continue;
+        unlink(k, n); const along = [...E.keys()].filter(q => { const [qx, qy] = XY(q); return qx === x && qy > y && qy < ny; }).map(q => XY(q)[1]).sort((u, v) => u - v);
+        let prev = y; for (let yy = y + 20; yy <= ny; yy += 20) { link2(K(x, prev), K(x, yy)); prev = yy; } void along; }
+      for (const sy of ends.sort((u, v) => u - v)) { const tag = String(++foldN), oO = { id: uid('p'), t: 'cnt_out', x: X + 40, y: sy, rot: 0, desc: '', tag, fold: 1, foldR: xR }, oI = { id: uid('p'), t: 'cnt_in', x: Xl - 40, y: sy + H, rot: 0, desc: '', tag, fold: 1, foldL: fL };
+        made.push({ r: null, o: oO }, { r: null, o: oI }); addTerm(K(X, sy), oO, 0); addTerm(K(Xl, sy + H), oI, 0); }
+      note(changed, wrap ? 'Rungs too long for the paper: wrapped onto lines under them (the wire runs back under the rung; the line keeps the rung\'s number)' : 'Rungs too long for the paper: carried on along new rungs under them, a continuation at each end, each named by the other\'s rung and wire (R19-W30)');
+    }
+    mkDerived(); GR = findGroups();
+  };
+  const P0 = { paper: 'letter', land: false }, mode = env.long || 'tight', blank = !made.length && !E.size;
+  let paper = env.paper || null, fit = null, ask = false;
+  if (paper) { fit = fitBest(paper, 'proper'); if (!fit.ok) fit = fitBest(paper, 'tight'); }
+  else if (blank) { paper = P0; fit = fitBest(P0); }
+  else { const f0 = fitBest(P0, 'proper'); ask = !f0.ok; paper = P0; fit = f0;
+    if (ask && mode === 'tight') fit = fitBest(P0, 'tight');
+    else if (ask && (mode === 'wrap' || mode === 'cont' || mode === 'fold')) { foldLong(P0, mode === 'wrap' ? 'wrap' : 'cont'); fit = fitBest(P0, 'proper'); if (!fit.ok) fit = fitBest(P0, 'tight'); }
+    else if (ask) for (const pap of [{ paper: 'letter', land: true }, { paper: 'tabloid', land: true }, { paper: 'ansic', land: true }]) { const f = fitBest(pap, 'proper'); paper = pap; fit = f; if (f.ok) break; }
+  }
+  // (centred: room the same each side of the uprights for the rung numbers (and anything out left of them) and the cross-references;
+  // drawn closer, or tighter, if that is what it takes)
+  for (let it = 0; it < 3 && fit.ok && fit.P && fit.P.size >= 2; it++) {
+    const PLx = fit.P.get(Math.min(...fit.P.keys())), lo = Math.min(...fit.res.map(r => r.n[0])), over = Math.max(0, PLx - lo);
+    const side = Math.max(130 + over, xrefW) + 30, fits = over + linkDrawW(paper) - 2 * side;
+    if (fit.w <= fits + 1) break;
+    ROOMCUT += fit.w - fits; const m2 = fit.tight ? 'tight' : 'proper'; let f2 = fitBest(paper, m2); if (!f2.ok) f2 = fitBest(paper, 'tight'); if (!f2.ok) { ROOMCUT = 0; break; } fit = f2; }
+  if (env.debug) { env.debug.fit = fit; env.debug.made = made.map(({ o }) => [o.t, o.x, spanOf(o)]); env.debug.room = roomFor(paper); }
+  const sheet0 = { paper: paper.paper, land: !!paper.land }, DH = linkDrawH(sheet0);
+  if (!fit.ok) note(changed, 'The circuit is wider than the paper even drawn closer: it runs off the right of each sheet (shrink it in Circuit Builder, or move things on the print)');
+  if (fit.c < .999) note(changed, `Drawn closer across to fit ${sheet0.paper === 'letter' ? 'letter' : sheet0.paper} paper (the parts their own size, the gaps between them closed up)`);
+  if (fit.tight) note(changed, `${fit.tight === 1 ? 'One rung' : fit.tight + ' rungs'} too long for the paper drawn tighter (closer than usual)`);
+  // (across, rung by rung: a place in a rung's own layout; off every rung (the uprights between rungs), by the pins)
+  const interp = (keys, n, x) => { let i = 0; while (i < keys.length && keys[i] < x) i++; if (i < keys.length && keys[i] === x) return n[i]; if (i === 0) return x - keys[0] + n[0]; if (i === keys.length) return x - keys[i - 1] + n[i - 1]; return linkSnap(n[i - 1] + (x - keys[i - 1]) * (n[i] - n[i - 1]) / (keys[i] - keys[i - 1])); };
+  const pinK = [...fit.P.keys()].sort((a, b) => a - b), pinN = pinK.map(k => fit.P.get(k));
+  const bandAt = y => fit.bands.findIndex(([a, b]) => y >= a && y <= b);
+  const MXb = (x, y) => { const i = bandAt(y); if (i >= 0) { const r = fit.res[i]; return r.m.has(x) ? r.m.get(x) : interp(r.keys, r.n, x); } return pinK.length ? interp(pinK, pinN, x) : x; };
+  const xb = fit.bands.length ? fit.bands.map(([a, b], i) => [a, b, fit.res[i].keys, fit.res[i].n]) : null;
+  // (everything moved across: parts, rails, the wiring)
+  { const E2 = new Map(); const mk = k => { const [x, y] = XY(k), dv = derived.get(k); return K(dv ? MXb(dv.o.x, dv.o.y) + dv.off : MXb(x, y), y); };
+    for (const [k, ns] of E) E2.set(mk(k), new Set([...ns].map(mk)));
+    E.clear(); for (const [k, v] of E2) E.set(k, v);
+    const re = m => { const m2 = new Map(); for (const [k, v] of m) m2.set(mk(k), v); m.clear(); for (const [k, v] of m2) m.set(k, v); }; re(termAt); re(railAt); { const r2 = [...runEnds].map(mk); runEnds.clear(); for (const k of r2) runEnds.add(k); }
+    for (const { o } of made) { const tx = oneX(o), ty = tx != null ? linkPbTerms(o)[0][1] : o.y; o.x = tx != null ? MXb(tx, ty) - (tx - o.x) : MXb(o.x, o.y); }
+    for (const rl of rails) rl.x = pinK.length ? interp(pinK, pinN, rl.x) : rl.x; }
+
+  // ---- 5. sheets (Dallas, 17 Nov 2026: as few continuations as can be; a rung's logic kept on one sheet; the ladder centred)
+  const room = DH - 280;   // (the drawing's height, less a margin and the continuations at its top and its foot, clear of the title block)
+  // (a rung too tall for a sheet: its rows drawn closer down, as close as their tags and names allow)
+  { const yk = new Set(); for (const k of E.keys()) yk.add(XY(k)[1]); for (const k of termAt.keys()) yk.add(XY(k)[1]);
+    for (const { o } of made) { yk.add(o.y); for (const q of linkPbTerms(o)) yk.add(q[1]); } for (const r of rails) { yk.add(r.from); yk.add(r.to); }
+    const ys = [...yk].sort((a, b) => a - b), idx = new Map(ys.map((y, i) => [y, i]));
+    const tall = GR.groups.filter(([a, b]) => b - a + 160 > room);
+    // (and every rung a little closer down than Circuit Builder draws it, so more rungs share a sheet: its rows, at most 4/5 as far apart)
+    const CY = .8;
+    if (ys.length) {
+      // (points along an upright that join nothing: taken out first, so the rows alone set how close they can come)
+      for (const k of [...E.keys()]) { if (deg(k) !== 2 || termAt.has(k) || railAt.has(k) || runEnds.has(k)) continue; const [x] = XY(k), [a, b] = [...E.get(k)];
+        if (XY(a)[0] !== x || XY(b)[0] !== x) continue; unlink(k, a); unlink(k, b); E.delete(k); link2(a, b); }
+      yk.clear(); for (const k of E.keys()) yk.add(XY(k)[1]); for (const k of termAt.keys()) yk.add(XY(k)[1]);
+      for (const { o } of made) { yk.add(o.y); for (const q of linkPbTerms(o)) yk.add(q[1]); } for (const r of rails) { yk.add(r.from); yk.add(r.to); }
+      ys.length = 0; ys.push(...[...yk].sort((a, b) => a - b)); idx.clear(); ys.forEach((y, i) => idx.set(y, i));
+      const up = new Map(), down = new Map(), need = ys.map(() => []);
+      for (const { o } of made) { const ts = linkPbTerms(o), ty = ts.map(q => q[1]);
+        if (ty.length && ty.some(y => y !== ty[0])) { const lo = Math.min(...ty, o.y), hi = Math.max(...ty, o.y); need[idx.get(hi)].push([idx.get(lo), hi - lo]); continue; }
+        up.set(o.y, Math.max(up.get(o.y) || 0, 70)); down.set(o.y, Math.max(down.get(o.y) || 0, noteOf(o) ? 64 : 34)); }
+      const rows = ys.filter(y => up.has(y)); for (let i = 1; i < rows.length; i++) need[idx.get(rows[i])].push([idx.get(rows[i - 1]), down.get(rows[i - 1]) + up.get(rows[i]) + 10]);
+      const cOf = new Map(tall.map(g => [g, 1]));
+      const lay = () => { const n = [ys[0]]; for (let j = 1; j < ys.length; j++) { const g = tall.find(([a, b]) => ys[j - 1] >= a && ys[j] <= b), c = g ? cOf.get(g) : 1;
+        const gap = ys[j] - ys[j - 1]; let v = n[j - 1] + Math.max(20, linkSnap(c < CY ? gap * c : gap <= 200 ? Math.max(Math.min(gap, 160), gap * CY) : 160 + (gap - 200) * .4));   // (never closer than 160 unless a rung needs it to fit; a long run with nothing on it much shorter)
+        for (const [i, r] of need[j]) v = Math.max(v, n[i] + r); n.push(linkSnap(v)); } return n; };
+      let n = lay(); for (const g of tall) { const h = () => n[idx.get(Math.max(...ys.filter(y => y <= g[1])))] - n[idx.get(Math.min(...ys.filter(y => y >= g[0])))];
+        while ((cOf.get(g) > .45 && h() + 160 > room * .75) || (cOf.get(g) > .2 && h() + 160 > room)) {   // (closer still, so the rungs before or after can share its sheet)
+          cOf.set(g, cOf.get(g) - .05); n = lay(); } }
+      const MY = new Map(ys.map((y, i) => [y, n[i]])), my = y => MY.has(y) ? MY.get(y) : y;
+      if (n.some((v, i) => v !== ys[i])) {
+        const mk = k => { const [x, y] = XY(k); return K(x, my(y)); };
+        const E2 = new Map(); for (const [k, ns] of E) E2.set(mk(k), new Set([...ns].map(mk))); E.clear(); for (const [k, v] of E2) E.set(k, v);
+        const re = m => { const m2 = new Map(); for (const [k, v] of m) m2.set(mk(k), v); m.clear(); for (const [k, v] of m2) m.set(k, v); }; re(termAt); re(railAt); { const r2 = [...runEnds].map(mk); runEnds.clear(); for (const k of r2) runEnds.add(k); }
+        for (const { o } of made) { const ts = linkPbTerms(o); o.y = ts.length ? my(ts[0][1]) - (ts[0][1] - o.y) : my(o.y); }
+        for (const r of rails) { r.from = my(r.from); r.to = my(r.to); }
+        // (uprights back into short steps)
+        for (const [k, ns] of [...E]) for (const q of [...ns]) { const [x, y] = XY(k), [qx, qy] = XY(q); if (x !== qx || qy - y <= 20) continue;
+          unlink(k, q); let prev = y; for (let yy = y + 20; yy <= qy; yy += 20) { link2(K(x, prev), K(x, yy)); prev = yy; } }
+        ylink = [ys, n];
+        GR = findGroups();
+      } } }
+  const allY = [...E.keys()].map(k => XY(k)[1]).concat(made.map(({ o }) => o.y), rails.flatMap(r => [r.from, r.to]));
+  const gy0 = Math.min(...allY), gy1 = Math.max(...allY);
+  const horizAt = new Set(); for (const [k, ns] of E) { const [, y] = XY(k); for (const n of ns) if (XY(n)[1] === y) horizAt.add(y); }
+  const partBand = []; for (const { o } of made) { const ys = linkPbTerms(o).map(q => q[1]).concat(o.y); partBand.push([Math.min(...ys) - 80, Math.max(...ys) + 80]); }
+  const crossN = new Map(); for (const [k, ns] of E) { const [x, y] = XY(k); if (ns.has(K(x, y + 20))) crossN.set(y + 20, (crossN.get(y + 20) || 0) + 1); }
+  const crossing = C => crossN.get(C) || 0;
+  const inPart = new Set(); for (const [u, v] of partBand) for (let y = linkSnap(u) + 20; y < v; y += 20) inPart.add(y);
+  const termYs = new Set([...termAt.keys()].map(k => XY(k)[1]));
+  const okCut = C => !horizAt.has(C - 20) && !horizAt.has(C) && !horizAt.has(C + 20) && !(inPart.has(C) || partBand.some(([u, v]) => C > u && C < v && C % 20)) && !termYs.has(C) && !termYs.has(C - 20) && !termYs.has(C + 20);
+  // (where the sheets break: the fewest wires cut over the whole print (each one a pair of continuations), never inside a rung if it
+  // can be helped, then the fewest sheets. Every line between rungs is looked at, not just the first that fills a sheet)
+  const between = y => !GR.groups.some(([a, b]) => y > a && y < b);
+  const base = Math.min(...GR.groups.slice(0, -1).map((g, i) => { const c = []; for (let y = g[1] + 20; y < GR.groups[i + 1][0]; y += 20) if (okCut(y)) c.push(crossing(y)); return c.length ? Math.min(...c) : Infinity; }).concat([Infinity]));
+  const cuts = [];
+  if (gy1 - (gy0 - 40) > room) {
+    const cand = []; for (let C = linkSnap(gy0) + 20; C < gy1; C += 20) { const ok = okCut(C), x = crossing(C);
+      cand.push({ C, cost: ok ? (between(C) ? 0 : 400) + 1000 * Math.max(0, x - (Number.isFinite(base) ? base : 0)) + 10 * x : 1e6 + 1000 * x }); }
+    const start = gy0 - 40, best = cand.map(() => null);
+    // (Dallas, 19 Nov 2026: no near-empty sheets. Each sheet but the last is charged for the room it leaves empty, never as much as
+    // cutting inside a rung or one more wire: of the breaks as good as each other, the sheets fill up in reading order)
+    // (measured to the end of the rung before the break, so every line in one gap between rungs costs the same, and the break still
+    // sits where it always did in that gap, clear of the next rung's tags)
+    const rungEnd = C => { let b = -Infinity; for (const [, e] of GR.groups) if (e <= C && e > b) b = e; return Number.isFinite(b) ? b : C; };
+    // (and a sheet with no part on it at all, only wires running through, more than cutting a rung or another wire: never worth it)
+    const partYs = made.filter(({ o }) => !/^cnt_/.test(o.t)).map(({ o }) => o.y);
+    const emptyPen = (C, from) => Math.round(300 * Math.max(0, room - (rungEnd(C) - from)) / room) + (partYs.some(y => y > from && y <= C) ? 0 : 3000);
+    for (let i = 0; i < cand.length; i++) { if (cand[i].C - start <= room) best[i] = { cost: cand[i].cost + 50 + emptyPen(cand[i].C, start), prev: -1, n: 1 };
+      for (let j = i - 1; j >= 0 && cand[i].C - cand[j].C <= room; j--) if (best[j]) { const c = best[j].cost + cand[i].cost + 50 + emptyPen(cand[i].C, cand[j].C); if (!best[i] || c < best[i].cost) best[i] = { cost: c, prev: j, n: best[j].n + 1 }; } }
+    let end = -1, endCost = Infinity; for (let i = 0; i < cand.length; i++) if (best[i] && gy1 - cand[i].C <= room && best[i].cost < endCost) { endCost = best[i].cost; end = i; }
+    for (let i = end; i >= 0; i = best[i].prev) cuts.unshift(cand[i].C);
+  }
+  const tops = [gy0 - 40, ...cuts], sheetOf = y => { let k = 0; while (k < cuts.length && y > cuts[k]) k++; return k; };
+  const sheets = tops.map(() => ({ id: uid('s'), ...(sheet0.paper !== 'letter' ? { paper: sheet0.paper } : {}), land: sheet0.land, parts: [], wires: [], nodes: [], texts: [] }));
+  // (each sheet's ladder centred across it, its rung numbers on the left and the coils' cross-references on the right counted in
+  // (Dallas, 17 Nov 2026: it always leaned to one side); top: a short margin, then the continuations)
+  const TOP = 120;
+  const OXs = tops.map((t, k) => { const lo = k ? t : -Infinity, hi = k < cuts.length ? cuts[k] : Infinity, inS = y => y > lo && y <= hi;
+    const xs = [...E.keys()].filter(q => inS(XY(q)[1])).map(q => XY(q)[0]).concat(made.filter(({ o }) => inS(o.y)).flatMap(({ o }) => [o.x, ...linkPbTerms(o).map(q => q[0])]));
+    const rx = rails.filter(r => r.from <= hi && r.to >= lo).map(r => r.x); xs.push(...rx); if (!xs.length) xs.push(...allX());
+    const coilN = Math.max(0, ...made.filter(({ o }) => inS(o.y) && (o.t === 'coil' || o.t === 'mst3')).map(({ o }) => xrefN.get(o.tag) || 1));
+    const xl = Math.min(...xs) - (rx.length && Math.min(...rx) - Math.min(...xs) < 120 ? 170 : 110), xr = Math.max(...xs) + (coilN ? xrefOf(coilN) : 60);
+    // (the uprights' middle on the sheet's middle; moved over only as far as needed to keep everything inside the border)
+    const ups0 = fit.P && fit.P.size >= 2 ? [Math.min(...fit.P.values()), Math.max(...fit.P.values())] : null, DW = linkDrawW(sheet0);
+    // (a power section's own uprights, a transformer's fuses with starters and motors beyond them, are not the ladder's: centred on everything then)
+    const ups = ups0 && Math.max(...xs) <= ups0[1] + 20 ? ups0 : null;
+    let ox = ups ? (DW - (ups[0] + ups[1])) / 2 : (DW - (xr - xl)) / 2 - xl;
+    if (xl + ox < 40) ox = 40 - xl; else if (xr + ox > DW - 16) ox = Math.max(40 - xl, DW - 16 - xr);
+    return linkSnap(ox); });
+  const OX = OXs[0];
+  const OY = k => TOP - tops[k] + (k ? 40 : 0);
+  const P = (k, x, y) => [x + OXs[k], y + OY(k)];
+  // (a wire running down over a break: a continuation each side, numbered alike)
+  let contN = Math.max(foldN, ...[...jmpSeen.keys()].map(Number).filter(Number.isFinite)); const contAt = new Map();
+  for (const C of cuts) for (const [k, ns] of [...E].sort((u, v) => XY(u[0])[0] - XY(v[0])[0])) { const [x, y] = XY(k); if (y !== C - 20 || !ns.has(K(x, C))) continue;
+    // (cut the run at C: the point above ends on a continuation out, the one below starts from a continuation in)
+    const ab = K(x, C - 20), at = K(x, C), be = K(x, C + 20); unlink(ab, at); unlink(at, be); if (!deg(at)) E.delete(at);
+    const n = String(++contN); contAt.set(ab, { t: 'cnt_out', n }); contAt.set(be, { t: 'cnt_in', n }); }
+  if (contAt.size) note(changed, 'Wires running from one sheet to the next: a continuation at each end, numbered alike');
+  // parts on their sheets
+  for (const { o } of made) { const k = sheetOf(o.y), [x, y] = P(k, o.x, o.y); o.x = x; o.y = y; o.k = k; delete o.cbT; delete o.one; delete o.fold; delete o.foldL; delete o.foldR; sheets[k].parts.push(o); }
+  // rails on every sheet they reach, from the top of the drawing (or the first rung) down to the foot (or the last rung)
+  const railIds = rails.map(() => new Map());
+  rails.forEach((rl, n) => sheets.forEach((s, k) => {
+    const lo = Math.max(rl.from, k ? tops[k] : -Infinity), hi = Math.min(rl.to, k < cuts.length ? cuts[k] : Infinity);
+    if (lo > hi) return;
+    const y0 = (k && rl.from < tops[k]) || bars ? Math.min(TOP - 60, lo + OY(k)) : lo + OY(k), y1 = k < cuts.length && rl.to > cuts[k] ? linkDrawH(sheet0) - 40 : hi + OY(k) + (bars ? 60 : 0);
+    const id = uid('r'); railIds[n].set(k, id); s.parts.push({ id, t: 'rail', label: rl.label, x: rl.x + OXs[k], y0, y1 });
+  }));
+  for (const [k, c] of contAt) { const [x, y] = XY(k), sk = sheetOf(y), [px, py] = P(sk, x, y), o = { id: uid('p'), t: c.t, rot: 90, desc: '', tag: c.n, brk: 1 };
+    const [u, v] = linkTurn(LINK_PB_TERMS[c.t][0], 90); o.x = px - u; o.y = py - v; o.k = sk; sheets[sk].parts.push(o); addTerm(k, o, 0); }
+  // ---- 6. wires: traced from terminal to terminal (or rail, or junction), corners kept
+  const nodeIds = new Map();
+  const endOf = (k, sk) => { const tt = termAt.get(k); if (tt) { const t0 = tt.find(q => q.o.k === sk); if (t0) return { p: t0.o.id, i: t0.i }; }
+    if (railAt.has(k)) { const id = railIds[railAt.get(k)].get(sk); if (id) return { r: id, y: XY(k)[1] + OY(sk) }; }
+    if (!nodeIds.has(k)) { const [x, y] = P(sk, ...XY(k)), id = uid('n'); sheets[sk].nodes.push({ id, x, y }); nodeIds.set(k, id); } return { n: nodeIds.get(k) }; };
+  const stop = k => !through(k);
+  const done = new Set(), ek = (a, b) => a < b ? a + '|' + b : b + '|' + a;
+  for (const start of E.keys()) { if (!stop(start)) continue;
+    for (const first of E.get(start)) { if (done.has(ek(start, first))) continue;
+      const path = [start]; let prev = start, cur = first; done.add(ek(start, first));
+      while (!stop(cur)) { path.push(cur); const nx = onward(prev, cur); prev = cur; cur = nx; done.add(ek(prev, cur)); }
+      path.push(cur);
+      const sk = sheetOf(XY(path[0])[1]), ea = endOf(path[0], sk), eb = endOf(path[path.length - 1], sk);
+      // (in print places: the ends where the wire really joins; a terminal can sit a little in from where the wiring reached it)
+      const real = (e, k) => { const q = e.p && sheets[sk].parts.find(q => q.id === e.p); return q ? linkPbTerms(q)[e.i] : P(sk, ...XY(k)); };
+      let pts = [real(ea, path[0]), ...path.map(k => P(sk, ...XY(k))), real(eb, path[path.length - 1])];
+      // (a step where a terminal sits in from the wiring's end: along the terminal's own line first)
+      const fixEnd = (arr) => { const [t, q, r] = arr; if (t[0] !== q[0] && t[1] !== q[1]) arr.splice(1, 0, r && r[0] === q[0] ? [q[0], t[1]] : [t[0], q[1]]); return arr; };
+      pts = fixEnd(pts); pts = fixEnd(pts.reverse()).reverse();
+      const clean = []; for (const q of pts) { const l = clean[clean.length - 1]; if (!l || l[0] !== q[0] || l[1] !== q[1]) clean.push(q); }
+      for (let i = clean.length - 2; i >= 1; i--) { const [a, q, b] = [clean[i - 1], clean[i], clean[i + 1]]; if ((a[0] === q[0] && q[0] === b[0]) || (a[1] === q[1] && q[1] === b[1])) clean.splice(i, 1); }
+      sheets[sk].wires.push({ id: uid('w'), a: ea, b: eb, pts: clean.slice(1, -1) });
+    } }
+  // (a ring of wire with no ends at all: nothing to number; Circuit Builder would join it to nothing either)
+  if (d.pv && d.pv.length) note(left, 'Process values (they stay with the circuit, and come back with it)');
+  if (d.fl || d.sn) note(left, 'Planted faults (they stay with the circuit, and come back with it)');
+  const doc = { kind: 'o3-print', v: 1, tb: env.defaultTB(), sheets, cur: 0 };
+  const tf = doc.tb.fields.find(f => /title/i.test(f.label)); if (tf) tf.value = d.name || 'Circuit';
+  doc.link = { from: 'circuit-builder', v: 2, cb: d0, ox: OX, ...(OXs.some(v => v !== OX) ? { oxs: OXs } : {}), oy: sheets.map((_, k) => OY(k)), sy, ...(xb ? { xb } : {}), ...(ylink ? { ym: ylink } : {}), fp: linkFingerprint(doc) };
+  return { doc, notes: { changed, left }, ask };
+}
+
+// a print sheet's wires split wherever a node or a part's terminal sits part way along one (not at its own ends)
+function linkTees(s, uid) {
+  const on = (x, y, a, b) => a[0] === b[0] ? x === a[0] && y >= Math.min(a[1], b[1]) && y <= Math.max(a[1], b[1]) : y === a[1] && a[1] === b[1] && x >= Math.min(a[0], b[0]) && x <= Math.max(a[0], b[0]);
+  const spots = [...s.nodes.map(n => [n.x, n.y, { n: n.id }]), ...s.parts.filter(p => p.t !== 'rail').flatMap(p => linkPbTerms(p).map((q, i) => [q[0], q[1], { p: p.id, i }]))];
+  const same = (e, f) => (e.n && e.n === f.n) || (e.p && e.p === f.p && e.i === f.i);
+  // (a wire's loose end right on a part's terminal (it ran past the terminal in Circuit Builder): joined to the terminal)
+  for (const w of s.wires) for (const k of ['a', 'b']) { const e = w[k]; if (!e.n) continue; const q = linkPbPos(s, e), t = q && spots.find(([x, y, f]) => f.p && x === q[0] && y === q[1]); if (t) w[k] = { ...t[2] }; }
+  s.nodes = s.nodes.filter(n => s.wires.some(w => w.a.n === n.id || w.b.n === n.id));
+  for (let again = true, guard = 0; again && guard < 5000; guard++) {
+    again = false;
+    outer: for (const w of s.wires) {
+      const P = [linkPbPos(s, w.a), ...w.pts, linkPbPos(s, w.b)];
+      if (P.some(q => !q)) continue;
+      for (const [x, y, e] of spots) {
+        if (same(e, w.a) || same(e, w.b)) continue;
+        for (let k = 0; k < P.length - 1; k++) {
+          if (!on(x, y, P[k], P[k + 1]) || (k === 0 && x === P[0][0] && y === P[0][1]) || (k === P.length - 2 && x === P[k + 1][0] && y === P[k + 1][1])) continue;
+          const atBend = P[k + 1][0] === x && P[k + 1][1] === y;
+          const w2 = { id: uid('w'), a: { ...e }, b: w.b, pts: w.pts.slice(atBend ? k + 1 : k) };
+          w.pts = w.pts.slice(0, k); w.b = { ...e }; s.wires.push(w2); again = true; break outer;
+        }
+      }
+    }
+  }
+}
+// a print sheet's loose stubs taken off: one left inside a part's body, one joined to nothing at either end, or one running on
+// past a junction to nowhere (in Circuit Builder they joined nothing; on the print they would be marked as loose ends)
+function linkPrune(s) {
+  const uses = id => s.wires.filter(w => w.a.n === id || w.b.n === id).length;
+  for (let again = true; again;) {
+    again = false;
+    for (const w of [...s.wires]) {
+      const P = [linkPbPos(s, w.a), ...w.pts, linkPbPos(s, w.b)]; if (P.some(q => !q)) continue;
+      const loose = [w.a, w.b].filter(e => e.n && uses(e.n) === 1);
+      if (!loose.length) continue;
+      const other = loose.length === 1 ? (loose[0] === w.a ? w.b : w.a) : null;
+      const inPart = s.parts.some(p => p.t !== 'rail' && P.every(([x, y]) => Math.abs(x - p.x) <= 80 && Math.abs(y - p.y) <= 60));
+      if (!inPart && loose.length < 2 && !(other.n && uses(other.n) >= 3)) continue;
+      s.wires.splice(s.wires.indexOf(w), 1); for (const e of loose) s.nodes = s.nodes.filter(n => n.id !== e.n); again = true;
+    }
+  }
+}
+// ---- handing work over: into this site's storage, then the other program opened in a new tab
+function linkHandOff(kind, data, url) {
+  try { localStorage.setItem(LINK_KEY, JSON.stringify({ kind, t: Date.now(), data })); } catch (e) { return 'This browser would not let the work be handed over (storage is full or turned off). Save it as a file, then open that file in the other program.'; }
+  // (opened as a plain link would be, no tie back to this page (the work goes over in storage): so where the other program is
+  // installed as an app, Chrome opens it in its app window, not a browser tab (Dallas, 20 Nov 2026))
+  const a = document.createElement('a'); a.href = url + (url.includes('?') ? '&' : '?') + 'from=link'; a.target = '_blank'; a.rel = 'noopener';
+  document.body.append(a); a.click(); a.remove();
+  return '';
+}
+// the work handed over, if this page was opened for it (once: it is taken out of storage)
+function linkTake() {
+  if (!/[?&]from=link\b/.test(location.search)) return null;
+  let h = null; try { h = JSON.parse(localStorage.getItem(LINK_KEY) || 'null'); localStorage.removeItem(LINK_KEY); } catch (_) {}
+  try { window.history.replaceState(null, '', location.pathname + location.hash); } catch (_) {}   // (window's: Circuit Builder has a history of its own, its undo)
+  return h && Date.now() - h.t < 10 * 60 * 1000 ? h : null;
+}
+
+/* ---- js/psym.js ---- */
 /* =====================================================================
    the print symbols: Dallas's Symbol Design set, redrawn for the wire diagram print (the originals' Print Symbol-*.svg
    in "Circuit Builder Print Symbols"). Each in the builder's own units, its middle at 0,0, its lines the wires' weight
@@ -952,6 +2065,9 @@ function removeWire(s, id) { const w = s.wires.find(w => w.id === id); if (w) s.
 /* ---------- tags ---------- */
 // every part in the document, with its sheet
 const allParts = () => doc.sheets.flatMap((s, k) => s.parts.filter(p => p.t !== 'rail').map(p => ({ p, s, k })));
+// a timer's coil: its kind is TR (a print from Circuit Builder tags it by the circuit's letter, T, as Circuit Builder's prints do;
+// older prints went by the tag alone, TR1)
+const isTimerCoil = c => !!c && c.t === 'coil' && (c.pre ? c.pre === 'TR' : /^TR/.test(c.tag || ''));
 const tagPre = p => p.t === 'coil' ? (p.pre || 'CR') : LIB[p.t] && LIB[p.t].pre;
 // the next free tag starting pre: one more than the highest in use (FU1, FU2, FU3...: never the same twice)
 function nextTag(pre, motor = false) {   // (motors are counted among themselves: motor M1 and its starter M1 go together)
@@ -963,7 +2079,7 @@ function nextTag(pre, motor = false) {   // (motors are counted among themselves
 let lastCoil = '';
 function defaultTag(t) {
   const k = LIB[t].kind;
-  if (t === 'tc_no' || t === 'tc_nc') { const tm = allParts().filter(q => q.p.t === 'coil' && /^TR/.test(q.p.tag || '')); return (tm.find(q => q.p.tag === lastCoil) || tm[tm.length - 1] || {}).p?.tag || 'TR1'; }   // (a timed contact: the last timer's)
+  if (t === 'tc_no' || t === 'tc_nc') { const tm = allParts().filter(q => isTimerCoil(q.p)); return (tm.find(q => q.p.tag === lastCoil) || tm[tm.length - 1] || {}).p?.tag || 'TR1'; }   // (a timed contact: the last timer's)
   if (k === 'contact') return lastCoil || (allParts().find(q => q.p.t === 'coil') || {}).p?.tag || '';
   if (k === 'starter') { const m = allParts().find(q => q.p.t === 'coil' && /^M\d*$/.test(q.p.tag || '')); return m ? m.p.tag : 'M1'; }
   if (k === 'olc') { const o = allParts().find(q => LIB[q.p.t].kind === 'ol'); return o ? o.p.tag : 'OL1'; }
@@ -1085,22 +2201,28 @@ function analyse(D = doc) {
   const give = (r, l) => { if (r == null || label.has(r)) return false; label.set(r, l); return true; };
   // (the poles a line passes through, and the starters' contacts)
   const CROSS = new Set(['power', 'fuse', 'ol']);
-  const across = new Map(), addX = (a, b) => { if (!across.has(a)) across.set(a, []); across.get(a).push(b); };
+  const across = new Map(), addX = (a, b, x) => { if (!across.has(a)) across.set(a, []); across.get(a).push({ m: b, x }); };
   const starterLoad = new Set(), starterLine = new Map();
-  for (const { s, p } of parts) {
-    const k = kindOf(p); if (!CROSS.has(k) && k !== 'starter') continue;
+  for (const x of parts) {
+    const { s, p } = x, k = kindOf(p); if (!CROSS.has(k) && k !== 'starter') continue;
     for (const [i, j] of polesOf(p.t)) {
       const a = rootT(p, s, i), b = rootT(p, s, j);
-      if (k === 'starter') { starterLoad.add(b); starterLine.set(b, a); } else { addX(a, b); addX(b, a); }
+      if (k === 'starter') { starterLoad.add(b); starterLine.set(b, a); } else { addX(a, b, x); addX(b, a, x); }
     }
   }
-  // power, the line side: from each line in, lettered at each pole passed, up to the starters
+  // power, the line side: from each line in, lettered at each pole passed, up to the starters. Each device a line
+  // passes takes that line's next letter (Dallas, 19 Nov 2026: every fused branch its own letter), level by level
+  // from the line in, in reading order: L1, past the disconnect L1A, past two fuse blocks L1B and L1C.
   const sups = parts.filter(x => x.p.t === 'sup').sort((a, b) => (a.p.tag || '').localeCompare(b.p.tag || '') || reading(a, b));
-  const q = [];
-  for (const { s, p } of sups) { const r = rootT(p, s, 0); power.add(r); if (give(r, p.tag || 'L?')) q.push([r, p.tag || 'L?', 0]); }
-  while (q.length) {
-    const [r, L, d] = q.shift();
-    for (const m of across.get(r) || []) if (!label.has(m) && !starterLoad.has(m)) { label.set(m, L + LET(d + 1)); power.add(m); q.push([m, L, d + 1]); }
+  for (const { s, p } of sups) {
+    const r = rootT(p, s, 0), L = p.tag || 'L?'; power.add(r); if (!give(r, L)) continue;
+    let front = [r], n = 0;
+    while (front.length) {
+      const hop = [];
+      for (const a of front) for (const { m, x } of across.get(a) || []) if (!label.has(m) && !starterLoad.has(m)) hop.push({ m, x });
+      hop.sort((u, v) => reading(u.x, v.x)); front = [];
+      for (const { m } of hop) if (!label.has(m)) { label.set(m, L + LET(++n)); power.add(m); front.push(m); }
+    }
   }
   // power, the load side: each motor's leads, back from it to its starter
   const motors = parts.filter(x => kindOf(x.p) === 'motor').sort(reading);
@@ -1110,7 +2232,7 @@ function analyse(D = doc) {
     leads.forEach(({ i }, j) => {
       const chain = [rootT(p, s, i)];
       for (let g = 0; g < 30 && !starterLoad.has(chain[chain.length - 1]); g++) {
-        const nx = (across.get(chain[chain.length - 1]) || []).find(m => !chain.includes(m) && !label.has(m)); if (nx == null) break; chain.push(nx);
+        const nx = (across.get(chain[chain.length - 1]) || []).map(o => o.m).find(m => !chain.includes(m) && !label.has(m)); if (nx == null) break; chain.push(nx);
       }
       const n = 3 * mk_ + j + 1; tN = Math.max(tN, n);
       if (starterLoad.has(chain[chain.length - 1])) chain.reverse().forEach((r, d) => { if (give(r, 'T' + n + LET(d))) power.add(r); });
@@ -1161,7 +2283,9 @@ function analyse(D = doc) {
       const ctl = isCtrlKind(kd) || (kd === 'fuse' && p !== x1fuse && [0, 1].every(i => !power.has(rootT(p, s, i))));
       if (ctl && [...Array(termsN(p)).keys()].some(i => wiresAt(s, { p: p.id, i }).length)) ys.add(p.y);   // (one not wired in yet takes no rung number)
     }
-    const sorted = [...ys].sort((a, b) => a - b), map = new Map(sorted.map(y => [y, ++rn]));
+    // (a line a long rung wraps onto (Dallas's "Ladder Edit 1", 19 Nov 2026: every control part on it marked rc) keeps the rung's number)
+    const wrapped = y => { const ps = s.parts.filter(p => p.t !== 'rail' && p.y === y && !((p.rot || 0) % 180) && isCtrlKind(kindOf(p))); return ps.length && ps.every(p => p.rc); };
+    const sorted = [...ys].sort((a, b) => a - b), map = new Map(sorted.map((y, i) => [y, i && wrapped(y) ? rn : ++rn]));
     rows.push(sorted.map(y => ({ y, n: map.get(y) })));
     for (const p of s.parts) if (p.t !== 'rail' && map.has(p.y) && !((p.rot || 0) % 180)) rung.set(p.id, map.get(p.y));
   });
@@ -1234,6 +2358,27 @@ function checkPrint(A = analyse()) {
   for (const [r, ts] of TERMS) if (r !== A.n1 && r !== A.n2 && ts.length >= 2 && ts.every(t => isLoadKind(kindOf(t.p)))) {
     const ps = [...new Set(ts.map(t => t.p))]; if (ps.length >= 2) add('w', `${ps.map(name).join(' and ')} are in series`, 'Loads in series share the voltage, so neither gets enough. Put each across 1 and 2 (in parallel).', ts.map(t => ({ k: t.k, id: t.p.id, x: t.p.x, y: t.p.y })));
   }
+  // drawing: symbols on top of each other, a wire through a symbol, a wire over a junction or terminal it isn't joined to
+  // (Dallas, 19 Nov 2026: each looks joined, or hides a part, on paper)
+  let drawn = 0;
+  const symBox = p => { const e = extOf(p), c = [[e.x0, e.y0], [e.x1, e.y1]].map(q => turn(q, p.rot || 0));
+    return { x0: p.x + Math.min(c[0][0], c[1][0]) + 4, x1: p.x + Math.max(c[0][0], c[1][0]) - 4, y0: p.y + Math.min(c[0][1], c[1][1]) + 4, y1: p.y + Math.max(c[0][1], c[1][1]) - 4 }; };
+  const segIn = ([a, b], o) => Math.max(a[0], b[0]) > o.x0 && Math.min(a[0], b[0]) < o.x1 && Math.max(a[1], b[1]) > o.y0 && Math.min(a[1], b[1]) < o.y1;
+  const onSeg = ([a, b], q) => (a[0] === b[0] ? q[0] === a[0] && q[1] > Math.min(a[1], b[1]) && q[1] < Math.max(a[1], b[1])
+    : a[1] === b[1] && q[1] === a[1] && q[0] > Math.min(a[0], b[0]) && q[0] < Math.max(a[0], b[0]));
+  doc.sheets.forEach((s, k) => {
+    const ps = s.parts.filter(p => p.t !== 'rail' && LIB[p.t]), bx = new Map(ps.map(p => [p.id, symBox(p)]));
+    for (let i = 0; i < ps.length; i++) for (let j = i + 1; j < ps.length; j++) { const a = bx.get(ps[i].id), b = bx.get(ps[j].id);
+      if (a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0) { drawn++; add('w', `${name(ps[i])} and ${name(ps[j])} are drawn on top of each other${sheetName(k)}`, 'Move one clear of the other, so each can be read.', [{ k, id: ps[i].id, x: ps[i].x, y: ps[i].y }, { k, id: ps[j].id, x: ps[j].x, y: ps[j].y }]); } }
+    const pts = [...s.nodes.map(n => ({ q: [n.x, n.y], what: 'a junction', end: e => e.n === n.id })),
+      ...ps.flatMap(p => [...Array(termsN(p)).keys()].map(i => ({ q: termPos(p, i), what: `a terminal of ${name(p)}`, end: e => e.p === p.id && e.i === i })))];
+    for (const w of s.wires) { const P = wirePts(s, w), segs = P.slice(1).map((b, i) => [P[i], b]);
+      for (const p of ps) if (w.a.p !== p.id && w.b.p !== p.id) { const sg = segs.find(g => segIn(g, bx.get(p.id)));
+        if (sg) { drawn++; add('w', `A wire runs through ${name(p)}${sheetName(k)}`, 'It is not joined to it, but on paper it looks as if it were. Route the wire around the symbol.', [{ k, id: p.id, x: p.x, y: p.y }]); } }
+      for (const o of pts) if (!o.end(w.a) && !o.end(w.b) && segs.some(g => onSeg(g, o.q))) {
+        drawn++; add('w', `A wire runs over ${o.what} it is not joined to${sheetName(k)}`, 'On paper they look joined. Move the wire off it, or join them there.', [{ k, id: w.id, x: o.q[0], y: o.q[1] }]); }
+    }
+  });
   // wire numbers
   const byNum = new Map(); for (const [r, l] of label) if (WIRED.has(r)) { if (!byNum.has(l)) byNum.set(l, []); byNum.get(l).push(r); }
   let dupN = 0;
@@ -1246,6 +2391,7 @@ function checkPrint(A = analyse()) {
   if (!shorts && (A.n1 != null || parts.length)) okLine('No shorts', 'Every way from 1 to 2 goes through a load.');
   if (!dups) okLine('Every device has its own tag', 'Contacts share only their coil’s.');
   if (!dupN) okLine('No wire number is used twice', '');
+  if (!drawn) okLine('Nothing drawn on top of anything else', 'No symbol on another, no wire through a symbol or over a junction it isn’t joined to.');
   const rank = { e: 0, w: 1, ok: 2 }; out.sort((a, b) => rank[a.sev] - rank[b.sev]);
   return out;
 }
@@ -1263,13 +2409,17 @@ let XREFS = [], RUNGNUMS = [], LINKS = [];     // (on the sheet on screen: each 
 // how far a part's name, label or one of its fuse numbers has been dragged (each on its own), and setting it
 const labOff = (p, which) => (which === 'tag' ? p.lt : which === 'desc' ? p.ld : (p.lf || {})[which]) || [0, 0];
 function setLabOff(p, which, v) { if (which === 'tag') p.lt = v; else if (which === 'desc') p.ld = v; else (p.lf ||= {})[which] = v; }
-// a continuation's note: TO / FROM the other sheet with its letter (or, on the same sheet, the rung)
+// a continuation's note: TO / FROM the other sheet with its letter; on the same sheet (Dallas's "Ladder Edit 2", 19 Nov 2026) the other
+// end's rung and the wire's number, R19-W30
 function contNote(p, k) {
   const other = p.t === 'cnt_out' ? 'cnt_in' : 'cnt_out', m = allParts().find(q => q.p.t === other && q.p.tag === p.tag);
   if (!m) return p.t === 'cnt_out' ? 'TO ?' : 'FROM ?';
   const w = p.t === 'cnt_out' ? 'TO' : 'FROM';
-  if (m.k !== k) return `${w} SHEET ${m.k + 1}`;
-  const rn = A && A.rung && A.rung.get(m.p.id); return rn ? `${w} RUNG ${rn}` : `${w} ${m.p.tag}`;
+  const rn = A && A.rung && A.rung.get(m.p.id), s = doc.sheets[k], wn = A && A.label && s ? A.label.get(A.rootT(p, s, 0)) : null;
+  // (where the other end is: its sheet (P, Dallas 19 Nov 2026), rung and wire; on the same sheet, rung and wire)
+  if (m.k !== k) return rn && wn && wn !== '?' ? `P${m.k + 1}-R${rn}-W${wn}` : `${w} SHEET ${m.k + 1}`;
+  if (rn && wn && wn !== '?') return `R${rn}-W${wn}`;
+  return rn ? `${w} RUNG ${rn}` : `${w} ${m.p.tag}`;
 }
 /* ---------- what Circuit Builder's devices carry into the print ---------- */
 // one pushbutton (or selector switch) drawn in several rungs: the parts with its number are its contact blocks; the top
@@ -1286,7 +2436,7 @@ const mainBlock = p => blocksOf(p)[0] || p;
 function blockGroups(s) { const g = new Map(); for (const p of s.parts) if (linkable(p) && p.tag) { const k = family(p) + ':' + p.tag; if (!g.has(k)) g.set(k, []); g.get(k).push(p); }
   return [...g.values()].map(bs => bs.sort((a, b) => a.y - b.y)).filter(bs => bs.length > 1); }
 // the timer a contact belongs to (its coil, if that is a timer)
-const timerOf = p => { const c = allParts().find(q => q.p.t === 'coil' && q.p.tag === p.tag); return c && /^TR/.test(c.p.tag) ? c.p : null; };
+const timerOf = p => { const c = allParts().find(q => q.p.t === 'coil' && q.p.tag === p.tag); return c && isTimerCoil(c.p) ? c.p : null; };
 // the print symbol a part is drawn with: a timer's contacts timed (unless instant); a selector's extra blocks without the arrow
 function symOf(p) {
   if (p.t === 'tc_no' || p.t === 'tc_nc') { const tm = timerOf(p); return `${p.t === 'tc_no' ? 'NO' : 'NC'} ${tm && tm.tof ? 'FD' : 'ND'} Switch`; }   // (timed: on- or off-delay as its timer is)
@@ -1297,7 +2447,7 @@ function symOf(p) {
 // block is closed in, the button a light is built into, the light built into a button)
 function noteOf(p) {
   const n = [p.desc || LIB[p.t].note];
-  if (p.t === 'coil' && /^TR/.test(p.tag || '')) n.push(`${p.tof ? 'OFF' : 'ON'}-DELAY${p.delay ? ' ' + p.delay + ' s' : ''}`);
+  if (isTimerCoil(p)) n.push(`${p.tof ? 'OFF' : 'ON'}-DELAY${p.delay ? ' ' + p.delay + ' s' : ''}`);
   if (p.t === 'sel') { const names = selNames(p), cl = (p.closedIn || []).map(i => names[i]).filter(Boolean); n.push(cl.length ? 'CLOSED: ' + cl.join(', ') : 'OPEN IN ALL'); }
   if (p.t === 'pl' && p.inPB) n.push('IN ' + p.inPB);
   if (isPB(p) && mainBlock(p) === p) { const ls = allParts().filter(q => q.p.t === 'pl' && q.p.inPB === p.tag).map(q => q.p.tag); if (ls.length) n.push('LIGHTED (' + ls.join(', ') + ')'); }
@@ -1337,7 +2487,7 @@ function drawSheet(s, k, A) {
   // blocks of one pushbutton or selector, one above another: a dashed link from each to the next down. Each is routed
   // by linkRoute; dragged into another shape, it keeps that shape (see LINK_ in editor.js))
   for (const L of linksOf(s)) { linked.add(L.a.id); linked.add(L.b.id);
-    const P = linkRoute(L); LINKS.push({ ...L, pts: P });
+    const P = linkRoute(L, s); LINKS.push({ ...L, pts: P });
     g += `<polyline points="${P.map(q => q.join(',')).join(' ')}" fill="none" stroke-width="3" stroke-dasharray="12 10" stroke-linecap="butt" stroke-linejoin="miter"/>`; }
   // devices
   for (const p of s.parts) {
@@ -1391,9 +2541,13 @@ function drawSheet(s, k, A) {
       if (a[1] === p.y && b[1] === p.y) xs.push(Math.max(a[0], b[0])); else if (a[0] === b[0] && Math.min(a[1], b[1]) <= p.y && Math.max(a[1], b[1]) >= p.y) xs.push(a[0]); } }
     if (rL2 && p.y >= rL2.y0 && p.y <= rL2.y1) xs.push(rL2.x);
     const x = Math.max(...xs) + 26;
-    g += `<text x="${x}" y="${p.y + 9}" font-size="22" font-weight="700">${r.map(o => o.nc ? `<tspan text-decoration="underline">${o.n}</tspan>` : o.n).join(', ')}</text>`;
-    // (each number's box, for clicking: it goes to that rung; PWR goes to the coil's power contacts)
-    let cx = x; for (const o of r) { const w = String(o.n).length * 13.4; XREFS.push({ n: o.n, tag: p.tag, x0: cx - 3, x1: cx + w + 3, y0: p.y - 12, y1: p.y + 14 }); cx += w + 12; } }
+    // (as many numbers a line as fit inside the border; the rest on the lines under it (Dallas, 17 Nov 2026: they ran off the sheet))
+    const room = Math.min(drawW(s) - 16 - x, 250), lines = [[]]; let lw = 0;   // (and no wider than a few numbers, so the ladder can sit centred)
+    for (const o of r) { const w = String(o.n).length * 13.4 + 12; if (lines[lines.length - 1].length && lw + w - 12 > room) { lines.push([]); lw = 0; } lines[lines.length - 1].push(o); lw += w; }
+    lines.forEach((ln, li) => { const y = p.y + 9 + li * 24;
+      g += `<text x="${x}" y="${y}" font-size="22" font-weight="700">${ln.map(o => o.nc ? `<tspan text-decoration="underline">${o.n}</tspan>` : o.n).join(', ')}${li < lines.length - 1 ? ',' : ''}</text>`;
+      // (each number's box, for clicking: it goes to that rung; PWR goes to the coil's power contacts)
+      let cx = x; for (const o of ln) { const w = String(o.n).length * 13.4; XREFS.push({ n: o.n, tag: p.tag, x0: cx - 3, x1: cx + w + 3, y0: y - 21, y1: y + 5 }); cx += w + 12; } }); }
   // notes
   for (const t of s.texts) { const lines = String(t.s || '').split('\n');
     g += `<text x="${t.x}" y="${t.y}" font-size="${t.size || 24}" font-weight="${t.bold ? 700 : 500}">${lines.map((l, i) => `<tspan x="${t.x}" dy="${i ? (t.size || 24) * 1.25 : 0}">${esc(l)}</tspan>`).join('')}</text>`; }
@@ -1509,8 +2663,21 @@ function linkEnds(L) {
 }
 // the link's line: straight when its ends line up and face each other; otherwise out of each end and across (an upright
 // pair of ends: across at a level between them, or over/under both; a side pair: down/up at an upright between them)
-function linkRoute(L) {
-  const k = L.own.lk || {}, [ea, eb] = linkEnds(L), A_ = linkEnd(L.a, ea), B = linkEnd(L.b, eb), va = vertEnd(ea.s), vb = vertEnd(eb.s);
+function linkRoute(L, s) {
+  const k0 = L.own.lk || {}, P = linkRouteK(L, k0);
+  // (Dallas, 19 Nov 2026: a link never runs through another symbol. Not dragged into a shape of its own, it steps
+  // around: across at another level, or out beside them, the nearest way that is clear)
+  if (!s || k0.jx != null || k0.dy || k0.dx) return P;
+  const boxes = s.parts.filter(p => p.t !== 'rail' && LIB[p.t] && p !== L.a && p !== L.b).map(p => { const b = PSYM[symOf(p)] ? linkBox(p) : partBox(p); return { x0: b.x0 + 2, x1: b.x1 - 2, y0: b.y0 + 2, y1: b.y1 - 2 }; });
+  const hits = Q => Q.slice(1).some((b, i) => { const a = Q[i]; return boxes.some(o => Math.max(a[0], b[0]) > o.x0 && Math.min(a[0], b[0]) < o.x1 && Math.max(a[1], b[1]) > o.y0 && Math.min(a[1], b[1]) < o.y1); });
+  if (!hits(P)) return P;
+  const [ea, eb] = linkEnds(L), va = vertEnd(ea.s), vb = vertEnd(eb.s), steps = [1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6];
+  const tries = va && vb ? [...steps.map(i => ({ dy: 40 * i })), ...steps.map(i => ({ jx: 60 * i }))] : !va && !vb ? steps.map(i => ({ dx: 40 * i })) : [];
+  for (const t of tries) { const Q = linkRouteK(L, { ...k0, ...t }); if (!hits(Q)) return Q; }
+  return P;
+}
+function linkRouteK(L, k) {
+  const [ea, eb] = linkEnds(L), A_ = linkEnd(L.a, ea), B = linkEnd(L.b, eb), va = vertEnd(ea.s), vb = vertEnd(eb.s);
   if (va && vb && k.jx != null) {   // (stepped out beside them: out of each end, across to the upright, back in)
     const out = e => e.s === 'top' ? -24 : 24, ya = A_[1] + out(ea), yb = B[1] + out(eb), x = snap((A_[0] + B[0]) / 2) + k.jx;
     return [A_, [A_[0], ya], [x, ya], [x, yb], [B[0], yb], B];
@@ -2263,7 +3430,7 @@ function renderProps0() {
       ${k === 'contact' || k === 'starter' || k === 'olc' ? `<div class="f">Worked by<select id="p-of">${[...new Set([...list, p.tag].filter(Boolean))].map(x => `<option value="${esc(x)}"${x === p.tag ? ' selected' : ''}>${esc(x)}${list.includes(x) ? '' : ' (no ' + (k === 'olc' ? 'overload' : 'coil') + ' yet)'}</option>`).join('')}${list.length || p.tag ? '' : `<option value="">(place a ${k === 'olc' ? 'overload' : 'coil'} first)</option>`}<option value="__other">Other…</option></select></div>`
         : `<div class="f">${k === 'coil' || k === 'sw' || k === 'cont' ? 'Letter' : 'Number'}<input class="in" id="p-tag" value="${esc(p.tag)}" autocomplete="off"></div>`}`}
       ${p.t === 'fdsc3' ? `<div class="f">Fuses<input class="in" id="p-fu" value="${esc(p.fu || '')}" autocomplete="off" title="The first of its three fuses: FU1 makes them FU1, FU2, FU3"></div><div class="f">&nbsp;<span class="ro">${esc(tagsOf(p).slice(1).join(', '))}</span></div>` : ''}
-      ${k === 'coil' && /^TR/.test(p.tag || '') ? `<div class="f">Delay<div class="seg"><button data-tof="0" aria-pressed="${!p.tof}">On-Delay</button><button data-tof="1" aria-pressed="${!!p.tof}">Off-Delay</button></div></div><div class="f">Seconds<input class="in" id="p-delay" type="number" min="0" step="0.5" value="${esc(p.delay ?? '')}" style="min-width:80px;width:90px"></div>` : ''}
+      ${k === 'coil' && isTimerCoil(p) ? `<div class="f">Delay<div class="seg"><button data-tof="0" aria-pressed="${!p.tof}">On-Delay</button><button data-tof="1" aria-pressed="${!!p.tof}">Off-Delay</button></div></div><div class="f">Seconds<input class="in" id="p-delay" type="number" min="0" step="0.5" value="${esc(p.delay ?? '')}" style="min-width:80px;width:90px"></div>` : ''}
       ${/^(con|tc)_n[oc]$/.test(p.t) && (timerOf(p) || p.t.startsWith('tc')) ? `<div class="f">Contact Type<div class="seg"><button data-ctype="tc" aria-pressed="${p.t.startsWith('tc')}">Timed</button><button data-ctype="con" aria-pressed="${p.t.startsWith('con')}">Instant</button></div></div>` : ''}
       ${p.t === 'sel' ? `<div class="f">Positions<input class="in" id="p-pos" value="${esc(selNames(p).join('/'))}" title="2 to 4 positions, with slashes: HAND/OFF/AUTO"></div><div class="f">Closed In<div class="seg">${selNames(p).map((n, i) => `<button data-cl="${i}" aria-pressed="${(p.closedIn || []).includes(i)}">${esc(n)}</button>`).join('')}</div></div>` : ''}
       ${p.t === 'pl' ? `<div class="f">Built Into<select id="p-inpb"><option value="">None (a light of its own)</option>${[...new Set(allParts().filter(q => isPB(q.p) && q.p.tag).map(q => q.p.tag).concat(p.inPB ? [p.inPB] : []))].map(t => `<option value="${esc(t)}"${t === p.inPB ? ' selected' : ''}>${esc(t)} (lighted pushbutton)</option>`).join('')}</select></div>` : ''}
@@ -2446,14 +3613,26 @@ let saveT = null;
 function autosave() { showFileLabel(); clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(AUTOSAVE, JSON.stringify(doc)); localStorage.setItem(SHOWKEY, JSON.stringify(SHOW)); } catch (_) {} }, 400); }
 function loadDoc(d) {
   if (!d || d.kind !== 'o3-print' || !Array.isArray(d.sheets) || !d.sheets.length) throw new Error('not a Print Builder file');
+  // (a file that cannot be drawn is refused with a reason, never opened half-way: every sheet, part, wire and node
+  // must be there with numbers where numbers go)
+  const num = v => typeof v === 'number' && Number.isFinite(v);
+  d.sheets.forEach((s, k) => { const bad = why => { throw new Error('sheet ' + (k + 1) + ': ' + why); };
+    if (!s || typeof s !== 'object') bad('missing');
+    for (const key of ['parts', 'wires', 'nodes', 'texts']) if (s[key] != null && !Array.isArray(s[key])) bad(key + ' is not a list');
+    for (const p of s.parts || []) if (!p || typeof p.t !== 'string' || !num(p.x) || !(p.t === 'rail' ? num(p.y0) && num(p.y1) : num(p.y))) bad('a part with no symbol or place');
+    for (const n of s.nodes || []) if (!n || !num(n.x) || !num(n.y)) bad('a junction with no place');
+    for (const w of s.wires || []) if (!w || !w.a || !w.b || (w.pts != null && (!Array.isArray(w.pts) || w.pts.some(q => !Array.isArray(q) || !num(q[0]) || !num(q[1]))))) bad('a wire with a missing end or bend'); });
   for (const s of d.sheets) { s.parts ||= []; s.wires ||= []; s.nodes ||= []; s.texts ||= []; for (const p of s.parts) { if (/^(spdt|dpdt)_m$/.test(p.t)) { p.t = p.t.slice(0, -2); p.fx = true; }   // (flipped switches saved in the demo as parts of their own)
     if (p.t !== 'rail' && !LIB[p.t]) throw new Error('unknown symbol ' + p.t); } }
-  d.tb ||= defaultTB(); d.cur = Math.min(d.cur || 0, d.sheets.length - 1);
+  d.tb ||= defaultTB();
+  // (the sheet it was on: a sheet number, or (as some saved files have it) a sheet's id; anything else, sheet 1)
+  const ci = Number.isInteger(d.cur) ? d.cur : d.sheets.findIndex(s => s.id === d.cur);
+  d.cur = ci >= 0 && ci < d.sheets.length ? ci : 0;
   doc = d; S = doc.sheets[doc.cur]; sel = new Set(); selW = null; UNDO.length = 0; REDO.length = 0;
   // (a fused disconnect from before its fuses were numbered: the next three numbers)
   for (const s of d.sheets) for (const p of s.parts) if (p.t === 'fdsc3' && !p.fu) p.fu = nextTag('FU');
   // (a timer's contact drawn timed before there were timed contacts of their own: one now)
-  for (const s of d.sheets) for (const p of s.parts) if ((p.t === 'con_no' || p.t === 'con_nc') && !p.inst && d.sheets.some(t => t.parts.some(c => c.t === 'coil' && c.tag === p.tag && /^TR/.test(c.tag || '')))) p.t = 'tc_' + p.t.split('_')[1];
+  for (const s of d.sheets) for (const p of s.parts) if ((p.t === 'con_no' || p.t === 'con_nc') && !p.inst && d.sheets.some(t => t.parts.some(c => c.t === 'coil' && c.tag === p.tag && isTimerCoil(c)))) p.t = 'tc_' + p.t.split('_')[1];
 }
 const fileName = () => ((doc.tb.fields.find(f => /title/i.test(f.label)) || {}).value || 'Print').replace(/[\\/:*?"<>|]+/g, '').trim() || 'Print';
 /* ---------- files, as in Circuit Builder: where the browser allows it (Chrome and Edge, and the installed app), the
@@ -2488,9 +3667,41 @@ async function saveToFile(asNew) {
     return 'Could not save: ' + (e && e.message || e);
   }
 }
+// ---- Circuit Builder's work (O³ link): a circuit, drawn as a print, and a note of what changed to fit
+const LINK_DEMO = 'oo-print-builder:'.includes('-demo');   // (the demo build's storage keys say -demo: it opens the demo Circuit Builder)
+const CB_URL = LINK_DEMO ? '../../demo/Circuit_Builder.html' : '../Circuit_Builder.html';
+const isCircuit = d => d && !d.kind && Array.isArray(d.parts) && Array.isArray(d.wires);
+// (rungs too long for letter portrait: the person picks how they are drawn (Dallas, 17 Nov 2026); the choice remembered)
+const LONGKEY = 'oo-print-builder:long-rungs';
+function openCircuit(d, fname, long) {
+  let saved = 'tight'; try { const v = localStorage.getItem(LONGKEY); if (['land', 'tight', 'wrap', 'cont'].includes(v)) saved = v; else if (v === 'fold') saved = 'cont'; } catch (_) {}   // (fold: the choice before 19 Nov 2026, now Continue on a New Rung)
+  const r = circuitToPrint(d, { uid, defaultTB, tidy, long: long || saved });
+  if (r.ask && !long) {
+    const dl = $('long-dlg'); dl.querySelectorAll('.long-opt').forEach(b => { b.classList.toggle('last', b.dataset.long === saved); b.onclick = () => { dl.close(); try { localStorage.setItem(LONGKEY, b.dataset.long); } catch (_) {} openCircuit(d, fname, b.dataset.long); }; });
+    $('long-cancel').onclick = () => { dl.close(); say('Not opened.'); };
+    dl.showModal(); dl.querySelector('.long-opt.last')?.focus(); return;
+  }
+  const asDrawn = r.notes.same || r.notes.kept;
+  if (fname && !d.name && !asDrawn) { const tf = r.doc.tb.fields.find(f => /title/i.test(f.label)); if (tf) tf.value = fname; }
+  const dd = asDrawn ? r.doc : withDrawnBy(r.doc); dd.link = r.doc.link;   // (back from Circuit Builder unchanged: the print it was, exactly)
+  snapshot(); const keep = UNDO.slice(); loadDoc(dd); UNDO.push(...keep); forgetFile(); refresh(true); fitZoom();
+  const esc = t => String(t).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+  const n = r.notes, list = (h, xs) => xs.length ? `<h4>${h} (${xs.length})</h4><ul>${xs.map(x => '<li>' + esc(x) + '</li>').join('')}</ul>` : '';
+  const np = dd.sheets.reduce((a, s) => a + s.parts.filter(p => p.t !== 'rail').length, 0);
+  $('link-body').innerHTML = `<p>“${esc(fileName())}”: ${np} parts on ${dd.sheets.length} sheet${dd.sheets.length > 1 ? 's' : ''}, ${n.same ? 'exactly as it was before it went to Circuit Builder.' : n.kept ? 'as you drew it before it went to Circuit Builder.' : 'drawn as a print.'} Tidy it up and print it; Save ▾ → Open in Circuit Builder takes it back.</p>` + list('Changed to fit Print Builder', n.changed) + list('Kept with the circuit, not drawn', n.left);
+  $('link-dlg').showModal();
+  say('Opened ' + fileName() + ' from Circuit Builder.');
+}
+$('link-ok').addEventListener('click', () => $('link-dlg').close());
+// Export: a window with each other O³ program this print can open in
+$('export-btn').addEventListener('click', () => { $('export-msg').textContent = ''; $('export-dlg').showModal(); });
+$('export-close').addEventListener('click', () => $('export-dlg').close());
+$('export-cb').addEventListener('click', () => { const m = linkHandOff('print', doc, CB_URL); if (m) $('export-msg').textContent = m; else { $('export-dlg').close(); say('Opened in Circuit Builder, in a new tab.'); } });
+$('open-cb-btn').addEventListener('click', e => { e.stopPropagation(); closeMenus(); say(linkHandOff('print', doc, CB_URL) || 'Opened in Circuit Builder, in a new tab.'); });
 async function openFile(f, handle) {
-  try { const d = JSON.parse(await f.text()); snapshot(); const keep = UNDO.slice(); loadDoc(d); UNDO.push(...keep); fileHandle = handle || null; refresh(true); fitZoom(); markSaved(); say('Opened ' + f.name + (handle ? '. Save writes your changes back into it.' : '')); }
-  catch (err) { alert('That file could not be opened: it is not a Print Builder file (' + err.message + ').'); }
+  try { const d = JSON.parse(await f.text());
+    if (isCircuit(d)) { openCircuit(d, f.name.replace(/\.json$/i, '')); return; } snapshot(); const keep = UNDO.slice(); loadDoc(d); UNDO.push(...keep); fileHandle = handle || null; refresh(true); fitZoom(); markSaved(); say('Opened ' + f.name + (handle ? '. Save writes your changes back into it.' : '')); }
+  catch (err) { alert('That file could not be opened: it is not a Print Builder print or a Circuit Builder circuit (' + err.message + ').'); }
 }
 async function pickAndOpen() {
   if (canUseFiles()) {
@@ -2594,15 +3805,19 @@ function start() {
   $('show-wn').checked = SHOW.wn; $('show-rn').checked = SHOW.rn; $('show-xr').checked = SHOW.xr;
   let d = null; try { d = JSON.parse(localStorage.getItem(AUTOSAVE) || 'null'); } catch (_) {}
   try { if (d) loadDoc(d); else loadDoc(withDrawnBy(template('starter'))); } catch (_) { loadDoc(withDrawnBy(template('blank'))); }
+  // (opened by Circuit Builder's Open in Print Builder: its circuit, drawn as a print)
+  const h = linkTake(); let fromCB = null;
+  if (h && h.kind === 'circuit') fromCB = h.data;
   try { const z = parseFloat(localStorage.getItem(UIKEY)); if (z) setUiSize(z); } catch (_) {}
   $('ui-size').addEventListener('change', e => setUiSize(parseFloat(e.target.value)));
   buildPalette(); palGrip(); refresh(true); setTool('select'); requestAnimationFrame(fitZoom);
+  if (fromCB) try { openCircuit(fromCB); } catch (e) { say('The circuit from Circuit Builder could not be drawn: ' + e.message); }
 }
 // (start() is called at the very end, in shell.js, once every script has run)
 
 /* ---------- several parts of one kind picked: one Part tab for them all (as in Circuit Builder) ---------- */
 // what parts are alike for this: contacts; relay coils; timers; pushbuttons; otherwise the same symbol, NO or NC
-const multiKey = p => { const k = LIB[p.t].kind; if (k === 'contact') return 'contact'; if (k === 'coil') return /^TR/.test(p.tag || '') ? 'timer' : 'coil'; if (isPB(p)) return 'pb'; return p.t.replace(/_(no|nc|hc|ho)$/, ''); };
+const multiKey = p => { const k = LIB[p.t].kind; if (k === 'contact') return 'contact'; if (k === 'coil') return isTimerCoil(p) ? 'timer' : 'coil'; if (isPB(p)) return 'pb'; return p.t.replace(/_(no|nc|hc|ho)$/, ''); };
 const MULTI_NAME = { contact: 'Contacts', coil: 'Relay Coils', timer: 'Timers', pb: 'Pushbuttons', pl: 'Pilot Lights', sel: 'Selector Switches' };
 // the picked parts, if every one is a symbol (not a rail) and all of one kind; else null
 function multiParts(ids) {
