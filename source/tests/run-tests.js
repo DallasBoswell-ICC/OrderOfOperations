@@ -3390,6 +3390,24 @@ const DEF_CIRCUIT = `
     if (pb !== 'L1,L1A,L1B,L1C') out.push('Print Builder: ' + pb + ' (want L1,L1A,L1B,L1C)');
     return out;
   });
+  await check('O³ link (Dallas, 19 Nov 2026, his report): a print opened in Circuit Builder with only a wire redrawn (or a letter changed) comes back as he drew it, the letter brought up to date; a wire taken away (joined differently) draws it again', async page => {
+    const pr = await withPB(page, pb => pb.evaluate(() => JSON.parse(JSON.stringify(withDrawnBy(template('starter'))))));
+    const ds = await page.evaluate(pr => { const out = {}; const open = () => { openFromPrint(pr, 'Starter'); document.getElementById('link-dlg').close(); };
+      // a wire drawn differently: the longest across in two pieces, meeting at a bend that joins nothing else
+      open(); { const i = wires.map((w, i) => [Math.abs(w.x2 - w.x1) * (w.y1 === w.y2), i]).sort((a, b) => b[0] - a[0])[0][1], w = wires[i], m = Math.round((w.x1 + w.x2) / 40) * 20;
+        wires.splice(i, 1, { ...w, x2: m }, { ...w, x1: m }); draw(); out.wire = circuitData(); }
+      open(); { const c = parts.find(p => p.t === 'coil'); out.was = c.L; c.L = 'Q'; for (const p of parts) if (p !== c && p.L === out.was && p.t === 'con') p.L = 'Q'; draw(); out.letter = circuitData(); }
+      open(); { wires.splice(wires.findIndex(w => w.y1 === w.y2 && w.x1 !== 0 && w.x2 !== 0), 1); draw(); out.cut = circuitData(); }
+      return out; }, pr);
+    const r = await withPB(page, pb => pb.evaluate(ds => Object.fromEntries(['wire', 'letter', 'cut'].map(k => { const x = circuitToPrint(ds[k], { uid, defaultTB, long: 'tight' });
+      return [k, { kept: !!x.notes.kept, note: x.notes.changed.join(' '), layout: JSON.stringify(x.doc.sheets.map(s => [s.parts.map(p => [p.id, p.x, p.y]), s.wires.map(w => [w.id, w.pts]), s.nodes, s.texts])), tags: x.doc.sheets.flatMap(s => s.parts.map(p => p.tag || '')) }]; })), ds));
+    const out = [], want = JSON.stringify(pr.sheets.map(s => [s.parts.map(p => [p.id, p.x, p.y]), s.wires.map(w => [w.id, w.pts]), s.nodes, s.texts]));
+    if (!r.wire.kept || r.wire.layout !== want) out.push('a wire redrawn in Circuit Builder: the print came back laid out differently (' + r.wire.note + ')');
+    if (!r.letter.kept || r.letter.layout !== want) out.push('a letter changed: the print came back laid out differently (' + r.letter.note + ')');
+    if (!r.letter.tags.includes('Q') || r.letter.tags.includes(ds.was)) out.push('a letter changed: tags on the print not brought up to date: ' + r.letter.tags.filter(Boolean).join(' '));
+    if (r.cut.kept) out.push('a wire taken away: still the old print (it is joined differently now)');
+    return out;
+  });
   await check('O³ link (Dallas, 19 Nov 2026): a print opened in Circuit Builder and sent back unchanged (even after saving and opening the circuit again) is the same print exactly; changed, it is drawn again with no old print inside it', async page => {
     const pr = await withPB(page, pb => pb.evaluate(() => JSON.parse(JSON.stringify(withDrawnBy(template('starter'))))));
     const ds = await page.evaluate(pr => { openFromPrint(pr, 'Starter'); document.getElementById('link-dlg').close(); const a = circuitData();

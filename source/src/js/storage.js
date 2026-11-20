@@ -204,7 +204,8 @@ function openFromPrint(doc, fname) {
   const title = (((doc.tb || {}).fields || []).find(f => /title/i.test(f.label)) || {}).value;
   if (!c.name || (!r.notes.same && c.name === 'Print')) c.name = title || fname || 'Circuit';
   useCircuit(c, r.notes.same ? `Opened ${c.name}, back from Print Builder unchanged.` : `Opened ${c.name} from Print Builder.`);
-  LINK_PRINT = { pb: JSON.parse(JSON.stringify(doc)), fp: linkCircuitFingerprint(circuitData()) };
+  { const now = circuitData(), same = Array.isArray(r.idx) && r.idx.length === now.parts.length && now.parts.every((a, i) => r.data.parts[i] && r.data.parts[i][0] === a[0]);
+    LINK_PRINT = { pb: JSON.parse(JSON.stringify(doc)), fp: linkCircuitFingerprint(now), ...(same ? { c0: { pw: now.pw, w: now.w, parts: now.parts, wires: now.wires }, ix: r.idx } : {}) }; }
   showLinkNote(c, r.notes);
 }
 function showLinkNote(c, n) {

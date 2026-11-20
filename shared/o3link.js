@@ -75,7 +75,9 @@ const LINK_PAL = ['FFDC00', 'EC008C', '7030A0', '00D2BE', 'FF9600', '0070C0', '0
 function printToCircuit(doc) {
   if (!doc || doc.kind !== 'o3-print' || !Array.isArray(doc.sheets)) throw new Error('That is not a print from Print Builder.');
   // (made from a circuit and not changed since: the circuit itself, exactly)
-  if (doc.link && doc.link.cb && doc.link.fp && doc.link.fp === linkFingerprint(doc)) return { data: JSON.parse(JSON.stringify(doc.link.cb)), notes: { changed: [], left: [], same: true } };
+  if (doc.link && doc.link.cb && doc.link.fp && doc.link.fp === linkFingerprint(doc)) {
+    const idx = doc.link.cb.parts.map(() => null); doc.sheets.forEach((s, k) => s.parts.forEach(p => { if (p.cbi != null && p.cbi < idx.length && !idx[p.cbi]) idx[p.cbi] = { k, id: p.id }; }));
+    return { data: JSON.parse(JSON.stringify(doc.link.cb)), notes: { changed: [], left: [], same: true }, idx }; }
   // (made from a circuit and changed on the print: first each part back at the circuit's own places. That is checked against the print:
   // joined just as the print joins it, no part on another, no wire through a part. If not (Dallas, 19 Nov 2026: a contact moved on the print
   // came back with a loose end; rungs drawn closer came back on top of each other), the circuit is drawn again from the print itself, its
@@ -90,7 +92,7 @@ function printToCircuit(doc) {
   }
   return linkOut(linkBuild(doc, false));
 }
-const linkOut = r => ({ data: r.data, notes: r.notes });
+const linkOut = r => ({ data: r.data, notes: r.notes, idx: r.idx });
 // a print turned into a circuit. back: each part at the circuit's own places (a print made from a circuit); otherwise as the print draws it
 function linkBuild(doc, back) {
   const changed = [], left = [], note = (list, s) => { if (!list.includes(s)) list.push(s); };
@@ -363,9 +365,30 @@ function linkBuild(doc, back) {
   // (made from a circuit, then changed on the print: what only Circuit Builder knows comes back, part by part)
   if (doc.link && doc.link.cb) data = linkMerge(doc.link.cb, data, fromIdx.map(it => it && it.p.cbi != null ? it.p.cbi : null), ownCol);
   if (noCoil.length) note(left, `The coil${noCoil.length > 1 ? 's' : ''} for ${noCoil.join(', ')}: not on the print (${noCoil.length > 1 ? 'their contacts are there, worked by nothing' : 'its contacts are there, worked by nothing'}: put ${noCoil.length > 1 ? 'the coils' : 'the coil'} in to run it)`);
-  return { data, notes: { changed, left }, map: all.filter(it => terms.has(it.p)).map(it => ({ k: it.k, id: it.p.id, t: it.p.t, ts: terms.get(it.p) })), through: all.filter(it => it.through || it.brk).map(it => ({ k: it.k, id: it.p.id, t: it.p.t })) };
+  return { data, notes: { changed, left }, idx: fromIdx.map(it => it && it.p ? { k: it.k, id: it.p.id } : null), map: all.filter(it => terms.has(it.p)).map(it => ({ k: it.k, id: it.p.id, t: it.p.t, ts: terms.get(it.p) })), through: all.filter(it => it.through || it.brk).map(it => ({ k: it.k, id: it.p.id, t: it.p.t })) };
 }
 const LIB_NAME_FOR = { fuse: 'A fuse', cb: 'A circuit breaker', cb2: 'A circuit breaker', cb3: 'A circuit breaker', ol: 'An overload heater', fdsc3: 'A fused disconnect', spst: 'A switch', spdt: 'A switch', dpst: 'A switch', dpdt: 'A switch', xover: 'A switch' };
+// Circuit Builder's joins, as it makes them: where a wire ends, or at a terminal (only crossing, not joined); its bars; jumpers by number
+const linkRotOf = a => ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(a[0]) ? (Math.round(+a[7]) || 0) : 0;
+function linkCbJoin(d, C) {
+  const bars = d.pw !== 'boxes', W = +d.w, at = new Map(), ends = new Set();
+  d.wires.forEach((w, wi) => { const [x1, y1, x2, y2] = w.map(Number), n = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) / 20; C.f('w' + wi);
+    for (const q of [[x1, y1], [x2, y2]]) { ends.add(q.join(',')); if (bars && q[0] === 0) C.u('w' + wi, 'BAR:L1'); if (bars && q[0] === W) C.u('w' + wi, 'BAR:L2'); }
+    for (let i = 0; i <= n; i++) { const k = (x1 + (x2 - x1) * i / (n || 1)) + ',' + (y1 + (y2 - y1) * i / (n || 1)); if (!at.has(k)) at.set(k, []); at.get(k).push('w' + wi); } });
+  const J = new Map();
+  for (const a of d.parts) linkCbTerms(a[0] === 'est' ? 'btn' : a[0], +a[1], +a[2], linkRotOf(a)).forEach(q => { const k = q.join(','); ends.add(k); C.f('t' + k); if (a[0] === 'jmp') { if (J.has(a[3])) C.u('t' + k, J.get(a[3])); else J.set(a[3], 't' + k); } });
+  for (const k of ends) { const ws = at.get(k) || []; for (const w of ws) C.u('t' + k, w); }
+  return C;
+}
+// how a circuit's parts are joined, whatever their places: each part's type, and for each of its terminals the first terminal (part,
+// terminal) in its net. Two circuits with the same are the same circuit drawn differently
+function linkCbShape(d) {
+  const par = new Map(), f = k => { if (!par.has(k)) par.set(k, k); let x = k; while (par.get(x) !== x) x = par.get(x); par.set(k, x); return x; };
+  const C = linkCbJoin(d, { f, u: (a, b) => { const A = f(a), B = f(b); if (A !== B) par.set(A, B); } }), first = new Map();
+  return JSON.stringify(d.parts.map((a, i) => [a[0], linkCbTerms(a[0] === 'est' ? 'btn' : a[0], +a[1], +a[2], linkRotOf(a)).map((q, j) => {
+    const root = C.f('t' + q.join(',')), bar = ['BAR:L1', 'BAR:L2'].find(b => par.has(b) && C.f(b) === root);
+    if (bar) return bar; if (!first.has(root)) first.set(root, i + ':' + j); return first.get(root); })]));
+}
 // does a circuit made from a print join what the print joins, and only that, with no part on another and no wire through a part?
 // (each print terminal against the circuit terminal it became: two joined on the print must be joined in the circuit, and the other way)
 function linkCheck(doc, r) {
@@ -378,13 +401,7 @@ function linkCheck(doc, r) {
     for (const p of s.parts) { if (p.t === 'ol') P.u(k + ':p:' + p.id + ':0', k + ':p:' + p.id + ':1');
       if (p.t === 'cnt_out' || p.t === 'cnt_in') { const t = String(p.tag || ''), q = k + ':p:' + p.id + ':0'; if (cnt.has(t)) P.u(q, cnt.get(t)); else cnt.set(t, q); } } });
   // the circuit: as Circuit Builder joins wires (where one ends, or at a terminal; only crossing, not joined), its bars, continuations by number
-  const d = r.data, C = mk(), bars = d.pw !== 'boxes', W = +d.w, at = new Map(), ends = new Set();
-  d.wires.forEach((w, wi) => { const [x1, y1, x2, y2] = w.map(Number), n = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) / 20; C.f('w' + wi);
-    for (const q of [[x1, y1], [x2, y2]]) { ends.add(q.join(',')); if (bars && q[0] === 0) C.u('w' + wi, 'BAR:L1'); if (bars && q[0] === W) C.u('w' + wi, 'BAR:L2'); }
-    for (let i = 0; i <= n; i++) { const k = (x1 + (x2 - x1) * i / (n || 1)) + ',' + (y1 + (y2 - y1) * i / (n || 1)); if (!at.has(k)) at.set(k, []); at.get(k).push('w' + wi); } });
-  const J = new Map(), rotOf = a => ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(a[0]) ? (Math.round(+a[7]) || 0) : 0;
-  for (const a of d.parts) linkCbTerms(a[0] === 'est' ? 'btn' : a[0], +a[1], +a[2], rotOf(a)).forEach(q => { const k = q.join(','); ends.add(k); C.f('t' + k); if (a[0] === 'jmp') { if (J.has(a[3])) C.u('t' + k, J.get(a[3])); else J.set(a[3], 't' + k); } });
-  for (const k of ends) { const ws = at.get(k) || []; for (const w of ws) C.u('t' + k, w); }
+  const d = r.data, C = linkCbJoin(d, mk()), rotOf = linkRotOf;
   // each mapped terminal: its group on the print and in the circuit must pair up one to one
   const pToC = new Map(), cToP = new Map(); let bad = 0; const problems = [];
   for (const m of r.map) m.ts.forEach((q, i) => { if (!q) return; const pk = P.f(m.k + ':p:' + m.id + ':' + i), ck = C.f('t' + q.join(','));
@@ -434,12 +451,35 @@ function linkMerge(old, nu, cbi, ownCol = new Set()) {
 /* =====================================================================
    A circuit -> a print (runs in Print Builder: uses its uid, defaultTB, nextTag-free tags of its own)
    ===================================================================== */
+// the print a circuit was opened from, kept as drawn while the circuit is the same parts joined the same way (null: draw it again)
+function linkKeepPrint(d, env) {
+  const c0 = d.pr.c0, ix = d.pr.ix;
+  try {
+    if (!Array.isArray(c0.parts) || c0.parts.length !== d.parts.length || ix.length !== d.parts.length || (c0.pw || '') !== (d.pw || '')) return null;
+    if (linkCbShape(c0) !== linkCbShape(d)) return null;
+    const pb = JSON.parse(JSON.stringify(d.pr.pb)), own = a => JSON.stringify([a[0], a[3], a[4], a[5], a[8], a[9], a[10], a[11]]);
+    const diff = d.parts.map((a, i) => own(a) !== own(c0.parts[i])).map((x, i) => x ? i : -1).filter(i => i >= 0);
+    if (diff.length) {
+      const bare = { ...d }; delete bare.pr; const fresh = circuitToPrint(bare, env).doc;
+      const freshOf = i => { for (const s of fresh.sheets) for (const p of s.parts) if (p.cbi === i) return p; return null; };
+      for (const i of diff) { const at = ix[i], nw = freshOf(i); if (!at) continue; const old = (pb.sheets[at.k] || { parts: [] }).parts.find(p => p.id === at.id);
+        if (!old || !nw) return null;
+        if (old.t !== nw.t && linkPbTerms(old).length !== linkPbTerms({ ...old, t: nw.t }).length) return null;
+        for (const key of ['t', 'tag', 'desc', 'pre', 'delay', 'tof']) { if (nw[key] === undefined) delete old[key]; else old[key] = nw[key]; } }
+    }
+    const n = diff.filter(i => ix[i]).length;
+    return { doc: pb, notes: { changed: [`Kept as you drew it: the circuit is still joined just as it was (only moved about)${n ? `; ${n} part${n > 1 ? 's' : ''} brought up to date (letters, names or contacts)` : ''}`], left: [], kept: true } };
+  } catch (e) { return null; }
+}
 function circuitToPrint(d, env) {
   if (!d || typeof d !== 'object' || !Array.isArray(d.parts) || !Array.isArray(d.wires)) throw new Error('That is not a circuit from Circuit Builder.');
   const uid = env.uid, changed = [], left = [], note = (list, s) => { if (!list.includes(s)) list.push(s); };
   // (opened in Circuit Builder from a print and not changed since: that print, exactly; Dallas, 19 Nov 2026)
   if (d.pr && d.pr.pb && d.pr.fp && d.pr.fp === linkCircuitFingerprint(d)) {
     const pb = JSON.parse(JSON.stringify(d.pr.pb)); if (pb && pb.kind === 'o3-print' && Array.isArray(pb.sheets) && pb.sheets.length) return { doc: pb, notes: { changed: [], left: [], same: true } }; }
+  // (changed in Circuit Builder, but only moved about: still the same parts, joined just as they were. Dallas, 19 Nov 2026: moving one
+  // wire redrew his whole print. Then the print as he drew it, each part whose letter, name or contacts changed brought up to date)
+  if (d.pr && d.pr.pb && d.pr.c0 && Array.isArray(d.pr.ix)) { const k = linkKeepPrint(d, env); if (k) return k; }
   if (d.pr) { d = { ...d }; delete d.pr; }   // (changed: drawn again; the old print is not carried inside the new one)
   const bars = d.pw !== 'boxes', d0 = d; let ylink = null;
   // (a ladder: its rungs spread out down the print as far as needed for the tags and names, up to twice as far)
