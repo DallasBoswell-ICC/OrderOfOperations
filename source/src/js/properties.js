@@ -66,7 +66,7 @@ function renderProps() {
     const top = Math.max(10, ...Object.keys(cnt).map(Number)) + 3;
     for (let n = 1; n <= top; n++) { const c = cnt[String(n)] || 0; ns.add(new Option(`${n}` + (c ? ` (joins ${c} other${c > 1 ? 's' : ''})` : ''), String(n), false, String(n) === p.L)); }
   }
-  document.getElementById('props-box').hidden = !(p && (isSrc(p) || isPh(p) || p.t === 'fu1'));
+  document.getElementById('props-box').hidden = !(p && (isSrc(p) || isPh(p) || p.t === 'fu1' || twoEnded(p)));
   document.getElementById('props-ph').hidden = !(p && isPh(p));
   if (p && isPh(p)) {
     // which phase it is, and that phase's colour (the colour of every box and wire of that phase)

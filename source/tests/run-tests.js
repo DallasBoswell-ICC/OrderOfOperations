@@ -3390,6 +3390,30 @@ const DEF_CIRCUIT = `
     if (pb !== 'L1,L1A,L1B,L1C') out.push('Print Builder: ' + pb + ' (want L1,L1A,L1B,L1C)');
     return out;
   });
+  await check('Turned parts (Dallas, 19 Nov 2026): a part turned on the print is turned in Circuit Builder (its terminals where the print\'s wires reach them), saved so, and turned again on the way back; one turned in Circuit Builder is turned on the print', async page => {
+    const SPEC = [['pb_no', 90], ['coil', 90], ['con_no', 270], ['ls_no', 180], ['pl', 90], ['sol', 270]];
+    const pr = await withPB(page, pb => pb.evaluate(SPEC => { loadDoc(withDrawnBy(template('blank'))); const L1 = S.parts.find(q => q.label === 'L1'); let x = 500;
+      for (const [t, r] of SPEC) { const p = addPart(S, t, x, 600); p.rot = r; p.tag = t === 'coil' ? 'CR' : t === 'con_no' ? 'CR' : t === 'pb_no' ? 'PB-A' : t === 'ls_no' ? 'LS1' : t === 'pl' ? 'PL1' : 'SOL1';
+        const ts = linkPbTerms(p).sort((u, v) => u[1] - v[1] || u[0] - v[0]); addWire(S, [[L1.x, ts[0][1] - 80], [ts[0][0], ts[0][1] - 80], ts[0]]); x += 260; }
+      refresh(true); return JSON.parse(JSON.stringify(doc)); }, SPEC));
+    const cb = await page.evaluate(pr => { openFromPrint(pr, 'Turned'); const note = document.getElementById('link-body').textContent; document.getElementById('link-dlg').close(); draw();
+      const got = parts.filter(p => !['l1', 'l2'].includes(p.t)).map(p => p.t + ':' + (p.rot || 0)).join(' ');
+      const wired = parts.filter(p => !['l1', 'l2'].includes(p.t)).map(p => terms(p).some(([x, y]) => wires.some(w => (w.x1 === x && w.y1 === y) || (w.x2 === x && w.y2 === y))));
+      const again = readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.filter(p => !['l1', 'l2'].includes(p.t)).map(p => p.t + ':' + (p.rot || 0)).join(' ');
+      return { got, wired, again, note, data: circuitData() }; }, pr);
+    const back = await withPB(page, pb => pb.evaluate(d => circuitToPrint(d, { uid, defaultTB, long: 'tight' }).doc.sheets.flatMap(s => s.parts).filter(p => p.t !== 'rail').map(p => p.t + ':' + (p.rot || 0)).sort().join(' '), cb.data));
+    const out = [], want = 'btn:1 coil:1 con:3 lsw:2 lamp:1 sol:3';
+    if (cb.got.split(' ').sort().join(' ') !== want.split(' ').sort().join(' ')) out.push('in Circuit Builder: ' + cb.got + ' (want ' + want + ')');
+    if (cb.wired.some(w => !w)) out.push('a turned part is not on its wire in Circuit Builder: ' + cb.wired.join(','));
+    if (cb.again !== cb.got) out.push('saved and read back: ' + cb.again);
+    if (back !== SPEC.map(([t, r]) => t + ':' + r).sort().join(' ')) out.push('back on the print: ' + back);
+    // turned in Circuit Builder itself
+    const mine = await page.evaluate(() => { parts = []; wires = []; const b = P('btn', 300, 200, { L: 'A' }); parts.push(b); normalize(); sel = selOne('p', b.id); draw(); KB_ACT.rotate.run(); return [b.rot || 0, JSON.stringify(terms(b)), circuitData()]; });
+    if (mine[0] !== 1 || mine[1] !== '[[300,160],[300,240]]') out.push('R on a button: turn ' + mine[0] + ', terminals ' + mine[1]);
+    const mp = await withPB(page, pb => pb.evaluate(d => circuitToPrint(d, { uid, defaultTB, long: 'tight' }).doc.sheets[0].parts.find(p => /^pbm?_no$/.test(p.t)).rot, mine[2]));
+    if (mp !== 90) out.push('a button turned in Circuit Builder: turned ' + mp + ' on the print');
+    return out;
+  });
   await check('Names typed in (Dallas, 19 Nov 2026): a button, selector or coil takes a name of its own (up to six letters and digits), a name another kind of part has is refused, and names cross to Print Builder and back as they are (START is PB-START; CR1 is CR1)', async page => {
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
     const ids = await page.evaluate(() => { const b = P('btn', 200, 160, { L: 'A' }), c = P('coil', 600, 160, { L: 'X' }), k = P('con', 400, 320, { L: 'X' }); parts.push(b, c, k); normalize(); draw(); return [b.id, c.id]; });

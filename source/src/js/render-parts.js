@@ -157,10 +157,15 @@ function drawPart(p, g, x, y, chan, onStation) {
   if (p.t === 'stand') return drawStand(p, g, x, y, onStation);
   // a single fuse turned: drawn as it is lying down, turned about its middle (its name, though, stays upright: above
   // it, or beside it when it stands upright)
-  if (p.t === 'fu1' && p.rot && !g.turned) {
+  // (and any two-ended part turned, the same way)
+  if ((p.t === 'fu1' || twoEnded(p)) && p.rot && !g.turned && !onStation) {
     const a = { transform: `rotate(${p.rot * 90} ${x} ${y})` }, g2 = el('g', a, g); g2.turned = true;
-    const v = drawPart(p, g2, x, y, el('g', a, chan || g), true);
-    if (!onStation) (v.cap = el('text', vert(p) ? { x: x + BOX / 2 + 12, y: y + 4.5, 'text-anchor': 'start', class: 'cap' } : { x, y: y - capTop(p), 'text-anchor': 'middle', class: 'cap' }, g)).textContent = captionOf(p);
+    const v = drawPart(p, g2, x, y, el('g', a, chan || g), false);
+    if (v.cap) { v.cap.remove(); delete v.cap; }
+    // (its writing, a letter on a cap or a coil, a number on a badge, turned back so it still reads upright)
+    for (const t of g2.querySelectorAll('text')) { const tx = +t.getAttribute('x') || 0, ty = +t.getAttribute('y') || 0, fs = +(t.getAttribute('font-size') || 14);
+      t.setAttribute('transform', `${t.getAttribute('transform') || ''} rotate(${-p.rot * 90} ${tx} ${ty - fs * .35})`.trim()); }
+    if (!onStation && !v.sec) (v.cap = el('text', vert(p) ? { x: x + BOX / 2 + 12, y: y + 4.5, 'text-anchor': 'start', class: 'cap' } : { x, y: y - capTop(p), 'text-anchor': 'middle', class: 'cap' }, g)).textContent = captionOf(p);
     return v;
   }
   const v = {}, T = TERM(p), half = p.t === 'tsw' ? TSW_HALF : BODYH(p.t) / 2;

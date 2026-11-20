@@ -50,7 +50,7 @@ const KB = {
     { g: 'tools', id: 'wire', keys: ['w'], label: 'Wire', short: 'Wire', run: () => setTool('wire') },
     { g: 'tools', id: 'mode', keys: ['g'], label: 'Switch Build and Run', short: 'Build / Run', inRun: true, run: () => { if (!LOCKED && !TS_MODE) setMode(editing); } },
     { g: 'tools', show: 'Esc', label: 'Back to Select, and let go of what is picked' },
-    { g: 'parts', id: 'rotate', keys: ['r'], label: 'Turn a box or fuse a quarter turn', short: 'Rotate', run: () => { const P = selGroup(); if (P.length && P.every(turns)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); } },
+    { g: 'parts', id: 'rotate', keys: ['r'], label: 'Turn the selected part a quarter turn', short: 'Rotate', run: () => { const P = selGroup(); if (P.length && P.every(turns)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); } },
     { g: 'parts', id: 'del', keys: ['x'], also: 'Delete', label: 'Delete', short: 'Delete', run: () => del() },
     { g: 'parts', id: 'again', keys: ['q'], label: 'Place another of the last part', short: 'Place Again', run: () => { if (lastKind) { closeMenus(); setTool('select'); placeFree(lastKind); } else say(`Put a part on the panel first. Then ${kn('again')} places another one like it.`); } },
     { g: 'parts', id: 'rename', keys: ['f2'], label: 'Jump to its letter', short: 'Letter', run: () => renameKey() },

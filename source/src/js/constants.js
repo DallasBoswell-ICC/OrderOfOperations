@@ -124,7 +124,11 @@ const isJmp = p => p.t === 'jmp', isBox = p => isSrc(p) || isJmp(p) || isPh(p);
 /* A single fuse (fu1): one cartridge fuse on one wire, in a box the size of a contact's. It turns a quarter turn at a
    time, as a box does, so it can sit in an upright run too (vert: turned upright) */
 const FU1_COL = '#c8c8c8';   // (its silver edge)
-const turns = p => isBox(p) || p.t === 'fu1', vert = p => p.t === 'fu1' && !!((p.rot || 0) & 1);
+// (Dallas, 19 Nov 2026: every two-ended part turns too, a quarter turn at a time, as in Print Builder: drawn turned about its middle,
+// its name upright. Boxes and a single fuse keep their turn where they always have (a[7]); the others at a[15], { r })
+const turns7 = p => isBox(p) || p.t === 'fu1';
+const twoEnded = p => !isBox(p) && !isPwr3(p) && p.t !== 'xfm' && p.t !== 'mtr' && p.t !== 'stand';
+const turns = p => turns7(p) || twoEnded(p), vert = p => (p.t === 'fu1' || twoEnded(p)) && !!((p.rot || 0) & 1);
 /* Three-phase power: an L1, L2 or L3 phase box (p.L '1', '2' or '3'), built like a supply box, every connection point
    of it that phase. Each phase has its own colour (each circuit keeps its own; brown, orange and yellow, as on 480 V).
    Every box turns, a quarter turn at a time (p.rot), as a continuation does. */

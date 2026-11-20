@@ -580,13 +580,16 @@ function linkPbPos(s, e) {
   return null;
 }
 // a Circuit Builder part's terminals (from its saved row's type, place and turn)
-function linkCbTerms(t, x, y, rot) { const ts = LINK_CB_TERMS[t + (rot ? '@' + rot : '')] || LINK_CB_TERMS[t] || []; return ts.map(([a, b]) => [x + a, y + b]); }
+function linkCbTerms(t, x, y, rot) { const own = rot && LINK_CB_TERMS[t + '@' + rot]; if (own) return own.map(([a, b]) => [x + a, y + b]);
+  // (no turned entry of its own: a two-ended part turned, its terminals turned about its middle, a quarter turn clockwise each)
+  return (LINK_CB_TERMS[t] || []).map(([a, b]) => { for (let k = 0; k < (rot || 0); k++) [a, b] = [-b, a]; return [x + a, y + b]; }); }
 
 // a Circuit Builder part's terminals, from its row as saved (a stand-in carries its own: a[10] = { t: the Print Builder part, r: its turn,
 // o: its terminals from its middle })
 const linkStandOK = a => a[0] === 'stand' && a[10] && Array.isArray(a[10].o);
 function linkRowTerms(a) { if (a[0] === 'stand') return linkStandOK(a) ? a[10].o.map(([u, v]) => [+a[1] + u, +a[2] + v]) : [];
-  return linkCbTerms(a[0] === 'est' ? 'btn' : a[0], +a[1], +a[2], ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(a[0]) ? (Math.round(+a[7]) || 0) : 0); }
+  const r = ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(a[0]) ? (Math.round(+a[7]) || 0) : a[15] && typeof a[15] === 'object' && [1, 2, 3].includes(+a[15].r) ? +a[15].r : 0;
+  return linkCbTerms(a[0] === 'est' ? 'btn' : a[0], +a[1], +a[2], r); }
 
 // a wire's points, its ends moved to new places (new ends: a run across or up and down, as the wire went)
 function linkMoveEnds(pts, a, b) {
@@ -816,7 +819,11 @@ function linkBuild(doc, back) {
     note(changed, `${name}: a stand-in in Circuit Builder (its symbol in a box: drawn, not run; it comes back to the print as it is)`); };
   for (const it of all) {
     const { p, k } = it, x = X(p.x), y = Y(k, p.y), pb = linkPbTerms(p).map(q => [X(q[0]), Y(k, q[1])]), name = p.tag || (LIB_NAME_FOR[p.t] || p.t);
-    const two = (t, row) => { const ts = linkCbTerms(t, x, y, 0); add(it, row, pb.length === 2 && pb[0][0] > pb[1][0] ? [ts[1], ts[0]] : ts); };   // (a flipped part: its first terminal on the right)
+    // (a part turned on the print is turned in Circuit Builder too, Dallas 19 Nov 2026: its turn at a[15]; its terminals matched to the print's in order)
+    const two = (t, row) => { const q = t === 'fu1' ? 0 : Math.round(((+p.rot || 0) % 360 + 360) % 360 / 90) % 4;
+      if (q) { while (row.length < 15) row.push(null); row[15] = { r: q }; }
+      const ts = linkCbTerms(t, x, y, q), d = (u, v) => Math.hypot(u[0] - v[0], u[1] - v[1]);
+      add(it, row, pb.length === 2 && ts.length === 2 && d(ts[0], pb[0]) + d(ts[1], pb[1]) > d(ts[1], pb[0]) + d(ts[0], pb[1]) ? [ts[1], ts[0]] : ts); };
     if (p.t === 'rail') continue;
     if ((p.brk && CB0) || pairDown.has(p)) { it.brk = pb[0]; continue; }   // (a continuation the print put where a wire ran over onto the next sheet: the wire joins up again)
     if (/^pbm?_/.test(p.t) || p.t === 'estop') {
@@ -1096,6 +1103,7 @@ function circuitToPrint(d, env) {
     }
     if (!t) { note(left, `A ${r.t} part: Print Builder has nothing like it`); continue; }
     o.t = t; if (o.tag == null) o.tag = '';
+    if (r.a[15] && typeof r.a[15] === 'object' && [1, 2, 3].includes(+r.a[15].r) && !o.rot) o.rot = +r.a[15].r * 90;   // (a two-ended part turned in Circuit Builder: turned on the print too)
     // (one terminal on the print: the part sits on the circuit box's terminal that a wire goes to, its terminal facing the wire)
     o.cbT = ts;   // (the circuit part's terminals, in G)
     if (['sup', 'src_l1', 'src_l2', 'cnt_out', 'cnt_in'].includes(t)) {

@@ -22,9 +22,10 @@ function circuitData() {
   return {
     app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}), ...(barsOn() ? {} : { pw: 'boxes' }), ...(SRC_COL !== SRC_DEFAULT ? { sc: SRC_COL } : {}), ...(PH_COL.join() !== PH_DEFAULT.join() ? { pc: PH_COL.map(c => c.slice(1)) } : {}),
     parts: parts.map(p => { if (p.t === 'stand') return ['stand', p.x, p.y, p.L || '', 0, 1, '', null, null, p.desc || '', { t: p.sym, r: p.srot || 0, o: p.st }];   // (a stand-in for a Print Builder part: what it stands for, kept whole)
-      const a = [p.estop ? 'est' : p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (p.t === 'lsw' && p.held) a.push(1); if (p.t === 'tsw' && p.low) a.push(1); if (turns(p) && p.rot) a.push(p.rot); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
+      const a = [p.estop ? 'est' : p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (p.t === 'lsw' && p.held) a.push(1); if (p.t === 'tsw' && p.low) a.push(1); if (turns7(p) && p.rot) a.push(p.rot); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
       if (p.t === 'sel') { while (a.length < 7) a.push(null); a.length = 7; a.push(selN(p), (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, (p.names || []).join('/'), p.pos || 0); }   // a selector switch: positions, closed-in mask, (no label), names, start
       if (p.lk || p.ls) { while (a.length < 12) a.push(null); a.push(p.lk ? p.lk[0] : 0, p.lk ? p.lk[1] : 0); if (p.ls) a.push(p.ls.join('')); }   // (its dashed link line, moved out of the way; the sides its ends join)
+      if (!turns7(p) && turns(p) && p.rot) { while (a.length < 15) a.push(null); a.push({ r: p.rot }); }   // (a two-ended part turned: its 16th)
       return a; }),
     wires: wires.map(q => { const a = [x(q.x1), q.y1, x(q.x2), q.y2]; if (WIRE_FAULTS[q.fault]) a.push(q.fault); return a; }),   // (a fault planted on a wire: its 5th)
     // (faults planted on parts: [part, fault]; the work order for the student)
@@ -68,6 +69,7 @@ function readCircuit(d) {
     if (['l1', 'l2', 'ph', 'jmp', 'xfm', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr'].includes(t)) delete p.color;
     if (t === 'olc') p.nc = true;
     if (t === 'jmp' || t === 'l1' || t === 'l2' || t === 'ph' || t === 'fu1') { const r = Math.round(Number(a[7])) || 0; if (r >= 1 && r <= 3) p.rot = r; }   // (turned)   // (a supply box has no colour of its own)
+    if (a[15] && typeof a[15] === 'object' && [1, 2, 3].includes(+a[15].r) && twoEnded(p)) p.rot = +a[15].r;   // (a two-ended part turned)
     if (t === 'con') { p.nc = !!a[4]; delete p.color; if (a[7] === 1) p.inst = true; }   // (a timer's instantaneous contact)
     if (t === 'coil' && a[7] !== undefined) { const n = Math.round(Number(a[7])); if (n >= 1) { p.delay = Math.min(999, n); if (a[8] === 1) p.tof = true; } }   // a timer (a[8] = 1: off-delay)
     if ((t === 'btn' || t === 'coil') && typeof a[9] === 'string' && a[9].trim()) p.label = a[9].replace(/\s+/g, ' ').trim().slice(0, 8);   // (a label written on it)
