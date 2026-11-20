@@ -40,7 +40,7 @@ function network() {
     }
   }
   for (const p of parts) {
-    if (isBox(p) || isPwr3(p) || p.t === 'mtr') continue;   // (supply boxes are not a way through: their connection points are L1 or L2, below; continuations: further down)
+    if (isBox(p) || isPwr3(p) || p.t === 'mtr' || p.t === 'stand') continue;   // (a stand-in: drawn, not run; supply boxes are not a way through: their connection points are L1 or L2, below; continuations: further down)
     const [[ax, ay], [bx, by]] = terms(p);
     p._a = node(ax, ay, key(ax, ay)); p._b = node(bx, by, key(bx, by));
     // (a fault planted on a load, while running: open, no way through it electrically; shorted, its ends joined straight through
@@ -138,6 +138,7 @@ function wiringIssues(net) {
   sts.forEach((m, i) => { const fm = V[i + 1], hs = Object.keys(net.PH);
     for (const a of hs) for (const b of hs) if (a < b && fm(net.PH[a]) === fm(net.PH[b]) && f0(net.PH[a]) !== f0(net.PH[b]) && !out.has(m.id)) out.set(m.id, `Closing it joins L${a} to L${b}`); });
   for (const p of parts) {
+    if (p.t === 'stand') { out.set(p.id, { note: 'A stand-in: drawn, not run' }); continue; }
     if (isSrc(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); continue; }
     if (isPwr3(p)) {
       if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything');

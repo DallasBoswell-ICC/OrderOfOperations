@@ -1038,6 +1038,10 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
    ===================================================================== */
 const LINK_CB_TERMS = {"btn":[[-40,0],[40,0]],"est":[[-40,0],[40,0]],"sel":[[-60,0],[60,0]],"lsw":[[-60,0],[60,0]],"tsw":[[-80,0],[80,0]],"psw":[[-60,0],[60,0]],"fsw":[[-60,0],[60,0]],"coil":[[-60,0],[60,0]],"lamp":[[-60,0],[60,0]],"sol":[[-60,0],[60,0]],"htr":[[-60,0],[60,0]],"mtr":[[-160,-120],[-160,0],[-160,120]],"con":[[-40,0],[40,0]],"mst":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"olc":[[-40,0],[40,0]],"olh":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"dsc":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"fus":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"fu1":[[-40,0],[40,0]],"fu1@1":[[0,-40],[0,40]],"fu1@2":[[40,0],[-40,0]],"fu1@3":[[0,40],[0,-40]],"xfm":[[-60,-80],[60,-80],[-60,80],[60,80]],"ph":[[-40,0],[40,0],[0,40]],"ph@1":[[0,-40],[0,40],[-40,0]],"ph@2":[[40,0],[-40,0],[0,-40]],"ph@3":[[0,40],[0,-40],[40,0]],"l1":[[-40,0],[40,0],[0,40]],"l1@1":[[0,-40],[0,40],[-40,0]],"l1@2":[[40,0],[-40,0],[0,-40]],"l1@3":[[0,40],[0,-40],[40,0]],"l2":[[-40,0],[40,0],[0,40]],"l2@1":[[0,-40],[0,40],[-40,0]],"l2@2":[[40,0],[-40,0],[0,-40]],"l2@3":[[0,40],[0,-40],[40,0]],"jmp":[[-40,0],[40,0],[0,40],[0,-40]],"jmp@1":[[0,-40],[0,40],[-40,0],[40,0]],"jmp@2":[[40,0],[-40,0],[0,-40],[0,40]],"jmp@3":[[0,40],[0,-40],[40,0],[-40,0]]};
 const LINK_PB_TERMS = {"pb_no":[[-40,0],[40,0]],"pb_nc":[[-40,0],[40,0]],"pbm_no":[[-40,0],[40,0]],"pbm_nc":[[-40,0],[40,0]],"estop":[[-40,0],[40,0]],"sel":[[-40,0],[40,0]],"ls_no":[[-40,0],[40,0]],"ls_nc":[[-40,0],[40,0]],"ls_hc":[[-40,0],[40,0]],"ls_ho":[[-40,0],[40,0]],"ts_no":[[-40,0],[40,0]],"ts_nc":[[-40,0],[40,0]],"ts_nol":[[-40,0],[40,0]],"ts_ncl":[[-40,0],[40,0]],"ps_no":[[-40,0],[40,0]],"ps_nc":[[-40,0],[40,0]],"fs_no":[[-40,0],[40,0]],"fs_nc":[[-40,0],[40,0]],"fls_no":[[-40,0],[40,0]],"fls_nc":[[-40,0],[40,0]],"prs_no":[[-64,0],[64,0]],"prs_nc":[[-64,0],[64,0]],"spst":[[-40,0],[40,0]],"spdt":[[-40,0],[40,-40],[40,40]],"dpst":[[-40,-60],[40,-60],[-40,60],[40,60]],"dpdt":[[-40,-60],[40,-100],[40,-20],[-40,60],[40,20],[40,100]],"xover":[[-40,-40],[40,-40],[-40,40],[40,40]],"coil":[[-40,0],[40,0]],"tmr_on":[[-40,0],[40,0]],"tmr_off":[[-40,0],[40,0]],"pl":[[-40,0],[40,0]],"sol":[[-40,0],[40,0]],"htr":[[-40,0],[40,0]],"motor":[[-140,-120],[-140,0],[-140,120]],"con_no":[[-40,0],[40,0]],"con_nc":[[-40,0],[40,0]],"tc_no":[[-40,0],[40,0]],"tc_nc":[[-40,0],[40,0]],"mst3":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"olc":[[-40,0],[40,0]],"dsc3":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"fdsc3":[[-80,-120],[80,-120],[-80,0],[80,0],[-80,120],[80,120]],"fus3":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"fuse":[[-40,0],[40,0]],"cb":[[-40,0],[40,0]],"cb2":[[-40,-60],[40,-60],[-40,60],[40,60]],"cb3":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"ol3":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"ol":[[-40,0],[40,0]],"sup":[[0,0]],"src_l1":[[0,0]],"src_l2":[[0,0]],"xfmr":[[-60,-60],[60,-60],[-60,60],[60,60]],"gnd":[[0,-40]],"cnt_out":[[-40,0]],"cnt_in":[[40,0]]};
+// Print Builder's symbol for each of its parts (a stand-in in Circuit Builder draws it), and the symbols Circuit Builder's
+// print-symbols.js lacks (taken from Print Builder's symbols.js and psym.js; a check in Print Builder's tests makes sure they still match)
+const LINK_PB_SYMN = {"pb_no":"NO Pushbutton","pb_nc":"NC Pushbutton","pbm_no":"NO Pushbutton","pbm_nc":"NC Pushbutton","estop":"NC EStop Pushbutton","sel":"Selector Switch Operator","ls_no":"NO Limit Switch","ls_nc":"NC Limit Switch","ls_hc":"NO HC Limit Switch","ls_ho":"NC HO Limit Switch","ts_no":"NO Temperature Switch","ts_nc":"NC Temperature Switch","ts_nol":"NO Temperature Switch","ts_ncl":"NC Temperature Switch","ps_no":"NO Pressure Switch","ps_nc":"NC Pressure Switch","fs_no":"NO Float Switch","fs_nc":"NC Float Switch","fls_no":"NO Flow Switch","fls_nc":"NC Flow Switch","prs_no":"NO Proximity Switch","prs_nc":"NC Proximity Switch","spst":"SPST Switch","spdt":"SPDT Switch","dpst":"DPST Switch","dpdt":"DPDT Switch","xover":"DPDT Crossover Switch","coil":"Relay","tmr_on":"Relay","tmr_off":"Relay","pl":"Pilot Light","sol":"Solenoid","htr":"Heating Element","motor":"Motor Leads","con_no":"NO Contact","con_nc":"NC Contact","tc_no":"NO ND Switch","tc_nc":"NC ND Switch","mst3":"3PH Starter Contacts","olc":"NC Contact","dsc3":"3PH Disconnect","fdsc3":"3PH Fusible Disconnect","fus3":"3PH Fuses","fuse":"Fuse","cb":"Circuit Breaker","cb2":"DPST Circuit Breaker","cb3":"3PST Circuit Breaker","ol3":"3PH Thermal Overload","ol":"Thermal Overload","xfmr":"Control Transformer","gnd":"Ground","cnt_out":"Continuation Out","cnt_in":"Continuation In"};
+const LINK_PB_PSYM = {"SPDT Switch":{"b":"<path d=\"M-30 0L36 -30\" fill=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,-40],[40,40]],"y0":-50,"y1":50},"DPST Switch":{"b":"<path d=\"M0 45V-73\" fill=\"none\" stroke-dasharray=\"12 12\"/><path d=\"M-30 -60L30 -90\" fill=\"none\"/><circle cx=\"-30\" cy=\"-60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"-60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><path d=\"M-30 60L30 30\" fill=\"none\"/><circle cx=\"-30\" cy=\"60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,-60],[40,-60],[-40,60],[40,60]],"y0":-92,"y1":70},"DPDT Switch":{"b":"<path d=\"M0 46V-74\" fill=\"none\" stroke-dasharray=\"12 12\"/><path d=\"M-30 -60L36 -90\" fill=\"none\"/><circle cx=\"-30\" cy=\"-60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"-60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-100\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-100\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-20\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-20\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><path d=\"M-30 60L36 30\" fill=\"none\"/><circle cx=\"-30\" cy=\"60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"20\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"20\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"100\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"100\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,-60],[40,-100],[40,-20],[-40,60],[40,20],[40,100]],"y0":-110,"y1":110},"DPDT Crossover Switch":{"b":"<path d=\"M-30 -40H30M-30 40H30\" fill=\"none\" stroke-dasharray=\"12 12\"/><path d=\"M-30 -40L30 40M-30 40L30 -40\" fill=\"none\"/><circle cx=\"-30\" cy=\"-40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"-40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"-30\" cy=\"40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,-40],[40,-40],[-40,40],[40,40]],"y0":-50,"y1":50},"Motor Leads":{"b":"<path d=\"M-140 -120H-120L-56.569 -56.569M-140 0H-80M-140 120H-120L-56.569 56.569\" fill=\"none\"/><circle cx=\"0\" cy=\"0\" r=\"80\" fill=\"#fff\"/>","t":[[-140,-120],[-140,0],[-140,120]],"y0":-124,"y1":124},"Circuit Breaker":{"b":"<path d=\"M-29.42 -14.34C-26.62 -22.26 -14.36 -27.98 -0.08 -28C14.18 -28.02 26.5 -22.36 29.38 -14.44\" fill=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"0\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"0\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-30,"y1":10},"DPST Circuit Breaker":{"b":"<path d=\"M0 32V-86\" fill=\"none\" stroke-dasharray=\"12 12\"/><path d=\"M-29.42 -74.34C-26.62 -82.26 -14.36 -87.98 -0.08 -88C14.18 -88.02 26.5 -82.36 29.38 -74.44\" fill=\"none\"/><circle cx=\"-30\" cy=\"-60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"-60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><path d=\"M-29.42 45.66C-26.62 37.74 -14.36 32.02 -0.08 32C14.18 31.98 26.5 37.64 29.38 45.56\" fill=\"none\"/><circle cx=\"-30\" cy=\"60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,-60],[40,-60],[-40,60],[40,60]],"y0":-90,"y1":70},"3PST Circuit Breaker":{"b":"<path d=\"M0 92V-146\" fill=\"none\" stroke-dasharray=\"12 12\"/><path d=\"M-29.42 -134.34C-26.62 -142.26 -14.36 -147.98 -0.08 -148C14.18 -148.02 26.5 -142.36 29.38 -134.44\" fill=\"none\"/><circle cx=\"-30\" cy=\"-120\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"-120\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-120\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-120\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><path d=\"M-29.42 -14.34C-26.62 -22.26 -14.36 -27.98 -0.08 -28C14.18 -28.02 26.5 -22.36 29.38 -14.44\" fill=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"0\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"0\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><path d=\"M-29.42 105.66C-26.62 97.74 -14.36 92.02 -0.08 92C14.18 91.98 26.5 97.64 29.38 105.56\" fill=\"none\"/><circle cx=\"-30\" cy=\"120\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"120\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"120\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"120\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"y0":-150,"y1":130},"Ground":{"b":"<path d=\"M0 -40V-8M-30 -8H30M-20 8H20M-10 24H10\" fill=\"none\"/>","t":[[0,-40]],"y0":-40,"y1":28},"Continuation Out":{"b":"<path d=\"M-40 0H-26\" fill=\"none\"/><path d=\"M-26 -22H14L36 0L14 22H-26Z\" fill=\"#fff\"/>","t":[[-40,0]],"y0":-22,"y1":22},"Continuation In":{"b":"<path d=\"M26 0H40\" fill=\"none\"/><path d=\"M-36 -22H4L26 0L4 22H-36Z\" fill=\"#fff\"/>","t":[[40,0]],"y0":-22,"y1":22}};
 
 /* ---- shared/o3link.js ---- */
 /* =====================================================================
@@ -1075,6 +1079,12 @@ function linkPbPos(s, e) {
 }
 // a Circuit Builder part's terminals (from its saved row's type, place and turn)
 function linkCbTerms(t, x, y, rot) { const ts = LINK_CB_TERMS[t + (rot ? '@' + rot : '')] || LINK_CB_TERMS[t] || []; return ts.map(([a, b]) => [x + a, y + b]); }
+
+// a Circuit Builder part's terminals, from its row as saved (a stand-in carries its own: a[10] = { t: the Print Builder part, r: its turn,
+// o: its terminals from its middle })
+const linkStandOK = a => a[0] === 'stand' && a[10] && Array.isArray(a[10].o);
+function linkRowTerms(a) { if (a[0] === 'stand') return linkStandOK(a) ? a[10].o.map(([u, v]) => [+a[1] + u, +a[2] + v]) : [];
+  return linkCbTerms(a[0] === 'est' ? 'btn' : a[0], +a[1], +a[2], ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(a[0]) ? (Math.round(+a[7]) || 0) : 0); }
 
 // a wire's points, its ends moved to new places (new ends: a run across or up and down, as the wire went)
 function linkMoveEnds(pts, a, b) {
@@ -1291,6 +1301,14 @@ function linkBuild(doc, back) {
   for (const a of all) if (a.p.t === 'cnt_out') { const b = all.find(q => q.p.t === 'cnt_in' && q.p.tag === a.p.tag && q.k === a.k + 1); if (!b) continue;
     const ta = linkPbTerms(a.p)[0], tb = linkPbTerms(b.p)[0]; if (ta && tb && Math.abs(ta[0] - tb[0]) < 1) { pairDown.add(a.p); pairDown.add(b.p); } }
   let coilN = 0; const noCoil = [], ownCol = new Set();   // (ownCol: lights whose colour the print names)
+  // (Dallas, 19 Nov 2026: a part Circuit Builder has none of comes in as a stand-in: its symbol in a box, its terminals where the
+  // print's are (two: a button's; more: just outside the symbol's). Drawn, not run; it goes back to the print as it was)
+  const standIn = (it, p, pb, x, y, name) => { x = linkSnap(x); y = linkSnap(y); const up = (p.rot || 0) % 180 !== 0;
+    const o = pb.length === 2 && (pb[0][1] === pb[1][1] || pb[0][0] === pb[1][0])
+      ? pb.map((q, i) => pb[0][1] === pb[1][1] ? [(Math.sign(q[0] - pb[1 - i][0]) || (i ? 1 : -1)) * 40, 0] : [0, (Math.sign(q[1] - pb[1 - i][1]) || (i ? 1 : -1)) * 40])
+      : pb.map(q => { let u = linkSnap(q[0] - x), v = linkSnap(q[1] - y); if (!up && u) u += Math.sign(u) * 20; else if (up && v) v += Math.sign(v) * 20; else if (v) v += Math.sign(v) * 20; else u += Math.sign(u || 1) * 20; return [u, v]; });
+    add(it, ['stand', x, y, String(p.tag || ''), 0, 1, '', null, null, String(p.desc || ''), { t: p.t, r: p.rot || 0, o }], o.map(([u, v]) => [x + u, y + v]));
+    note(changed, `${name}: a stand-in in Circuit Builder (its symbol in a box: drawn, not run; it comes back to the print as it is)`); };
   for (const it of all) {
     const { p, k } = it, x = X(p.x), y = Y(k, p.y), pb = linkPbTerms(p).map(q => [X(q[0]), Y(k, q[1])]), name = p.tag || (LIB_NAME_FOR[p.t] || p.t);
     const two = (t, row) => { const ts = linkCbTerms(t, x, y, 0); add(it, row, pb.length === 2 && pb[0][0] > pb[1][0] ? [ts[1], ts[0]] : ts); };   // (a flipped part: its first terminal on the right)
@@ -1303,10 +1321,8 @@ function linkBuild(doc, back) {
     } else if (p.t === 'sel') {
       const names = (p.pos || 'OFF/ON').split(/[\/,]+/).map(s => s.trim().toUpperCase().slice(0, 5)).filter(Boolean).slice(0, 4), n = Math.max(2, names.length);
       two('sel', ['sel', x, y, opL.get(opKey(p)), 0, 1, '0070C0', n, (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, names.join('/'), 0]);
-    } else if (p.t === 'spst') {
-      note(changed, `${name} toggle switch → a maintained pushbutton`);
-      two('btn', ['btn', x, y, opL.get(opKey(p)), 0, 1, '00B050', null, null, capLab(p)]);
-    } else if (/^(ls_|prs_|fs_)/.test(p.t)) {
+    } else if (p.t === 'spst' || /^(prs_|fs_)/.test(p.t)) standIn(it, p, pb, x, y, name);
+    else if (/^ls_/.test(p.t)) {
       let n = linkDigits(p.tag, '1');
       if (!/^ls_/.test(p.t)) { const key = p.t.split('_')[0] + ':' + p.tag; if (!swapLS.has(key)) swapLS.set(key, nextLS()); n = swapLS.get(key); note(changed, `${p.tag || ''} ${/^prs/.test(p.t) ? 'proximity' : 'float'} switch → limit switch LS${n} (Circuit Builder has none yet)`.trim()); }
       const nc = /_nc$|_ho$/.test(p.t), held = /_hc$|_ho$/.test(p.t);
@@ -1333,26 +1349,13 @@ function linkBuild(doc, back) {
     else if (p.t === 'mst3') { if (!coilL.has(p.tag)) { noCoil.push(p.tag || '?'); coilL.set(p.tag, take()); } add(it, ['mst', x, y, coilL.get(p.tag), 0, 1, ''], linkCbTerms('mst', x, y, 0)); }
     else if (p.t === 'ol3') add(it, ['olh', x, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('olh', x, y, 0));
     else if (p.t === 'dsc3') add(it, ['dsc', x, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('dsc', x, y, 0));
-    else if (p.t === 'fus3' || p.t === 'cb3') { if (p.t === 'cb3') note(changed, `${name} circuit breaker → 3-phase fuses`); add(it, ['fus', x, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('fus', x, y, 0)); }
-    else if (p.t === 'fdsc3') {
-      // (a fused disconnect: Circuit Builder's disconnect, then its fuses, side by side between the print's terminals)
-      note(changed, `${name} fused disconnect → a disconnect and 3-phase fuses`);
-      const xl = pb[0][0], xr = pb[1][0], d = linkSnap(xl + 40), f = linkSnap(Math.max(xr - 40, d + 160));
-      const dt = linkCbTerms('dsc', d, y, 0), ft = linkCbTerms('fus', f, y, 0);
-      add(it, ['dsc', d, y, linkDigits(p.tag, '1'), 0, 1, ''], [dt[0], ft[1], dt[2], ft[3], dt[4], ft[5]]);
-      parts.push(['fus', f, y, linkDigits(p.fu, '1'), 0, 1, '']); fromIdx.push(null);
-      it.extra = [0, 2, 4].map(i => [dt[i + 1], ft[i]]);   // (the short wires between them)
-    } else if (p.t === 'fuse' || p.t === 'cb') {
-      if (p.t === 'cb') note(changed, `${name} circuit breaker → a fuse`);
+    else if (p.t === 'cb3' || p.t === 'fdsc3' || p.t === 'cb' || p.t === 'cb2') standIn(it, p, pb, x, y, name);
+    else if (p.t === 'fus3') { add(it, ['fus', x, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('fus', x, y, 0)); }
+    else if (p.t === 'fuse') {
       const up = pb[0] && pb[1] && pb[0][0] === pb[1][0], cx = LK ? x : up ? pb[0][0] : linkSnap((pb[0][0] + pb[1][0]) / 2), cy = LK ? y : up ? linkSnap((pb[0][1] + pb[1][1]) / 2) : pb[0][1], rot = up ? 1 : 0;   // (made from a circuit: back at its own middle)
       const ts = linkCbTerms('fu1', cx, cy, rot), first = up ? (pb[0][1] < pb[1][1] ? 0 : 1) : (pb[0][0] < pb[1][0] ? 0 : 1);
       const sorted = up ? ts.slice().sort((a, b) => a[1] - b[1]) : ts.slice().sort((a, b) => a[0] - b[0]);
       add(it, ['fu1', cx, cy, linkDigits(p.tag, '1'), 0, 1, '', ...(rot ? [rot] : [])], first === 0 ? sorted : [sorted[1], sorted[0]]);
-    } else if (p.t === 'cb2') {
-      note(changed, `${name} 2-pole circuit breaker → two fuses`);
-      const ts = [];
-      for (const [i, j] of [[0, 1], [2, 3]]) { const a = pb[i], b = pb[j], up = a[0] === b[0], cx = up ? a[0] : linkSnap((a[0] + b[0]) / 2), cy = up ? linkSnap((a[1] + b[1]) / 2) : a[1]; const t2 = linkCbTerms('fu1', cx, cy, up ? 1 : 0); parts.push(['fu1', cx, cy, linkDigits(p.tag, '1'), 0, 1, '', ...(up ? [1] : [])]); fromIdx.push(null); const s2 = up ? t2.sort((u, v) => u[1] - v[1]) : t2.sort((u, v) => u[0] - v[0]); ts.push(...((up ? a[1] < b[1] : a[0] < b[0]) ? s2 : [s2[1], s2[0]])); }
-      terms.set(p, ts);
     } else if (p.t === 'xfmr') add(it, ['xfm', x, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('xfm', x, y, 0));
     else if (p.t === 'sup' || p.t === 'src_l1' || p.t === 'src_l2' || p.t === 'cnt_out' || p.t === 'cnt_in') {
       // (one terminal on the print: a Circuit Builder box with one of its terminals there, facing the way its wire goes)
@@ -1368,9 +1371,7 @@ function linkBuild(doc, back) {
       else row = [t, cx, cy, '', 0, 1, ''];
       add(it, row, [at]);
       if (dir[1] === -1 && t !== 'jmp') { /* (a box wired from above: its bottom terminal is the nearest Circuit Builder has) */ }
-    } else if (p.t === 'gnd') note(left, 'A ground' + (p.tag ? ' (' + p.tag + ')' : '') + ': Circuit Builder has none (its wire is left as it is)');
-    else if (p.t === 'ol') { note(changed, `${name} overload heater on one line → joined straight through (Circuit Builder’s overload is three-line)`); it.through = pb; }
-    else if (['spdt', 'dpst', 'dpdt', 'xover'].includes(p.t)) note(left, `${name} ${p.t.toUpperCase()} switch: Circuit Builder has nothing like it yet (its wires are left loose)`);
+    } else if (LINK_PB_TERMS[p.t] && pb.length) standIn(it, p, pb, x, y, name);   // (a ground, a one-line overload, SPDT, DPST, DPDT, crossover, and any other)
   }
   // wires: each keeps its path; ends on a part's terminal move onto that part's terminal here
   const wires = [];
@@ -1398,7 +1399,7 @@ function linkBuild(doc, back) {
   }
   // (a plain ladder with no supply drawn: Circuit Builder's bars are its supply; with power and rails fed by nothing, supply boxes on top)
   if (power) for (const r of rails) {
-    const fed = parts.some(row => { const ts = linkCbTerms(row[0], row[1], row[2], row[7] && ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(row[0]) ? row[7] : 0); return ts.some(q => q[0] === X(r.p.x) && q[1] === Y(r.k, r.p.y0)); })
+    const fed = parts.some(row => { const ts = linkRowTerms(row); return ts.some(q => q[0] === X(r.p.x) && q[1] === Y(r.k, r.p.y0)); })
       || wires.some(w => (w[0] === X(r.p.x) && w[1] === Y(r.k, r.p.y0) && !(w[2] === X(r.p.x) && w[3] > w[1])) || (w[2] === X(r.p.x) && w[3] === Y(r.k, r.p.y0) && !(w[0] === X(r.p.x) && w[1] > w[3])));
     if (!fed && r.k === 0) { parts.push([r.p.label === 'L2' ? 'l2' : 'l1', X(r.p.x), Y(r.k, r.p.y0) - 40, '', 0, 1, '']); fromIdx.push(null); }
   }
@@ -1418,7 +1419,7 @@ function linkCbJoin(d, C) {
     for (const q of [[x1, y1], [x2, y2]]) { ends.add(q.join(',')); if (bars && q[0] === 0) C.u('w' + wi, 'BAR:L1'); if (bars && q[0] === W) C.u('w' + wi, 'BAR:L2'); }
     for (let i = 0; i <= n; i++) { const k = (x1 + (x2 - x1) * i / (n || 1)) + ',' + (y1 + (y2 - y1) * i / (n || 1)); if (!at.has(k)) at.set(k, []); at.get(k).push('w' + wi); } });
   const J = new Map();
-  for (const a of d.parts) linkCbTerms(a[0] === 'est' ? 'btn' : a[0], +a[1], +a[2], linkRotOf(a)).forEach(q => { const k = q.join(','); ends.add(k); C.f('t' + k); if (a[0] === 'jmp') { if (J.has(a[3])) C.u('t' + k, J.get(a[3])); else J.set(a[3], 't' + k); } });
+  for (const a of d.parts) linkRowTerms(a).forEach(q => { const k = q.join(','); ends.add(k); C.f('t' + k); if (a[0] === 'jmp') { if (J.has(a[3])) C.u('t' + k, J.get(a[3])); else J.set(a[3], 't' + k); } });
   for (const k of ends) { const ws = at.get(k) || []; for (const w of ws) C.u('t' + k, w); }
   return C;
 }
@@ -1427,7 +1428,7 @@ function linkCbJoin(d, C) {
 function linkCbShape(d) {
   const par = new Map(), f = k => { if (!par.has(k)) par.set(k, k); let x = k; while (par.get(x) !== x) x = par.get(x); par.set(k, x); return x; };
   const C = linkCbJoin(d, { f, u: (a, b) => { const A = f(a), B = f(b); if (A !== B) par.set(A, B); } }), first = new Map();
-  return JSON.stringify(d.parts.map((a, i) => [a[0], linkCbTerms(a[0] === 'est' ? 'btn' : a[0], +a[1], +a[2], linkRotOf(a)).map((q, j) => {
+  return JSON.stringify(d.parts.map((a, i) => [a[0], linkRowTerms(a).map((q, j) => {
     const root = C.f('t' + q.join(',')), bar = ['BAR:L1', 'BAR:L2'].find(b => par.has(b) && C.f(b) === root);
     if (bar) return bar; if (!first.has(root)) first.set(root, i + ':' + j); return first.get(root); })]));
 }
@@ -1451,7 +1452,7 @@ function linkCheck(doc, r) {
     if (cToP.has(ck) && cToP.get(ck) !== pk) { bad++; if (problems.length < 6) problems.push(m.t + ' ' + i + ': joined in the circuit, not on the print'); } else cToP.set(ck, pk); });
   // parts on top of each other, and wires through a part (Circuit Builder's sizes: a switch with a head is taller above its wire)
   const TALL = new Set(['lsw', 'psw', 'fsw', 'tsw']);
-  const box = a => { const ts = linkCbTerms(a[0] === 'est' ? 'btn' : a[0], +a[1], +a[2], rotOf(a)); if (!ts.length) return null; const xs = ts.map(q => q[0]), ys = ts.map(q => q[1]);
+  const box = a => { const ts = linkRowTerms(a); if (!ts.length) return null; const xs = ts.map(q => q[0]), ys = ts.map(q => q[1]);
     if (ts.length === 2 && ys[0] === ys[1]) return { x0: Math.min(...xs), x1: Math.max(...xs), y0: ys[0] - (TALL.has(a[0]) ? 41 : 34), y1: ys[0] + (TALL.has(a[0]) ? 82 : 34), two: 1 };
     if (ts.length === 2 && xs[0] === xs[1]) return { x0: xs[0] - 34, x1: xs[0] + 34, y0: Math.min(...ys), y1: Math.max(...ys), two: 1 };
     return { x0: Math.min(...xs, +a[1]) - 20, x1: Math.max(...xs, +a[1]) + 20, y0: Math.min(...ys, +a[2]) - 20, y1: Math.max(...ys, +a[2]) + 20 }; };
@@ -1553,7 +1554,7 @@ function circuitToPrint(d, env) {
   for (const r of R.filter(r => r.t === 'btn' || r.t === 'est' || r.t === 'sel')) { const k = (r.t === 'sel' ? 'S:' : 'B:') + r.L; if (!tagOf.has(k)) tagOf.set(k, (r.t === 'sel' ? 'SS-' : r.t === 'est' ? 'ES-' : 'PB-') + r.L); }
   const descOf = new Map(R.filter(r => (r.t === 'btn' || r.t === 'est' || r.t === 'coil') && lbl(r)).map(r => [(r.t === 'coil' ? 'C:' : 'B:') + r.L, lbl(r)]));
   // ---- 1. each part as it will be on the print, at the circuit's own place for now (G: the circuit's grid)
-  const parts0 = R.map(r => ({ r, ts: linkCbTerms(r.t === 'est' ? 'btn' : r.t, r.x, r.y, rotOf(r)) }));
+  const parts0 = R.map(r => ({ r, ts: linkRowTerms(r.a) }));
   const wired = new Set(d.wires.flatMap(w => [w[0] + ',' + w[1], w[2] + ',' + w[3]]));
   const made = [];   // ({ r, o }: a circuit part and its print part, o.x/o.y in G for now)
   const COLN = { 'FF0032': 'RED', '00B050': 'GREEN', 'FFDC00': 'YELLOW', 'FF9600': 'AMBER', '0070C0': 'BLUE', 'FFFFFF': 'WHITE', '7030A0': 'VIOLET', 'EC008C': 'MAGENTA', '00D2BE': 'TEAL' };
@@ -1585,6 +1586,7 @@ function circuitToPrint(d, env) {
       case 'ph': t = 'sup'; o.tag = 'L' + r.L; break;
       case 'l1': t = 'src_l1'; break;
       case 'l2': t = 'src_l2'; break;
+      case 'stand': { const q = r.a[10]; if (!q || !LINK_PB_TERMS[q.t]) break; t = q.t; o.rot = +q.r || 0; o.tag = r.L; o.desc = typeof r.a[9] === 'string' ? r.a[9] : ''; break; }
       case 'jmp': { const seen = jmpSeen.get(r.L) || 0; jmpSeen.set(r.L, seen + 1); t = seen ? 'cnt_in' : 'cnt_out'; o.tag = String(r.L); break; }
     }
     if (!t) { note(left, `A ${r.t} part: Print Builder has nothing like it`); continue; }
@@ -2183,7 +2185,7 @@ const SOL_LEN = 2 * (SOL_DOT + SOL_DR - SOL_X) + 2 * Math.hypot(SOL_X, SOL_P) + 
 const SEL_BOX = 80;
 const WIDE = t => LOADT(t) || t === 'sel' || t === 'lsw' || t === 'psw' || t === 'fsw';                                // parts whose ends sit 60 either side of their centre
 const BODYH = t => t === 'lsw' || t === 'tsw' || t === 'psw' || t === 'fsw' ? LSW_S : t === 'xfm' ? XFM_H : t === 'mtr' ? MTR_H : isPwrT(t) ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
-const TERM = p => p.t === 'mtr' ? MTR_W / 2 + 20 : p.t === 'tsw' ? TSW_T : WIDE(p.t) ? 60 : 40;
+const TERM = p => p.t === 'stand' ? Math.max(40, ...(p.st || []).map(q => Math.abs(q[0]))) : p.t === 'mtr' ? MTR_W / 2 + 20 : p.t === 'tsw' ? TSW_T : WIDE(p.t) ? 60 : 40;
 const isOp = p => p.t === 'btn' || p.t === 'sel' || p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw' || p.t === 'fsw';
 /* A temperature switch (tsw): numbered (TS1, TS2...), the limit switch's body without its head, the NEMA temperature
    switch's stepped stem under its blade, and joined to its right side a sensing bulb's box with a thermometer in it.
@@ -2382,7 +2384,7 @@ const key = (x, y) => x + ',' + y;
 // (a continuation can be turned, p.rot quarter turns clockwise: its connection points turn with it)
 const rotQ = (p, dx, dy) => { for (let k = 0; k < (p.rot || 0); k++) [dx, dy] = [-dy, dx]; return [p.x + dx, p.y + dy]; };
 // (a supply box: left, right and bottom; a continuation its top too)
-const terms = p => isPwr3(p) ? [-PWR_DY, 0, PWR_DY].flatMap(dy => [[p.x - 40, p.y + dy], [p.x + 40, p.y + dy]]) : p.t === 'mtr' ? [-PWR_DY, 0, PWR_DY].map(dy => [p.x - TERM(p), p.y + dy]) : p.t === 'xfm' ? [[-XFM_TX, -XFM_TY], [XFM_TX, -XFM_TY], [-XFM_TX, XFM_TY], [XFM_TX, XFM_TY]].map(([dx, dy]) => [p.x + dx, p.y + dy]) : p.t === 'fu1' ? [[-TERM(p), 0], [TERM(p), 0]].map(([dx, dy]) => rotQ(p, dx, dy)) : isBox(p) ? [[-TERM(p), 0], [TERM(p), 0], [0, TERM(p)], ...(isJmp(p) ? [[0, -TERM(p)]] : [])].map(([dx, dy]) => rotQ(p, dx, dy)) : [[p.x - TERM(p), p.y], [p.x + TERM(p), p.y]];   // (a supply box: left, right and bottom)
+const terms = p => p.t === 'stand' ? (p.st || []).map(([u, v]) => [p.x + u, p.y + v]) : isPwr3(p) ? [-PWR_DY, 0, PWR_DY].flatMap(dy => [[p.x - 40, p.y + dy], [p.x + 40, p.y + dy]]) : p.t === 'mtr' ? [-PWR_DY, 0, PWR_DY].map(dy => [p.x - TERM(p), p.y + dy]) : p.t === 'xfm' ? [[-XFM_TX, -XFM_TY], [XFM_TX, -XFM_TY], [-XFM_TX, XFM_TY], [XFM_TX, XFM_TY]].map(([dx, dy]) => [p.x + dx, p.y + dy]) : p.t === 'fu1' ? [[-TERM(p), 0], [TERM(p), 0]].map(([dx, dy]) => rotQ(p, dx, dy)) : isBox(p) ? [[-TERM(p), 0], [TERM(p), 0], [0, TERM(p)], ...(isJmp(p) ? [[0, -TERM(p)]] : [])].map(([dx, dy]) => rotQ(p, dx, dy)) : [[p.x - TERM(p), p.y], [p.x + TERM(p), p.y]];   // (a supply box: left, right and bottom)
 /* The sheet is as wide as it needs to be to fill the panel with the whole circuit in view: on a wide screen, or for a
    tall circuit, the L2 bar moves out to the right edge and the wires fastened to it stretch to meet it. (It is never
    narrower than W_MIN, nor so narrow that a part would end up past L2.) Once the L1 or L2 bar has been moved by hand,
@@ -2487,7 +2489,7 @@ function network() {
     }
   }
   for (const p of parts) {
-    if (isBox(p) || isPwr3(p) || p.t === 'mtr') continue;   // (supply boxes are not a way through: their connection points are L1 or L2, below; continuations: further down)
+    if (isBox(p) || isPwr3(p) || p.t === 'mtr' || p.t === 'stand') continue;   // (a stand-in: drawn, not run; supply boxes are not a way through: their connection points are L1 or L2, below; continuations: further down)
     const [[ax, ay], [bx, by]] = terms(p);
     p._a = node(ax, ay, key(ax, ay)); p._b = node(bx, by, key(bx, by));
     // (a fault planted on a load, while running: open, no way through it electrically; shorted, its ends joined straight through
@@ -2585,6 +2587,7 @@ function wiringIssues(net) {
   sts.forEach((m, i) => { const fm = V[i + 1], hs = Object.keys(net.PH);
     for (const a of hs) for (const b of hs) if (a < b && fm(net.PH[a]) === fm(net.PH[b]) && f0(net.PH[a]) !== f0(net.PH[b]) && !out.has(m.id)) out.set(m.id, `Closing it joins L${a} to L${b}`); });
   for (const p of parts) {
+    if (p.t === 'stand') { out.set(p.id, { note: 'A stand-in: drawn, not run' }); continue; }
     if (isSrc(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); continue; }
     if (isPwr3(p)) {
       if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything');
@@ -3816,7 +3819,7 @@ function drawEstop(p, v, x, y, g) {
     el('path', { d: `M ${P1[0] + tx * L} ${P1[1] + ty * L} L ${P1[0] + nx * w} ${P1[1] + ny * w} L ${P1[0] - nx * w} ${P1[1] - ny * w} Z`, fill: ESTOP_PLATE }, v.twist);
   }
 }
-const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'stand' ? `${p.L ? p.L + ' ' : ''}${LINK_PB_SYMN[p.sym] || p.sym} (stand-in)` : p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -3845,7 +3848,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => p.t === 'stand' ? standBox(p).hh + 11 : (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -3853,7 +3856,33 @@ const BEZEL = 4.5, WELL = '#262626';
 let solMaskN = 0;   // (each solenoid drawing's mask has an id of its own)
 function framed(tag, a, g) { el(tag, Object.assign({}, a, { fill: 'none', stroke: WELL, 'stroke-width': (a['stroke-width'] || 1.8) + 2 * BEZEL }), g); return el(tag, a, g); }
 // a part, in the same style as the Order of Operations simulators
+/* A stand-in (Dallas, 19 Nov 2026): a Print Builder part Circuit Builder has none of, drawn as a NO pushbutton's square
+   with the part's own NEMA symbol inside, in colour, its edge dashed. Two terminals: a button's square and terminals, the
+   symbol drawn smaller to fit. More: the box as big as the symbol, its terminals just outside the symbol's, a lead to each.
+   Drawn, not run: nothing passes through it. */
+const STAND_COL = '#FFC000';
+const standSym = p => { const n = LINK_PB_SYMN[p.sym]; return n ? PSYM[n] || LINK_PB_PSYM[n] || null : null; };
+const standTwo = p => p.st.length === 2 && ((!p.st[0][1] && !p.st[1][1]) || (!p.st[0][0] && !p.st[1][0]));
+const standTurn = ([a, b], r) => { for (let k = 0; k < r / 90; k++) [a, b] = [-b, a]; return [a, b]; };
+function standBox(p) {
+  if (standTwo(p)) return { hw: BOX / 2, hh: BOX / 2 };
+  const s = standSym(p), xs = s ? s.t.map(q => q[0]) : [-40, 40], c = [[Math.min(...xs), s ? s.y0 : -40], [Math.max(...xs), s ? s.y1 : 40]].map(q => standTurn(q, p.srot || 0));
+  return { hw: Math.max(BOX / 2, Math.abs(c[0][0]) + 16, Math.abs(c[1][0]) + 16), hh: Math.max(BOX / 2, Math.abs(c[0][1]) + 16, Math.abs(c[1][1]) + 16) };
+}
+const standInk = b => b.replace(/fill="#000"/g, `fill="${STAND_COL}"`).replace(/fill="#fff"/g, 'fill="#262626"').replace(/stroke="#000"/g, `stroke="${STAND_COL}"`);
+function drawStand(p, g, x, y, onStation) {
+  const v = {}, s = standSym(p), two = standTwo(p), { hw, hh } = standBox(p), up = two && !p.st[0][0];
+  if (two) for (const [u, w] of p.st) el('line', { x1: x + u, y1: y + w, x2: x + Math.sign(u) * hw, y2: y + Math.sign(w) * hh, stroke: '#c8c8c8', 'stroke-width': 3 }, g);
+  else if (s) s.t.forEach((q, i) => { const [a, b] = standTurn(q, p.srot || 0), o = p.st[i]; if (o) el('line', { x1: x + a, y1: y + b, x2: x + o[0], y2: y + o[1], stroke: '#c8c8c8', 'stroke-width': 3 }, g); });
+  framed('rect', { x: x - hw, y: y - hh, width: 2 * hw, height: 2 * hh, rx: Math.min(hw, hh) * .3334, fill: 'url(#gWell)', stroke: STAND_COL, 'stroke-width': 1.8, 'stroke-dasharray': '6 4' }, g);
+  if (s) { const span = Math.max(1, Math.max(...s.t.map(q => q[0])) - Math.min(...s.t.map(q => q[0]))), sc = two ? Math.min(54 / span, 50 / Math.max(1, s.y1 - s.y0)) : 1;
+    const k = el('g', { transform: `translate(${x} ${y}) rotate(${two ? (up ? 90 : 0) : p.srot || 0}) scale(${sc})`, stroke: STAND_COL, 'stroke-width': 3 / sc, fill: 'none', 'pointer-events': 'none' }, g);
+    k.innerHTML = standInk(s.b); }
+  if (!onStation) (v.cap = el('text', { x, y: y - hh - 11, 'text-anchor': 'middle', class: 'cap' }, g)).textContent = captionOf(p);
+  return v;
+}
 function drawPart(p, g, x, y, chan, onStation) {
+  if (p.t === 'stand') return drawStand(p, g, x, y, onStation);
   // a single fuse turned: drawn as it is lying down, turned about its middle (its name, though, stays upright: above
   // it, or beside it when it stands upright)
   if (p.t === 'fu1' && p.rot && !g.turned) {
@@ -4868,7 +4897,8 @@ function fitCaps(V) {
   }
 }
 // the dashed outline round a selected part (a single fuse standing upright: its outline stands upright too, its name beside it)
-function selRect(p) { return vert(p) ? { x: p.x - BOX / 2 - 12, y: p.y - TERM(p) - 12, width: BOX + 120, height: 2 * TERM(p) + 24 } : { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 32, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44 }; }
+function selRect(p) { if (p.t === 'stand') { const { hw, hh } = standBox(p), T = Math.max(hw, ...p.st.map(q => Math.abs(q[0]))), V = Math.max(hh, ...p.st.map(q => Math.abs(q[1]))); return { x: p.x - T - 12, y: p.y - V - 32, width: 2 * T + 24, height: 2 * V + 44 }; }
+  return vert(p) ? { x: p.x - BOX / 2 - 12, y: p.y - TERM(p) - 12, width: BOX + 120, height: 2 * TERM(p) + 24 } : { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 32, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44 }; }
 function drawPreview() {
   view.overlay.innerHTML = '';
   // a green ring wherever the wire end or part end being moved will connect
@@ -5138,7 +5168,7 @@ function paintView(V) {
   }
   // parts: each one is only touched when how it looks has changed (redrawing a part, with its shadow, is costly)
   for (const p of parts) {
-    const v = V.parts.get(p.id); if (!v) continue;
+    const v = V.parts.get(p.id); if (!v || p.t === 'stand') continue;
     if (p.t === 'xfm') { paintXfm(p, v); continue; }
     if (isPwr3(p)) { paintPwr(p, v); continue; }
     if (p.t === 'mtr') { paintMtr(p, v); continue; }
@@ -6214,6 +6244,10 @@ function printSheet(drawnBy, fit = false) {
         if (!fed.length) text(x, y + 10, name, 28); break; }
       case 'jmp': { g += `<circle cx="${x}" cy="${y}" r="16" stroke-width="${PRINT_W}" fill="#fff"/>`; text(x, y + 8, q.L, 22);
         q.terms.forEach(t => { if (wired(t)) { const dx = Math.sign(t[0] - x) * 16, dy = Math.sign(t[1] - y) * 16; line(t[0], t[1], x + dx, y + dy); } }); break; }
+      case 'stand': { const n = LINK_PB_SYMN[p.sym], s = n && (PSYM[n] || LINK_PB_PSYM[n]); if (!s) break;   // (a stand-in: on the print, the part it stands for)
+        const r = p.srot || 0, sp = s.t.map(t => { let [a, b] = t; for (let k = 0; k < r / 90; k++) [a, b] = [-b, a]; return [x + a, y + b]; });
+        g += `<g class="sym" transform="translate(${x} ${y}) rotate(${r})">${s.b}</g>`; q.terms.forEach((t, i) => { if (sp[i]) line(t[0], t[1], sp[i][0], sp[i][1]); });
+        const ys = sp.map(t => t[1]).concat(r % 180 ? [] : [y + s.y0]); text(x, Math.min(...ys) - 8, p.L || '', 26); if (p.desc) text(x, Math.max(...sp.map(t => t[1]), r % 180 ? y : y + s.y1) + 24, p.desc, 21, 'middle', 500); break; }
       case 'btn': two(q, p.estop ? 'NC EStop Pushbutton' : p.nc ? 'NC Pushbutton' : 'NO Pushbutton', uniqueLabel('btn', q.L) ? '' : p.label || ''); break;
       case 'sel': { // (Dallas's selector switch: a contact block in each rung it is drawn in, its turning arrow on the top one,
         // which carries its tag; under each, the positions that block is closed in; a dashed line links the blocks, below)
@@ -8132,7 +8166,8 @@ function circuitData() {
   const w = W_USER ? W : contentRight(), x = v => barsOn() && v === W ? w : v;   // (a length set by moving the bars is kept)
   return {
     app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}), ...(barsOn() ? {} : { pw: 'boxes' }), ...(SRC_COL !== SRC_DEFAULT ? { sc: SRC_COL } : {}), ...(PH_COL.join() !== PH_DEFAULT.join() ? { pc: PH_COL.map(c => c.slice(1)) } : {}),
-    parts: parts.map(p => { const a = [p.estop ? 'est' : p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (p.t === 'lsw' && p.held) a.push(1); if (p.t === 'tsw' && p.low) a.push(1); if (turns(p) && p.rot) a.push(p.rot); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
+    parts: parts.map(p => { if (p.t === 'stand') return ['stand', p.x, p.y, p.L || '', 0, 1, '', null, null, p.desc || '', { t: p.sym, r: p.srot || 0, o: p.st }];   // (a stand-in for a Print Builder part: what it stands for, kept whole)
+      const a = [p.estop ? 'est' : p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if (p.t === 'lsw' && p.held) a.push(1); if (p.t === 'tsw' && p.low) a.push(1); if (turns(p) && p.rot) a.push(p.rot); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
       if (p.t === 'sel') { while (a.length < 7) a.push(null); a.length = 7; a.push(selN(p), (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, (p.names || []).join('/'), p.pos || 0); }   // a selector switch: positions, closed-in mask, (no label), names, start
       if (p.lk || p.ls) { while (a.length < 12) a.push(null); a.push(p.lk ? p.lk[0] : 0, p.lk ? p.lk[1] : 0); if (p.ls) a.push(p.ls.join('')); }   // (its dashed link line, moved out of the way; the sides its ends join)
       return a; }),
@@ -8157,6 +8192,9 @@ function readCircuit(d) {
   const num = v => { const n = Number(v); if (!Number.isFinite(n)) throw new Error('The circuit is damaged (a position is not a number).'); return snap(n); };
   const hex = c => /^[0-9a-f]{6}$/i.test(c || '') ? '#' + c.toUpperCase() : null;
   const ps = d.parts.slice(0, 1000).map(a => {
+    // (a stand-in for a Print Builder part Circuit Builder has none of: its symbol in a box, its terminals as the print had them)
+    if (a[0] === 'stand') { const q = a[10] || {}, st = Array.isArray(q.o) ? q.o.slice(0, 12).filter(o => Array.isArray(o) && o.every(n => Number.isFinite(+n) && Math.abs(+n) <= 400)).map(o => [snap(+o[0]), snap(+o[1])]) : [];
+      if (typeof q.t === 'string' && st.length) { const p = P('stand', snap(num(a[1])), snap(num(a[2])), { L: String(a[3] ?? '').slice(0, 12) }); p.sym = q.t.slice(0, 16); p.srot = [0, 90, 180, 270].includes(+q.r) ? +q.r : 0; p.st = st; p.desc = typeof a[9] === 'string' ? a[9].slice(0, 40) : ''; delete p.color; return p; } }
     const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'htr' ? 'htr' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw', 'fsw'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
     const p = P(t, snap(num(a[1])), snap(num(a[2])), {   // (on the grid: a part saved off it, by an older version, could never be wired)
       L: ['dsc', 'fus', 'fu1', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw', 'fsw'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1))) : t === 'sol' || t === 'htr' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'htr' ? HTR_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : t === 'lsw' ? LSW_COL : t === 'tsw' ? TSW_COL : t === 'psw' ? PSW_COL : t === 'fsw' ? FSW_COL : BTN_COL[L] || '#FF0032') });

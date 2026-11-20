@@ -3390,6 +3390,26 @@ const DEF_CIRCUIT = `
     if (pb !== 'L1,L1A,L1B,L1C') out.push('Print Builder: ' + pb + ' (want L1,L1A,L1B,L1C)');
     return out;
   });
+  await check('Stand-ins (Dallas, 19 Nov 2026): every Print Builder part Circuit Builder has none of comes in as a stand-in (its symbol in a box, terminals as the print joins them), draws, runs (passing nothing) and prints, and goes back to the print as the same part, tag and name', async page => {
+    const TYPES = ['spst', 'prs_no', 'fs_nc', 'cb', 'cb2', 'cb3', 'fdsc3', 'ol', 'gnd', 'spdt', 'dpst', 'dpdt', 'xover'];
+    const pr = await withPB(page, pb => pb.evaluate(TYPES => { loadDoc(withDrawnBy(template('blank'))); const L1 = S.parts.find(q => q.label === 'L1'); let y = 260;
+      for (const t of TYPES) { const p = addPart(S, t, 900, y); p.tag = t.toUpperCase().replace(/_/g, '') + '1'; p.desc = 'D' + t; const tm = linkPbTerms(p)[0]; addWire(S, [[L1.x, tm[1]], tm]); y += 340; }
+      refresh(true); return JSON.parse(JSON.stringify(doc)); }, TYPES));
+    const cb = await page.evaluate(pr => { openFromPrint(pr, 'Stand-ins'); document.getElementById('link-dlg').close(); draw();
+      const st = parts.filter(p => p.t === 'stand'), out = { n: st.length, syms: st.map(p => p.sym).sort().join(' '), boxes: document.querySelectorAll('rect[stroke-dasharray="6 4"]').length };
+      const h = document.createElement('div'); h.innerHTML = printSheet('x', true).html; out.printSyms = h.querySelectorAll('g.sym').length;
+      startRun(); return out; }, pr);
+    await page.waitForTimeout(400); cb.data = await page.evaluate(() => circuitData());
+    const back = await withPB(page, pb => pb.evaluate(([d, TYPES]) => { const r = circuitToPrint(d, { uid, defaultTB, long: 'tight' }); const ps = r.doc.sheets.flatMap(s => s.parts);
+      return TYPES.map(t => { const p = ps.find(q => q.t === t); return p ? t + ':' + p.tag + ':' + p.desc : t + ': missing'; }); }, [cb.data, TYPES]));
+    const out = [];
+    if (cb.n !== TYPES.length) out.push(`${cb.n} stand-ins in Circuit Builder (want ${TYPES.length}): ${cb.syms}`);
+    if (cb.boxes < TYPES.length) out.push(`${cb.boxes} stand-in boxes drawn`);
+    if (cb.printSyms < TYPES.length) out.push(`Print Diagram: ${cb.printSyms} symbols`);
+    for (const [i, t] of TYPES.entries()) if (back[i] !== `${t}:${t.toUpperCase().replace(/_/g, '')}1:D${t}`) out.push('back in Print Builder: ' + back[i]);
+    if (page.errors.length) out.push('page errors: ' + page.errors.slice(0, 3).join(' | '));
+    return out;
+  });
   await check('O³ link (Dallas, 19 Nov 2026, his report): a print opened in Circuit Builder with only a wire redrawn (or a letter changed) comes back as he drew it, the letter brought up to date; a wire taken away (joined differently) draws it again', async page => {
     const pr = await withPB(page, pb => pb.evaluate(() => JSON.parse(JSON.stringify(withDrawnBy(template('starter'))))));
     const ds = await page.evaluate(pr => { const out = {}; const open = () => { openFromPrint(pr, 'Starter'); document.getElementById('link-dlg').close(); };
@@ -3569,11 +3589,11 @@ const DEF_CIRCUIT = `
     const out = [];
     const print = await withPB(page, pb => pb.evaluate(() => { const d = template('starter'); d.sheets[0].parts.push({ id: 'pz', t: 'prs_no', x: 3000, y: 3000, rot: 0, tag: 'PRS1', desc: '' }); return d; }));
     await page.evaluate(async d => { await openFile(new File([JSON.stringify(d)], 'Motor Starter.o3print.json')); }, print);
-    const r = await page.evaluate(() => [document.getElementById('link-dlg').open, document.getElementById('link-body').textContent, circuitName, parts.some(p => p.t === 'lsw')]);
+    const r = await page.evaluate(() => [document.getElementById('link-dlg').open, document.getElementById('link-body').textContent, circuitName, parts.some(p => p.t === 'stand' && p.sym === 'prs_no')]);
     if (!r[0]) out.push('no arrival note');
-    if (!/proximity switch → limit switch LS1/.test(r[1])) out.push('note: ' + r[1]);
+    if (!/PRS1: a stand-in in Circuit Builder/.test(r[1])) out.push('note: ' + r[1]);
     if (r[2] !== 'Motor Starter' && r[2] !== 'Basic Motor Starter') out.push('name: ' + r[2]);
-    if (!r[3]) out.push('the proximity switch did not come in as a limit switch');
+    if (!r[3]) out.push('the proximity switch did not come in as a stand-in (Dallas, 19 Nov 2026)');
     await page.evaluate(() => document.getElementById('link-dlg').close());
     // the Save box: Open in Print Builder (the new tab stubbed: just where it goes and what is handed over)
     const h = await page.evaluate(() => { let url = null; window.open = u => { url = u; return {}; }; document.getElementById('save-more').click(); document.getElementById('save-pb').click(); const s = JSON.parse(localStorage.getItem('o3-link:handoff')); return [url, s && s.kind, s && s.data.parts.length === parts.length, document.getElementById('save-dlg').open]; });

@@ -914,6 +914,12 @@ let passed = 0, failed = 0;
         if (!ok) out.push(name + ': not refused with a reason'); if (doc !== before) out.push(name + ': the open print was replaced'); }
       return out; });
   });
+  await check('O³ link: the symbol table shared with Circuit Builder (its stand-ins) matches Print Builder\'s own: each part\'s symbol, and the drawings of those Circuit Builder lacks', async p => {
+    return p.evaluate(() => { const out = [];
+      for (const [t, v] of Object.entries(LIB)) if (v.sym && LINK_PB_SYMN[t] !== v.sym) out.push(t + ': ' + LINK_PB_SYMN[t] + ' (want ' + v.sym + ')');
+      for (const [n, v] of Object.entries(LINK_PB_PSYM)) if (JSON.stringify(PSYM[n]) !== JSON.stringify(v)) out.push(n + ': drawn differently');
+      return out; });
+  });
   await check('O³ link: the terminal table shared with Circuit Builder matches where Print Builder\'s parts really join (every symbol)', async p => {
     return p.evaluate(() => Object.keys(LIB).filter(t => t !== 'rail').flatMap(t => { const q = { id: 'q', t, x: 0, y: 0, rot: 0 }; const got = JSON.stringify(termsOf(t).map((_, i) => termPos(q, i))), want = JSON.stringify(LINK_PB_TERMS[t] || null); return got === want ? [] : [t + ': table ' + want + ', Print Builder ' + got]; }));
   });

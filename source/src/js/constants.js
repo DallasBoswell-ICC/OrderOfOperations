@@ -83,7 +83,7 @@ const SOL_LEN = 2 * (SOL_DOT + SOL_DR - SOL_X) + 2 * Math.hypot(SOL_X, SOL_P) + 
 const SEL_BOX = 80;
 const WIDE = t => LOADT(t) || t === 'sel' || t === 'lsw' || t === 'psw' || t === 'fsw';                                // parts whose ends sit 60 either side of their centre
 const BODYH = t => t === 'lsw' || t === 'tsw' || t === 'psw' || t === 'fsw' ? LSW_S : t === 'xfm' ? XFM_H : t === 'mtr' ? MTR_H : isPwrT(t) ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
-const TERM = p => p.t === 'mtr' ? MTR_W / 2 + 20 : p.t === 'tsw' ? TSW_T : WIDE(p.t) ? 60 : 40;
+const TERM = p => p.t === 'stand' ? Math.max(40, ...(p.st || []).map(q => Math.abs(q[0]))) : p.t === 'mtr' ? MTR_W / 2 + 20 : p.t === 'tsw' ? TSW_T : WIDE(p.t) ? 60 : 40;
 const isOp = p => p.t === 'btn' || p.t === 'sel' || p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw' || p.t === 'fsw';
 /* A temperature switch (tsw): numbered (TS1, TS2...), the limit switch's body without its head, the NEMA temperature
    switch's stepped stem under its blade, and joined to its right side a sensing bulb's box with a thermometer in it.

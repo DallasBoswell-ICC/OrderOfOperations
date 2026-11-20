@@ -58,7 +58,7 @@ function paintView(V) {
   }
   // parts: each one is only touched when how it looks has changed (redrawing a part, with its shadow, is costly)
   for (const p of parts) {
-    const v = V.parts.get(p.id); if (!v) continue;
+    const v = V.parts.get(p.id); if (!v || p.t === 'stand') continue;
     if (p.t === 'xfm') { paintXfm(p, v); continue; }
     if (isPwr3(p)) { paintPwr(p, v); continue; }
     if (p.t === 'mtr') { paintMtr(p, v); continue; }

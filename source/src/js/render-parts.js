@@ -91,7 +91,7 @@ function drawEstop(p, v, x, y, g) {
     el('path', { d: `M ${P1[0] + tx * L} ${P1[1] + ty * L} L ${P1[0] + nx * w} ${P1[1] + ny * w} L ${P1[0] - nx * w} ${P1[1] - ny * w} Z`, fill: ESTOP_PLATE }, v.twist);
   }
 }
-const captionOf = p => p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'stand' ? `${p.L ? p.L + ' ' : ''}${LINK_PB_SYMN[p.sym] || p.sym} (stand-in)` : p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -120,7 +120,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => p.t === 'stand' ? standBox(p).hh + 11 : (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -128,7 +128,33 @@ const BEZEL = 4.5, WELL = '#262626';
 let solMaskN = 0;   // (each solenoid drawing's mask has an id of its own)
 function framed(tag, a, g) { el(tag, Object.assign({}, a, { fill: 'none', stroke: WELL, 'stroke-width': (a['stroke-width'] || 1.8) + 2 * BEZEL }), g); return el(tag, a, g); }
 // a part, in the same style as the Order of Operations simulators
+/* A stand-in (Dallas, 19 Nov 2026): a Print Builder part Circuit Builder has none of, drawn as a NO pushbutton's square
+   with the part's own NEMA symbol inside, in colour, its edge dashed. Two terminals: a button's square and terminals, the
+   symbol drawn smaller to fit. More: the box as big as the symbol, its terminals just outside the symbol's, a lead to each.
+   Drawn, not run: nothing passes through it. */
+const STAND_COL = '#FFC000';
+const standSym = p => { const n = LINK_PB_SYMN[p.sym]; return n ? PSYM[n] || LINK_PB_PSYM[n] || null : null; };
+const standTwo = p => p.st.length === 2 && ((!p.st[0][1] && !p.st[1][1]) || (!p.st[0][0] && !p.st[1][0]));
+const standTurn = ([a, b], r) => { for (let k = 0; k < r / 90; k++) [a, b] = [-b, a]; return [a, b]; };
+function standBox(p) {
+  if (standTwo(p)) return { hw: BOX / 2, hh: BOX / 2 };
+  const s = standSym(p), xs = s ? s.t.map(q => q[0]) : [-40, 40], c = [[Math.min(...xs), s ? s.y0 : -40], [Math.max(...xs), s ? s.y1 : 40]].map(q => standTurn(q, p.srot || 0));
+  return { hw: Math.max(BOX / 2, Math.abs(c[0][0]) + 16, Math.abs(c[1][0]) + 16), hh: Math.max(BOX / 2, Math.abs(c[0][1]) + 16, Math.abs(c[1][1]) + 16) };
+}
+const standInk = b => b.replace(/fill="#000"/g, `fill="${STAND_COL}"`).replace(/fill="#fff"/g, 'fill="#262626"').replace(/stroke="#000"/g, `stroke="${STAND_COL}"`);
+function drawStand(p, g, x, y, onStation) {
+  const v = {}, s = standSym(p), two = standTwo(p), { hw, hh } = standBox(p), up = two && !p.st[0][0];
+  if (two) for (const [u, w] of p.st) el('line', { x1: x + u, y1: y + w, x2: x + Math.sign(u) * hw, y2: y + Math.sign(w) * hh, stroke: '#c8c8c8', 'stroke-width': 3 }, g);
+  else if (s) s.t.forEach((q, i) => { const [a, b] = standTurn(q, p.srot || 0), o = p.st[i]; if (o) el('line', { x1: x + a, y1: y + b, x2: x + o[0], y2: y + o[1], stroke: '#c8c8c8', 'stroke-width': 3 }, g); });
+  framed('rect', { x: x - hw, y: y - hh, width: 2 * hw, height: 2 * hh, rx: Math.min(hw, hh) * .3334, fill: 'url(#gWell)', stroke: STAND_COL, 'stroke-width': 1.8, 'stroke-dasharray': '6 4' }, g);
+  if (s) { const span = Math.max(1, Math.max(...s.t.map(q => q[0])) - Math.min(...s.t.map(q => q[0]))), sc = two ? Math.min(54 / span, 50 / Math.max(1, s.y1 - s.y0)) : 1;
+    const k = el('g', { transform: `translate(${x} ${y}) rotate(${two ? (up ? 90 : 0) : p.srot || 0}) scale(${sc})`, stroke: STAND_COL, 'stroke-width': 3 / sc, fill: 'none', 'pointer-events': 'none' }, g);
+    k.innerHTML = standInk(s.b); }
+  if (!onStation) (v.cap = el('text', { x, y: y - hh - 11, 'text-anchor': 'middle', class: 'cap' }, g)).textContent = captionOf(p);
+  return v;
+}
 function drawPart(p, g, x, y, chan, onStation) {
+  if (p.t === 'stand') return drawStand(p, g, x, y, onStation);
   // a single fuse turned: drawn as it is lying down, turned about its middle (its name, though, stays upright: above
   // it, or beside it when it stands upright)
   if (p.t === 'fu1' && p.rot && !g.turned) {

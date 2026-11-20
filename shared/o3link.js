@@ -34,6 +34,12 @@ function linkPbPos(s, e) {
 // a Circuit Builder part's terminals (from its saved row's type, place and turn)
 function linkCbTerms(t, x, y, rot) { const ts = LINK_CB_TERMS[t + (rot ? '@' + rot : '')] || LINK_CB_TERMS[t] || []; return ts.map(([a, b]) => [x + a, y + b]); }
 
+// a Circuit Builder part's terminals, from its row as saved (a stand-in carries its own: a[10] = { t: the Print Builder part, r: its turn,
+// o: its terminals from its middle })
+const linkStandOK = a => a[0] === 'stand' && a[10] && Array.isArray(a[10].o);
+function linkRowTerms(a) { if (a[0] === 'stand') return linkStandOK(a) ? a[10].o.map(([u, v]) => [+a[1] + u, +a[2] + v]) : [];
+  return linkCbTerms(a[0] === 'est' ? 'btn' : a[0], +a[1], +a[2], ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(a[0]) ? (Math.round(+a[7]) || 0) : 0); }
+
 // a wire's points, its ends moved to new places (new ends: a run across or up and down, as the wire went)
 function linkMoveEnds(pts, a, b) {
   const out = pts.map(q => [q[0], q[1]]);
@@ -249,6 +255,14 @@ function linkBuild(doc, back) {
   for (const a of all) if (a.p.t === 'cnt_out') { const b = all.find(q => q.p.t === 'cnt_in' && q.p.tag === a.p.tag && q.k === a.k + 1); if (!b) continue;
     const ta = linkPbTerms(a.p)[0], tb = linkPbTerms(b.p)[0]; if (ta && tb && Math.abs(ta[0] - tb[0]) < 1) { pairDown.add(a.p); pairDown.add(b.p); } }
   let coilN = 0; const noCoil = [], ownCol = new Set();   // (ownCol: lights whose colour the print names)
+  // (Dallas, 19 Nov 2026: a part Circuit Builder has none of comes in as a stand-in: its symbol in a box, its terminals where the
+  // print's are (two: a button's; more: just outside the symbol's). Drawn, not run; it goes back to the print as it was)
+  const standIn = (it, p, pb, x, y, name) => { x = linkSnap(x); y = linkSnap(y); const up = (p.rot || 0) % 180 !== 0;
+    const o = pb.length === 2 && (pb[0][1] === pb[1][1] || pb[0][0] === pb[1][0])
+      ? pb.map((q, i) => pb[0][1] === pb[1][1] ? [(Math.sign(q[0] - pb[1 - i][0]) || (i ? 1 : -1)) * 40, 0] : [0, (Math.sign(q[1] - pb[1 - i][1]) || (i ? 1 : -1)) * 40])
+      : pb.map(q => { let u = linkSnap(q[0] - x), v = linkSnap(q[1] - y); if (!up && u) u += Math.sign(u) * 20; else if (up && v) v += Math.sign(v) * 20; else if (v) v += Math.sign(v) * 20; else u += Math.sign(u || 1) * 20; return [u, v]; });
+    add(it, ['stand', x, y, String(p.tag || ''), 0, 1, '', null, null, String(p.desc || ''), { t: p.t, r: p.rot || 0, o }], o.map(([u, v]) => [x + u, y + v]));
+    note(changed, `${name}: a stand-in in Circuit Builder (its symbol in a box: drawn, not run; it comes back to the print as it is)`); };
   for (const it of all) {
     const { p, k } = it, x = X(p.x), y = Y(k, p.y), pb = linkPbTerms(p).map(q => [X(q[0]), Y(k, q[1])]), name = p.tag || (LIB_NAME_FOR[p.t] || p.t);
     const two = (t, row) => { const ts = linkCbTerms(t, x, y, 0); add(it, row, pb.length === 2 && pb[0][0] > pb[1][0] ? [ts[1], ts[0]] : ts); };   // (a flipped part: its first terminal on the right)
@@ -261,10 +275,8 @@ function linkBuild(doc, back) {
     } else if (p.t === 'sel') {
       const names = (p.pos || 'OFF/ON').split(/[\/,]+/).map(s => s.trim().toUpperCase().slice(0, 5)).filter(Boolean).slice(0, 4), n = Math.max(2, names.length);
       two('sel', ['sel', x, y, opL.get(opKey(p)), 0, 1, '0070C0', n, (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, names.join('/'), 0]);
-    } else if (p.t === 'spst') {
-      note(changed, `${name} toggle switch → a maintained pushbutton`);
-      two('btn', ['btn', x, y, opL.get(opKey(p)), 0, 1, '00B050', null, null, capLab(p)]);
-    } else if (/^(ls_|prs_|fs_)/.test(p.t)) {
+    } else if (p.t === 'spst' || /^(prs_|fs_)/.test(p.t)) standIn(it, p, pb, x, y, name);
+    else if (/^ls_/.test(p.t)) {
       let n = linkDigits(p.tag, '1');
       if (!/^ls_/.test(p.t)) { const key = p.t.split('_')[0] + ':' + p.tag; if (!swapLS.has(key)) swapLS.set(key, nextLS()); n = swapLS.get(key); note(changed, `${p.tag || ''} ${/^prs/.test(p.t) ? 'proximity' : 'float'} switch → limit switch LS${n} (Circuit Builder has none yet)`.trim()); }
       const nc = /_nc$|_ho$/.test(p.t), held = /_hc$|_ho$/.test(p.t);
@@ -291,26 +303,13 @@ function linkBuild(doc, back) {
     else if (p.t === 'mst3') { if (!coilL.has(p.tag)) { noCoil.push(p.tag || '?'); coilL.set(p.tag, take()); } add(it, ['mst', x, y, coilL.get(p.tag), 0, 1, ''], linkCbTerms('mst', x, y, 0)); }
     else if (p.t === 'ol3') add(it, ['olh', x, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('olh', x, y, 0));
     else if (p.t === 'dsc3') add(it, ['dsc', x, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('dsc', x, y, 0));
-    else if (p.t === 'fus3' || p.t === 'cb3') { if (p.t === 'cb3') note(changed, `${name} circuit breaker → 3-phase fuses`); add(it, ['fus', x, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('fus', x, y, 0)); }
-    else if (p.t === 'fdsc3') {
-      // (a fused disconnect: Circuit Builder's disconnect, then its fuses, side by side between the print's terminals)
-      note(changed, `${name} fused disconnect → a disconnect and 3-phase fuses`);
-      const xl = pb[0][0], xr = pb[1][0], d = linkSnap(xl + 40), f = linkSnap(Math.max(xr - 40, d + 160));
-      const dt = linkCbTerms('dsc', d, y, 0), ft = linkCbTerms('fus', f, y, 0);
-      add(it, ['dsc', d, y, linkDigits(p.tag, '1'), 0, 1, ''], [dt[0], ft[1], dt[2], ft[3], dt[4], ft[5]]);
-      parts.push(['fus', f, y, linkDigits(p.fu, '1'), 0, 1, '']); fromIdx.push(null);
-      it.extra = [0, 2, 4].map(i => [dt[i + 1], ft[i]]);   // (the short wires between them)
-    } else if (p.t === 'fuse' || p.t === 'cb') {
-      if (p.t === 'cb') note(changed, `${name} circuit breaker → a fuse`);
+    else if (p.t === 'cb3' || p.t === 'fdsc3' || p.t === 'cb' || p.t === 'cb2') standIn(it, p, pb, x, y, name);
+    else if (p.t === 'fus3') { add(it, ['fus', x, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('fus', x, y, 0)); }
+    else if (p.t === 'fuse') {
       const up = pb[0] && pb[1] && pb[0][0] === pb[1][0], cx = LK ? x : up ? pb[0][0] : linkSnap((pb[0][0] + pb[1][0]) / 2), cy = LK ? y : up ? linkSnap((pb[0][1] + pb[1][1]) / 2) : pb[0][1], rot = up ? 1 : 0;   // (made from a circuit: back at its own middle)
       const ts = linkCbTerms('fu1', cx, cy, rot), first = up ? (pb[0][1] < pb[1][1] ? 0 : 1) : (pb[0][0] < pb[1][0] ? 0 : 1);
       const sorted = up ? ts.slice().sort((a, b) => a[1] - b[1]) : ts.slice().sort((a, b) => a[0] - b[0]);
       add(it, ['fu1', cx, cy, linkDigits(p.tag, '1'), 0, 1, '', ...(rot ? [rot] : [])], first === 0 ? sorted : [sorted[1], sorted[0]]);
-    } else if (p.t === 'cb2') {
-      note(changed, `${name} 2-pole circuit breaker → two fuses`);
-      const ts = [];
-      for (const [i, j] of [[0, 1], [2, 3]]) { const a = pb[i], b = pb[j], up = a[0] === b[0], cx = up ? a[0] : linkSnap((a[0] + b[0]) / 2), cy = up ? linkSnap((a[1] + b[1]) / 2) : a[1]; const t2 = linkCbTerms('fu1', cx, cy, up ? 1 : 0); parts.push(['fu1', cx, cy, linkDigits(p.tag, '1'), 0, 1, '', ...(up ? [1] : [])]); fromIdx.push(null); const s2 = up ? t2.sort((u, v) => u[1] - v[1]) : t2.sort((u, v) => u[0] - v[0]); ts.push(...((up ? a[1] < b[1] : a[0] < b[0]) ? s2 : [s2[1], s2[0]])); }
-      terms.set(p, ts);
     } else if (p.t === 'xfmr') add(it, ['xfm', x, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('xfm', x, y, 0));
     else if (p.t === 'sup' || p.t === 'src_l1' || p.t === 'src_l2' || p.t === 'cnt_out' || p.t === 'cnt_in') {
       // (one terminal on the print: a Circuit Builder box with one of its terminals there, facing the way its wire goes)
@@ -326,9 +325,7 @@ function linkBuild(doc, back) {
       else row = [t, cx, cy, '', 0, 1, ''];
       add(it, row, [at]);
       if (dir[1] === -1 && t !== 'jmp') { /* (a box wired from above: its bottom terminal is the nearest Circuit Builder has) */ }
-    } else if (p.t === 'gnd') note(left, 'A ground' + (p.tag ? ' (' + p.tag + ')' : '') + ': Circuit Builder has none (its wire is left as it is)');
-    else if (p.t === 'ol') { note(changed, `${name} overload heater on one line → joined straight through (Circuit Builder’s overload is three-line)`); it.through = pb; }
-    else if (['spdt', 'dpst', 'dpdt', 'xover'].includes(p.t)) note(left, `${name} ${p.t.toUpperCase()} switch: Circuit Builder has nothing like it yet (its wires are left loose)`);
+    } else if (LINK_PB_TERMS[p.t] && pb.length) standIn(it, p, pb, x, y, name);   // (a ground, a one-line overload, SPDT, DPST, DPDT, crossover, and any other)
   }
   // wires: each keeps its path; ends on a part's terminal move onto that part's terminal here
   const wires = [];
@@ -356,7 +353,7 @@ function linkBuild(doc, back) {
   }
   // (a plain ladder with no supply drawn: Circuit Builder's bars are its supply; with power and rails fed by nothing, supply boxes on top)
   if (power) for (const r of rails) {
-    const fed = parts.some(row => { const ts = linkCbTerms(row[0], row[1], row[2], row[7] && ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(row[0]) ? row[7] : 0); return ts.some(q => q[0] === X(r.p.x) && q[1] === Y(r.k, r.p.y0)); })
+    const fed = parts.some(row => { const ts = linkRowTerms(row); return ts.some(q => q[0] === X(r.p.x) && q[1] === Y(r.k, r.p.y0)); })
       || wires.some(w => (w[0] === X(r.p.x) && w[1] === Y(r.k, r.p.y0) && !(w[2] === X(r.p.x) && w[3] > w[1])) || (w[2] === X(r.p.x) && w[3] === Y(r.k, r.p.y0) && !(w[0] === X(r.p.x) && w[1] > w[3])));
     if (!fed && r.k === 0) { parts.push([r.p.label === 'L2' ? 'l2' : 'l1', X(r.p.x), Y(r.k, r.p.y0) - 40, '', 0, 1, '']); fromIdx.push(null); }
   }
@@ -376,7 +373,7 @@ function linkCbJoin(d, C) {
     for (const q of [[x1, y1], [x2, y2]]) { ends.add(q.join(',')); if (bars && q[0] === 0) C.u('w' + wi, 'BAR:L1'); if (bars && q[0] === W) C.u('w' + wi, 'BAR:L2'); }
     for (let i = 0; i <= n; i++) { const k = (x1 + (x2 - x1) * i / (n || 1)) + ',' + (y1 + (y2 - y1) * i / (n || 1)); if (!at.has(k)) at.set(k, []); at.get(k).push('w' + wi); } });
   const J = new Map();
-  for (const a of d.parts) linkCbTerms(a[0] === 'est' ? 'btn' : a[0], +a[1], +a[2], linkRotOf(a)).forEach(q => { const k = q.join(','); ends.add(k); C.f('t' + k); if (a[0] === 'jmp') { if (J.has(a[3])) C.u('t' + k, J.get(a[3])); else J.set(a[3], 't' + k); } });
+  for (const a of d.parts) linkRowTerms(a).forEach(q => { const k = q.join(','); ends.add(k); C.f('t' + k); if (a[0] === 'jmp') { if (J.has(a[3])) C.u('t' + k, J.get(a[3])); else J.set(a[3], 't' + k); } });
   for (const k of ends) { const ws = at.get(k) || []; for (const w of ws) C.u('t' + k, w); }
   return C;
 }
@@ -385,7 +382,7 @@ function linkCbJoin(d, C) {
 function linkCbShape(d) {
   const par = new Map(), f = k => { if (!par.has(k)) par.set(k, k); let x = k; while (par.get(x) !== x) x = par.get(x); par.set(k, x); return x; };
   const C = linkCbJoin(d, { f, u: (a, b) => { const A = f(a), B = f(b); if (A !== B) par.set(A, B); } }), first = new Map();
-  return JSON.stringify(d.parts.map((a, i) => [a[0], linkCbTerms(a[0] === 'est' ? 'btn' : a[0], +a[1], +a[2], linkRotOf(a)).map((q, j) => {
+  return JSON.stringify(d.parts.map((a, i) => [a[0], linkRowTerms(a).map((q, j) => {
     const root = C.f('t' + q.join(',')), bar = ['BAR:L1', 'BAR:L2'].find(b => par.has(b) && C.f(b) === root);
     if (bar) return bar; if (!first.has(root)) first.set(root, i + ':' + j); return first.get(root); })]));
 }
@@ -409,7 +406,7 @@ function linkCheck(doc, r) {
     if (cToP.has(ck) && cToP.get(ck) !== pk) { bad++; if (problems.length < 6) problems.push(m.t + ' ' + i + ': joined in the circuit, not on the print'); } else cToP.set(ck, pk); });
   // parts on top of each other, and wires through a part (Circuit Builder's sizes: a switch with a head is taller above its wire)
   const TALL = new Set(['lsw', 'psw', 'fsw', 'tsw']);
-  const box = a => { const ts = linkCbTerms(a[0] === 'est' ? 'btn' : a[0], +a[1], +a[2], rotOf(a)); if (!ts.length) return null; const xs = ts.map(q => q[0]), ys = ts.map(q => q[1]);
+  const box = a => { const ts = linkRowTerms(a); if (!ts.length) return null; const xs = ts.map(q => q[0]), ys = ts.map(q => q[1]);
     if (ts.length === 2 && ys[0] === ys[1]) return { x0: Math.min(...xs), x1: Math.max(...xs), y0: ys[0] - (TALL.has(a[0]) ? 41 : 34), y1: ys[0] + (TALL.has(a[0]) ? 82 : 34), two: 1 };
     if (ts.length === 2 && xs[0] === xs[1]) return { x0: xs[0] - 34, x1: xs[0] + 34, y0: Math.min(...ys), y1: Math.max(...ys), two: 1 };
     return { x0: Math.min(...xs, +a[1]) - 20, x1: Math.max(...xs, +a[1]) + 20, y0: Math.min(...ys, +a[2]) - 20, y1: Math.max(...ys, +a[2]) + 20 }; };
@@ -511,7 +508,7 @@ function circuitToPrint(d, env) {
   for (const r of R.filter(r => r.t === 'btn' || r.t === 'est' || r.t === 'sel')) { const k = (r.t === 'sel' ? 'S:' : 'B:') + r.L; if (!tagOf.has(k)) tagOf.set(k, (r.t === 'sel' ? 'SS-' : r.t === 'est' ? 'ES-' : 'PB-') + r.L); }
   const descOf = new Map(R.filter(r => (r.t === 'btn' || r.t === 'est' || r.t === 'coil') && lbl(r)).map(r => [(r.t === 'coil' ? 'C:' : 'B:') + r.L, lbl(r)]));
   // ---- 1. each part as it will be on the print, at the circuit's own place for now (G: the circuit's grid)
-  const parts0 = R.map(r => ({ r, ts: linkCbTerms(r.t === 'est' ? 'btn' : r.t, r.x, r.y, rotOf(r)) }));
+  const parts0 = R.map(r => ({ r, ts: linkRowTerms(r.a) }));
   const wired = new Set(d.wires.flatMap(w => [w[0] + ',' + w[1], w[2] + ',' + w[3]]));
   const made = [];   // ({ r, o }: a circuit part and its print part, o.x/o.y in G for now)
   const COLN = { 'FF0032': 'RED', '00B050': 'GREEN', 'FFDC00': 'YELLOW', 'FF9600': 'AMBER', '0070C0': 'BLUE', 'FFFFFF': 'WHITE', '7030A0': 'VIOLET', 'EC008C': 'MAGENTA', '00D2BE': 'TEAL' };
@@ -543,6 +540,7 @@ function circuitToPrint(d, env) {
       case 'ph': t = 'sup'; o.tag = 'L' + r.L; break;
       case 'l1': t = 'src_l1'; break;
       case 'l2': t = 'src_l2'; break;
+      case 'stand': { const q = r.a[10]; if (!q || !LINK_PB_TERMS[q.t]) break; t = q.t; o.rot = +q.r || 0; o.tag = r.L; o.desc = typeof r.a[9] === 'string' ? r.a[9] : ''; break; }
       case 'jmp': { const seen = jmpSeen.get(r.L) || 0; jmpSeen.set(r.L, seen + 1); t = seen ? 'cnt_in' : 'cnt_out'; o.tag = String(r.L); break; }
     }
     if (!t) { note(left, `A ${r.t} part: Print Builder has nothing like it`); continue; }

@@ -172,6 +172,10 @@ function printSheet(drawnBy, fit = false) {
         if (!fed.length) text(x, y + 10, name, 28); break; }
       case 'jmp': { g += `<circle cx="${x}" cy="${y}" r="16" stroke-width="${PRINT_W}" fill="#fff"/>`; text(x, y + 8, q.L, 22);
         q.terms.forEach(t => { if (wired(t)) { const dx = Math.sign(t[0] - x) * 16, dy = Math.sign(t[1] - y) * 16; line(t[0], t[1], x + dx, y + dy); } }); break; }
+      case 'stand': { const n = LINK_PB_SYMN[p.sym], s = n && (PSYM[n] || LINK_PB_PSYM[n]); if (!s) break;   // (a stand-in: on the print, the part it stands for)
+        const r = p.srot || 0, sp = s.t.map(t => { let [a, b] = t; for (let k = 0; k < r / 90; k++) [a, b] = [-b, a]; return [x + a, y + b]; });
+        g += `<g class="sym" transform="translate(${x} ${y}) rotate(${r})">${s.b}</g>`; q.terms.forEach((t, i) => { if (sp[i]) line(t[0], t[1], sp[i][0], sp[i][1]); });
+        const ys = sp.map(t => t[1]).concat(r % 180 ? [] : [y + s.y0]); text(x, Math.min(...ys) - 8, p.L || '', 26); if (p.desc) text(x, Math.max(...sp.map(t => t[1]), r % 180 ? y : y + s.y1) + 24, p.desc, 21, 'middle', 500); break; }
       case 'btn': two(q, p.estop ? 'NC EStop Pushbutton' : p.nc ? 'NC Pushbutton' : 'NO Pushbutton', uniqueLabel('btn', q.L) ? '' : p.label || ''); break;
       case 'sel': { // (Dallas's selector switch: a contact block in each rung it is drawn in, its turning arrow on the top one,
         // which carries its tag; under each, the positions that block is closed in; a dashed line links the blocks, below)
