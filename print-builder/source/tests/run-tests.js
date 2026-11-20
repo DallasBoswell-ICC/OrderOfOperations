@@ -230,15 +230,15 @@ let passed = 0, failed = 0;
     return r === '0,0,40,0' ? [] : ['moved by (DS1, FU1, FU2, FU3): ' + r];
   });
 
-  await check('Continuation arrows: A on sheet 1 and A on sheet 2 are one wire, each says where the other is', async p => {
+  await check('Continuation arrows: A on sheet 1 and A on sheet 2 are one wire, each says where the other is (sheet, rung and wire: P1-R#-W#)', async p => {
     const r = await p.evaluate(() => { loadDoc(template('blank')); const L1 = S.parts.find(q => q.label === 'L1');
       addWire(S, [[L1.x, 400], [500, 400]]); addPart(S, 'pb_no', 540, 400); addWire(S, [[580, 400], [900, 400]]); const o = addPart(S, 'cnt_out', 940, 400);
       const s2 = newSheet(); doc.sheets.push(s2); doc.cur = 1; S = s2; const L2 = S.parts.find(q => q.label === 'L2');
       const i = addPart(S, 'cnt_in', 400, 600); addWire(S, [[440, 600], [800, 600]]); addPart(S, 'coil', 840, 600); addWire(S, [[880, 600], [L2.x, 600]]); refresh(true);
       const A2 = analyse(), n1 = A2.label.get(A2.rootT(o, doc.sheets[0], 0)), n2 = A2.label.get(A2.rootT(i, doc.sheets[1], 0));
-      const notes = [...svg.querySelectorAll('g.ink text')].map(e => e.textContent).filter(t => /SHEET/.test(t)).join(',');
-      return [o.tag, i.tag, n1 === n2, notes, checkPrint(A2).filter(x => /Continuation/.test(x.title)).length]; });
-    return r.join('|') === 'A|A|true|FROM SHEET 1|0' ? [] : ['out | in | same number | note on sheet 2 | warnings: ' + r.join(' | ')];
+      const notes = [...svg.querySelectorAll('g.ink text')].map(e => e.textContent).filter(t => /SHEET|^P\d+-R/.test(t)).join(',');
+      return [o.tag, i.tag, n1 === n2, notes === `P1-R${A2.rung.get(o.id)}-W${n1}` ? 'ok' : notes, checkPrint(A2).filter(x => /Continuation/.test(x.title)).length]; });
+    return r.join('|') === 'A|A|true|ok|0' ? [] : ['out | in | same number | note on sheet 2 (want P1-R#-W#, Dallas 19 Nov 2026) | warnings: ' + r.join(' | ')];
   });
 
   await check('Save: writes back into the same file after the first save; Save As asks again', async p => {

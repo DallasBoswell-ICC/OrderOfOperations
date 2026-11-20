@@ -2375,8 +2375,9 @@ function contNote(p, k) {
   const other = p.t === 'cnt_out' ? 'cnt_in' : 'cnt_out', m = allParts().find(q => q.p.t === other && q.p.tag === p.tag);
   if (!m) return p.t === 'cnt_out' ? 'TO ?' : 'FROM ?';
   const w = p.t === 'cnt_out' ? 'TO' : 'FROM';
-  if (m.k !== k) return `${w} SHEET ${m.k + 1}`;
   const rn = A && A.rung && A.rung.get(m.p.id), s = doc.sheets[k], wn = A && A.label && s ? A.label.get(A.rootT(p, s, 0)) : null;
+  // (where the other end is: its sheet (P, Dallas 19 Nov 2026), rung and wire; on the same sheet, rung and wire)
+  if (m.k !== k) return rn && wn && wn !== '?' ? `P${m.k + 1}-R${rn}-W${wn}` : `${w} SHEET ${m.k + 1}`;
   if (rn && wn && wn !== '?') return `R${rn}-W${wn}`;
   return rn ? `${w} RUNG ${rn}` : `${w} ${m.p.tag}`;
 }
