@@ -27,7 +27,7 @@ function findButtonDirections() {
       for (const e of NET.jadj.get(u) || []) { if (e.part === p || !viaL1(e)) continue; const w = e.a === u ? e.b : e.a, nd = d + e.len; if (!dist.has(w) || nd < dist.get(w)) { dist.set(w, nd); q.push([nd, w]); } } }
     return dist;
   };
-  for (const p of parts) if (isSw(p)) {
+  for (const p of parts.flatMap(q => q.t === 'sp2' ? q._poles || [] : [q])) if (isSw(p)) {   // (an SPDT: each of its two ways through)
     // current comes in at the end nearer L1 (like reading a rung from left to right, whichever way it is drawn);
     // if both ends are equally near, at the end with the higher voltage
     const dist = distFromL1(p), da = dist.get(p._a) ?? Infinity, db = dist.get(p._b) ?? Infinity;
@@ -42,7 +42,7 @@ function solveV(allClosed) {
   for (let it = 0; it < 40; it++) {
     r = solveOnce(allClosed, blocked);
     let changed = false;
-    for (const p of parts) {
+    for (const p of parts.flatMap(q => q.t === 'sp2' ? q._poles || [] : [q])) {
       if (!isSw(p) || !(allClosed || closed(p))) continue;
       const i = btnIn(p), va = r.V.get(i), vb = r.V.get(i === p._a ? p._b : p._a);   // va: where current should come in
       if (!blocked.has(p) && va !== undefined && vb !== undefined && vb > va + 1e-12) { blocked.add(p); changed = true; }

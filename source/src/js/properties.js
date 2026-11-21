@@ -66,7 +66,8 @@ function renderProps() {
     const top = Math.max(10, ...Object.keys(cnt).map(Number)) + 3;
     for (let n = 1; n <= top; n++) { const c = cnt[String(n)] || 0; ns.add(new Option(`${n}` + (c ? ` (joins ${c} other${c > 1 ? 's' : ''})` : ''), String(n), false, String(n) === p.L)); }
   }
-  document.getElementById('props-box').hidden = !(p && (isSrc(p) || isPh(p) || p.t === 'fu1' || twoEnded(p)));
+  document.getElementById('props-box').hidden = !(p && (isSrc(p) || isPh(p) || p.t === 'fu1' || twoEnded(p) || flips(p)));
+  groupOf('box-rot').hidden = !!p && p.t === 'sp2'; groupOf('box-flip').hidden = !(p && flips(p));
   document.getElementById('props-ph').hidden = !(p && isPh(p));
   if (p && isPh(p)) {
     // which phase it is, and that phase's colour (the colour of every box and wire of that phase)
@@ -371,6 +372,7 @@ document.getElementById('x-num').addEventListener('change', e => { const p = sel
 function setPhaseCol(L, hex) { hex = hex.toUpperCase(); if (PH_COL[L - 1] === hex) return; snapshot(); PH_COL = PH_COL.map((c, i) => i === L - 1 ? hex : c); say(`L${L} colour changed.`); draw(); }
 document.getElementById('ph-num').addEventListener('change', e => { if (selGroup().every(isPh)) each(p => p.L = e.target.value); });
 document.getElementById('ph-custom').addEventListener('change', e => { const p = selGroup()[0]; if (p && isPh(p)) setPhaseCol(p.L, e.target.value); });
+document.getElementById('box-flip').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(flips)) each(p => { if (p.fx) delete p.fx; else p.fx = true; }); });
 document.getElementById('box-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(turns)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
 document.getElementById('pw-num').addEventListener('change', e => { const G = selGroup(); if (G.length && G.every(p => isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'fu1')) each(p => p.L = e.target.value); });
 document.getElementById('ls-num').addEventListener('change', e => { const G = selGroup(); if (!G.every(p => p.t === G[0].t && isLim(p))) return;

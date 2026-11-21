@@ -3594,6 +3594,37 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Flipped toggle switches (Dallas, 21 Nov 2026): Flip (or F) mirrors an SPST or SPDT left to right (an SPDT\'s common on the right, its throws on the left), its tags still SW# left and kind right; a flipped SPDT works its throws as before; saved; crosses to Print Builder flipped and back flipped; Rotate is not offered for an SPDT', async page => {
+    const out = [];
+    await page.evaluate(() => { loadPreset('blank'); W = Math.max(W_MIN, 1100); const t = newPart('sp2', 760, 300); parts.push(t); const lx = 340;
+      parts.push(P('lamp', lx, 240, { L: '', color: '#00B050' }), P('lamp', lx, 360, { L: '', color: '#FF0032' }));
+      wires.push(Wr(820, 300, W, 300), Wr(0, 240, lx - 60, 240), Wr(lx + 60, 240, 700, 240), Wr(0, 360, lx - 60, 360), Wr(lx + 60, 360, 700, 360)); normalize(); draw(); });
+    // select it and flip it with the Part tab's Flip button
+    const at = await page.evaluate(() => { const t = parts.find(p => p.t === 'sp2'), m = WORLD.getScreenCTM(); return { x: m.a * t.x + m.e, y: m.d * (t.y + 120) + m.f }; });
+    await page.mouse.click(at.x, at.y); await page.waitForTimeout(150);
+    const ui = await page.evaluate(() => [!document.getElementById('box-flip').closest('.tgroup').hidden, !document.getElementById('box-rot').closest('.tgroup').hidden]);
+    if (!ui[0] || ui[1]) out.push('Part tab: Flip ' + (ui[0] ? 'shown' : 'missing') + ', Rotate ' + (ui[1] ? 'shown (should not be)' : 'hidden'));
+    await page.click('#box-flip'); await page.waitForTimeout(100);
+    const st = await page.evaluate(() => { const t = parts.find(p => p.t === 'sp2'); return JSON.stringify([!!t.fx, terms(t)]) + ' ' + [...wiringIssues(NET).values()].filter(v => typeof v === 'string').join(); });
+    if (st !== '[true,[[820,300],[700,240],[700,360]]] ') out.push('flipped: ' + st);
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    const L = () => page.evaluate(() => parts.filter(p => p.t === 'lamp').sort((a, b) => a.y - b.y).map(l => coilOn[l.id] ? 'lit' : 'dark').join('/'));
+    let s = await L(); if (s !== 'dark/lit') out.push('at rest: ' + s);
+    await page.evaluate(() => press(opKey(parts.find(p => p.t === 'sp2')), true)); await page.waitForTimeout(500);
+    s = await L(); if (s !== 'lit/dark') out.push('flipped up: ' + s);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    const back = await page.evaluate(() => readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.filter(p => p.fx).map(p => p.t).join());
+    if (back !== 'sp2') out.push('read back flipped: ' + back);
+    const d = await page.evaluate(() => circuitData());
+    const pb = await withPB(page, pb => pb.evaluate(d => { const r = circuitToPrint(d, { uid, defaultTB, long: 'tight' }); loadDoc(JSON.parse(JSON.stringify(r.doc))); refresh(true);
+      return [r.doc.sheets.flatMap(s => s.parts).filter(p => p.t === 'spdt').map(p => p.t + (p.fx ? '/fx' : '')).join(), checkPrint().filter(i => i.sev === 'e').map(i => i.title).join(), JSON.parse(JSON.stringify(r.doc))]; }, d));
+    if (pb[0] !== 'spdt/fx') out.push('in Print Builder: ' + pb[0]);
+    if (pb[1]) out.push('Check Print: ' + pb[1]);
+    pb[2].link.fp = 'changed'; const again = await page.evaluate(doc => { openFromPrint(doc, 'x'); document.getElementById('link-dlg').close(); return parts.filter(p => p.t === 'sp2' || p.t === 'stand').map(p => p.t + (p.fx ? '/fx' : '')).join() + ' ' + [...wiringIssues(NET).values()].filter(v => typeof v === 'string').join(); }, pb[2]);
+    if (again !== 'sp2/fx ') out.push('drawn again in Circuit Builder from the print: ' + again);
+    return out;
+  });
+
   await check('Turned parts (Dallas, 19 Nov 2026): a part turned on the print is turned in Circuit Builder (its terminals where the print\'s wires reach them), saved so, and turned again on the way back; one turned in Circuit Builder is turned on the print', async page => {
     const SPEC = [['pb_no', 90], ['coil', 90], ['con_no', 270], ['ls_no', 180], ['pl', 90], ['sol', 270]];
     const pr = await withPB(page, pb => pb.evaluate(SPEC => { loadDoc(withDrawnBy(template('blank'))); const L1 = S.parts.find(q => q.label === 'L1'); let x = 500;

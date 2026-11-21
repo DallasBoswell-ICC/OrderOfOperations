@@ -171,7 +171,7 @@ function fitCaps(V) {
 }
 // the dashed outline round a selected part (a single fuse standing upright: its outline stands upright too, its name beside it)
 function selRect(p) { if (p.t === 'stand') { const { hw, hh } = standBox(p), T = Math.max(hw, ...p.st.map(q => Math.abs(q[0]))), V = Math.max(hh, ...p.st.map(q => Math.abs(q[1]))); return { x: p.x - T - 12, y: p.y - V - 32, width: 2 * T + 24, height: 2 * V + 44 }; }
-  return vert(p) ? { x: p.x - BOX / 2 - 12, y: p.y - TERM(p) - 12, width: BOX + 120, height: 2 * TERM(p) + 24 } : { x: p.x - TERM(p) - 12, y: p.y - BODYH(p.t) / 2 - 32, width: 2 * TERM(p) + 24, height: BODYH(p.t) + 44 }; }
+  return vert(p) ? { x: p.x - BOX / 2 - 12, y: p.y - TERM(p) - 12, width: BOX + 120, height: 2 * TERM(p) + 24 } : { x: p.x - TERM(p) - 12, y: p.y - bodyUp(p) - 32, width: 2 * TERM(p) + 24, height: bodyUp(p) + bodyDown(p) + 44 }; }
 function drawPreview() {
   view.overlay.innerHTML = '';
   // a green ring wherever the wire end or part end being moved will connect

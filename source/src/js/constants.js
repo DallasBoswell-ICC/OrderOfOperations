@@ -136,6 +136,9 @@ const FU1_COL = '#c8c8c8';   // (its silver edge)
 // its name upright. Boxes and a single fuse keep their turn where they always have (a[7]); the others at a[15], { r })
 const turns7 = p => isBox(p) || p.t === 'fu1';
 const twoEnded = p => !isBox(p) && !isPwr3(p) && p.t !== 'xfm' && p.t !== 'mtr' && p.t !== 'stand' && p.t !== 'sp2';
+const flips = p => p.t === 'tgl' || p.t === 'sp2';
+// (how far a part's body reaches above and below its wire: the toggle switches reach further down than up)
+const bodyUp = p => p.t === 'sp2' ? SP2_TOP : p.t === 'tgl' ? LSW_TOP : BODYH(p.t) / 2, bodyDown = p => p.t === 'sp2' ? SP2_BOT : p.t === 'tgl' ? TGL_BOT : BODYH(p.t) / 2;   // (toggle switches mirror left to right: Dallas, 21 Nov 2026)
 const turns = p => turns7(p) || twoEnded(p), vert = p => (p.t === 'fu1' || twoEnded(p)) && !!((p.rot || 0) & 1);
 /* Three-phase power: an L1, L2 or L3 phase box (p.L '1', '2' or '3'), built like a supply box, every connection point
    of it that phase. Each phase has its own colour (each circuit keeps its own; brown, orange and yellow, as on 480 V).

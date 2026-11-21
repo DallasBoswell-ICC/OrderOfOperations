@@ -192,9 +192,9 @@ function printSheet(drawnBy, fit = false) {
       case 'tsw': two(q, `${p.nc ? 'NC' : 'NO'} Temperature Switch`, p.low ? 'LOW TEMP' : 'HIGH TEMP'); break;
       case 'psw': two(q, `${p.nc ? 'NC' : 'NO'} Pressure Switch`, p.low ? 'LOW PRESS' : 'HIGH PRESS'); break;
       case 'fsw': two(q, `${p.nc ? 'NC' : 'NO'} Flow Switch`, p.low ? 'LOW FLOW' : 'HIGH FLOW'); break;
-      case 'tgl': two(q, 'SPST Switch'); break;
+      case 'tgl': { const k = g.length; two(q, 'SPST Switch'); if (p.fx) g = g.slice(0, k) + g.slice(k).replace(/<g class="sym" transform="([^"]*)">/, (m, t) => `<g class="sym" transform="${t} scale(-1 1)">`); break; }   // (flipped: its hinge on the right)
       case 'sp2': { const s = PSYM['SPDT Switch'] || LINK_PB_PSYM['SPDT Switch']; if (!s) break;   // (an SPDT: Dallas's symbol, its common and throws joined to the part's)
-        g += `<g class="sym" transform="translate(${x} ${y})">${s.b}</g>`; q.terms.forEach((t, i) => { const u = s.t[i]; if (u) line(t[0], t[1], x + u[0], y + u[1]); });
+        const m = p.fx ? -1 : 1; g += `<g class="sym" transform="translate(${x} ${y})${p.fx ? ' scale(-1 1)' : ''}">${s.b}</g>`; q.terms.forEach((t, i) => { const u = s.t[i]; if (u) line(t[0], t[1], x + m * u[0], y + u[1]); });
         text(x, y + s.y0 - 8, 'SW' + p.L, 26); break; }
       case 'flt': two(q, `${p.nc ? 'NC' : 'NO'} Float Switch`, p.low ? 'LOW LEVEL' : 'HIGH LEVEL'); break;
       case 'lsw': two(q, p.held ? (p.nc ? 'NC HO Limit Switch' : 'NO HC Limit Switch') : `${p.nc ? 'NC' : 'NO'} Limit Switch`); break;

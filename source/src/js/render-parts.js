@@ -156,6 +156,15 @@ function drawStand(p, g, x, y, onStation) {
 }
 function drawPart(p, g, x, y, chan, onStation) {
   if (p.t === 'stand') return drawStand(p, g, x, y, onStation);
+  // a toggle switch flipped (Dallas, 21 Nov 2026): drawn mirrored left to right about its middle; its writing turned back to read
+  if (p.fx && flips(p) && !g.flipped && !onStation) {
+    const a = { transform: `translate(${2 * x} 0) scale(-1 1)` }, g2 = el('g', a, g); g2.flipped = true;
+    const v = drawPart(p, g2, x, y, el('g', a, chan || g), false);
+    if (v.cap) { v.cap.remove(); delete v.cap; }
+    for (const t of g2.querySelectorAll('text')) { const tx = +t.getAttribute('x') || 0; t.setAttribute('transform', `${t.getAttribute('transform') || ''} translate(${2 * tx} 0) scale(-1 1)`.trim()); }
+    if (!v.sec) (v.cap = el('text', vert(p) ? { x: x + BOX / 2 + 12, y: y + 4.5, 'text-anchor': 'start', class: 'cap' } : { x, y: y - capTop(p), 'text-anchor': 'middle', class: 'cap' }, g)).textContent = captionOf(p);
+    return v;
+  }
   // a single fuse turned: drawn as it is lying down, turned about its middle (its name, though, stays upright: above
   // it, or beside it when it stands upright)
   // (and any two-ended part turned, the same way)
@@ -1061,10 +1070,11 @@ function drawToggle(p, g, x, y, v) {
   // the toggle: the slot (framed), and the lever drawn up and down, the one it is at shown
   Object.assign(v, tglLever(p, g, x, y + TGL_TY, ['ON', 'OFF']));
   // its tags
-  el('rect', { x: x - hw + 7, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
-  el('rect', { x: x + hw - 39, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  const fl = p.fx ? -1 : 1;   // (flipped: its tags drawn the other way round, so they end up where they always are)
+  el('rect', { x: x - fl * (hw - 23) - 16, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('rect', { x: x + fl * (hw - 23) - 16, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
   const tg = (t, tx) => { const e = el('text', { x: tx, y: bot - 12.5, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 800, fill: '#fff', 'pointer-events': 'none' }, g); e.textContent = t; };
-  tg('SW' + p.L, x - hw + 23); tg('NO', x + hw - 23);
+  tg('SW' + p.L, x - fl * (hw - 23)); tg('NO', x + fl * (hw - 23));
   setToggle(v, p, editing ? 0 : lswPos(p), editing ? false : lswClosed(p));
 }
 // a toggle switch's lever in its slot, seen from the front (drawn up and down; setToggle or setSpdt shows the one it is at), and
@@ -1108,7 +1118,7 @@ function setToggle(v, p, pos, cl) {
 function drawSpdt(p, g, x, y, v, chan) {
   v.lead = null; v.src = [];
   const col = p.color, hw = LSW_W / 2, top = y - SP2_TOP, bot = y + SP2_BOT, px1 = x - 30, px2 = x + 30, sy = BOX * .045, r = 7;
-  terms(p).forEach(([tx, ty], i) => { const bx = tx < x ? x - hw : x + hw;
+  [[x - 60, y], [x + 60, y - SP2_DY], [x + 60, y + SP2_DY]].forEach(([tx, ty], i) => { const bx = tx < x ? x - hw : x + hw;   // (drawn as unflipped: a flipped one is mirrored as a whole)
     el('line', { x1: tx, y1: ty, x2: bx, y2: ty, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
     if (!editing && p._t) v.src.push({ n: p._t[i], ln: el('line', { x1: tx, y1: ty, x2: bx, y2: ty, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g) }); });
   framed('rect', { x: x - hw, y: top, width: LSW_W, height: bot - top, rx: 15, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
@@ -1123,10 +1133,11 @@ function drawSpdt(p, g, x, y, v, chan) {
   const num = (t, yy) => { const e = el('text', { x: x + 12, y: yy, 'text-anchor': 'middle', 'font-size': 8, 'font-weight': 800, fill: '#6a6a6a', 'pointer-events': 'none' }, g); e.textContent = t; return e; };
   v.n1 = num('1', y - SP2_DY + 4); v.n2 = num('2', y + SP2_DY + 4);
   Object.assign(v, tglLever(p, g, x, y + SP2_DY + 52, ['1', '2']));
-  el('rect', { x: x - hw + 7, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
-  el('rect', { x: x + hw - 41, y: bot - 25, width: 34, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  const fl = p.fx ? -1 : 1;   // (flipped: its tags drawn the other way round, so they end up where they always are)
+  el('rect', { x: x - fl * (hw - 23) - 16, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('rect', { x: x + fl * (hw - 24) - 17, y: bot - 25, width: 34, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
   const tg = (t, tx, fs) => { const e = el('text', { x: tx, y: bot - 12.5, 'text-anchor': 'middle', 'font-size': fs, 'font-weight': 800, fill: '#fff', 'pointer-events': 'none' }, g); e.textContent = t; };
-  tg('SW' + p.L, x - hw + 23, 9); tg('SPDT', x + hw - 24, 8);
+  tg('SW' + p.L, x - fl * (hw - 23), 9); tg('SPDT', x + fl * (hw - 24), 8);
   setSpdt(v, p, editing ? 0 : lswPos(p));
 }
 function setSpdt(v, p, pos) {
