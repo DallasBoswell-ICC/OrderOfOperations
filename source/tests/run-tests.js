@@ -3625,6 +3625,33 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Toggle switches start as set (Dallas, 21 Nov 2026): Starts (Off / On for an SPST; At 2 / At 1 for an SPDT) on the Part tab; drawn so in Build; in Run it starts that way, a click flips it from there, Reset puts it back; saved', async page => {
+    const out = [];
+    await page.evaluate(() => { loadPreset('blank'); W = Math.max(W_MIN, 1100); const a = newPart('tgl', 400, 200), b = newPart('sp2', 400, 560); parts.push(a, b); normalize(); draw(); });
+    const pick = async t => { const at = await page.evaluate(t => { const q = parts.find(p => p.t === t), m = WORLD.getScreenCTM(); return { x: m.a * q.x + m.e, y: m.d * (q.y + 60) + m.f }; }, t); await page.mouse.click(at.x, at.y); await page.waitForTimeout(120); };
+    await pick('tgl');
+    const o1 = await page.evaluate(() => [...document.getElementById('ls-start').options].map(o => o.textContent).join('/') + (document.getElementById('ls-start').closest('.tgroup').hidden ? ' hidden' : ''));
+    if (o1 !== 'Off/On') out.push('SPST Starts: ' + o1);
+    await page.selectOption('#ls-start', '1');
+    await pick('sp2');
+    const o2 = await page.evaluate(() => [...document.getElementById('ls-start').options].map(o => o.textContent).join('/'));
+    if (o2 !== 'At 2 (Lever Down)/At 1 (Lever Up)') out.push('SPDT Starts: ' + o2);
+    await page.selectOption('#ls-start', '1');
+    const b0 = await page.evaluate(() => parts.map(p => { const v = view.parts.get(p.id); return p.t + ':' + (v.lev[1].getAttribute('display') === 'none' ? 'down' : 'up'); }).join());
+    if (b0 !== 'tgl:up,sp2:up') out.push('drawn in Build: ' + b0);
+    const st = () => page.evaluate(() => parts.map(p => p.t + ':' + (p.t === 'tgl' ? (lswClosed(p) ? 'on' : 'off') : (closed(p._poles[0]) ? '1' : '2'))).join());
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(300);
+    let s = await st(); if (s !== 'tgl:on,sp2:1') out.push('starting: ' + s);
+    await page.evaluate(() => { for (const p of parts) press(opKey(p), !down[opKey(p)]); }); await page.waitForTimeout(400);
+    s = await st(); if (s !== 'tgl:off,sp2:2') out.push('flipped: ' + s);
+    await page.click('#reset-btn'); await page.waitForTimeout(400);
+    s = await st(); if (s !== 'tgl:on,sp2:1') out.push('after Reset: ' + s);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    const back = await page.evaluate(() => readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.map(p => p.t + (p.held ? '+' : '-')).join());
+    if (back !== 'tgl+,sp2+') out.push('read back: ' + back);
+    return out;
+  });
+
   await check('Turned parts (Dallas, 19 Nov 2026): a part turned on the print is turned in Circuit Builder (its terminals where the print\'s wires reach them), saved so, and turned again on the way back; one turned in Circuit Builder is turned on the print', async page => {
     const SPEC = [['pb_no', 90], ['coil', 90], ['con_no', 270], ['ls_no', 180], ['pl', 90], ['sol', 270]];
     const pr = await withPB(page, pb => pb.evaluate(SPEC => { loadDoc(withDrawnBy(template('blank'))); const L1 = S.parts.find(q => q.label === 'L1'); let x = 500;

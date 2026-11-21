@@ -1075,7 +1075,7 @@ function drawToggle(p, g, x, y, v) {
   el('rect', { x: x + fl * (hw - 23) - 16, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
   const tg = (t, tx) => { const e = el('text', { x: tx, y: bot - 12.5, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 800, fill: '#fff', 'pointer-events': 'none' }, g); e.textContent = t; };
   tg('SW' + p.L, x - fl * (hw - 23)); tg('NO', x + fl * (hw - 23));
-  setToggle(v, p, editing ? 0 : lswPos(p), editing ? false : lswClosed(p));
+  setToggle(v, p, editing ? (p.held ? 1 : 0) : lswPos(p), editing ? !!p.held : lswClosed(p));   // (in Build: as it starts)
 }
 // a toggle switch's lever in its slot, seen from the front (drawn up and down; setToggle or setSpdt shows the one it is at), and
 // the marks beside it (ON / OFF; 1 / 2 on an SPDT)
@@ -1138,7 +1138,7 @@ function drawSpdt(p, g, x, y, v, chan) {
   el('rect', { x: x + fl * (hw - 24) - 17, y: bot - 25, width: 34, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
   const tg = (t, tx, fs) => { const e = el('text', { x: tx, y: bot - 12.5, 'text-anchor': 'middle', 'font-size': fs, 'font-weight': 800, fill: '#fff', 'pointer-events': 'none' }, g); e.textContent = t; };
   tg('SW' + p.L, x - fl * (hw - 23), 9); tg('SPDT', x + fl * (hw - 24), 8);
-  setSpdt(v, p, editing ? 0 : lswPos(p));
+  setSpdt(v, p, editing ? (p.held ? 1 : 0) : lswPos(p));   // (in Build: as it starts)
 }
 function setSpdt(v, p, pos) {
   const k = pos.toFixed(3); if (v.k === k) return; v.k = k;

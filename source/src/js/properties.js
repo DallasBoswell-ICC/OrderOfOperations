@@ -87,7 +87,10 @@ function renderProps() {
     // its number (one no other switch of its kind has), its kind and its colour (a temperature switch: NO or NC only)
     const ns = document.getElementById('ls-num'), sameKind = q => q.t === p.t || ((p.t === 'tgl' || p.t === 'sp2') && (q.t === 'tgl' || q.t === 'sp2')), taken = new Set(parts.filter(q => sameKind(q) && q !== p).map(q => q.L));
     groupOf('ls-num').hidden = multi; ns.innerHTML = '';
-    groupOf('ls-kind').hidden = p.t === 'tgl' || p.t === 'sp2';   // (a toggle switch: an SPST, normally open; nothing to choose)
+    groupOf('ls-kind').hidden = p.t === 'tgl' || p.t === 'sp2';
+    // (a toggle switch: how it starts (Dallas, 21 Nov 2026): an SPST off or on; an SPDT at throw 2 or throw 1)
+    { const st = document.getElementById('ls-start'), ok = G.every(q => q.t === p.t) && flips(p); groupOf('ls-start').hidden = !ok;
+      if (ok) { st.options[0].textContent = p.t === 'sp2' ? 'At 2 (Lever Down)' : 'Off'; st.options[1].textContent = p.t === 'sp2' ? 'At 1 (Lever Up)' : 'On'; st.value = p.held ? '1' : '0'; } }   // (a toggle switch: an SPST, normally open; nothing to choose)
     for (const o of document.querySelectorAll('#ls-kind option')) { o.hidden = HILO(p.t) ? o.value.endsWith('h') : o.value.endsWith('l');
       if (HILO(p.t)) { const w = { tsw: 'temp.', psw: 'pressure', fsw: 'flow', flt: 'level' }[p.t]; o.textContent = { no: `High ${w}, NO`, nc: `High ${w}, NC`, nol: `Low ${w}, NO`, ncl: `Low ${w}, NC` }[o.value] || o.textContent; }
       else o.textContent = { no: 'Normally open', nc: 'Normally closed' }[o.value] || o.textContent; }
@@ -372,6 +375,7 @@ document.getElementById('x-num').addEventListener('change', e => { const p = sel
 function setPhaseCol(L, hex) { hex = hex.toUpperCase(); if (PH_COL[L - 1] === hex) return; snapshot(); PH_COL = PH_COL.map((c, i) => i === L - 1 ? hex : c); say(`L${L} colour changed.`); draw(); }
 document.getElementById('ph-num').addEventListener('change', e => { if (selGroup().every(isPh)) each(p => p.L = e.target.value); });
 document.getElementById('ph-custom').addEventListener('change', e => { const p = selGroup()[0]; if (p && isPh(p)) setPhaseCol(p.L, e.target.value); });
+document.getElementById('ls-start').addEventListener('change', e => { const on = e.target.value === '1'; if (selGroup().every(flips)) each(p => { if (on) p.held = true; else delete p.held; }); });
 document.getElementById('box-flip').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(flips)) each(p => { if (p.fx) delete p.fx; else p.fx = true; }); });
 document.getElementById('box-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(turns)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
 document.getElementById('pw-num').addEventListener('change', e => { const G = selGroup(); if (G.length && G.every(p => isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'fu1')) each(p => p.L = e.target.value); });

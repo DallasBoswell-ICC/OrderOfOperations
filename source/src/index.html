@@ -186,6 +186,7 @@
       <div class="props" id="props-lsw" hidden>
         <div class="tgroup"><span class="label">Number</span><select id="ls-num" aria-label="Limit switch number"></select></div>
         <div class="tgroup"><span class="label">Kind</span><select id="ls-kind" aria-label="Kind of limit switch"><option value="no">Normally open</option><option value="nc">Normally closed</option><option value="noh">NO held closed</option><option value="nch">NC held open</option><option value="nol">Low temp., NO</option><option value="ncl">Low temp., NC</option></select></div>
+        <div class="tgroup" id="ls-start-group"><span class="label">Starts</span><select id="ls-start" aria-label="How it starts" data-tip="How it is when the circuit starts running (and after Reset)"><option value="0">Off</option><option value="1">On</option></select></div>
         <div class="tgroup" id="ls-pv-group"><span class="label">Worked by</span><select id="ls-pv" aria-label="What works this switch"></select></div>
         <div class="tgroup" id="ls-side-group"><span class="label">Acts</span><select id="ls-side" aria-label="Which side of its setting it acts on"><option value="hi">At or above</option><option value="lo">At or below</option></select></div>
         <div class="tgroup" id="ls-sp-group"><span class="label" id="ls-sp-label">Acts at</span><input type="text" id="ls-sp" class="labelbox pvnum" inputmode="decimal" autocomplete="off" aria-label="The value it acts at"><span class="unit ls-unit"></span></div>
