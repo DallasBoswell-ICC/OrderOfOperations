@@ -347,7 +347,7 @@ function insulated(tag, a, parent) {
 }
 // how far from its middle a part's body reaches along its wire (to its dark edge)
 const tsBodyEdge = (p, ux) => p.t === 'coil' || p.t === 'lamp' || isSolT(p.t) ? COIL / 2 + BEZEL : p.t === 'sel' ? SEL_BOX / 2 + BEZEL : p.t === 'tsw' ? TSW_HALF + 3 : isLim(p) ? LSW_W / 2 + BEZEL : BOX / 2 + BEZEL;
-const tsBlocked = p => !isBox(p) && !isPwr3(p) && p.t !== 'xfm' && p.t !== 'mtr';
+const tsBlocked = p => !isBox(p) && !isPwr3(p) && p.t !== 'xfm' && p.t !== 'mtr' && p.t !== 'sp2';
 let TS_POINTS = [];   // (where the meter's leads can go: { x, y, n: the junction, label }, in panel units)
 function tsTerminals(V, B, net) {
   const pts = [], at = new Map(net.nodes.map((n, i) => [n.k, i])), ys = rungYs(net);
@@ -368,7 +368,7 @@ function tsTerminals(V, B, net) {
       continue;
     }
     if (isJmp(p) || !p._t) continue;
-    const name = (i, side) => p.t === 'xfm' ? ['H1', 'H2', 'X1', 'X2'][i] : isPwr3(p) ? `${['L1', 'L2', 'L3'][i >> 1]} ${i & 1 ? 'load' : 'line'} side` : p.t === 'mtr' ? `T${i + 1}` : side;
+    const name = (i, side) => p.t === 'xfm' ? ['H1', 'H2', 'X1', 'X2'][i] : isPwr3(p) ? `${['L1', 'L2', 'L3'][i >> 1]} ${i & 1 ? 'load' : 'line'} side` : p.t === 'mtr' ? `T${i + 1}` : p.t === 'sp2' ? ['common', 'throw 1', 'throw 2'][i] : side;
     T.forEach(([tx, ty], i) => { const n = at.get(key(tx, ty)); if (n !== undefined) pts.push({ x: tx, y: ty, n, label: `${captionOf(p)}, ${name(i, ['left', 'right', 'bottom', 'top'][i] || '')}` }); });
   }
   const seen = new Set();

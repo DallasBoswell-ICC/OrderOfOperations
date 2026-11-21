@@ -92,7 +92,7 @@ function drawEstop(p, v, x, y, g) {
     el('path', { d: `M ${P1[0] + tx * L} ${P1[1] + ty * L} L ${P1[0] + nx * w} ${P1[1] + ny * w} L ${P1[0] - nx * w} ${P1[1] - ny * w} Z`, fill: ESTOP_PLATE }, v.twist);
   }
 }
-const captionOf = p => p.t === 'stand' ? `${p.L ? p.L + ' ' : ''}${LINK_PB_SYMN[p.sym] || p.sym} (stand-in)` : p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} ${p.low ? 'Low' : 'High'} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} ${p.low ? 'Low' : 'High'} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'flt' ? `FS${p.L} ${p.low ? 'Low' : 'High'} Level Float Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tgl' ? `SW${p.L} Toggle Switch (SPST)` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'stand' ? `${p.L ? p.L + ' ' : ''}${LINK_PB_SYMN[p.sym] || p.sym} (stand-in)` : p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} ${p.low ? 'Low' : 'High'} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} ${p.low ? 'Low' : 'High'} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'flt' ? `FS${p.L} ${p.low ? 'Low' : 'High'} Level Float Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tgl' ? `SW${p.L} Toggle Switch (SPST)` : p.t === 'sp2' ? `SW${p.L} Toggle Switch (SPDT)` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -121,7 +121,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => p.t === 'stand' ? standBox(p).hh + 11 : (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'flt' ? FLT_UP + 2 : p.t === 'tgl' ? LSW_TOP + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => p.t === 'stand' ? standBox(p).hh + 11 : (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'flt' ? FLT_UP + 2 : p.t === 'tgl' ? LSW_TOP + 2 : p.t === 'sp2' ? SP2_TOP + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -170,7 +170,7 @@ function drawPart(p, g, x, y, chan, onStation) {
     return v;
   }
   const v = {}, T = TERM(p), half = p.t === 'tsw' ? TSW_HALF : BODYH(p.t) / 2;
-  if (!isBox(p) && p.t !== 'xfm' && !isPwr3(p) && p.t !== 'mtr') el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
+  if (!isBox(p) && p.t !== 'xfm' && !isPwr3(p) && p.t !== 'mtr' && p.t !== 'sp2') el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
   // the short leads between the part's ends and its body: each drawn in two pieces, so the current can flow along
   // them (the new colour, and what was there before it)
   const lead = () => el('line', { x1: x, y1: y, x2: x, y2: y, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g);
@@ -265,6 +265,8 @@ function drawPart(p, g, x, y, chan, onStation) {
     drawFloat(p, g, x, y, v);
   } else if (p.t === 'tgl') {
     drawToggle(p, g, x, y, v);
+  } else if (p.t === 'sp2') {
+    drawSpdt(p, g, x, y, v, chan);
   } else if (p.t === 'xfm') {
     drawXfm(p, g, x, y, v, chan);
   } else if (p.t === 'fu1') {
@@ -1057,7 +1059,18 @@ function drawToggle(p, g, x, y, v) {
   for (const cx of [px1, px2]) { v.rings.push(el('circle', { cx, cy: y, r, fill: '#1f1f1f', stroke: GREY, 'stroke-width': 3.4 }, g)); el('circle', { cx, cy: y, r, fill: 'none', stroke: 'url(#gGloss)', 'stroke-width': 3.4 }, g); }
   v.pin = el('circle', { cx: px1, cy: y, r: 2.6, fill: BLADE_GREY }, g); el('circle', { cx: px1, cy: y, r: 2.6, fill: 'url(#gDome)' }, g);
   // the toggle: the slot (framed), and the lever drawn up and down, the one it is at shown
-  const S = TGL_S, W = 15 * S, H = 34 * S, cx = x, cy = y + TGL_TY, x0 = cx - W / 2, y0 = cy - H / 2;
+  Object.assign(v, tglLever(p, g, x, y + TGL_TY, ['ON', 'OFF']));
+  // its tags
+  el('rect', { x: x - hw + 7, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('rect', { x: x + hw - 39, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  const tg = (t, tx) => { const e = el('text', { x: tx, y: bot - 12.5, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 800, fill: '#fff', 'pointer-events': 'none' }, g); e.textContent = t; };
+  tg('SW' + p.L, x - hw + 23); tg('NO', x + hw - 23);
+  setToggle(v, p, editing ? 0 : lswPos(p), editing ? false : lswClosed(p));
+}
+// a toggle switch's lever in its slot, seen from the front (drawn up and down; setToggle or setSpdt shows the one it is at), and
+// the marks beside it (ON / OFF; 1 / 2 on an SPDT)
+function tglLever(p, g, cx, cy, labs) {
+  const S = TGL_S, W = 15 * S, H = 34 * S, x0 = cx - W / 2, y0 = cy - H / 2, col = p.color, v = {};
   framed('rect', { x: x0 - 3 * S, y: y0 - 3 * S, width: W + 6 * S, height: H + 6 * S, rx: 3.5 * S, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.2 }, g);
   el('rect', { x: x0, y: y0, width: W, height: H, rx: 1.6 * S, fill: '#0b0b0b' }, g);
   const dk = (c, f) => { const n = parseInt(c.slice(1), 16), m = q => Math.max(0, Math.min(255, Math.round(q * f))); return '#' + [n >> 16, n >> 8 & 255, n & 255].map(m).map(q => q.toString(16).padStart(2, '0')).join(''); };
@@ -1077,13 +1090,8 @@ function drawToggle(p, g, x, y, v) {
     v.lev.push(lv);
   }
   const lab = (t, yy) => { const e = el('text', { x: x0 - 14 * S, y: yy, 'text-anchor': 'middle', 'font-size': 7.5 * S, 'font-weight': 800, fill: '#5a5a5a', 'pointer-events': 'none' }, g); e.textContent = t; return e; };
-  v.lOn = lab('ON', y0 + 7 * S); v.lOff = lab('OFF', y0 + H - S);
-  // its tags
-  el('rect', { x: x - hw + 7, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
-  el('rect', { x: x + hw - 39, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
-  const tg = (t, tx) => { const e = el('text', { x: tx, y: bot - 12.5, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 800, fill: '#fff', 'pointer-events': 'none' }, g); e.textContent = t; };
-  tg('SW' + p.L, x - hw + 23); tg('NO', x + hw - 23);
-  setToggle(v, p, editing ? 0 : lswPos(p), editing ? false : lswClosed(p));
+  v.lOn = lab(labs[0], y0 + 7 * S); v.lOff = lab(labs[1], y0 + H - S);
+  return v;
 }
 function setToggle(v, p, pos, cl) {
   const k = pos.toFixed(3) + (cl ? 'c' : 'o'); if (v.k === k) return; v.k = k;
@@ -1092,6 +1100,43 @@ function setToggle(v, p, pos, cl) {
   v.posts.setAttribute('fill', cl ? p.color : GREY); for (const q of v.rings) q.setAttribute('stroke', cl ? p.color : GREY);
   const up = pos >= .5; v.lev[0].setAttribute('display', up ? 'none' : ''); v.lev[1].setAttribute('display', up ? '' : 'none');   // (the lever flips over half way)
   v.lOn.setAttribute('fill', up ? p.color : '#5a5a5a'); v.lOff.setAttribute('fill', up ? '#5a5a5a' : '#cfcfcf');
+}
+/* A toggle switch, SPDT (Dallas, 21 Nov 2026: option B): the SPST's faceplate and toggle, with his SPDT across it: the
+   common ring on the left (on the wire) and two throws on the right, 40 above and below, numbered 1 and 2; the blade from the
+   common to throw 1 with the lever up, to throw 2 with it down (it is never off: one way or the other). The toggle marked 1
+   and 2 to match. Its three ends are its leads (lit by what reaches them). */
+function drawSpdt(p, g, x, y, v, chan) {
+  v.lead = null; v.src = [];
+  const col = p.color, hw = LSW_W / 2, top = y - SP2_TOP, bot = y + SP2_BOT, px1 = x - 30, px2 = x + 30, sy = BOX * .045, r = 7;
+  terms(p).forEach(([tx, ty], i) => { const bx = tx < x ? x - hw : x + hw;
+    el('line', { x1: tx, y1: ty, x2: bx, y2: ty, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
+    if (!editing && p._t) v.src.push({ n: p._t[i], ln: el('line', { x1: tx, y1: ty, x2: bx, y2: ty, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g) }); });
+  framed('rect', { x: x - hw, y: top, width: LSW_W, height: bot - top, rx: 15, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
+  // the stubs: the common's in from the left, each throw's out to the right
+  v.stub = [y, y - 40, y + 40].map((yy, i) => el('rect', i ? { x: px2 + r, y: yy - sy, width: x + hw - 4.5 - px2 - r, height: 2 * sy, fill: GREY } : { x: x - hw + 4.5, y: yy - sy, width: px1 - r - (x - hw + 4.5), height: 2 * sy, fill: col }, g));
+  v.blade = el('g', { filter: 'url(#fShadow)' }, g); v.hinge = [px1, y];
+  const len = Math.hypot(60, 40) - r + 1.5;
+  el('rect', { x: px1, y: y - 3.5, width: len, height: 7, rx: 3.5, fill: col, stroke: 'rgba(0,0,0,.35)', 'stroke-width': .6 }, v.blade);
+  el('rect', { x: px1, y: y - 3.5, width: len, height: 7, rx: 3.5, fill: 'url(#gGloss)' }, v.blade);
+  v.rings = [[px1, y], [px2, y - 40], [px2, y + 40]].map(([cx, cy], i) => { const c = el('circle', { cx, cy, r, fill: '#1f1f1f', stroke: i ? GREY : col, 'stroke-width': 3.4 }, g); el('circle', { cx, cy, r, fill: 'none', stroke: 'url(#gGloss)', 'stroke-width': 3.4 }, g); return c; });
+  el('circle', { cx: px1, cy: y, r: 2.6, fill: col }, g); el('circle', { cx: px1, cy: y, r: 2.6, fill: 'url(#gDome)' }, g);
+  const num = (t, yy) => { const e = el('text', { x: x + 12, y: yy, 'text-anchor': 'middle', 'font-size': 8, 'font-weight': 800, fill: '#6a6a6a', 'pointer-events': 'none' }, g); e.textContent = t; return e; };
+  v.n1 = num('1', y - 36); v.n2 = num('2', y + 44);
+  Object.assign(v, tglLever(p, g, x, y + 92, ['1', '2']));
+  el('rect', { x: x - hw + 7, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('rect', { x: x + hw - 41, y: bot - 25, width: 34, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  const tg = (t, tx, fs) => { const e = el('text', { x: tx, y: bot - 12.5, 'text-anchor': 'middle', 'font-size': fs, 'font-weight': 800, fill: '#fff', 'pointer-events': 'none' }, g); e.textContent = t; };
+  tg('SW' + p.L, x - hw + 23, 9); tg('SPDT', x + hw - 24, 8);
+  setSpdt(v, p, editing ? 0 : lswPos(p));
+}
+function setSpdt(v, p, pos) {
+  const k = pos.toFixed(3); if (v.k === k) return; v.k = k;
+  const a = Math.atan2(40, 60) * 180 / Math.PI, [hx, hy] = v.hinge, up = pos >= .5;
+  v.blade.setAttribute('transform', `rotate(${lerp(a, -a, pos).toFixed(2)} ${hx} ${hy})`);   // (down to throw 2 at rest; up to throw 1, worked)
+  for (const [i, on] of [[1, up && pos > .98], [2, !up && pos < .02]]) { v.rings[i].setAttribute('stroke', on ? p.color : GREY); v.stub[i].setAttribute('fill', on ? p.color : GREY); }
+  v.n1.setAttribute('fill', up ? p.color : '#6a6a6a'); v.n2.setAttribute('fill', up ? '#6a6a6a' : p.color);
+  v.lev[0].setAttribute('display', up ? 'none' : ''); v.lev[1].setAttribute('display', up ? '' : 'none');
+  v.lOn.setAttribute('fill', up ? p.color : '#5a5a5a'); v.lOff.setAttribute('fill', up ? '#5a5a5a' : p.color);
 }
 // a flow switch pos of the way from at rest (0) to worked (1): the paddle bent over, the blade turned as the limit
 // switch's (its stem and flag with it), the water in the pipe (by hand: fading in as it is worked; linked to a Flow

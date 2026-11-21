@@ -3557,6 +3557,43 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Toggle switch, SPDT (Dallas, 21 Nov 2026, option B): placed from the Switches menu (Toggle Switches) as the next SW number; its common joins throw 2 at rest (lever down) and throw 1 when flipped (lever up), each throw lighting its own pilot light, and it stays as left; saved, printed as the SPDT symbol, and across to Print Builder and back as SW#', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    await toolbarDrop(page, 'tgl', 300, 160); await toolbarDrop(page, 'sp2', 700, 220);
+    const cap = await page.evaluate(() => parts.map(p => captionOf(p)).join());
+    if (cap !== 'SW1 Toggle Switch (SPST),SW2 Toggle Switch (SPDT)') out.push('placed as: ' + cap);
+    // the SPDT's common from L1; a light on each throw
+    await page.evaluate(() => { parts = parts.filter(p => p.t === 'sp2'); const t = parts[0]; W = Math.max(W_MIN, t.x + 460); const lx = W - 180;
+      parts.push(P('lamp', lx, t.y - 40, { L: '', color: '#00B050' }), P('lamp', lx, t.y + 40, { L: '', color: '#FF0032' }));
+      wires.length = 0; wires.push(Wr(0, t.y, t.x - 60, t.y), Wr(t.x + 60, t.y - 40, lx - 60, t.y - 40), Wr(t.x + 60, t.y + 40, lx - 60, t.y + 40), Wr(lx + 60, t.y - 40, W, t.y - 40), Wr(lx + 60, t.y + 40, W, t.y + 40)); normalize(); draw(); });
+    const iss = await page.evaluate(() => [...(wiringIssues(NET) || new Map()).entries()].filter(([k, v]) => typeof v === 'string').map(([k, v]) => v).join());
+    if (iss) out.push('build warnings: ' + iss);
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    const st = () => page.evaluate(() => { const t = parts.find(p => p.t === 'sp2'), v = view.parts.get(t.id), L = parts.filter(p => p.t === 'lamp').sort((a, b) => a.y - b.y);
+      return [v.lev[1].getAttribute('display') === 'none' ? 'down' : 'up', L.map(l => coilOn[l.id] ? 'lit' : 'dark').join('/')].join(' '); });
+    let s = await st(); if (s !== 'down dark/lit') out.push('at rest (throw 2): ' + s);
+    const at = await page.evaluate(() => { const g = [...document.querySelectorAll('#svg g.dev')].find(g => /SPDT/.test(g.getAttribute('aria-label') || '')); const b = g.getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height * .7 }; });
+    await page.mouse.click(at.x, at.y); await page.waitForTimeout(600);
+    s = await st(); if (s !== 'up lit/dark') out.push('flipped (throw 1): ' + s);
+    await page.waitForTimeout(300); s = await st(); if (s !== 'up lit/dark') out.push('left up (it stays): ' + s);
+    await page.mouse.click(at.x, at.y); await page.waitForTimeout(600);
+    s = await st(); if (s !== 'down dark/lit') out.push('flipped back (throw 2): ' + s);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    const back = await page.evaluate(() => readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.filter(p => p.t === 'sp2').map(p => p.t + p.L + (p.maint ? 'm' : '')).join());
+    if (back !== 'sp22m') out.push('read back: ' + back);
+    const pr = await page.evaluate(() => { const h = document.createElement('div'); h.innerHTML = printSheet('x', true).html; return [...h.querySelectorAll('text')].map(t => t.textContent).filter(t => /^SW\d/.test(t)).join(); });
+    if (pr !== 'SW2') out.push('printed tags: ' + pr);
+    const d = await page.evaluate(() => circuitData());
+    const pb = await withPB(page, pb => pb.evaluate(d => { const r = circuitToPrint(d, { uid, defaultTB, long: 'tight' }); loadDoc(JSON.parse(JSON.stringify(r.doc))); refresh(true);
+      const ps = r.doc.sheets.flatMap(s => s.parts).filter(p => p.t === 'spdt'); return [ps.map(p => p.t + ':' + p.tag).join(), checkPrint().filter(i => i.sev === 'e').map(i => i.title).join(), JSON.parse(JSON.stringify(r.doc))]; }, d));
+    if (pb[0] !== 'spdt:SW2') out.push('in Print Builder: ' + pb[0]);
+    if (pb[1]) out.push('Check Print: ' + pb[1]);
+    pb[2].link.fp = 'changed'; const again = await page.evaluate(doc => { openFromPrint(doc, 'x'); document.getElementById('link-dlg').close(); return parts.filter(p => p.t === 'sp2' || p.t === 'stand').map(p => p.t + p.L).join(); }, pb[2]);
+    if (again !== 'sp22') out.push('drawn again in Circuit Builder from the print: ' + again);
+    return out;
+  });
+
   await check('Turned parts (Dallas, 19 Nov 2026): a part turned on the print is turned in Circuit Builder (its terminals where the print\'s wires reach them), saved so, and turned again on the way back; one turned in Circuit Builder is turned on the print', async page => {
     const SPEC = [['pb_no', 90], ['coil', 90], ['con_no', 270], ['ls_no', 180], ['pl', 90], ['sol', 270]];
     const pr = await withPB(page, pb => pb.evaluate(SPEC => { loadDoc(withDrawnBy(template('blank'))); const L1 = S.parts.find(q => q.label === 'L1'); let x = 500;
@@ -3602,7 +3639,7 @@ const DEF_CIRCUIT = `
     return out;
   });
   await check('Stand-ins (Dallas, 19 Nov 2026): every Print Builder part Circuit Builder has none of comes in as a stand-in (its symbol in a box, terminals as the print joins them), draws, runs (passing nothing) and prints, and goes back to the print as the same part, tag and name', async page => {
-    const TYPES = ['prs_no', 'cb', 'cb2', 'cb3', 'fdsc3', 'ol', 'gnd', 'spdt', 'dpst', 'dpdt', 'xover'];
+    const TYPES = ['prs_no', 'cb', 'cb2', 'cb3', 'fdsc3', 'ol', 'gnd', 'dpst', 'dpdt', 'xover'];
     const pr = await withPB(page, pb => pb.evaluate(TYPES => { loadDoc(withDrawnBy(template('blank'))); const L1 = S.parts.find(q => q.label === 'L1'); let y = 260;
       for (const t of TYPES) { const p = addPart(S, t, 900, y); p.tag = t.toUpperCase().replace(/_/g, '') + '1'; p.desc = 'D' + t; const tm = linkPbTerms(p)[0]; addWire(S, [[L1.x, tm[1]], tm]); y += 340; }
       refresh(true); return JSON.parse(JSON.stringify(doc)); }, TYPES));

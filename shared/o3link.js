@@ -179,7 +179,7 @@ function linkBuild(doc, back) {
   // as far as they need, so no part lands on another or on a wire; nothing is moved closer)
   const FX = (() => {
     if (LK) return x => x;
-    const CBW = { coil: 60, pl: 60, sol: 60, htr: 60, sel: 60, ls_no: 60, ls_nc: 60, ls_hc: 60, ls_ho: 60, ps_no: 60, ps_nc: 60, fls_no: 60, fls_nc: 60, prs_no: 60, prs_nc: 60, fs_no: 60, fs_nc: 60, spst: 60, ps_nol: 60, ps_ncl: 60, fls_nol: 60, fls_ncl: 60, fs_nol: 60, fs_ncl: 60, ts_no: 80, ts_nc: 80, ts_nol: 80, ts_ncl: 80 };
+    const CBW = { coil: 60, pl: 60, sol: 60, htr: 60, sel: 60, ls_no: 60, ls_nc: 60, ls_hc: 60, ls_ho: 60, ps_no: 60, ps_nc: 60, fls_no: 60, fls_nc: 60, prs_no: 60, prs_nc: 60, fs_no: 60, fs_nc: 60, spst: 60, spdt: 60, ps_nol: 60, ps_ncl: 60, fls_nol: 60, fls_ncl: 60, fs_nol: 60, fs_ncl: 60, ts_no: 80, ts_nc: 80, ts_nol: 80, ts_ncl: 80 };
     const keySet = new Set(), items = new Map(), cons = [];
     const row = (k, y) => { const key = k + ':' + y; if (!items.has(key)) items.set(key, []); return items.get(key); };
     doc.sheets.forEach((s, k) => {
@@ -288,6 +288,7 @@ function linkBuild(doc, back) {
       const names = (p.pos || 'OFF/ON').split(/[\/,]+/).map(s => s.trim().toUpperCase().slice(0, 5)).filter(Boolean).slice(0, 4), n = Math.max(2, names.length);
       two('sel', ['sel', x, y, opL.get(opKey(p)), 0, 1, '0070C0', n, (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, names.join('/'), 0]);
     } else if (/^prs_/.test(p.t)) standIn(it, p, pb, x, y, name);
+    else if (p.t === 'spdt' && !(((+p.rot || 0) % 360 + 360) % 360) && !p.fx) two('sp2', ['sp2', x, y, linkDigits(p.tag, '1'), 0, 1, '99E600']);   // (an SPDT, upright: Circuit Builder's own, 21 Nov 2026)
     else if (p.t === 'spst') two('tgl', ['tgl', x, y, linkDigits(p.tag, '1'), 0, 1, '99E600']);   // (a toggle switch: Circuit Builder's own, 21 Nov 2026)
     else if (/^fs_/.test(p.t)) two('flt', ['flt', x, y, linkDigits(p.tag, '1'), /_ncl?$/.test(p.t) ? 1 : 0, 1, '16C1E8', ...(/l$/.test(p.t) ? [1] : [])]);   // (a float switch: Circuit Builder's own, 20 Nov 2026)
     else if (/^ls_/.test(p.t)) {
@@ -419,7 +420,7 @@ function linkCheck(doc, r) {
     if (pToC.has(pk) && pToC.get(pk) !== ck) { bad++; if (problems.length < 6) problems.push(m.t + ' ' + i + ': joined on the print, not in the circuit'); } else pToC.set(pk, ck);
     if (cToP.has(ck) && cToP.get(ck) !== pk) { bad++; if (problems.length < 6) problems.push(m.t + ' ' + i + ': joined in the circuit, not on the print'); } else cToP.set(ck, pk); });
   // parts on top of each other, and wires through a part (Circuit Builder's sizes: a switch with a head is taller above its wire)
-  const TALL = new Set(['lsw', 'psw', 'fsw', 'flt', 'tsw', 'tgl']);
+  const TALL = new Set(['lsw', 'psw', 'fsw', 'flt', 'tsw', 'tgl', 'sp2']);
   const box = a => { const ts = linkRowTerms(a); if (!ts.length) return null; const xs = ts.map(q => q[0]), ys = ts.map(q => q[1]);
     if (ts.length === 2 && ys[0] === ys[1]) return { x0: Math.min(...xs), x1: Math.max(...xs), y0: ys[0] - (TALL.has(a[0]) ? 41 : 34), y1: ys[0] + (TALL.has(a[0]) ? 82 : 34), two: 1 };
     if (ts.length === 2 && xs[0] === xs[1]) return { x0: xs[0] - 34, x1: xs[0] + 34, y0: Math.min(...ys), y1: Math.max(...ys), two: 1 };
@@ -546,6 +547,7 @@ function circuitToPrint(d, env) {
       case 'psw': t = (r.nc ? 'ps_nc' : 'ps_no') + (r.a[7] === 1 ? 'l' : ''); o.tag = 'PS' + r.L; break;
       case 'fsw': t = (r.nc ? 'fls_nc' : 'fls_no') + (r.a[7] === 1 ? 'l' : ''); o.tag = 'FLS' + r.L; break;
       case 'tgl': t = 'spst'; o.tag = 'SW' + r.L; break;
+      case 'sp2': t = 'spdt'; o.tag = 'SW' + r.L; break;
       case 'flt': t = (r.nc ? 'fs_nc' : 'fs_no') + (r.a[7] === 1 ? 'l' : ''); o.tag = 'FS' + r.L; break;
       case 'coil': t = 'coil'; o.tag = tagOf.get('C:' + r.L); o.desc = descOf.get('C:' + r.L) || ''; o.pre = R.some(q => q.t === 'mst' && q.L === r.L) ? 'M' : isTimer(r) ? 'TR' : 'CR'; if (isTimer(r)) { o.delay = Math.round(+r.a[7]); if (r.a[8] === 1) o.tof = true; } break;
       case 'con': { const c = coilBy.get(r.L); t = isTimer(c) && r.a[7] !== 1 ? (r.nc ? 'tc_nc' : 'tc_no') : (r.nc ? 'con_nc' : 'con_no'); o.tag = c ? tagOf.get('C:' + r.L) : r.L; if (isTimer(c) && r.a[7] === 1) o.inst = true; break; }
