@@ -473,7 +473,7 @@ function press(L, v) {
   if (!!down[L] === v) return;
   down[L] = v; needPaint = true;
   if (parts.some(p => isLim(p) && opKey(p) === L)) { LSW_T[L] = simT; if (simT + LSW_MOVE > busyUntil) busyUntil = simT + LSW_MOVE; }   // (a limit switch: it moves over a moment)
-  switched(parts.filter(p => (p.t === 'btn' && p.L === L) || (isLim(p) && opKey(p) === L)).flatMap(p => p.t === 'sp2' ? p._poles || [] : [p]), simT);   // (a pushbutton's letter, or a limit or temperature switch's key)
+  switched(parts.filter(p => (p.t === 'btn' && p.L === L) || (isLim(p) && opKey(p) === L)).flatMap(p => isTglN(p) ? p._poles || [] : [p]), simT);   // (a pushbutton's letter, or a limit or temperature switch's key)
 }
 // a relay contact's bar starts to move: it stops passing current as soon as it lifts, and passes current again
 // only once it has landed

@@ -92,7 +92,7 @@ function drawEstop(p, v, x, y, g) {
     el('path', { d: `M ${P1[0] + tx * L} ${P1[1] + ty * L} L ${P1[0] + nx * w} ${P1[1] + ny * w} L ${P1[0] - nx * w} ${P1[1] - ny * w} Z`, fill: ESTOP_PLATE }, v.twist);
   }
 }
-const captionOf = p => p.t === 'stand' ? `${p.L ? p.L + ' ' : ''}${LINK_PB_SYMN[p.sym] || p.sym} (stand-in)` : p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} ${p.low ? 'Low' : 'High'} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} ${p.low ? 'Low' : 'High'} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'flt' ? `FS${p.L} ${p.low ? 'Low' : 'High'} Level Float Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tgl' ? `SW${p.L} Toggle Switch (SPST)` : p.t === 'sp2' ? `SW${p.L} Toggle Switch (SPDT)` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'stand' ? `${p.L ? p.L + ' ' : ''}${LINK_PB_SYMN[p.sym] || p.sym} (stand-in)` : p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} ${p.low ? 'Low' : 'High'} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} ${p.low ? 'Low' : 'High'} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'flt' ? `FS${p.L} ${p.low ? 'Low' : 'High'} Level Float Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tgl' ? `SW${p.L} Toggle Switch (SPST)` : p.t === 'sp2' ? `SW${p.L} Toggle Switch (SPDT)` : p.t === 'xov' ? `SW${p.L} Crossover Switch (DPDT)` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -121,7 +121,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => p.t === 'stand' ? standBox(p).hh + 11 : (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'flt' ? FLT_UP + 2 : p.t === 'tgl' ? LSW_TOP + 2 : p.t === 'sp2' ? SP2_TOP + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => p.t === 'stand' ? standBox(p).hh + 11 : (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'flt' ? FLT_UP + 2 : p.t === 'tgl' ? LSW_TOP + 2 : p.t === 'sp2' || p.t === 'xov' ? SP2_TOP + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -179,7 +179,7 @@ function drawPart(p, g, x, y, chan, onStation) {
     return v;
   }
   const v = {}, T = TERM(p), half = p.t === 'tsw' ? TSW_HALF : BODYH(p.t) / 2;
-  if (!isBox(p) && p.t !== 'xfm' && !isPwr3(p) && p.t !== 'mtr' && p.t !== 'sp2') el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
+  if (!isBox(p) && p.t !== 'xfm' && !isPwr3(p) && p.t !== 'mtr' && !isTglN(p)) el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
   // the short leads between the part's ends and its body: each drawn in two pieces, so the current can flow along
   // them (the new colour, and what was there before it)
   const lead = () => el('line', { x1: x, y1: y, x2: x, y2: y, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g);
@@ -276,6 +276,8 @@ function drawPart(p, g, x, y, chan, onStation) {
     drawToggle(p, g, x, y, v);
   } else if (p.t === 'sp2') {
     drawSpdt(p, g, x, y, v, chan);
+  } else if (p.t === 'xov') {
+    drawXover(p, g, x, y, v, chan);
   } else if (p.t === 'xfm') {
     drawXfm(p, g, x, y, v, chan);
   } else if (p.t === 'fu1') {
@@ -1146,6 +1148,51 @@ function setSpdt(v, p, pos) {
   v.blade.setAttribute('transform', `rotate(${lerp(a, -a, pos).toFixed(2)} ${hx} ${hy})`);   // (down to throw 2 at rest; up to throw 1, worked)
   for (const [i, on] of [[1, up && pos > .98], [2, !up && pos < .02]]) { v.rings[i].setAttribute('stroke', on ? p.color : GREY); v.stub[i].setAttribute('fill', on ? p.color : GREY); }
   v.n1.setAttribute('fill', up ? p.color : '#6a6a6a'); v.n2.setAttribute('fill', up ? '#6a6a6a' : p.color);
+  v.lev[0].setAttribute('display', up ? 'none' : ''); v.lev[1].setAttribute('display', up ? '' : 'none');
+  v.lOn.setAttribute('fill', up ? p.color : '#5a5a5a'); v.lOff.setAttribute('fill', up ? '#5a5a5a' : p.color);
+}
+// a crossover (Dallas, 21 Nov 2026): option B: its four contacts 60 apart across and 120 up and down (its ends where an SPDT's
+// throws are), two blades hinged on the left ones; straight across (lever up) as it starts, crossed (lever down) worked, each
+// blade swinging over and stretching to reach the far corner (the one from the bottom left behind, under a gap in the other)
+const XOV_A = Math.atan2(2 * SP2_DY, 2 * XOV_C) * 180 / Math.PI, XOV_LONG = Math.hypot(2 * SP2_DY, 2 * XOV_C);
+function drawXover(p, g, x, y, v, chan) {
+  v.lead = null; v.src = [];
+  const col = p.color, hw = LSW_W / 2, top = y - SP2_TOP, bot = y + SP2_BOT, L = x - XOV_C, R = x + XOV_C, sy = BOX * .045, r = 7;
+  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sv], i) => { const ty = y + sv * SP2_DY, tx = x + sx * 60, bx = x + sx * hw;   // (drawn as unflipped: a flipped one is mirrored as a whole)
+    el('line', { x1: tx, y1: ty, x2: bx, y2: ty, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
+    if (!editing && p._t) v.src.push({ n: p._t[i], ln: el('line', { x1: tx, y1: ty, x2: bx, y2: ty, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g) }); });
+  framed('rect', { x: x - hw, y: top, width: 2 * hw, height: bot - top, rx: 15, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
+  for (const yy of [y - SP2_DY, y + SP2_DY]) {
+    el('rect', { x: x - hw + 4.5, y: yy - sy, width: L - r - (x - hw + 4.5), height: 2 * sy, fill: col }, g);
+    el('rect', { x: R + r, y: yy - sy, width: x + hw - 4.5 - R - r, height: 2 * sy, fill: col }, g);
+  }
+  const blade = hy => { const b = el('g', { filter: 'url(#fShadow)' }, g), w = [el('rect', { x: L, y: hy - 3.5, width: 60, height: 7, rx: 3.5, fill: col, stroke: 'rgba(0,0,0,.35)', 'stroke-width': .6 }, b), el('rect', { x: L, y: hy - 3.5, width: 60, height: 7, rx: 3.5, fill: 'url(#gGloss)' }, b)]; return { b, w, hy }; };
+  v.bl = blade(y + SP2_DY);   // (the one behind)
+  v.gap = el('path', { fill: '#242424' }, g); v.gy = y;   // (a gap cut in it where the other crosses over: its sides along the top blade's)
+  v.tl = blade(y - SP2_DY);
+  v.hx = L;
+  v.rings = [[L, y - SP2_DY], [R, y - SP2_DY], [L, y + SP2_DY], [R, y + SP2_DY]].map(([cx, cy]) => { const c = el('circle', { cx, cy, r, fill: '#1f1f1f', stroke: col, 'stroke-width': 3.4 }, g); el('circle', { cx, cy, r, fill: 'none', stroke: 'url(#gGloss)', 'stroke-width': 3.4 }, g); return c; });
+  for (const cy of [y - SP2_DY, y + SP2_DY]) { el('circle', { cx: L, cy, r: 2.6, fill: col }, g); el('circle', { cx: L, cy, r: 2.6, fill: 'url(#gDome)' }, g); }
+  Object.assign(v, tglLever(p, g, x, y + SP2_DY + 52, ['1', '2']));
+  const fl = p.fx ? -1 : 1;   // (flipped: its tags drawn the other way round, so they end up where they always are)
+  el('rect', { x: x - fl * (hw - 23) - 16, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('rect', { x: x + fl * (hw - 25) - 18, y: bot - 25, width: 36, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  const tg = (t, tx, fs) => { const e = el('text', { x: tx, y: bot - 12.5, 'text-anchor': 'middle', 'font-size': fs, 'font-weight': 800, fill: '#fff', 'pointer-events': 'none' }, g); e.textContent = t; };
+  tg('SW' + p.L, x - fl * (hw - 23), 9); tg('XOVER', x + fl * (hw - 25), 7.5);
+  setXover(v, p, editing ? (p.held ? 1 : 0) : lswPos(p));   // (in Build: as it starts)
+}
+function setXover(v, p, pos) {
+  const k = pos.toFixed(3); if (v.k === k) return; v.k = k;
+  const a = XOV_A * pos, len = lerp(2 * XOV_C, XOV_LONG, pos) - 7 + 1.5, up = pos < .5, home = pos < .02 || pos > .98;
+  for (const [bl, s] of [[v.tl, 1], [v.bl, -1]]) { bl.b.setAttribute('transform', `rotate(${(s * a).toFixed(2)} ${v.hx} ${bl.hy})`); for (const w of bl.w) w.setAttribute('width', len.toFixed(2)); }
+  // (the gap: a strip the top blade's width and a little more, its sides along the top blade, its ends along the bottom one, so
+  // it cuts the bottom blade cleanly where they cross; only once they cross within both)
+  const ar = a * Math.PI / 180, sn = Math.sin(ar), d = sn > .01 ? SP2_DY / sn : Infinity;
+  if (d < len - 4) { const cs = Math.cos(ar), s2 = Math.sin(2 * ar), A = 8 / (2 * s2), B = 11.5 / (2 * s2), cx = v.hx + d * cs, cy = v.gy;
+    const pt = (i, j) => `${(cx + i * A * cs + j * B * cs).toFixed(2)} ${(cy + i * A * sn - j * B * sn).toFixed(2)}`;
+    v.gap.setAttribute('d', `M${pt(1, 1)}L${pt(1, -1)}L${pt(-1, -1)}L${pt(-1, 1)}Z`); v.gap.setAttribute('display', ''); }
+  else v.gap.setAttribute('display', 'none');
+  for (const i of [1, 3]) v.rings[i].setAttribute('stroke', home ? p.color : GREY);
   v.lev[0].setAttribute('display', up ? 'none' : ''); v.lev[1].setAttribute('display', up ? '' : 'none');
   v.lOn.setAttribute('fill', up ? p.color : '#5a5a5a'); v.lOff.setAttribute('fill', up ? '#5a5a5a' : p.color);
 }

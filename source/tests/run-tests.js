@@ -3625,6 +3625,48 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Crossover switch (Dallas, 21 Nov 2026): a DPDT crossover in the Toggle Switches menu; four ends, 60 out and 60 above and below its middle; straight across (top to top, bottom to bottom) with the lever up as it starts, crossed with it down; Starts and Flip as the other toggle switches; saved; crosses to Print Builder\'s DPDT Crossover Switch and back', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60); await toolbarDrop(page, 'xov', 300, 200);
+    const placed = await page.evaluate(() => { const t = parts.find(p => p.t === 'xov'); return t ? t.t + t.L + (t.maint ? 'm' : '') + ' ' + t.color : 'none'; });
+    if (placed !== 'xov1m #99E600') out.push('placed from the menu: ' + placed);
+    await page.evaluate(() => { sel = null; loadPreset('blank'); W = Math.max(W_MIN, 1100); const t = newPart('xov', 700, 300); parts.push(t); const lx = W - 180;
+      parts.push(P('lamp', lx, 240, { L: '', color: '#00B050' }), P('lamp', lx, 360, { L: '', color: '#FF0032' }), P('lamp', lx, 540, { L: '', color: '#FFDC00' }));
+      wires.push(Wr(0, 240, 640, 240), Wr(760, 240, lx - 60, 240), Wr(lx + 60, 240, W, 240), Wr(760, 360, lx - 60, 360), Wr(lx + 60, 360, W, 360), Wr(640, 360, 540, 360), Wr(540, 360, 540, 540), Wr(540, 540, lx - 60, 540), Wr(lx + 60, 540, W, 540)); normalize(); draw(); });
+    const ts = await page.evaluate(() => JSON.stringify(terms(parts.find(p => p.t === 'xov'))));
+    if (ts !== '[[640,240],[760,240],[640,360],[760,360]]') out.push('ends: ' + ts);
+    const L = () => page.evaluate(() => parts.filter(p => p.t === 'lamp').sort((a, b) => a.y - b.y).map(l => coilOn[l.id] ? 'lit' : 'dark').join('/'));
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    let s = await L(); if (s !== 'lit/dark/dark') out.push('at rest (straight): ' + s);
+    const lev = () => page.evaluate(() => { const v = view.parts.get(parts.find(p => p.t === 'xov').id); return (v.lev[1].getAttribute('display') === 'none' ? 'down' : 'up') + (v.gap.getAttribute('display') === 'none' ? '' : '+gap'); });
+    if (await lev() !== 'up') out.push('drawn at rest: ' + await lev());
+    await page.evaluate(() => press(opKey(parts.find(p => p.t === 'xov')), true)); await page.waitForTimeout(500);
+    s = await L(); if (s !== 'dark/lit/dark') out.push('crossed: ' + s);
+    if (await lev() !== 'down+gap') out.push('drawn crossed: ' + await lev());
+    await page.evaluate(() => press(opKey(parts.find(p => p.t === 'xov')), false)); await page.waitForTimeout(500);
+    s = await L(); if (s !== 'lit/dark/dark') out.push('back straight: ' + s);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    // starts crossed, and flipped
+    await page.evaluate(() => { const t = parts.find(p => p.t === 'xov'); t.held = true; t.fx = true; normalize(); draw(); });
+    const fl = await page.evaluate(() => JSON.stringify(terms(parts.find(p => p.t === 'xov'))));
+    if (fl !== '[[760,240],[640,240],[760,360],[640,360]]') out.push('flipped ends: ' + fl);
+    await page.evaluate(() => { const t = parts.find(p => p.t === 'xov'); t.fx = false; normalize(); draw(); });
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    s = await L(); if (s !== 'dark/lit/dark') out.push('starts crossed: ' + s);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    const back = await page.evaluate(() => readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.filter(p => p.t === 'xov').map(p => p.t + p.L + (p.maint ? 'm' : '') + (p.held ? 'h' : '')).join());
+    if (back !== 'xov1mh') out.push('read back: ' + back);
+    await page.evaluate(() => { const t = parts.find(p => p.t === 'xov'); t.fx = true; t.held = false; normalize(); draw(); });
+    const d = await page.evaluate(() => circuitData());
+    const pb = await withPB(page, pb => pb.evaluate(d => { const r = circuitToPrint(d, { uid, defaultTB, long: 'tight' }); loadDoc(JSON.parse(JSON.stringify(r.doc))); refresh(true);
+      return [r.doc.sheets.flatMap(s => s.parts).filter(p => p.t === 'xover').map(p => p.t + (p.fx ? '/fx' : '') + ' ' + p.tag).join(), checkPrint().filter(i => i.sev === 'e').map(i => i.title).join(), JSON.parse(JSON.stringify(r.doc))]; }, d));
+    if (pb[0] !== 'xover/fx SW1') out.push('in Print Builder: ' + pb[0]);
+    if (pb[1]) out.push('Check Print: ' + pb[1]);
+    pb[2].link.fp = 'changed'; const again = await page.evaluate(doc => { openFromPrint(doc, 'x'); document.getElementById('link-dlg').close(); return parts.filter(p => p.t === 'xov' || p.t === 'stand').map(p => p.t + (p.fx ? '/fx' : '')).join() + ' ' + parts.filter(p => p.t === 'xov').flatMap(p => terms(p).map(([x, y]) => wires.some(w => (w.x1 === x && w.y1 === y) || (w.x2 === x && w.y2 === y)) ? 'w' : '-')).join(''); }, pb[2]);
+    if (again !== 'xov/fx wwww') out.push('drawn again in Circuit Builder from the print: ' + again);
+    return out;
+  });
+
   await check('Toggle switches start as set (Dallas, 21 Nov 2026): Starts (Off / On for an SPST; At 2 / At 1 for an SPDT) on the Part tab; drawn so in Build; in Run it starts that way, a click flips it from there, Reset puts it back; saved', async page => {
     const out = [];
     await page.evaluate(() => { loadPreset('blank'); W = Math.max(W_MIN, 1100); const a = newPart('tgl', 400, 200), b = newPart('sp2', 400, 560); parts.push(a, b); normalize(); draw(); });
@@ -3727,7 +3769,7 @@ const DEF_CIRCUIT = `
     return out;
   });
   await check('Stand-ins (Dallas, 19 Nov 2026): every Print Builder part Circuit Builder has none of comes in as a stand-in (its symbol in a box, terminals as the print joins them), draws, runs (passing nothing) and prints, and goes back to the print as the same part, tag and name', async page => {
-    const TYPES = ['prs_no', 'cb', 'cb2', 'cb3', 'fdsc3', 'ol', 'gnd', 'dpst', 'dpdt', 'xover'];
+    const TYPES = ['prs_no', 'cb', 'cb2', 'cb3', 'fdsc3', 'ol', 'gnd', 'dpst', 'dpdt'];
     const pr = await withPB(page, pb => pb.evaluate(TYPES => { loadDoc(withDrawnBy(template('blank'))); const L1 = S.parts.find(q => q.label === 'L1'); let y = 260;
       for (const t of TYPES) { const p = addPart(S, t, 900, y); p.tag = t.toUpperCase().replace(/_/g, '') + '1'; p.desc = 'D' + t; const tm = linkPbTerms(p)[0]; addWire(S, [[L1.x, tm[1]], tm]); y += 340; }
       refresh(true); return JSON.parse(JSON.stringify(doc)); }, TYPES));

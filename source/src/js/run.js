@@ -62,7 +62,7 @@ function paintView(V) {
     if (p.t === 'xfm') { paintXfm(p, v); continue; }
     if (isPwr3(p)) { paintPwr(p, v); continue; }
     if (p.t === 'mtr') { paintMtr(p, v); continue; }
-    if (p.t === 'sp2') { for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } setSpdt(v, p, lswPos(p)); continue; }
+    if (isTglN(p)) { for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } if (p.t === 'xov') setXover(v, p, lswPos(p)); else setSpdt(v, p, lswPos(p)); continue; }
     if (isJmp(p)) {
       for (const q of v.src || []) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
       const c = (p._c !== undefined && showCol(p._c, simT)) || '#8a8a8a'; if (c !== v.cc) { v.cc = c; for (const ch of v.chev) ch.setAttribute('stroke', c); }
