@@ -640,7 +640,7 @@ function linkFingerprint(doc) {
 /* =====================================================================
    A print -> a circuit
    ===================================================================== */
-const LINK_LAMP_COL = { GREEN: '00B050', GRN: '00B050', RED: 'FF0032', AMBER: 'FF9600', AMB: 'FF9600', ORANGE: 'FF9600', YELLOW: 'FFDC00', YLW: 'FFDC00', BLUE: '0070C0', BLU: '0070C0', WHITE: 'FFFFFF', WHT: 'FFFFFF', CLEAR: 'FFFFFF', VIOLET: '7030A0', PURPLE: '7030A0', PINK: 'EC008C', MAGENTA: 'EC008C', TEAL: '00D2BE' };
+const LINK_LAMP_COL = { GREEN: '00B050', GRN: '00B050', RED: 'FF0032', AMBER: 'FF9600', AMB: 'FF9600', ORANGE: 'FF9600', YELLOW: 'FFDC00', YLW: 'FFDC00', BLUE: '0070C0', BLU: '0070C0', WHITE: 'FFFFFF', WHT: 'FFFFFF', CLEAR: 'FFFFFF', VIOLET: '7030A0', PURPLE: '7030A0', PINK: 'EC008C', MAGENTA: 'EC008C', TEAL: '00D2BE', LIME: '99E600' };
 // a print's timer coil: its kind TR (or, on older prints, a tag starting TR), or a delay set on it
 const linkTimer = c => (c.pre ? c.pre === 'TR' : /^TR/i.test(c.tag || '')) || !!c.delay || !!c.tof;
 const LINK_PAL = ['FFDC00', 'EC008C', '7030A0', '00D2BE', 'FF9600', '0070C0', '00B050', 'FF0032'];
@@ -1095,7 +1095,7 @@ function circuitToPrint(d, env) {
   const parts0 = R.map(r => ({ r, ts: linkRowTerms(r.a) }));
   const wired = new Set(d.wires.flatMap(w => [w[0] + ',' + w[1], w[2] + ',' + w[3]]));
   const made = [];   // ({ r, o }: a circuit part and its print part, o.x/o.y in G for now)
-  const COLN = { 'FF0032': 'RED', '00B050': 'GREEN', 'FFDC00': 'YELLOW', 'FF9600': 'AMBER', '0070C0': 'BLUE', 'FFFFFF': 'WHITE', '7030A0': 'VIOLET', 'EC008C': 'MAGENTA', '00D2BE': 'TEAL' };
+  const COLN = { 'FF0032': 'RED', '00B050': 'GREEN', 'FFDC00': 'YELLOW', 'FF9600': 'AMBER', '0070C0': 'BLUE', 'FFFFFF': 'WHITE', '7030A0': 'VIOLET', 'EC008C': 'MAGENTA', '99E600': 'LIME', '00D2BE': 'TEAL' };
   let plN = 0; const jmpSeen = new Map();
   for (const { r, ts } of parts0) {
     const o = { id: uid('p'), x: r.x, y: r.y, rot: 0, desc: '', cbi: r.i };
