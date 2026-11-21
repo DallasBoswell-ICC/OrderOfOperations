@@ -3652,6 +3652,36 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('SPDTs to Print Builder (Dallas, 21 Nov 2026): a two-way switch circuit (two SPDTs, throw wired to throw) goes to the print with the rows by each SPDT closed up to the symbol\'s throws (40 from its common), so the wires between the throws run straight, with no jog; Check Print clean; and back to Circuit Builder wired as before', async page => {
+    const out = [];
+    const d = await page.evaluate(() => { loadPreset('blank'); W = 1300; const a = newPart('sp2', 300, 240); parts.push(a); const b = newPart('sp2', 940, 240); b.fx = true; parts.push(b);
+      parts.push(P('lamp', 1160, 240, { L: '', color: '#FFDC00' })); wires.push(Wr(0, 240, 240, 240), Wr(360, 180, 880, 180), Wr(360, 300, 880, 300), Wr(1000, 240, 1100, 240), Wr(1220, 240, W, 240)); normalize(); draw(); return circuitData(); });
+    const r = await withPB(page, pb => pb.evaluate(d => { const r = circuitToPrint(d, { uid, defaultTB, long: 'tight' }); loadDoc(JSON.parse(JSON.stringify(r.doc))); refresh(true);
+      const sw = S.parts.filter(p => p.t === 'spdt'), bent = [];
+      for (const w of S.wires) { const ends = [w.a, w.b].filter(e => e.p && sw.some(p => p.id === e.p)); if (ends.length !== 2) continue; const ys = new Set(w.pts.map(q => q[1])); if (ys.size > 1) bent.push(w.pts.map(q => q.join(',')).join(' ')); }
+      return [bent, checkPrint().filter(i => i.sev === 'e').map(i => i.title).join(), JSON.parse(JSON.stringify(r.doc))]; }, d));
+    if (r[0].length) out.push('wires between the throws not straight: ' + r[0].join(' | '));
+    if (r[1]) out.push('Check Print: ' + r[1]);
+    r[2].link.fp = 'changed'; const back = await page.evaluate(doc => { openFromPrint(doc, 'x'); document.getElementById('link-dlg').close(); return [...wiringIssues(NET).values()].filter(v => typeof v === 'string').join() || 'ok'; }, r[2]);
+    if (back !== 'ok') out.push('back in Circuit Builder: ' + back);
+    return out;
+  });
+
+  await check('SPDTs from Print Builder (Dallas, 21 Nov 2026): a print of its own (not from Circuit Builder) with a two-way switch circuit comes into Circuit Builder with each SPDT\'s rows opened out to its throws (60 from its common), so every wire meets its throw straight; the rung under a toggle switch kept clear of its body', async page => {
+    const out = [];
+    const d = await page.evaluate(() => { loadPreset('blank'); W = 1300; const a = newPart('sp2', 300, 240); parts.push(a); const b = newPart('sp2', 940, 240); b.fx = true; parts.push(b); const c = newPart('tgl', 300, 560); parts.push(c, P('lamp', 1160, 240, { L: '', color: '#FFDC00' }), P('lamp', 1160, 560, { L: '', color: '#FFDC00' }));
+      wires.push(Wr(0, 240, 240, 240), Wr(360, 180, 880, 180), Wr(360, 300, 880, 300), Wr(1000, 240, 1100, 240), Wr(1220, 240, W, 240), Wr(0, 560, 240, 560), Wr(360, 560, 1100, 560), Wr(1220, 560, W, 560)); normalize(); draw(); return circuitData(); });
+    const doc = await withPB(page, pb => pb.evaluate(d => { const r = circuitToPrint(d, { uid, defaultTB, long: 'tight' }); const doc = JSON.parse(JSON.stringify(r.doc)); delete doc.link; return doc; }, d));
+    const r = await page.evaluate(doc => { openFromPrint(doc, 'x'); document.getElementById('link-dlg').close(); draw(); const bad = [];
+      for (const p of parts.filter(p => p.t === 'sp2')) for (const [x, y] of terms(p)) { const ws = wires.filter(w => (w.x1 === x && w.y1 === y) || (w.x2 === x && w.y2 === y)); if (!ws.length || ws.some(w => w.y1 !== w.y2)) bad.push(`SW${p.L} at ${x},${y}: ` + (ws.map(w => [w.x1, w.y1, w.x2, w.y2].join(',')).join(' ') || 'no wire')); }
+      const sw = parts.filter(p => p.t === 'sp2' || p.t === 'tgl').sort((a, b) => a.y - b.y), gap = sw.length > 1 ? Math.max(...sw.map(p => p.y)) - Math.min(...sw.map(p => p.y)) : 0;
+      return [bad, [...wiringIssues(NET).values()].filter(v => typeof v === 'string').join(), gap]; }, doc);
+    if (r[0].length) out.push('not met straight: ' + r[0].join(' | '));
+    if (r[1]) out.push('warnings: ' + r[1]);
+    if (r[2] < 180 + 41 + 30) out.push('the SPST rung under the SPDTs only ' + r[2] + ' below them');
+    return out;
+  });
+
   await check('Turned parts (Dallas, 19 Nov 2026): a part turned on the print is turned in Circuit Builder (its terminals where the print\'s wires reach them), saved so, and turned again on the way back; one turned in Circuit Builder is turned on the print', async page => {
     const SPEC = [['pb_no', 90], ['coil', 90], ['con_no', 270], ['ls_no', 180], ['pl', 90], ['sol', 270]];
     const pr = await withPB(page, pb => pb.evaluate(SPEC => { loadDoc(withDrawnBy(template('blank'))); const L1 = S.parts.find(q => q.label === 'L1'); let x = 500;
