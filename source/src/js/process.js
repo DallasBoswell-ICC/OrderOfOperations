@@ -107,7 +107,7 @@ function pvStartRun() {
 }
 const pvDrvText = v => parts.filter(p => isDrv(p) && p.pv === v.id).sort((a, b) => a.t.localeCompare(b.t) || a.L - b.L).map(p => drvText(p, v)).join(', ');
 const pvLinksText = v => parts.filter(p => isLim(p) && p.pv === v.id).sort((a, b) => a.t.localeCompare(b.t) || a.L - b.L).map(p => {
-  const tag = (p.t === 'tsw' ? 'TS' : p.t === 'psw' ? 'PS' : p.t === 'fsw' ? 'FLS' : p.t === 'flt' ? 'FS' : 'LS') + p.L, u = v.unit ? ' ' + v.unit : '';
+  const tag = (p.t === 'tsw' ? 'TS' : p.t === 'psw' ? 'PS' : p.t === 'fsw' ? 'FLS' : p.t === 'flt' ? 'FS' : p.t === 'tgl' ? 'SW' : 'LS') + p.L, u = v.unit ? ' ' + v.unit : '';
   if (p.t === 'lsw') return `${tag} at ${p.side === 'lo' ? '≤' : '≥'} ${pvFmt(v, +p.sp)}${u}`;
   return `${tag} at ${pvFalls(p) ? '≤' : '≥'} ${pvFmt(v, +p.sp)}${u}, resets at ${pvFmt(v, +p.rs)}${u}`;
 }).join(' · ');

@@ -17,7 +17,7 @@ const selGroup = () => {
   return ps.every(q => q.t === ps[0].t) ? ps : [];
 };
 const each = f => { const g = selGroup(); if (!g.length) return false; snapshot(); g.forEach(f); normalize(); draw(); return true; };
-const KIND_NAME = { flt: 'float switches', xfm: 'transformers', btn: 'pushbuttons', coil: 'coils', con: 'contacts', lamp: 'pilot lights', sel: 'selector switches', sol: 'solenoids', jmp: 'continuations', lsw: 'limit switches', tsw: 'temperature switches', psw: 'pressure switches', fsw: 'flow switches', htr: 'heating elements', l1: 'L1 supplies', l2: 'L2 returns', ph: 'phases', dsc: 'disconnects', fus: 'fuse blocks', mst: 'starters', olh: 'overloads', olc: 'overload contacts', mtr: 'motors' };
+const KIND_NAME = { tgl: 'toggle switches', flt: 'float switches', xfm: 'transformers', btn: 'pushbuttons', coil: 'coils', con: 'contacts', lamp: 'pilot lights', sel: 'selector switches', sol: 'solenoids', jmp: 'continuations', lsw: 'limit switches', tsw: 'temperature switches', psw: 'pressure switches', fsw: 'flow switches', htr: 'heating elements', l1: 'L1 supplies', l2: 'L2 returns', ph: 'phases', dsc: 'disconnects', fus: 'fuse blocks', mst: 'starters', olh: 'overloads', olc: 'overload contacts', mtr: 'motors' };
 const blocksOf = L => parts.filter(p => p.t === 'btn' && p.L === L);
 function renderProps() {
   const G = selGroup(), p = G[0] || null, multi = G.length > 1;
@@ -86,19 +86,20 @@ function renderProps() {
     // its number (one no other switch of its kind has), its kind and its colour (a temperature switch: NO or NC only)
     const ns = document.getElementById('ls-num'), taken = new Set(parts.filter(q => q.t === p.t && q !== p).map(q => q.L));
     groupOf('ls-num').hidden = multi; ns.innerHTML = '';
+    groupOf('ls-kind').hidden = p.t === 'tgl';   // (a toggle switch: an SPST, normally open; nothing to choose)
     for (const o of document.querySelectorAll('#ls-kind option')) { o.hidden = HILO(p.t) ? o.value.endsWith('h') : o.value.endsWith('l');
       if (HILO(p.t)) { const w = { tsw: 'temp.', psw: 'pressure', fsw: 'flow', flt: 'level' }[p.t]; o.textContent = { no: `High ${w}, NO`, nc: `High ${w}, NC`, nol: `Low ${w}, NO`, ncl: `Low ${w}, NC` }[o.value] || o.textContent; }
       else o.textContent = { no: 'Normally open', nc: 'Normally closed' }[o.value] || o.textContent; }
-    for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n)) || String(n) === p.L) ns.add(new Option(({ tsw: 'TS', psw: 'PS', fsw: 'FLS', flt: 'FS' }[p.t] || 'LS') + n + (String(n) === p.L && limGroup(p)[0] !== p ? ' (another contact)' : ''), String(n), false, String(n) === p.L));   // (its own number: "(another contact)" after it if it is not the main one)
-    for (const n of [...taken].filter(n => n !== p.L).sort((a, b) => a - b)) ns.add(new Option(`${({ tsw: 'TS', psw: 'PS', fsw: 'FLS', flt: 'FS' }[p.t] || 'LS')}${n} (another contact)`, n));
+    for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n)) || String(n) === p.L) ns.add(new Option(({ tsw: 'TS', psw: 'PS', fsw: 'FLS', flt: 'FS', tgl: 'SW' }[p.t] || 'LS') + n + (String(n) === p.L && limGroup(p)[0] !== p ? ' (another contact)' : ''), String(n), false, String(n) === p.L));   // (its own number: "(another contact)" after it if it is not the main one)
+    for (const n of [...taken].filter(n => n !== p.L).sort((a, b) => a - b)) ns.add(new Option(`${({ tsw: 'TS', psw: 'PS', fsw: 'FLS', flt: 'FS', tgl: 'SW' }[p.t] || 'LS')}${n} (another contact)`, n));
     document.getElementById('ls-kind').value = (p.nc ? 'nc' : 'no') + (p.held ? 'h' : '') + (p.low ? 'l' : '');
     swatches(document.getElementById('ls-colour'), p.color, hex => { each(q => q.color = hex); limSync(); });
     // what works it: by hand, or a process value of its kind (and then where it acts, and resets)
     const kind = PV_FOR[p.t], opts = PV.filter(v => v.kind === kind), pvs = document.getElementById('ls-pv'), same = G.every(q => q.t === p.t);
-    document.getElementById('ls-pv-group').hidden = !same;
+    document.getElementById('ls-pv-group').hidden = !same || !kind;   // (a toggle switch: flipped by hand only)
     pvs.innerHTML = ''; pvs.add(new Option('Clicked by hand', '', false, !p.pv));
     for (const v of opts) pvs.add(new Option(v.name, v.id, false, v.id === p.pv));
-    if (!opts.length) { const o = new Option(`(no ${PV_KINDS[kind][0].toLowerCase()} values yet: add one with Process values on the Home tab)`, '__none'); o.disabled = true; pvs.add(o); }
+    if (!opts.length && kind) { const o = new Option(`(no ${PV_KINDS[kind][0].toLowerCase()} values yet: add one with Process values on the Home tab)`, '__none'); o.disabled = true; pvs.add(o); }
     const v = same ? pvOf(p) : null;
     document.getElementById('ls-side-group').hidden = !(v && p.t === 'lsw');
     document.getElementById('ls-sp-group').hidden = !v; document.getElementById('ls-rs-group').hidden = !v || p.t === 'lsw';
@@ -297,7 +298,7 @@ const selsOf = L => parts.filter(p => p.t === 'sel' && p.L === L);
    the top one is the main one; they share what works them, its settings and their colour, and each keeps its own NO
    or NC. */
 const limGroup = p => parts.filter(q => isLim(q) && q.t === p.t && q.L === p.L).sort((a, b) => a.y - b.y || a.x - b.x);
-const limName = p => ({ tsw: 'TS', psw: 'PS', fsw: 'FLS', flt: 'FS' }[p.t] || 'LS') + p.L;
+const limName = p => ({ tsw: 'TS', psw: 'PS', fsw: 'FLS', flt: 'FS', tgl: 'SW' }[p.t] || 'LS') + p.L;
 const LIM_SHARED = ['pv', 'sp', 'rs', 'side', 'color'];
 // p's shared settings given to every other contact of its switch (from, if given: the contact whose settings they take)
 function syncLim(p, from = p) { for (const q of limGroup(p)) if (q !== from) for (const f of LIM_SHARED) { if (from[f] === undefined) delete q[f]; else q[f] = from[f]; } }

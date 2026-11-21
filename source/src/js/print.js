@@ -122,7 +122,7 @@ function printSheet(drawnBy, fit = false) {
   const lampN = new Map(); P.filter(q => q.t === 'lamp').sort((a, b) => a.y - b.y || a.x - b.x).forEach((q, i) => lampN.set(q, i + 1));
   // (a button or coil with a label of its own, that no other has, goes by it: no PB-A, its contacts named by it too)
   const tag = q => ({ btn: uniqueLabel('btn', q.L) || (q.p.estop ? 'ES-' : 'PB-') + q.L, sel: 'SS-' + q.L, coil: uniqueLabel('coil', q.L) || q.L, con: uniqueLabel('coil', q.L) || q.L, olc: 'OL' + q.L, lamp: 'PL' + lampN.get(q), sol: 'SOL' + q.L, htr: 'HTR' + q.L, tsw: 'TS' + q.L,
-    psw: 'PS' + q.L, fsw: 'FLS' + q.L, flt: 'FS' + q.L, lsw: 'LS' + q.L, fu1: 'FU' + q.L, fus: 'FU' + q.L, dsc: 'DS' + q.L, mst: q.L, olh: 'OL' + q.L, mtr: 'M' + q.L, xfm: 'CPT' + q.L })[q.t] || '';
+    psw: 'PS' + q.L, fsw: 'FLS' + q.L, flt: 'FS' + q.L, tgl: 'SW' + q.L, lsw: 'LS' + q.L, fu1: 'FU' + q.L, fus: 'FU' + q.L, dsc: 'DS' + q.L, mst: q.L, olh: 'OL' + q.L, mtr: 'M' + q.L, xfm: 'CPT' + q.L })[q.t] || '';
   const COLOURS = { '#00B050': 'GREEN', '#FF0032': 'RED', '#FF9600': 'AMBER', '#FFDC00': 'YELLOW', '#0070C0': 'BLUE', '#FFFFFF': 'WHITE', '#7030A0': 'PURPLE' };
   const colourName = c => COLOURS[(c || '').toUpperCase()] || '';
 
@@ -192,6 +192,7 @@ function printSheet(drawnBy, fit = false) {
       case 'tsw': two(q, `${p.nc ? 'NC' : 'NO'} Temperature Switch`, p.low ? 'LOW TEMP' : 'HIGH TEMP'); break;
       case 'psw': two(q, `${p.nc ? 'NC' : 'NO'} Pressure Switch`, p.low ? 'LOW PRESS' : 'HIGH PRESS'); break;
       case 'fsw': two(q, `${p.nc ? 'NC' : 'NO'} Flow Switch`, p.low ? 'LOW FLOW' : 'HIGH FLOW'); break;
+      case 'tgl': two(q, 'SPST Switch'); break;
       case 'flt': two(q, `${p.nc ? 'NC' : 'NO'} Float Switch`, p.low ? 'LOW LEVEL' : 'HIGH LEVEL'); break;
       case 'lsw': two(q, p.held ? (p.nc ? 'NC HO Limit Switch' : 'NO HC Limit Switch') : `${p.nc ? 'NC' : 'NO'} Limit Switch`); break;
       case 'dsc': three(q, '3PH Disconnect'); break;
