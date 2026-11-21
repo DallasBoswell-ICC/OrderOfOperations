@@ -3311,6 +3311,13 @@ const DEF_CIRCUIT = `
     await page.evaluate(NETSIG + 'window.netSig = netSig;');
     const circs = await page.evaluate(() => Object.keys(PRESETS).map(n => { loadPreset(n); return [n, circuitData()]; }));
     circs.push(['drill station', JSON.parse(require('fs').readFileSync(path.join(__dirname, 'fixtures', 'drill-station.json'), 'utf8'))]);
+    // (Dallas, 21 Nov 2026: a reversing motor on bars, its two starters fed straight from the phase boxes: its rungs spread out on the
+    // print, but never through a starter, whose poles keep their spacing, or its wires miss them)
+    circs.push(['reversing on bars', await page.evaluate(() => { const C = { app: 'order-of-operations-circuit-builder', v: 1, name: 'Rev', w: 2180, pw: 'bars', pc: ['E8413C', '3F7FFF', '00FF64'],
+      parts: [['ph', 100, 120, '1', 0, 1, '', 3], ['ph', 100, 240, '2', 0, 1, '', 3], ['ph', 100, 360, '3', 0, 1, '', 3], ['mst', 1160, 240, 'CR1', 0, 1, ''], ['mst', 1160, 620, 'CR2', 0, 1, ''], ['mtr', 1980, 240, '1', 0, 1, '']],
+      wires: [[140, 120, 580, 120], [580, 120, 1120, 120], [1200, 120, 1500, 120], [1500, 120, 1820, 120], [140, 240, 700, 240], [700, 240, 1120, 240], [1200, 240, 1400, 240], [1400, 240, 1820, 240], [140, 360, 820, 360], [820, 360, 1120, 360], [1200, 360, 1300, 360], [1300, 360, 1820, 360],
+        [820, 360, 820, 500], [820, 500, 1120, 500], [1200, 500, 1500, 500], [1500, 120, 1500, 500], [700, 240, 700, 620], [700, 620, 1120, 620], [1200, 620, 1400, 620], [1400, 240, 1400, 620], [580, 120, 580, 740], [580, 740, 1120, 740], [1200, 740, 1300, 740], [1300, 360, 1300, 740]], pv: [], pd: [], pl: [] };
+      PRESETS.__rev = () => { const c = readCircuit(C); return [c.parts, c.wires, c.w, c.fixed, c]; }; loadPreset('__rev'); delete PRESETS.__rev; return circuitData(); })]);
     const prints = await withPB(page, pb => pb.evaluate(cs => cs.map(([n, d]) => { openCircuit(d, undefined, 'tight'); $('link-dlg').close(); return [n, JSON.parse(JSON.stringify(doc)), checkPrint().filter(i => /without reaching anything/.test(i.title)).length]; }), circs));
     for (let i = 0; i < circs.length; i++) {
       const [n, d] = circs[i], [, print, loose] = prints[i];

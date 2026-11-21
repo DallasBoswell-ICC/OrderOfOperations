@@ -213,7 +213,9 @@ function linkBuild(doc, back) {
     const oy = LK.oy, n = oy.length, step = n > 1 ? oy[n - 2] - oy[n - 1] : 3000, sy = LK.sy || 1;
     X = x => linkSnap(x - LK.ox);
     if (LK.v === 2 && LK.xk) { const Kk = LK.xk, N = LK.xn, n2 = Kk.length, un = v => { if (v <= N[0]) return v - N[0] + Kk[0]; for (let i = 1; i < n2; i++) if (v <= N[i]) return Kk[i - 1] + (v - N[i - 1]) * (Kk[i] - Kk[i - 1]) / ((N[i] - N[i - 1]) || 1); return v - N[n2 - 1] + Kk[n2 - 1]; }; X = x => linkSnap(un(x - LK.ox)); }   // (drawn closer across: spread back out)
-    Y = (k, y) => linkSnap((y - (k < n ? oy[k] : oy[n - 1] - (k - n + 1) * step)) / sy);
+    // (spread back: evenly, or as it was spread, row by row around its tall parts (sk, sn: the circuit's heights and the print's))
+    const Ks = LK.sk, Ns = LK.sn, back = Array.isArray(Ks) && Array.isArray(Ns) && Ks.length === Ns.length && Ks.length ? v => { const m = Ks.length; if (v <= Ns[0]) return Ks[0] + (v - Ns[0]) / sy; for (let i = 1; i < m; i++) if (v <= Ns[i]) return Ks[i - 1] + (v - Ns[i - 1]) * (Ks[i] - Ks[i - 1]) / ((Ns[i] - Ns[i - 1]) || 1); return Ks[m - 1] + (v - Ns[m - 1]) / sy; } : v => v / sy;
+    Y = (k, y) => linkSnap(back(y - (k < n ? oy[k] : oy[n - 1] - (k - n + 1) * step)));
   }
   // (Circuit Builder's sheet is never narrower than LINK_W_MIN (its W_MIN): the L2 bar is there, so the wires reach it there)
   const W = !power && rL1 && rL2 ? Math.max(LK && LK.cb.fw ? 400 : LINK_W_MIN, LK ? +LK.cb.w || 0 : linkSnap(FX(rL2.p.x) - FX(rL1.p.x))) : 0;
@@ -502,10 +504,16 @@ function circuitToPrint(d, env) {
   if (d.pr) { d = { ...d }; delete d.pr; }   // (changed: drawn again; the old print is not carried inside the new one)
   const bars = d.pw !== 'boxes', d0 = d; let ylink = null;
   // (a ladder: its rungs spread out down the print as far as needed for the tags and names, up to twice as far)
-  let sy = 1;
+  let sy = 1, syMap = null;
   if (bars) { const ys = [...new Set(d.parts.map(a => +a[2]))].sort((a, b) => a - b), gaps = ys.slice(1).map((y, i) => y - ys[i]).filter(g => g > 0);
     if (gaps.length) sy = Math.max(1, Math.min(2, 160 / Math.min(...gaps)));
-    if (sy > 1) d = { ...d, parts: d.parts.map(a => { const b = a.slice(); b[2] = linkSnap(+a[2] * sy); return b; }), wires: d.wires.map(w => { const b = w.slice(); b[1] = linkSnap(+w[1] * sy); b[3] = linkSnap(+w[3] * sy); return b; }) }; }
+    // (Dallas, 21 Nov 2026: spread only between rows: never through a tall part, as a starter, a motor or a three-pole fuse block,
+    // whose terminals keep their own spacing on the print, or its wires would no longer meet them)
+    if (sy > 1) { const keep = d.parts.map(a => { const ys = linkRowTerms(a).map(q => +q[1]); return ys.length ? [Math.min(...ys), Math.max(...ys)] : null; }).filter(k => k && k[1] > k[0]);
+      const lv = [...new Set([...d.parts.map(a => +a[2]), ...d.wires.flatMap(w => [+w[1], +w[3]]), ...keep.flat()])].sort((a, b) => a - b), at = new Map();
+      lv.forEach((y, i) => { if (!i) { at.set(y, linkSnap(y * sy)); return; } const p = lv[i - 1], held = keep.some(([u, v]) => p >= u && y <= v); at.set(y, at.get(p) + (held ? y - p : Math.max(20, linkSnap((y - p) * sy)))); });
+      syMap = [lv, lv.map(y => at.get(y))];
+      d = { ...d, parts: d.parts.map(a => { const b = a.slice(); b[2] = at.get(+a[2]); return b; }), wires: d.wires.map(w => { const b = w.slice(); b[1] = at.get(+w[1]); b[3] = at.get(+w[3]); return b; }) }; } }
   const R = d.parts.map((a, i) => ({ i, t: a[0], x: +a[1], y: +a[2], L: String(a[3] ?? ''), nc: !!a[4], maint: a[5] !== 0, color: a[6] || '', a }));
   const rotOf = r => ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(r.t) ? (Math.round(+r.a[7]) || 0) : 0;
   const coilBy = new Map(R.filter(r => r.t === 'coil').map(r => [r.L, r]));
@@ -1007,7 +1015,7 @@ function circuitToPrint(d, env) {
   if (d.fl || d.sn) note(left, 'Planted faults (they stay with the circuit, and come back with it)');
   const doc = { kind: 'o3-print', v: 1, tb: env.defaultTB(), sheets, cur: 0 };
   const tf = doc.tb.fields.find(f => /title/i.test(f.label)); if (tf) tf.value = d.name || 'Circuit';
-  doc.link = { from: 'circuit-builder', v: 2, cb: d0, ox: OX, ...(OXs.some(v => v !== OX) ? { oxs: OXs } : {}), oy: sheets.map((_, k) => OY(k)), sy, ...(xb ? { xb } : {}), ...(ylink ? { ym: ylink } : {}), fp: linkFingerprint(doc) };
+  doc.link = { from: 'circuit-builder', v: 2, cb: d0, ox: OX, ...(OXs.some(v => v !== OX) ? { oxs: OXs } : {}), oy: sheets.map((_, k) => OY(k)), sy, ...(syMap ? { sk: syMap[0], sn: syMap[1] } : {}), ...(xb ? { xb } : {}), ...(ylink ? { ym: ylink } : {}), fp: linkFingerprint(doc) };
   return { doc, notes: { changed, left }, ask };
 }
 
