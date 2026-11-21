@@ -3565,8 +3565,8 @@ const DEF_CIRCUIT = `
     if (cap !== 'SW1 Toggle Switch (SPST),SW2 Toggle Switch (SPDT)') out.push('placed as: ' + cap);
     // the SPDT's common from L1; a light on each throw
     await page.evaluate(() => { parts = parts.filter(p => p.t === 'sp2'); const t = parts[0]; W = Math.max(W_MIN, t.x + 460); const lx = W - 180;
-      parts.push(P('lamp', lx, t.y - 40, { L: '', color: '#00B050' }), P('lamp', lx, t.y + 40, { L: '', color: '#FF0032' }));
-      wires.length = 0; wires.push(Wr(0, t.y, t.x - 60, t.y), Wr(t.x + 60, t.y - 40, lx - 60, t.y - 40), Wr(t.x + 60, t.y + 40, lx - 60, t.y + 40), Wr(lx + 60, t.y - 40, W, t.y - 40), Wr(lx + 60, t.y + 40, W, t.y + 40)); normalize(); draw(); });
+      parts.push(P('lamp', lx, t.y - 60, { L: '', color: '#00B050' }), P('lamp', lx, t.y + 60, { L: '', color: '#FF0032' }));
+      wires.length = 0; wires.push(Wr(0, t.y, t.x - 60, t.y), Wr(t.x + 60, t.y - 60, lx - 60, t.y - 60), Wr(t.x + 60, t.y + 60, lx - 60, t.y + 60), Wr(lx + 60, t.y - 60, W, t.y - 60), Wr(lx + 60, t.y + 60, W, t.y + 60)); normalize(); draw(); });
     const iss = await page.evaluate(() => [...(wiringIssues(NET) || new Map()).entries()].filter(([k, v]) => typeof v === 'string').map(([k, v]) => v).join());
     if (iss) out.push('build warnings: ' + iss);
     await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);

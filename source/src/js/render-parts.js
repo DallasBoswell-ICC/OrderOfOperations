@@ -1102,7 +1102,7 @@ function setToggle(v, p, pos, cl) {
   v.lOn.setAttribute('fill', up ? p.color : '#5a5a5a'); v.lOff.setAttribute('fill', up ? '#5a5a5a' : '#cfcfcf');
 }
 /* A toggle switch, SPDT (Dallas, 21 Nov 2026: option B): the SPST's faceplate and toggle, with his SPDT across it: the
-   common ring on the left (on the wire) and two throws on the right, 40 above and below, numbered 1 and 2; the blade from the
+   common ring on the left (on the wire) and two throws on the right, 60 above and below (6 squares apart), numbered 1 and 2; the blade from the
    common to throw 1 with the lever up, to throw 2 with it down (it is never off: one way or the other). The toggle marked 1
    and 2 to match. Its three ends are its leads (lit by what reaches them). */
 function drawSpdt(p, g, x, y, v, chan) {
@@ -1113,16 +1113,16 @@ function drawSpdt(p, g, x, y, v, chan) {
     if (!editing && p._t) v.src.push({ n: p._t[i], ln: el('line', { x1: tx, y1: ty, x2: bx, y2: ty, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g) }); });
   framed('rect', { x: x - hw, y: top, width: LSW_W, height: bot - top, rx: 15, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
   // the stubs: the common's in from the left, each throw's out to the right
-  v.stub = [y, y - 40, y + 40].map((yy, i) => el('rect', i ? { x: px2 + r, y: yy - sy, width: x + hw - 4.5 - px2 - r, height: 2 * sy, fill: GREY } : { x: x - hw + 4.5, y: yy - sy, width: px1 - r - (x - hw + 4.5), height: 2 * sy, fill: col }, g));
+  v.stub = [y, y - SP2_DY, y + SP2_DY].map((yy, i) => el('rect', i ? { x: px2 + r, y: yy - sy, width: x + hw - 4.5 - px2 - r, height: 2 * sy, fill: GREY } : { x: x - hw + 4.5, y: yy - sy, width: px1 - r - (x - hw + 4.5), height: 2 * sy, fill: col }, g));
   v.blade = el('g', { filter: 'url(#fShadow)' }, g); v.hinge = [px1, y];
-  const len = Math.hypot(60, 40) - r + 1.5;
+  const len = Math.hypot(60, SP2_DY) - r + 1.5;
   el('rect', { x: px1, y: y - 3.5, width: len, height: 7, rx: 3.5, fill: col, stroke: 'rgba(0,0,0,.35)', 'stroke-width': .6 }, v.blade);
   el('rect', { x: px1, y: y - 3.5, width: len, height: 7, rx: 3.5, fill: 'url(#gGloss)' }, v.blade);
-  v.rings = [[px1, y], [px2, y - 40], [px2, y + 40]].map(([cx, cy], i) => { const c = el('circle', { cx, cy, r, fill: '#1f1f1f', stroke: i ? GREY : col, 'stroke-width': 3.4 }, g); el('circle', { cx, cy, r, fill: 'none', stroke: 'url(#gGloss)', 'stroke-width': 3.4 }, g); return c; });
+  v.rings = [[px1, y], [px2, y - SP2_DY], [px2, y + SP2_DY]].map(([cx, cy], i) => { const c = el('circle', { cx, cy, r, fill: '#1f1f1f', stroke: i ? GREY : col, 'stroke-width': 3.4 }, g); el('circle', { cx, cy, r, fill: 'none', stroke: 'url(#gGloss)', 'stroke-width': 3.4 }, g); return c; });
   el('circle', { cx: px1, cy: y, r: 2.6, fill: col }, g); el('circle', { cx: px1, cy: y, r: 2.6, fill: 'url(#gDome)' }, g);
   const num = (t, yy) => { const e = el('text', { x: x + 12, y: yy, 'text-anchor': 'middle', 'font-size': 8, 'font-weight': 800, fill: '#6a6a6a', 'pointer-events': 'none' }, g); e.textContent = t; return e; };
-  v.n1 = num('1', y - 36); v.n2 = num('2', y + 44);
-  Object.assign(v, tglLever(p, g, x, y + 92, ['1', '2']));
+  v.n1 = num('1', y - SP2_DY + 4); v.n2 = num('2', y + SP2_DY + 4);
+  Object.assign(v, tglLever(p, g, x, y + SP2_DY + 52, ['1', '2']));
   el('rect', { x: x - hw + 7, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
   el('rect', { x: x + hw - 41, y: bot - 25, width: 34, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
   const tg = (t, tx, fs) => { const e = el('text', { x: tx, y: bot - 12.5, 'text-anchor': 'middle', 'font-size': fs, 'font-weight': 800, fill: '#fff', 'pointer-events': 'none' }, g); e.textContent = t; };
@@ -1131,7 +1131,7 @@ function drawSpdt(p, g, x, y, v, chan) {
 }
 function setSpdt(v, p, pos) {
   const k = pos.toFixed(3); if (v.k === k) return; v.k = k;
-  const a = Math.atan2(40, 60) * 180 / Math.PI, [hx, hy] = v.hinge, up = pos >= .5;
+  const a = Math.atan2(SP2_DY, 60) * 180 / Math.PI, [hx, hy] = v.hinge, up = pos >= .5;
   v.blade.setAttribute('transform', `rotate(${lerp(a, -a, pos).toFixed(2)} ${hx} ${hy})`);   // (down to throw 2 at rest; up to throw 1, worked)
   for (const [i, on] of [[1, up && pos > .98], [2, !up && pos < .02]]) { v.rings[i].setAttribute('stroke', on ? p.color : GREY); v.stub[i].setAttribute('fill', on ? p.color : GREY); }
   v.n1.setAttribute('fill', up ? p.color : '#6a6a6a'); v.n2.setAttribute('fill', up ? '#6a6a6a' : p.color);
