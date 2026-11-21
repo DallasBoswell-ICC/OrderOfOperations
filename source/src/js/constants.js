@@ -108,7 +108,7 @@ const FSW_COL = '#9B6BFF', FSW_UP = 96;   // (its colour, violet; how far its pi
    float, upright, rising to push the blade. Worked by hand as a limit switch is, or by a Level value (the water in the tank
    shows it). NO or NC; aqua. */
 const FLT_COL = '#16C1E8', FLT_UP = 113;
-const TGL_COL = '#FF5FA2', TGL_BOT = 130;   // (a toggle switch, SPST (Dallas, 21 Nov 2026): its colour, pink for now; how far its body reaches below the wire)   // (its colour, aqua; how far its tank reaches above the wire)
+const TGL_COL = '#99E600', TGL_BOT = 130;   // (a toggle switch, SPST (Dallas, 21 Nov 2026): its colour, lime green (Dallas, 21 Nov 2026); how far its body reaches below the wire)   // (its colour, aqua; how far its tank reaches above the wire)
 const isLim = p => p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw' || p.t === 'fsw' || p.t === 'flt' || p.t === 'tgl', opKey = p => p.t === 'tsw' ? 'T' + p.L : p.t === 'psw' ? 'P' + p.L : p.t === 'fsw' ? 'W' + p.L : p.t === 'flt' ? '#F' + p.L : p.t === 'tgl' ? '#G' + p.L : p.L;
 /* A limit switch (lsw): numbered (p.L '1', '2'... : LS1, LS2), worked like a momentary pushbutton (down[p.L]) and
    tinting the current with its colour as one does. Normally open or closed (p.nc); held (p.held): actuated by the

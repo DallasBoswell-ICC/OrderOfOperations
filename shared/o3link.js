@@ -288,7 +288,7 @@ function linkBuild(doc, back) {
       const names = (p.pos || 'OFF/ON').split(/[\/,]+/).map(s => s.trim().toUpperCase().slice(0, 5)).filter(Boolean).slice(0, 4), n = Math.max(2, names.length);
       two('sel', ['sel', x, y, opL.get(opKey(p)), 0, 1, '0070C0', n, (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, names.join('/'), 0]);
     } else if (/^prs_/.test(p.t)) standIn(it, p, pb, x, y, name);
-    else if (p.t === 'spst') two('tgl', ['tgl', x, y, linkDigits(p.tag, '1'), 0, 1, 'FF5FA2']);   // (a toggle switch: Circuit Builder's own, 21 Nov 2026)
+    else if (p.t === 'spst') two('tgl', ['tgl', x, y, linkDigits(p.tag, '1'), 0, 1, '99E600']);   // (a toggle switch: Circuit Builder's own, 21 Nov 2026)
     else if (/^fs_/.test(p.t)) two('flt', ['flt', x, y, linkDigits(p.tag, '1'), /_ncl?$/.test(p.t) ? 1 : 0, 1, '16C1E8', ...(/l$/.test(p.t) ? [1] : [])]);   // (a float switch: Circuit Builder's own, 20 Nov 2026)
     else if (/^ls_/.test(p.t)) {
       let n = linkDigits(p.tag, '1');
