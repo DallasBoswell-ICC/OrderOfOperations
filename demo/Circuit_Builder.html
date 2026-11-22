@@ -2313,6 +2313,10 @@ const SEL_BOX = 80;
 const WIDE = t => LOADT(t) || t === 'sel' || t === 'lsw' || t === 'psw' || t === 'fsw' || t === 'flt' || t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'tps' || t === 'dpd' || t === 'cbk';                // parts whose ends sit 60 either side of their centre
 const BODYH = t => t === 'lsw' || t === 'tsw' || t === 'psw' || t === 'fsw' || t === 'flt' || t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'tps' || t === 'dpd' || t === 'cbk' ? LSW_S : t === 'xfm' ? XFM_H : t === 'mtr' ? MTR_H : isPwrT(t) ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
 const TERM = p => p.t === 'stand' ? Math.max(40, ...(p.st || []).map(q => Math.abs(q[0]))) : p.t === 'mtr' ? MTR_W / 2 + 20 : p.t === 'tsw' ? TSW_T : WIDE(p.t) ? 60 : 40;
+// how far a part's short leads reach in from its ends: to its body's edge (a wide part's body, as limit and toggle switches
+// and the circuit breaker have, is 110 across, inside its ends 60 out; never past its ends, or the current would come
+// out late, painted out over the wire (Dallas, 22 Nov 2026))
+const LEADH = p => p.t === 'tsw' ? TSW_HALF : WIDE(p.t) ? Math.min(BODYH(p.t) / 2, TERM(p) - 5) : BODYH(p.t) / 2;
 const HILO = t => t === 'tsw' || t === 'psw' || t === 'fsw' || t === 'flt';   // (switches made in high and low kinds: temperature, pressure, flow, float; Dallas, 20 Nov 2026)
 const isOp = p => p.t === 'btn' || p.t === 'sel' || p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw' || p.t === 'fsw' || p.t === 'flt' || p.t === 'tgl' || isTglN(p) || (p.t === 'pp' && !!p.x && isTglN(p.x));   // (an SPDT's two ways through: each tints the current as the switch does)
 /* A temperature switch (tsw): numbered (TS1, TS2...), the limit switch's body without its head, the NEMA temperature
@@ -3476,7 +3480,7 @@ function send(d, r, t, atOnce) {
   if (d.e.kind !== 'seg') {
     // the part's leads: the current flows in from the end it enters at, and out along the far lead just in time to
     // reach the far end when it arrives there
-    const p = d.e.part, outS = d.from === p._a ? 'B' : 'A', Ls = TERM(p) - (p.t === 'tsw' ? TSW_HALF : BODYH(p.t) / 2);
+    const p = d.e.part, outS = d.from === p._a ? 'B' : 'A', Ls = TERM(p) - LEADH(p);
     const tOut = t + (atOnce ? 0 : d.delay);
     leadEvent(p, outS, tOut - Ls / V, out, 'body');
     schedule(tOut, () => { d.arrived = out; reeval(d.to, evT); });
@@ -4081,7 +4085,7 @@ function drawPart(p, g, x, y, chan, onStation) {
     if (!onStation && !v.sec) (v.cap = el('text', vert(p) ? { x: x + BOX / 2 + 12, y: y + 4.5, 'text-anchor': 'start', class: 'cap' } : { x, y: y - capTop(p), 'text-anchor': 'middle', class: 'cap' }, g)).textContent = captionOf(p);
     return v;
   }
-  const v = {}, T = TERM(p), half = p.t === 'tsw' ? TSW_HALF : BODYH(p.t) / 2;
+  const v = {}, T = TERM(p), half = LEADH(p);
   if (!isBox(p) && p.t !== 'xfm' && !isPwr3(p) && p.t !== 'mtr' && !isTglN(p)) el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
   // the short leads between the part's ends and its body: each drawn in two pieces, so the current can flow along
   // them (the new colour, and what was there before it)

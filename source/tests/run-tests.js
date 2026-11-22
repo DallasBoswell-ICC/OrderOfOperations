@@ -3792,6 +3792,10 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Wide parts\' leads stay inside their ends (Dallas, 22 Nov 2026): the current leaves a limit switch, toggle switch or circuit breaker the moment it gets across, with nothing painted out over the wire past it', async page => {
+    const bad = await page.evaluate(() => ['lsw', 'tgl', 'sp2', 'xov', 'dps', 'tps', 'dpd', 'cbk', 'psw', 'fsw', 'flt'].filter(t => { const p = { t }; return LEADH(p) > TERM(p); }));
+    if (bad.length) throw new Error('leads past their ends: ' + bad.join(', '));
+  });
   await check('Circuit breaker (Dallas, 22 Nov 2026): in the Protection menu; starts on; a short through it trips it (the arc lifted, TRIP showing) and the rest runs on; a click resets it; clicks turn it off and on; Starts; saved; crosses to Print Builder\'s Circuit Breaker and back', async page => {
     const out = [];
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60); await toolbarDrop(page, 'cbk', 300, 200);

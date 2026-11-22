@@ -178,7 +178,7 @@ function drawPart(p, g, x, y, chan, onStation) {
     if (!onStation && !v.sec) (v.cap = el('text', vert(p) ? { x: x + BOX / 2 + 12, y: y + 4.5, 'text-anchor': 'start', class: 'cap' } : { x, y: y - capTop(p), 'text-anchor': 'middle', class: 'cap' }, g)).textContent = captionOf(p);
     return v;
   }
-  const v = {}, T = TERM(p), half = p.t === 'tsw' ? TSW_HALF : BODYH(p.t) / 2;
+  const v = {}, T = TERM(p), half = LEADH(p);
   if (!isBox(p) && p.t !== 'xfm' && !isPwr3(p) && p.t !== 'mtr' && !isTglN(p)) el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
   // the short leads between the part's ends and its body: each drawn in two pieces, so the current can flow along
   // them (the new colour, and what was there before it)

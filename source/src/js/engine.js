@@ -323,7 +323,7 @@ function send(d, r, t, atOnce) {
   if (d.e.kind !== 'seg') {
     // the part's leads: the current flows in from the end it enters at, and out along the far lead just in time to
     // reach the far end when it arrives there
-    const p = d.e.part, outS = d.from === p._a ? 'B' : 'A', Ls = TERM(p) - (p.t === 'tsw' ? TSW_HALF : BODYH(p.t) / 2);
+    const p = d.e.part, outS = d.from === p._a ? 'B' : 'A', Ls = TERM(p) - LEADH(p);
     const tOut = t + (atOnce ? 0 : d.delay);
     leadEvent(p, outS, tOut - Ls / V, out, 'body');
     schedule(tOut, () => { d.arrived = out; reeval(d.to, evT); });
