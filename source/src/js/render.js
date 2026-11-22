@@ -368,7 +368,7 @@ function tsTerminals(V, B, net) {
       continue;
     }
     if (isJmp(p) || !p._t) continue;
-    const name = (i, side) => p.t === 'xfm' ? ['H1', 'H2', 'X1', 'X2'][i] : isPwr3(p) ? `${['L1', 'L2', 'L3'][i >> 1]} ${i & 1 ? 'load' : 'line'} side` : p.t === 'mtr' ? `T${i + 1}` : p.t === 'sp2' ? ['common', 'throw 1', 'throw 2'][i] : p.t === 'xov' ? ['top left', 'top right', 'bottom left', 'bottom right'][i] : side;
+    const name = (i, side) => p.t === 'xfm' ? ['H1', 'H2', 'X1', 'X2'][i] : isPwr3(p) ? `${['L1', 'L2', 'L3'][i >> 1]} ${i & 1 ? 'load' : 'line'} side` : p.t === 'mtr' ? `T${i + 1}` : p.t === 'sp2' ? ['common', 'throw 1', 'throw 2'][i] : p.t === 'xov' || p.t === 'dps' ? ['top left', 'top right', 'bottom left', 'bottom right'][i] : side;
     T.forEach(([tx, ty], i) => { const n = at.get(key(tx, ty)); if (n !== undefined) pts.push({ x: tx, y: ty, n, label: `${captionOf(p)}, ${name(i, ['left', 'right', 'bottom', 'top'][i] || '')}` }); });
   }
   const seen = new Set();

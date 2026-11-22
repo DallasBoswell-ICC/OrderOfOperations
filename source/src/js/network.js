@@ -91,10 +91,10 @@ function network() {
   }
   // a crossover (Dallas, 21 Nov 2026): its four ends (top left, top right, bottom left, bottom right) and four ways through it: straight
   // across (top to top, bottom to bottom) as it starts, lever up; crossed (top left to bottom right, bottom left to top right), lever down
-  for (const p of parts) if (p.t === 'xov') {
+  for (const p of parts) if (p.t === 'xov' || p.t === 'dps') {
     p._t = terms(p).map(([x, y]) => node(x, y, key(x, y)));
-    p._poles = p._poles || [0, 1, 2, 3].map(i => ({ t: 'pp', id: p.id + '.' + i, i }));
-    const ends = [[0, 1], [2, 3], [0, 3], [2, 1]];
+    p._poles = p._poles || (p.t === 'dps' ? [0, 1] : [0, 1, 2, 3]).map(i => ({ t: 'pp', id: p.id + '.' + i, i }));
+    const ends = [[0, 1], [2, 3], [0, 3], [2, 1]].slice(0, p.t === 'dps' ? 2 : 4);   // (a DPST: its two poles, top and bottom, across)
     p._poles.forEach((k, i) => { Object.assign(k, { x: p, _a: p._t[ends[i][0]], _b: p._t[ends[i][1]] }); const w = i < 2 ? 120 : 170; edges.push({ a: k._a, b: k._b, w, kind: 'part', part: k }); jedges.push({ kind: 'part', a: k._a, b: k._b, len: w, part: k }); });
   }
   for (const p of parts) if (p.t === 'mtr') p._t = terms(p).map(([x, y]) => node(x, y, key(x, y)));
@@ -155,7 +155,7 @@ function wiringIssues(net) {
   for (const p of parts) {
     if (p.t === 'stand') { out.set(p.id, { note: 'A stand-in: drawn, not run' }); continue; }
     if (isSrc(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); continue; }
-    if (p.t === 'xov') { if (p._t.some(i => net.adj[i].length < 2)) out.set(p.id, 'An end is not connected'); continue; }
+    if (p.t === 'xov' || p.t === 'dps') { if (p._t.some(i => net.adj[i].length < 2)) out.set(p.id, 'An end is not connected'); continue; }
     if (p.t === 'sp2') { if (net.adj[p._t[0]].length < 2 || !p._t.slice(1).some(i => net.adj[i].length > 1)) out.set(p.id, 'An end is not connected'); continue; }
     if (isPwr3(p)) {
       if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything');
