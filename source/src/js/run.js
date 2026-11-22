@@ -62,6 +62,8 @@ function paintView(V) {
     if (p.t === 'xfm') { paintXfm(p, v); continue; }
     if (isPwr3(p)) { paintPwr(p, v); continue; }
     if (p.t === 'mtr') { paintMtr(p, v); continue; }
+    if (p.t === 'cbd') { for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
+      setBreaker(v, p, lswPos(p), !!BLOWN[p.id], (p._poles || []).map(cbkPole), lswClosed(p)); continue; }   // (a DPST circuit breaker: each pole as a single one's, below)
     if (isTglN(p)) { for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } if (p.t === 'xov') setXover(v, p, lswPos(p)); else if (p.t === 'dps' || p.t === 'tps') setDpst(v, p, lswPos(p)); else if (p.t === 'dpd') setDpdt(v, p, lswPos(p)); else setSpdt(v, p, lswPos(p)); continue; }
     if (isJmp(p)) {
       for (const q of v.src || []) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
@@ -81,8 +83,7 @@ function paintView(V) {
     else if (p.t === 'cbk') {
       // (the end current comes in at (its line side): open, or moving, the colour waiting there lights it up to its contact; even
       // while what is past it drains away, so it never flickers grey as it is switched (Dallas, 22 Nov 2026))
-      const a = showCol(p._a, simT), b = showCol(p._b, simT), d = DIRS.find(x => x.e.part === p), side = d ? (d.from === p._b ? 1 : 0) : a ? 0 : b ? 1 : 0, w = side ? b : a;
-      setBreaker(v, p, lswPos(p), !!BLOWN[p.id], a || b, w ? { side, col: w } : null, lswClosed(p)); }   // (the colour through it: shown only while its arc is down)
+      setBreaker(v, p, lswPos(p), !!BLOWN[p.id], [cbkPole(p)], lswClosed(p)); }   // (the colour through it: shown only while its arc is down)
     else if (p.t === 'con' || p.t === 'olc') {
       const s = p.t === 'olc' ? olState(p.L) : CON[p.id]; if (!s) continue;
       const f = clamp01((simT - s.t0) / SWING), e = f * f * (3 - 2 * f);   // ease in and out
@@ -247,6 +248,9 @@ function paintXfm(p, v) {
   } else fillW(v.pri, ...pri);
   fillW(v.sec, ...sec);
 }
+// a circuit breaker's pole (a single breaker, or one of a DPST's two): the colour through it, and, open, the colour waiting at the end
+// current comes in at (0 its left, 1 its right)
+function cbkPole(k) { const a = showCol(k._a, simT), b = showCol(k._b, simT), d = DIRS.find(x => x.e.part === k), side = d ? (d.from === k._b ? 1 : 0) : a ? 0 : b ? 1 : 0, w = side ? b : a; return { flow: a || b, wait: w ? { side, col: w } : null }; }
 function paintLead(L, evs) {
   if (TS_MODE) return;
   let i = -1; if (evs) for (let k = 0; k < evs.length; k++) if (evs[k].t0 <= simT + 1e-9) i = k;
@@ -264,7 +268,7 @@ function bindButton(g, p) {
   const linkedSay = () => { const v = pvOf(p); say(`${captionOf(p)} is worked by ${v.name}: set it in the Process window.`); };
   const dn = () => {
     if (pvLinked(p)) return linkedSay();   // (worked by its process value, not by hand)
-    if (p.t === 'cbk' && BLOWN[p.id]) { delete BLOWN[p.id]; FU1T[p.id] = simT; if (!lswAct(p)) press(K, !down[K]); else switched([p], simT); needPaint = true; return; }   // (a tripped circuit breaker: a click resets it, on)
+    if ((p.t === 'cbk' || p.t === 'cbd') && BLOWN[p.id]) { delete BLOWN[p.id]; FU1T[p.id] = simT; if (!lswAct(p)) press(K, !down[K]); else switched(p.t === 'cbd' ? p._poles || [] : [p], simT); needPaint = true; return; }   // (a tripped circuit breaker: a click resets it, on)
     if (p.maint) return press(K, !down[K]);
     if (mode === 'latch') return press(K, !down[K]);   // (the Troubleshooter's Click to Hold: a click holds it down, another lets it go)
     if (mode === 'click') { if (down[K]) return; press(K, true); autoRel[K] = true; } else press(K, true);

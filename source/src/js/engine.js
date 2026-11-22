@@ -473,7 +473,7 @@ function press(L, v) {
   if (!!down[L] === v) return;
   down[L] = v; needPaint = true;
   if (parts.some(p => isLim(p) && opKey(p) === L)) { LSW_T[L] = simT; if (simT + LSW_MOVE > busyUntil) busyUntil = simT + LSW_MOVE; }   // (a limit switch: it moves over a moment)
-  switched(parts.filter(p => (p.t === 'btn' && p.L === L) || (isLim(p) && opKey(p) === L)).flatMap(p => isTglN(p) ? p._poles || [] : [p]), simT);   // (a pushbutton's letter, or a limit or temperature switch's key)
+  switched(parts.filter(p => (p.t === 'btn' && p.L === L) || (isLim(p) && opKey(p) === L)).flatMap(p => isMulti(p) ? p._poles || [] : [p]), simT);   // (a pushbutton's letter, or a limit or temperature switch's key)
 }
 // a relay contact's bar starts to move: it stops passing current as soon as it lifts, and passes current again
 // only once it has landed
@@ -651,12 +651,12 @@ function faultFuses() {
   return out;
 }
 // fuses blow (just after, so they are seen to)
-function blowSoon(fs, t) { if (fs.length) schedule(t + .05, () => { const now = fs.filter(k => !BLOWN[k.id]); if (!now.length) return; for (const k of now) { BLOWN[k.id] = { t: evT }; FU1T[k.id] = evT; } switched(now, evT); }); }
+function blowSoon(fs, t) { if (fs.length) schedule(t + .05, () => { const now = fs.filter(k => !BLOWN[k.id]); if (!now.length) return; for (const k of now) { BLOWN[k.id] = { t: evT }; FU1T[k.id] = evT; } switched(now.flatMap(k => k.t === 'cbd' ? k._poles || [] : [k]), evT); }); }   // (a DPST circuit breaker: both its poles open)
 // L1 joined straight to L2: the single fuse (or circuit breaker: it trips) on the way blows (the first, nearest L1, where there are several in a row)
 function shortFuses() {
   const out = [];
-  for (const p of [...parts].sort((a, b) => a.x - b.x || a.y - b.y)) if ((p.t === 'fu1' || (p.t === 'cbk' && lswClosed(p))) && !BLOWN[p.id]) {   // (or a circuit breaker, which trips)
-    const f = components(NET, e => conducts(e) && e.part !== p);
+  for (const p of [...parts].sort((a, b) => a.x - b.x || a.y - b.y)) if ((p.t === 'fu1' || ((p.t === 'cbk' || p.t === 'cbd') && lswClosed(p))) && !BLOWN[p.id]) {   // (or a circuit breaker, which trips)
+    const f = components(NET, e => conducts(e) && e.part !== p && !(e.part && e.part.x === p));   // (a DPST circuit breaker: both its poles; a short through either trips it)
     if (f(NET.L1) !== f(NET.L2)) { out.push(p); break; }
   }
   return out;

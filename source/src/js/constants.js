@@ -56,7 +56,7 @@ const XFM_W = 210, XFM_H = 148, XFM_TX = 60, XFM_TY = 80, XFM_EDGE = '#9aa7b5';
 const isPwr3 = p => p.t === 'dsc' || p.t === 'fus' || p.t === 'mst' || p.t === 'olh', isPwrT = t => t === 'dsc' || t === 'fus' || t === 'mst' || t === 'olh';
 const DSC_HEAD = 50, DSC_HANDLE = '#E8413C';   // (a disconnect's head on top, with its handle)
 const PWR_DY = 120, PWR_H = 2 * PWR_DY + 66, MTR_W = 280, MTR_H = 280, MTR_COL = '#9aa7b5', OL_COL = '#FF6F59', DSC_COL = '#c9d2dd', FUS_COL = '#c8c8c8';
-const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : t === 'tsw' ? TSW_T : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : t === 'psw' ? PSW_UP : t === 'fsw' ? FSW_UP : t === 'lsw' || t === 'tsw' ? LSW_S / 2 : t === 'tgl' ? TGL_BOT : t === 'dpd' ? DPD_BOT : t === 'tps' ? TPS_BOT : t === 'sp2' || t === 'xov' || t === 'dps' ? SP2_BOT : t === 'mtr' ? MTR_H / 2 : t === 'dsc' ? PWR_H / 2 + DSC_HEAD : isPwrT(t) ? PWR_H / 2 : 40;   // (the room a part takes)
+const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : t === 'tsw' ? TSW_T : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : t === 'psw' ? PSW_UP : t === 'fsw' ? FSW_UP : t === 'lsw' || t === 'tsw' ? LSW_S / 2 : t === 'tgl' ? TGL_BOT : t === 'dpd' ? DPD_BOT : t === 'tps' ? TPS_BOT : t === 'cbd' ? CBD_BOT : t === 'sp2' || t === 'xov' || t === 'dps' ? SP2_BOT : t === 'mtr' ? MTR_H / 2 : t === 'dsc' ? PWR_H / 2 + DSC_HEAD : isPwrT(t) ? PWR_H / 2 : 40;   // (the room a part takes)
 const SOL_COL = '#00D2BE';
 /* a solenoid (as on Dallas's drawing): a diamond (a rounded square on its corner) as tall and wide as a coil, with a
    dot at each end where the rung comes in, joined by the lightning bolt: along the rung, up to a peak, straight down and
@@ -81,8 +81,8 @@ const isSolT = t => t === 'sol' || t === 'htr';   // (drawn as a solenoid is)
 const SOL_LEN = 2 * (SOL_DOT + SOL_DR - SOL_X) + 2 * Math.hypot(SOL_X, SOL_P) + 2 * SOL_P;
 // a selector switch: a square body a little larger than a pushbutton's (room for its position numbers round the top)
 const SEL_BOX = 80;
-const WIDE = t => LOADT(t) || t === 'sel' || t === 'lsw' || t === 'psw' || t === 'fsw' || t === 'flt' || t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'tps' || t === 'dpd' || t === 'cbk';                // parts whose ends sit 60 either side of their centre
-const BODYH = t => t === 'lsw' || t === 'tsw' || t === 'psw' || t === 'fsw' || t === 'flt' || t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'tps' || t === 'dpd' || t === 'cbk' ? LSW_S : t === 'xfm' ? XFM_H : t === 'mtr' ? MTR_H : isPwrT(t) ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
+const WIDE = t => LOADT(t) || t === 'sel' || t === 'lsw' || t === 'psw' || t === 'fsw' || t === 'flt' || t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'tps' || t === 'dpd' || t === 'cbk' || t === 'cbd';                // parts whose ends sit 60 either side of their centre
+const BODYH = t => t === 'lsw' || t === 'tsw' || t === 'psw' || t === 'fsw' || t === 'flt' || t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'tps' || t === 'dpd' || t === 'cbk' || t === 'cbd' ? LSW_S : t === 'xfm' ? XFM_H : t === 'mtr' ? MTR_H : isPwrT(t) ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
 const TERM = p => p.t === 'stand' ? Math.max(40, ...(p.st || []).map(q => Math.abs(q[0]))) : p.t === 'mtr' ? MTR_W / 2 + 20 : p.t === 'tsw' ? TSW_T : WIDE(p.t) ? 60 : 40;
 // how far a part's short leads reach in from its ends: to its body's edge (a wide part's body, as limit and toggle switches
 // and the circuit breaker have, is 110 across, inside its ends 60 out; never past its ends, or the current would come
@@ -112,8 +112,8 @@ const FSW_COL = '#9B6BFF', FSW_UP = 96;   // (its colour, violet; how far its pi
    float, upright, rising to push the blade. Worked by hand as a limit switch is, or by a Level value (the water in the tank
    shows it). NO or NC; aqua. */
 const FLT_COL = '#16C1E8', FLT_UP = 113;
-const TGL_COL = '#99E600', TGL_BOT = 130, SP2_TOP = 108, SP2_BOT = 180, SP2_DY = 60, DPD_DY = 180, DPD_BOT = 360, TPS_TOP = 168, TPS_BOT = 240, CBK_TOP = 60, CBK_BOT = 150, CBK_COL = '#c8c8c8', XOV_C = 30;   // (a crossover's contacts: 30 either side of its middle, 60 apart across, 120 up and down)   // (an SPDT: its throws 60 above and below its common (Dallas, 21 Nov 2026: 6 squares apart))   // (a toggle switch, SPST (Dallas, 21 Nov 2026): its colour, lime green (Dallas, 21 Nov 2026); how far its body reaches below the wire)   // (its colour, aqua; how far its tank reaches above the wire)
-const isLim = p => p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw' || p.t === 'fsw' || p.t === 'flt' || p.t === 'tgl' || p.t === 'cbk' || isTglN(p), opKey = p => p.t === 'pp' && p.x ? opKey(p.x) : p.t === 'sp2' ? '#H' + p.L : p.t === 'xov' ? '#X' + p.L : p.t === 'dps' ? '#D' + p.L : p.t === 'dpd' ? '#E' + p.L : p.t === 'tps' ? '#T' + p.L : p.t === 'cbk' ? '#B' + p.L : p.t === 'tsw' ? 'T' + p.L : p.t === 'psw' ? 'P' + p.L : p.t === 'fsw' ? 'W' + p.L : p.t === 'flt' ? '#F' + p.L : p.t === 'tgl' ? '#G' + p.L : p.L;
+const TGL_COL = '#99E600', TGL_BOT = 130, SP2_TOP = 108, SP2_BOT = 180, SP2_DY = 60, DPD_DY = 180, DPD_BOT = 360, TPS_TOP = 168, TPS_BOT = 240, CBK_TOP = 60, CBK_BOT = 150, CBK_COL = '#c8c8c8', CBD_TOP = 120, CBD_BOT = 210, XOV_C = 30;   // (a crossover's contacts: 30 either side of its middle, 60 apart across, 120 up and down)   // (an SPDT: its throws 60 above and below its common (Dallas, 21 Nov 2026: 6 squares apart))   // (a toggle switch, SPST (Dallas, 21 Nov 2026): its colour, lime green (Dallas, 21 Nov 2026); how far its body reaches below the wire)   // (its colour, aqua; how far its tank reaches above the wire)
+const isLim = p => p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw' || p.t === 'fsw' || p.t === 'flt' || p.t === 'tgl' || p.t === 'cbk' || p.t === 'cbd' || isTglN(p), opKey = p => p.t === 'pp' && p.x ? opKey(p.x) : p.t === 'sp2' ? '#H' + p.L : p.t === 'xov' ? '#X' + p.L : p.t === 'dps' ? '#D' + p.L : p.t === 'dpd' ? '#E' + p.L : p.t === 'tps' ? '#T' + p.L : p.t === 'cbk' || p.t === 'cbd' ? '#B' + p.L : p.t === 'tsw' ? 'T' + p.L : p.t === 'psw' ? 'P' + p.L : p.t === 'fsw' ? 'W' + p.L : p.t === 'flt' ? '#F' + p.L : p.t === 'tgl' ? '#G' + p.L : p.L;
 /* A limit switch (lsw): numbered (p.L '1', '2'... : LS1, LS2), worked like a momentary pushbutton (down[p.L]) and
    tinting the current with its colour as one does. Normally open or closed (p.nc); held (p.held): actuated by the
    machine at rest, so working it lets it go. A square body, roomier than a contact's, its ends 60 either side. */
@@ -139,15 +139,17 @@ const FU1_COL = '#c8c8c8';   // (its silver edge)
 // (Dallas, 19 Nov 2026: every two-ended part turns too, a quarter turn at a time, as in Print Builder: drawn turned about its middle,
 // its name upright. Boxes and a single fuse keep their turn where they always have (a[7]); the others at a[15], { r })
 const turns7 = p => isBox(p) || p.t === 'fu1';
-const twoEnded = p => !isBox(p) && !isPwr3(p) && p.t !== 'xfm' && p.t !== 'mtr' && p.t !== 'stand' && !isTglN(p);
+const twoEnded = p => !isBox(p) && !isPwr3(p) && p.t !== 'xfm' && p.t !== 'mtr' && p.t !== 'stand' && !isMulti(p);
 const flips = p => p.t === 'tgl' || isTglN(p);
+const isBrk = p => p.t === 'cbk' || p.t === 'cbd';   // (a circuit breaker, single or DPST)
+const isMulti = p => isTglN(p) || p.t === 'cbd';   // (the parts with more than two ends that switch: the toggle switches below, and a DPST circuit breaker; each run as its poles)
 const isTglN = p => p.t === 'sp2' || p.t === 'xov' || p.t === 'dps' || p.t === 'dpd' || p.t === 'tps';   // (the toggle switches with more than two ends: an SPDT, a crossover, a DPST, a DPDT)
 // (how far a part's body reaches above and below its wire: the toggle switches reach further down than up)
-const bodyUp = p => p.t === 'cbk' ? CBK_TOP : p.t === 'tps' ? TPS_TOP : isTglN(p) ? SP2_TOP : p.t === 'tgl' ? LSW_TOP : BODYH(p.t) / 2, bodyDown = p => p.t === 'cbk' ? CBK_BOT : p.t === 'tps' ? TPS_BOT : p.t === 'dpd' ? DPD_BOT : isTglN(p) ? SP2_BOT : p.t === 'tgl' ? TGL_BOT : BODYH(p.t) / 2;   // (toggle switches mirror left to right: Dallas, 21 Nov 2026)
+const bodyUp = p => p.t === 'cbk' ? CBK_TOP : p.t === 'cbd' ? CBD_TOP : p.t === 'tps' ? TPS_TOP : isTglN(p) ? SP2_TOP : p.t === 'tgl' ? LSW_TOP : BODYH(p.t) / 2, bodyDown = p => p.t === 'cbk' ? CBK_BOT : p.t === 'cbd' ? CBD_BOT : p.t === 'tps' ? TPS_BOT : p.t === 'dpd' ? DPD_BOT : isTglN(p) ? SP2_BOT : p.t === 'tgl' ? TGL_BOT : BODYH(p.t) / 2;   // (toggle switches mirror left to right: Dallas, 21 Nov 2026)
 // the room a part takes above and below its middle, and whether two parts' rooms meet (Dallas, 22 Nov 2026: a toggle switch's
 // body reaches far further below its wire than above it, a DPDT's 360 below to 108 above, so its room is counted as it is, not
 // as the most of the two either way, which kept it 360 off parts above it as well)
-const isTglT = t => t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'tps' || t === 'dpd' || t === 'cbk';
+const isTglT = t => t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'tps' || t === 'dpd' || t === 'cbk' || t === 'cbd';
 const roomUp = t => isTglT(t) ? bodyUp({ t }) + 20 : halfH(t),   // (and room for its name over it)
       roomDown = t => isTglT(t) ? bodyDown({ t }) : halfH(t);
 const vClash = (ta, ya, tb, yb) => ya - roomUp(ta) < yb + roomDown(tb) && yb - roomUp(tb) < ya + roomDown(ta);
