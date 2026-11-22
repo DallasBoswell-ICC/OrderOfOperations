@@ -3792,6 +3792,45 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Circuit breaker (Dallas, 22 Nov 2026): in the Protection menu; starts on; a short through it trips it (the arc lifted, TRIP showing) and the rest runs on; a click resets it; clicks turn it off and on; Starts; saved; crosses to Print Builder\'s Circuit Breaker and back', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60); await toolbarDrop(page, 'cbk', 300, 200);
+    const placed = await page.evaluate(() => { const t = parts.find(p => p.t === 'cbk'); return t ? captionOf(t) + (t.maint ? ' m' : '') + (t.held ? ' h' : '') : 'none'; });
+    if (placed !== 'CB1 Circuit Breaker m h') out.push('placed from the menu: ' + placed);
+    // L1 - CB1 - lamp - L2; a button that shorts the lamp
+    await page.evaluate(() => { sel = null; loadPreset('blank'); W = Math.max(W_MIN, 1100); const c = newPart('cbk', 300, 240); parts.push(c);
+      parts.push(P('lamp', 700, 240, { L: '', color: '#00B050' }), P('btn', 700, 400, { L: 'A', color: '#00B050' }));
+      wires.push(Wr(0, 240, 240, 240), Wr(360, 240, 640, 240), Wr(760, 240, W, 240), Wr(500, 240, 500, 400), Wr(500, 400, 660, 400), Wr(740, 400, 900, 400), Wr(900, 400, 900, 240)); normalize(); draw(); });
+    const st = () => page.evaluate(() => { const p = parts.find(q => q.t === 'cbk'), v = view.parts.get(p.id); return (coilOn[parts.find(q => q.t === 'lamp').id] ? 'lit' : 'dark') + ' ' + v.flagT.textContent; });
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    let s = await st(); if (s !== 'lit ON') out.push('at rest: ' + s);
+    await page.evaluate(() => press('A', true)); await page.waitForTimeout(500);
+    s = await st(); if (s !== 'dark TRIP') out.push('shorted: ' + s);
+    await page.evaluate(() => press('A', false)); await page.waitForTimeout(300);
+    s = await st(); if (s !== 'dark TRIP') out.push('short gone, still tripped: ' + s);
+    const click = () => page.evaluate(() => { const g = view.parts.get(parts.find(q => q.t === 'cbk').id).g || document.querySelector(`[data-id="${parts.find(q => q.t === 'cbk').id}"]`); return !!g; });
+    const hit = async () => { const b = await page.evaluate(() => { const p = parts.find(q => q.t === 'cbk'); const m = WORLD.getScreenCTM(); return [m.a * (p.x + 10) + m.e, m.d * (p.y + 70) + m.f]; }); await page.mouse.click(b[0], b[1]); await page.waitForTimeout(500); };
+    await hit(); s = await st(); if (s !== 'lit ON') out.push('reset by a click: ' + s);
+    await hit(); s = await st(); if (s !== 'dark OFF') out.push('clicked off: ' + s);
+    await hit(); s = await st(); if (s !== 'lit ON') out.push('clicked on: ' + s);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    await page.evaluate(() => { delete parts.find(q => q.t === 'cbk').held; normalize(); draw(); });
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    s = await st(); if (s !== 'dark OFF') out.push('set to start off: ' + s);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    const back = await page.evaluate(() => readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.filter(p => p.t === 'cbk').map(p => p.t + p.L + (p.maint ? 'm' : '') + (p.held ? 'h' : '')).join());
+    if (back !== 'cbk1m') out.push('read back: ' + back);
+    await page.evaluate(() => { parts.find(q => q.t === 'cbk').held = true; wires = wires.filter(w => !(w.x1 === 500 || w.x2 === 500 || w.y1 === 400)); parts = parts.filter(q => q.t !== 'btn'); normalize(); draw(); });
+    const d = await page.evaluate(() => circuitData());
+    const pb = await withPB(page, pb => pb.evaluate(d => { const r = circuitToPrint(d, { uid, defaultTB, long: 'tight' }); loadDoc(JSON.parse(JSON.stringify(r.doc))); refresh(true);
+      return [r.doc.sheets.flatMap(s => s.parts).filter(p => p.t === 'cb').map(p => p.t + ' ' + p.tag).join(), checkPrint().filter(i => i.sev === 'e').map(i => i.title).join(), JSON.parse(JSON.stringify(r.doc))]; }, d));
+    if (pb[0] !== 'cb CB1') out.push('in Print Builder: ' + pb[0]);
+    if (pb[1]) out.push('Check Print: ' + pb[1]);
+    pb[2].link.fp = 'changed'; const again = await page.evaluate(doc => { openFromPrint(doc, 'x'); document.getElementById('link-dlg').close(); return parts.filter(p => p.t === 'cbk' || p.t === 'stand').map(p => p.t + (p.held ? 'h' : '')).join() + ' ' + wires.filter(w => w.x1 !== w.x2 && w.y1 !== w.y2).length + ' ' + [...wiringIssues(NET).values()].filter(v => typeof v === 'string').join(); }, pb[2]);
+    if (again !== 'cbkh 0 ') out.push('drawn again in Circuit Builder from the print: ' + again);
+    return out;
+  });
+
   await check('Toggle switches start as set (Dallas, 21 Nov 2026): Starts (Off / On for an SPST; At 2 / At 1 for an SPDT) on the Part tab; drawn so in Build; in Run it starts that way, a click flips it from there, Reset puts it back; saved', async page => {
     const out = [];
     await page.evaluate(() => { loadPreset('blank'); W = Math.max(W_MIN, 1100); const a = newPart('tgl', 400, 200), b = newPart('sp2', 400, 560); parts.push(a, b); normalize(); draw(); });
@@ -3894,7 +3933,7 @@ const DEF_CIRCUIT = `
     return out;
   });
   await check('Stand-ins (Dallas, 19 Nov 2026): every Print Builder part Circuit Builder has none of comes in as a stand-in (its symbol in a box, terminals as the print joins them), draws, runs (passing nothing) and prints, and goes back to the print as the same part, tag and name', async page => {
-    const TYPES = ['prs_no', 'cb', 'cb2', 'cb3', 'fdsc3', 'ol', 'gnd'];
+    const TYPES = ['prs_no', 'cb2', 'cb3', 'fdsc3', 'ol', 'gnd'];
     const pr = await withPB(page, pb => pb.evaluate(TYPES => { loadDoc(withDrawnBy(template('blank'))); const L1 = S.parts.find(q => q.label === 'L1'); let y = 260;
       for (const t of TYPES) { const p = addPart(S, t, 900, y); p.tag = t.toUpperCase().replace(/_/g, '') + '1'; p.desc = 'D' + t; const tm = linkPbTerms(p)[0]; addWire(S, [[L1.x, tm[1]], tm]); y += 340; }
       refresh(true); return JSON.parse(JSON.stringify(doc)); }, TYPES));

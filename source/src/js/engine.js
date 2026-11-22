@@ -652,10 +652,10 @@ function faultFuses() {
 }
 // fuses blow (just after, so they are seen to)
 function blowSoon(fs, t) { if (fs.length) schedule(t + .05, () => { const now = fs.filter(k => !BLOWN[k.id]); if (!now.length) return; for (const k of now) { BLOWN[k.id] = { t: evT }; FU1T[k.id] = evT; } switched(now, evT); }); }
-// L1 joined straight to L2: the single fuse on the way blows (the first, nearest L1, where there are several in a row)
+// L1 joined straight to L2: the single fuse (or circuit breaker: it trips) on the way blows (the first, nearest L1, where there are several in a row)
 function shortFuses() {
   const out = [];
-  for (const p of [...parts].sort((a, b) => a.x - b.x || a.y - b.y)) if (p.t === 'fu1' && !BLOWN[p.id]) {
+  for (const p of [...parts].sort((a, b) => a.x - b.x || a.y - b.y)) if ((p.t === 'fu1' || (p.t === 'cbk' && lswClosed(p))) && !BLOWN[p.id]) {   // (or a circuit breaker, which trips)
     const f = components(NET, e => conducts(e) && e.part !== p);
     if (f(NET.L1) !== f(NET.L2)) { out.push(p); break; }
   }

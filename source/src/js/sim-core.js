@@ -131,7 +131,7 @@ let DSC = {}, BLOWN = {}, OLTRIP = {}, MOT = {};
 const poleClosed = k => { const p = k.x; return p.t === 'dpd' ? (k.i % 2 === 0) === lswAct(p) : p.t === 'dps' || p.t === 'tps' ? lswAct(p) : p.t === 'xov' ? (k.i < 2) !== lswAct(p) : p.t === 'sp2' ? (k.i === 0) === lswAct(p) : p.t === 'dsc' ? !DSC[p.id] : p.t === 'fus' ? !BLOWN[k.id] : p.t === 'mst' ? !!(CON[p.id] && CON[p.id].shut) : true; };
 // a limit switch: actuated while worked (a held one: while not), and closed accordingly
 const lswAct = p => TS_PUSHED['s:' + opKey(p)] ? true : (pvLinked(p) ? !!PVACT[opKey(p)] : !!down[opKey(p)]) !== !!p.held,   // (worked by hand, or by its process value; or forced on in the Fault Finder)
-      lswClosed = p => p.nc ? !lswAct(p) : lswAct(p);
+      lswClosed = p => p.t === 'cbk' && BLOWN[p.id] ? false : p.nc ? !lswAct(p) : lswAct(p);   // (a circuit breaker: open once tripped, whatever its handle)
 // how far a limit switch has moved from at rest (0) to worked (1): easing in and out over LSW_MOVE after it was last
 // worked or let go
 const LSW_MOVE = .3;

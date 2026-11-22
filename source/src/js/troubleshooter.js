@@ -275,7 +275,7 @@ function tsRead() {
 }
 // every frame: the leads follow the view; a few times a second, the reading (and the test log)
 function tsTick(now) {
-  for (const id in BLOWN) if (!TS_BLOWN[id]) { TS_BLOWN[id] = 1; tsSave(); }   // (a blown fuse stays blown)
+  for (const id in BLOWN) if (!TS_BLOWN[id] && !parts.some(q => q.t === 'cbk' && String(q.id) === id)) { TS_BLOWN[id] = 1; tsSave(); }   // (a blown fuse stays blown; a tripped circuit breaker is reset with a click)
   tsLeads();
   if (now < TSM.due) return; TSM.due = now + 200;
   const sig = TSM.mode + ':' + (TSM.red && TSM.red.n) + ':' + (TSM.black && TSM.black.n) + ':' + tsState();

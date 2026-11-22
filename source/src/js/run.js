@@ -78,6 +78,7 @@ function paintView(V) {
     else if (p.t === 'fsw') setFlow(v, p, lswPos(p), lswClosed(p));
     else if (p.t === 'flt') setFloat(v, p, lswPos(p), lswClosed(p));
     else if (p.t === 'tgl') setToggle(v, p, lswPos(p), lswClosed(p));
+    else if (p.t === 'cbk') setBreaker(v, p, lswPos(p), !!BLOWN[p.id], lswClosed(p) ? showCol(p._a, simT) || showCol(p._b, simT) : null);
     else if (p.t === 'con' || p.t === 'olc') {
       const s = p.t === 'olc' ? olState(p.L) : CON[p.id]; if (!s) continue;
       const f = clamp01((simT - s.t0) / SWING), e = f * f * (3 - 2 * f);   // ease in and out
@@ -259,6 +260,7 @@ function bindButton(g, p) {
   const linkedSay = () => { const v = pvOf(p); say(`${captionOf(p)} is worked by ${v.name}: set it in the Process window.`); };
   const dn = () => {
     if (pvLinked(p)) return linkedSay();   // (worked by its process value, not by hand)
+    if (p.t === 'cbk' && BLOWN[p.id]) { delete BLOWN[p.id]; FU1T[p.id] = simT; if (!lswAct(p)) press(K, !down[K]); else switched([p], simT); needPaint = true; return; }   // (a tripped circuit breaker: a click resets it, on)
     if (p.maint) return press(K, !down[K]);
     if (mode === 'latch') return press(K, !down[K]);   // (the Troubleshooter's Click to Hold: a click holds it down, another lets it go)
     if (mode === 'click') { if (down[K]) return; press(K, true); autoRel[K] = true; } else press(K, true);
