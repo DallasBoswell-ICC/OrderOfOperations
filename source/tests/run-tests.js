@@ -3705,6 +3705,44 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('DPDT toggle switch (Dallas, 21 Nov 2026, option A): in the Toggle Switches menu; two SPDTs 180 apart, rows 60 apart; each common at its throw 2 with the lever down as it starts, at throw 1 with it up; Starts and Flip; saved; crosses to Print Builder\'s DPDT Switch and back, its wires straight', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60); await toolbarDrop(page, 'dpd', 300, 200);
+    const placed = await page.evaluate(() => { const t = parts.find(p => p.t === 'dpd'); return t ? captionOf(t) + (t.maint ? ' m' : '') : 'none'; });
+    if (placed !== 'SW1 Toggle Switch (DPDT) m') out.push('placed from the menu: ' + placed);
+    await page.evaluate(() => { sel = null; loadPreset('blank'); W = Math.max(W_MIN, 1300); const t = newPart('dpd', 700, 300); parts.push(t); const lx = W - 180;
+      parts.push(...[[lx, 240], [lx - 200, 360], [lx, 420], [lx - 200, 540]].map(([x, y]) => P('lamp', x, y, { L: '', color: '#00B050' })));
+      wires.push(Wr(0, 300, 640, 300), Wr(0, 480, 640, 480), ...[[lx, 240], [lx - 200, 360], [lx, 420], [lx - 200, 540]].flatMap(([x, y]) => [Wr(760, y, x - 60, y), Wr(x + 60, y, W, y)])); normalize(); draw(); });
+    const ts = await page.evaluate(() => JSON.stringify(terms(parts.find(p => p.t === 'dpd'))) + ' ' + [...wiringIssues(NET).values()].filter(v => typeof v === 'string').join());
+    if (ts !== '[[640,300],[760,240],[760,360],[640,480],[760,420],[760,540]] ') out.push('ends: ' + ts);
+    const L = () => page.evaluate(() => parts.filter(p => p.t === 'lamp').sort((a, b) => a.y - b.y).map(l => coilOn[l.id] ? 'lit' : 'dark').join('/'));
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    let s = await L(); if (s !== 'dark/lit/dark/lit') out.push('at rest (at 2): ' + s);
+    await page.evaluate(() => press(opKey(parts.find(p => p.t === 'dpd')), true)); await page.waitForTimeout(500);
+    s = await L(); if (s !== 'lit/dark/lit/dark') out.push('at 1: ' + s);
+    await page.evaluate(() => press(opKey(parts.find(p => p.t === 'dpd')), false)); await page.waitForTimeout(500);
+    s = await L(); if (s !== 'dark/lit/dark/lit') out.push('back at 2: ' + s);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    await page.evaluate(() => { const t = parts.find(p => p.t === 'dpd'); t.held = true; t.fx = true; normalize(); draw(); });
+    const fl = await page.evaluate(() => JSON.stringify(terms(parts.find(p => p.t === 'dpd'))));
+    if (fl !== '[[760,300],[640,240],[640,360],[760,480],[640,420],[640,540]]') out.push('flipped ends: ' + fl);
+    await page.evaluate(() => { const t = parts.find(p => p.t === 'dpd'); t.fx = false; normalize(); draw(); });
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    s = await L(); if (s !== 'lit/dark/lit/dark') out.push('starts at 1: ' + s);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    const back = await page.evaluate(() => readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.filter(p => p.t === 'dpd').map(p => p.t + p.L + (p.maint ? 'm' : '') + (p.held ? 'h' : '')).join());
+    if (back !== 'dpd1mh') out.push('read back: ' + back);
+    await page.evaluate(() => { const t = parts.find(p => p.t === 'dpd'); t.held = false; normalize(); draw(); });   // (unflipped: flipping alone leaves this circuit's wires off its ends)
+    const d = await page.evaluate(() => circuitData());
+    const pb = await withPB(page, pb => pb.evaluate(d => { const r = circuitToPrint(d, { uid, defaultTB, long: 'tight' }); loadDoc(JSON.parse(JSON.stringify(r.doc))); refresh(true);
+      return [r.doc.sheets.flatMap(s => s.parts).filter(p => p.t === 'dpdt').map(p => p.t + (p.fx ? '/fx' : '') + ' ' + p.tag).join(), checkPrint().filter(i => i.sev === 'e').map(i => i.title).join(), JSON.parse(JSON.stringify(r.doc))]; }, d));
+    if (pb[0] !== 'dpdt SW1') out.push('in Print Builder: ' + pb[0]);
+    if (pb[1]) out.push('Check Print: ' + pb[1]);
+    pb[2].link.fp = 'changed'; const again = await page.evaluate(doc => { openFromPrint(doc, 'x'); document.getElementById('link-dlg').close(); return parts.filter(p => p.t === 'dpd' || p.t === 'stand').map(p => p.t + (p.fx ? '/fx' : '')).join() + ' ' + wires.filter(w => w.x1 !== w.x2 && w.y1 !== w.y2).length + ' ' + [...wiringIssues(NET).values()].filter(v => typeof v === 'string').join(); }, pb[2]);
+    if (again !== 'dpd 0 ') out.push('drawn again in Circuit Builder from the print: ' + again);
+    return out;
+  });
+
   await check('Toggle switches start as set (Dallas, 21 Nov 2026): Starts (Off / On for an SPST; At 2 / At 1 for an SPDT) on the Part tab; drawn so in Build; in Run it starts that way, a click flips it from there, Reset puts it back; saved', async page => {
     const out = [];
     await page.evaluate(() => { loadPreset('blank'); W = Math.max(W_MIN, 1100); const a = newPart('tgl', 400, 200), b = newPart('sp2', 400, 560); parts.push(a, b); normalize(); draw(); });
@@ -3807,7 +3845,7 @@ const DEF_CIRCUIT = `
     return out;
   });
   await check('Stand-ins (Dallas, 19 Nov 2026): every Print Builder part Circuit Builder has none of comes in as a stand-in (its symbol in a box, terminals as the print joins them), draws, runs (passing nothing) and prints, and goes back to the print as the same part, tag and name', async page => {
-    const TYPES = ['prs_no', 'cb', 'cb2', 'cb3', 'fdsc3', 'ol', 'gnd', 'dpdt'];
+    const TYPES = ['prs_no', 'cb', 'cb2', 'cb3', 'fdsc3', 'ol', 'gnd'];
     const pr = await withPB(page, pb => pb.evaluate(TYPES => { loadDoc(withDrawnBy(template('blank'))); const L1 = S.parts.find(q => q.label === 'L1'); let y = 260;
       for (const t of TYPES) { const p = addPart(S, t, 900, y); p.tag = t.toUpperCase().replace(/_/g, '') + '1'; p.desc = 'D' + t; const tm = linkPbTerms(p)[0]; addWire(S, [[L1.x, tm[1]], tm]); y += 340; }
       refresh(true); return JSON.parse(JSON.stringify(doc)); }, TYPES));

@@ -171,7 +171,7 @@ function linkBuild(doc, back) {
     // (between the lines of a three-phase part, a transformer or a motor, rows keep their spacing, so its terminals stay on its lines)
     // (Dallas, 21 Nov 2026: and an upright SPDT, its throws 40 from its common on the print, opened out to Circuit Builder's 60, so
     // the wires to its throws come in straight)
-    const sp = p => (p.t === 'spdt' || p.t === 'xover') && !(((+p.rot || 0) % 360 + 360) % 360), spans = sh.parts.filter(sp).map(p => { const ys = linkPbTerms(p).map(q => q[1]); return [Math.min(...ys), Math.max(...ys)]; });
+    const sp = p => (p.t === 'spdt' || p.t === 'xover' || p.t === 'dpdt') && !(((+p.rot || 0) % 360 + 360) % 360), spans = sh.parts.filter(sp).map(p => { const ys = linkPbTerms(p).map(q => q[1]); return [Math.min(...ys), Math.max(...ys)]; });
     // (a toggle switch's body reaches further below its wire than other parts: the row under an SPST, or under an SPDT's lower throw, kept further off)
     const deep = new Set([...sh.parts.filter(p => p.t === 'spst' && !(((+p.rot || 0) % 180 + 180) % 180)).map(p => p.y), ...spans.map(q => q[1]), ...sh.parts.filter(p => p.t === 'dpst' && !(((+p.rot || 0) % 360 + 360) % 360)).map(p => Math.max(...linkPbTerms(p).map(q => q[1])))]);
     const rigid = sh.parts.filter(p => p.t !== 'rail' && !sp(p) && linkPbTerms(p).length > 2).map(p => { const ys = linkPbTerms(p).map(q => q[1]); return [Math.min(...ys), Math.max(...ys)]; });
@@ -295,7 +295,7 @@ function linkBuild(doc, back) {
       const names = (p.pos || 'OFF/ON').split(/[\/,]+/).map(s => s.trim().toUpperCase().slice(0, 5)).filter(Boolean).slice(0, 4), n = Math.max(2, names.length);
       two('sel', ['sel', x, y, opL.get(opKey(p)), 0, 1, '0070C0', n, (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, names.join('/'), 0]);
     } else if (/^prs_/.test(p.t)) standIn(it, p, pb, x, y, name);
-    else if ((p.t === 'spdt' || p.t === 'xover' || p.t === 'dpst') && !(((+p.rot || 0) % 360 + 360) % 360)) { const row = [p.t === 'xover' ? 'xov' : p.t === 'dpst' ? 'dps' : 'sp2', x, y, linkDigits(p.tag, '1'), 0, 1, '99E600']; if (p.fx) { while (row.length < 15) row.push(null); row[15] = { f: 1 }; } add(it, row, linkRowTerms(row)); }   // (an SPDT, upright, flipped or not)   // (an SPDT, upright: Circuit Builder's own, 21 Nov 2026)
+    else if ((p.t === 'spdt' || p.t === 'xover' || p.t === 'dpst' || p.t === 'dpdt') && !(((+p.rot || 0) % 360 + 360) % 360)) { const row = [p.t === 'xover' ? 'xov' : p.t === 'dpst' ? 'dps' : p.t === 'dpdt' ? 'dpd' : 'sp2', x, p.t === 'dpdt' ? pb[0][1] : y, linkDigits(p.tag, '1'), 0, 1, '99E600']; if (p.fx) { while (row.length < 15) row.push(null); row[15] = { f: 1 }; } add(it, row, linkRowTerms(row)); }   // (an SPDT, upright, flipped or not)   // (an SPDT, upright: Circuit Builder's own, 21 Nov 2026)
     else if (p.t === 'spst') { const row = ['tgl', x, y, linkDigits(p.tag, '1'), 0, 1, '99E600'], q = Math.round(((+p.rot || 0) % 360 + 360) % 360 / 90) % 4; if (q || p.fx) { while (row.length < 15) row.push(null); row[15] = { ...(q ? { r: q } : {}), ...(p.fx ? { f: 1 } : {}) }; }
       const ts = linkRowTerms(row), pb2 = pb.length === 2 && ts.length === 2 && Math.hypot(ts[0][0] - pb[0][0], ts[0][1] - pb[0][1]) + Math.hypot(ts[1][0] - pb[1][0], ts[1][1] - pb[1][1]) > Math.hypot(ts[1][0] - pb[0][0], ts[1][1] - pb[0][1]) + Math.hypot(ts[0][0] - pb[1][0], ts[0][1] - pb[1][1]); add(it, row, pb2 ? [ts[1], ts[0]] : ts); }   // (a toggle switch: Circuit Builder's own, 21 Nov 2026)
     else if (/^fs_/.test(p.t)) two('flt', ['flt', x, y, linkDigits(p.tag, '1'), /_ncl?$/.test(p.t) ? 1 : 0, 1, '16C1E8', ...(/l$/.test(p.t) ? [1] : [])]);   // (a float switch: Circuit Builder's own, 20 Nov 2026)
@@ -428,7 +428,7 @@ function linkCheck(doc, r) {
     if (pToC.has(pk) && pToC.get(pk) !== ck) { bad++; if (problems.length < 6) problems.push(m.t + ' ' + i + ': joined on the print, not in the circuit'); } else pToC.set(pk, ck);
     if (cToP.has(ck) && cToP.get(ck) !== pk) { bad++; if (problems.length < 6) problems.push(m.t + ' ' + i + ': joined in the circuit, not on the print'); } else cToP.set(ck, pk); });
   // parts on top of each other, and wires through a part (Circuit Builder's sizes: a switch with a head is taller above its wire)
-  const TALL = new Set(['lsw', 'psw', 'fsw', 'flt', 'tsw', 'tgl', 'sp2', 'xov', 'dps']);
+  const TALL = new Set(['lsw', 'psw', 'fsw', 'flt', 'tsw', 'tgl', 'sp2', 'xov', 'dps', 'dpd']);
   const box = a => { const ts = linkRowTerms(a); if (!ts.length) return null; const xs = ts.map(q => q[0]), ys = ts.map(q => q[1]);
     if (ts.length === 2 && ys[0] === ys[1]) return { x0: Math.min(...xs), x1: Math.max(...xs), y0: ys[0] - (TALL.has(a[0]) ? 41 : 34), y1: ys[0] + (TALL.has(a[0]) ? 82 : 34), two: 1 };
     if (ts.length === 2 && xs[0] === xs[1]) return { x0: xs[0] - 34, x1: xs[0] + 34, y0: Math.min(...ys), y1: Math.max(...ys), two: 1 };
@@ -521,9 +521,9 @@ function circuitToPrint(d, env) {
   // whose terminals keep their own spacing on the print, or its wires would no longer meet them. And an SPDT toggle switch's
   // throws, 60 above and below its common in Circuit Builder, drawn 40 from it on the print, as his SPDT symbol has them: the rows
   // between its common and its throws closed up to that, so the wires to its throws meet them straight, with no jog)
-  { const SP = d.parts.filter(a => a[0] === 'sp2' || a[0] === 'xov').flatMap(a => { const y = +a[2], t = LINK_CB_TERMS.sp2[1][1]; return [[y + t, y, 40 / -t], [y, y - t, 40 / -t]]; });
+  { const SP = d.parts.filter(a => a[0] === 'sp2' || a[0] === 'xov' || a[0] === 'dpd').flatMap(a => { const y = +a[2], t = LINK_CB_TERMS.sp2[1][1]; return a[0] === 'dpd' ? [[y + t, y + 4 * -t, 40 / -t]] : [[y + t, y, 40 / -t], [y, y - t, 40 / -t]]; });
     if (sy > 1 || SP.length) {
-      const keep = d.parts.filter(a => a[0] !== 'sp2' && a[0] !== 'xov').map(a => { const ys = linkRowTerms(a).map(q => +q[1]); return ys.length ? [Math.min(...ys), Math.max(...ys)] : null; }).filter(k => k && k[1] > k[0]);
+      const keep = d.parts.filter(a => a[0] !== 'sp2' && a[0] !== 'xov' && a[0] !== 'dpd').map(a => { const ys = linkRowTerms(a).map(q => +q[1]); return ys.length ? [Math.min(...ys), Math.max(...ys)] : null; }).filter(k => k && k[1] > k[0]);
       const lv = [...new Set([...d.parts.map(a => +a[2]), ...d.wires.flatMap(w => [+w[1], +w[3]]), ...keep.flat(), ...SP.flatMap(q => [q[0], q[1]])])].sort((a, b) => a - b), at = new Map();
       lv.forEach((y, i) => { if (!i) { at.set(y, linkSnap(y * sy)); return; } const p = lv[i - 1], sp = SP.find(([u, v]) => p >= u && y <= v), held = keep.some(([u, v]) => p >= u && y <= v);
         at.set(y, at.get(p) + (sp ? Math.max(20, linkSnap((y - p) * sp[2])) : held ? y - p : Math.max(20, linkSnap((y - p) * sy)))); });
@@ -543,7 +543,7 @@ function circuitToPrint(d, env) {
   for (const r of R.filter(r => r.t === 'btn' || r.t === 'est' || r.t === 'sel')) { const k = (r.t === 'sel' ? 'S:' : 'B:') + r.L; if (!tagOf.has(k)) { const pre = r.t === 'sel' ? 'SS' : r.t === 'est' ? 'ES' : 'PB'; tagOf.set(k, new RegExp('^' + (r.t === 'sel' ? 'SS' : 'PB|ES')).test(r.L) ? r.L : pre + '-' + r.L); } }
   const descOf = new Map(R.filter(r => (r.t === 'btn' || r.t === 'est' || r.t === 'coil') && lbl(r)).map(r => [(r.t === 'coil' ? 'C:' : 'B:') + r.L, lbl(r)]));
   // ---- 1. each part as it will be on the print, at the circuit's own place for now (G: the circuit's grid)
-  const parts0 = R.map(r => ({ r, ts: r.t === 'sp2' || r.t === 'xov' ? linkRowTerms(r.a).map(([x, y]) => [x, r.y + Math.sign(y - r.y) * 40]) : linkRowTerms(r.a) }));   // (an SPDT's throws: where the rows were closed up to, 40 from its common)
+  const parts0 = R.map(r => ({ r, ts: r.t === 'sp2' || r.t === 'xov' || r.t === 'dpd' ? linkRowTerms(r.a).map(([x, y]) => [x, r.y + (y - r.y) * 2 / 3]) : linkRowTerms(r.a) }));   // (an SPDT's throws: where the rows were closed up to, 40 from its common)
   const wired = new Set(d.wires.flatMap(w => [w[0] + ',' + w[1], w[2] + ',' + w[3]]));
   const made = [];   // ({ r, o }: a circuit part and its print part, o.x/o.y in G for now)
   const COLN = { 'FF0032': 'RED', '00B050': 'GREEN', 'FFDC00': 'YELLOW', 'FF9600': 'AMBER', '0070C0': 'BLUE', 'FFFFFF': 'WHITE', '7030A0': 'VIOLET', 'EC008C': 'MAGENTA', '99E600': 'LIME', '00D2BE': 'TEAL' };
@@ -561,6 +561,7 @@ function circuitToPrint(d, env) {
       case 'fsw': t = (r.nc ? 'fls_nc' : 'fls_no') + (r.a[7] === 1 ? 'l' : ''); o.tag = 'FLS' + r.L; break;
       case 'tgl': t = 'spst'; o.tag = 'SW' + r.L; if (r.a[15] && r.a[15].f) o.fx = true; break;
       case 'sp2': t = 'spdt'; o.tag = 'SW' + r.L; if (r.a[15] && r.a[15].f) o.fx = true; break;
+      case 'dpd': t = 'dpdt'; o.tag = 'SW' + r.L; o.y = r.y + 60; if (r.a[15] && r.a[15].f) o.fx = true; break;   // (a DPDT: the print's symbol centred 60 below its top common)
       case 'dps': t = 'dpst'; o.tag = 'SW' + r.L; if (r.a[15] && r.a[15].f) o.fx = true; break;
       case 'xov': t = 'xover'; o.tag = 'SW' + r.L; if (r.a[15] && r.a[15].f) o.fx = true; break;
       case 'flt': t = (r.nc ? 'fs_nc' : 'fs_no') + (r.a[7] === 1 ? 'l' : ''); o.tag = 'FS' + r.L; break;
@@ -933,6 +934,20 @@ function circuitToPrint(d, env) {
         // (uprights back into short steps)
         for (const [k, ns] of [...E]) for (const q of [...ns]) { const [x, y] = XY(k), [qx, qy] = XY(q); if (x !== qx || qy - y <= 20) continue;
           unlink(k, q); let prev = y; for (let yy = y + 20; yy <= qy; yy += 20) { link2(K(x, prev), K(x, yy)); prev = yy; } }
+        // (a part over several rows whose rows were spread apart round it (Dallas, 21 Nov 2026: a DPDT whose throws feed loads in one
+        // column, each load's tag and name needing more room than the switch's 40): each terminal left behind joined to its wire by a
+        // short step out first, then up or down, the lowest nearest, so no upright runs over another of its terminals)
+        for (const { o } of made) { const ts = linkPbTerms(o); if (ts.length < 3 || ts.every(q => q[1] === ts[0][1])) continue;
+          const moves = ts.map((q, i) => { const at = [...termAt].find(([, v]) => v.some(e => e.o === o && e.i === i)); return at && at[0] !== K(...q) ? { q, i, k: at[0], oy: XY(at[0])[1] } : null; }).filter(Boolean);
+          const nOut = new Map();
+          for (const m of moves.sort((u, v) => (v.oy > v.q[1]) - (u.oy > u.q[1]) || (u.oy > u.q[1] ? v.q[1] - u.q[1] : u.q[1] - v.q[1]))) {
+            const [ox] = XY(m.k), dir = Math.sign(m.q[0] - o.x) || 1; if (ox !== m.q[0]) continue;
+            if (!ts.some(t => t !== m.q && t[0] === m.q[0] && (t[1] - m.q[1]) * (t[1] - m.oy) <= 0)) continue;   // (only where its upright would pass another of its terminals)
+            const j = (nOut.get(dir) || 0) + 1, bx = m.q[0] + dir * 20 * j, nb = [...(E.get(m.k) || [])].find(n => { const [nx, ny] = XY(n); return ny === m.oy && Math.sign(nx - ox) === dir && Math.abs(nx - ox) > 20 * j; });
+            if (!nb) continue; nOut.set(dir, j);
+            unlink(m.k, nb); if (!deg(m.k)) E.delete(m.k); link2(K(bx, m.oy), nb);
+            const L = termAt.get(m.k).filter(e => !(e.o === o && e.i === m.i)); if (L.length) termAt.set(m.k, L); else termAt.delete(m.k);
+            const tk = K(...m.q); addTerm(tk, o, m.i); link2(tk, K(bx, m.q[1])); const st = Math.sign(m.oy - m.q[1]) * 20; for (let y = m.q[1]; y !== m.oy; y += st) link2(K(bx, y), K(bx, y + st)); } }
         ylink = [ys, n];
         GR = findGroups();
       } } }

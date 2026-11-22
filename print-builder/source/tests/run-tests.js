@@ -496,7 +496,7 @@ let passed = 0, failed = 0;
     const placed = await p.evaluate(() => [S.parts.at(-1).t, document.querySelectorAll('.dmenu:not([hidden])').length]);
     await p.setViewportSize({ width: 1600, height: 1000 });
     const r = [...rows, ...fly, one, ...placed].join('|');
-    return r === 'Selector Switch;Limit Switches;Temperature Switches;Pressure Switches;Float Switches;Flow Switches;Proximity Switches;Toggle & Multi-Pole Switches|true|1|true|5|4|ls_hc|0' ? [] : ['kinds | menu fits | fly-outs open | fly-out fits | its parts | one open at a time | placed | menus left open: ' + r];
+    return r === 'Selector Switch;Limit Switches;Temperature Switches;Pressure Switches;Float Switches;Flow Switches;Proximity Switches;Toggle & Multi-Pole Switches|true|1|true|' + (process.argv.includes('--demo') ? 8 : 5) + '|4|ls_hc|0' ? [] :   /* (the demo: the three 60-spacing switches too) */ ['kinds | menu fits | fly-outs open | fly-out fits | its parts | one open at a time | placed | menus left open: ' + r];
   });
 
   await check('Every long part menu is split by kind; SPDT and DPDT switches flip left to right (F, or Flip on the Part tab), their wires following', async p => {

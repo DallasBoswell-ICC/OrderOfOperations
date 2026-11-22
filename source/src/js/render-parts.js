@@ -92,7 +92,7 @@ function drawEstop(p, v, x, y, g) {
     el('path', { d: `M ${P1[0] + tx * L} ${P1[1] + ty * L} L ${P1[0] + nx * w} ${P1[1] + ny * w} L ${P1[0] - nx * w} ${P1[1] - ny * w} Z`, fill: ESTOP_PLATE }, v.twist);
   }
 }
-const captionOf = p => p.t === 'stand' ? `${p.L ? p.L + ' ' : ''}${LINK_PB_SYMN[p.sym] || p.sym} (stand-in)` : p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} ${p.low ? 'Low' : 'High'} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} ${p.low ? 'Low' : 'High'} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'flt' ? `FS${p.L} ${p.low ? 'Low' : 'High'} Level Float Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tgl' ? `SW${p.L} Toggle Switch (SPST)` : p.t === 'sp2' ? `SW${p.L} Toggle Switch (SPDT)` : p.t === 'xov' ? `SW${p.L} Crossover Switch (DPDT)` : p.t === 'dps' ? `SW${p.L} Toggle Switch (DPST)` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'stand' ? `${p.L ? p.L + ' ' : ''}${LINK_PB_SYMN[p.sym] || p.sym} (stand-in)` : p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} ${p.low ? 'Low' : 'High'} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} ${p.low ? 'Low' : 'High'} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'flt' ? `FS${p.L} ${p.low ? 'Low' : 'High'} Level Float Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tgl' ? `SW${p.L} Toggle Switch (SPST)` : p.t === 'sp2' ? `SW${p.L} Toggle Switch (SPDT)` : p.t === 'xov' ? `SW${p.L} Crossover Switch (DPDT)` : p.t === 'dps' ? `SW${p.L} Toggle Switch (DPST)` : p.t === 'dpd' ? `SW${p.L} Toggle Switch (DPDT)` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -280,6 +280,8 @@ function drawPart(p, g, x, y, chan, onStation) {
     drawXover(p, g, x, y, v, chan);
   } else if (p.t === 'dps') {
     drawDpst(p, g, x, y, v, chan);
+  } else if (p.t === 'dpd') {
+    drawDpdt(p, g, x, y, v, chan);
   } else if (p.t === 'xfm') {
     drawXfm(p, g, x, y, v, chan);
   } else if (p.t === 'fu1') {
@@ -1150,6 +1152,50 @@ function setSpdt(v, p, pos) {
   v.blade.setAttribute('transform', `rotate(${lerp(a, -a, pos).toFixed(2)} ${hx} ${hy})`);   // (down to throw 2 at rest; up to throw 1, worked)
   for (const [i, on] of [[1, up && pos > .98], [2, !up && pos < .02]]) { v.rings[i].setAttribute('stroke', on ? p.color : GREY); v.stub[i].setAttribute('fill', on ? p.color : GREY); }
   v.n1.setAttribute('fill', up ? p.color : '#6a6a6a'); v.n2.setAttribute('fill', up ? '#6a6a6a' : p.color);
+  v.lev[0].setAttribute('display', up ? 'none' : ''); v.lev[1].setAttribute('display', up ? '' : 'none');
+  v.lOn.setAttribute('fill', up ? p.color : '#5a5a5a'); v.lOff.setAttribute('fill', up ? '#5a5a5a' : p.color);
+}
+// a DPDT toggle switch (Dallas, 21 Nov 2026, option A): two SPDTs worked together by the one toggle, the second 180 below the
+// first (its throws 60 from each common, as the SPDT's: the six rows 60 apart), the NEMA dashed link between the blades
+function drawDpdt(p, g, x, y, v, chan) {
+  v.lead = null; v.src = [];
+  const col = p.color, hw = LSW_W / 2, top = y - SP2_TOP, bot = y + DPD_BOT, px1 = x - 30, px2 = x + 30, sy = BOX * .045, r = 7, D = DPD_DY;
+  [[x - 60, y], [x + 60, y - SP2_DY], [x + 60, y + SP2_DY], [x - 60, y + D], [x + 60, y + D - SP2_DY], [x + 60, y + D + SP2_DY]].forEach(([tx, ty], i) => { const bx = tx < x ? x - hw : x + hw;   // (drawn as unflipped: a flipped one is mirrored as a whole)
+    el('line', { x1: tx, y1: ty, x2: bx, y2: ty, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
+    if (!editing && p._t) v.src.push({ n: p._t[i], ln: el('line', { x1: tx, y1: ty, x2: bx, y2: ty, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g) }); });
+  framed('rect', { x: x - hw, y: top, width: LSW_W, height: bot - top, rx: 15, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
+  v.link = el('line', { stroke: col, 'stroke-width': 2, 'stroke-dasharray': '5 4' }, g);
+  const len = Math.hypot(60, SP2_DY) - r + 1.5;
+  v.poles = [y, y + D].map(yc => { const q = {};
+    q.stub = [yc, yc - SP2_DY, yc + SP2_DY].map((yy, i) => el('rect', i ? { x: px2 + r, y: yy - sy, width: x + hw - 4.5 - px2 - r, height: 2 * sy, fill: GREY } : { x: x - hw + 4.5, y: yy - sy, width: px1 - r - (x - hw + 4.5), height: 2 * sy, fill: col }, g));
+    q.blade = el('g', { filter: 'url(#fShadow)' }, g); q.hy = yc;
+    el('rect', { x: px1, y: yc - 3.5, width: len, height: 7, rx: 3.5, fill: col, stroke: 'rgba(0,0,0,.35)', 'stroke-width': .6 }, q.blade);
+    el('rect', { x: px1, y: yc - 3.5, width: len, height: 7, rx: 3.5, fill: 'url(#gGloss)' }, q.blade);
+    q.rings = [[px1, yc], [px2, yc - SP2_DY], [px2, yc + SP2_DY]].map(([cx, cy], i) => { const c = el('circle', { cx, cy, r, fill: '#1f1f1f', stroke: i ? GREY : col, 'stroke-width': 3.4 }, g); el('circle', { cx, cy, r, fill: 'none', stroke: 'url(#gGloss)', 'stroke-width': 3.4 }, g); return c; });
+    el('circle', { cx: px1, cy: yc, r: 2.6, fill: col }, g); el('circle', { cx: px1, cy: yc, r: 2.6, fill: 'url(#gDome)' }, g);
+    const num = (t, yy) => { const e = el('text', { x: x + 12, y: yy, 'text-anchor': 'middle', 'font-size': 8, 'font-weight': 800, fill: '#6a6a6a', 'pointer-events': 'none' }, g); e.textContent = t; return e; };
+    q.n1 = num('1', yc - SP2_DY + 4); q.n2 = num('2', yc + SP2_DY + 4);
+    return q; });
+  v.hx = px1; v.ly = y;
+  Object.assign(v, tglLever(p, g, x, y + D + SP2_DY + 52, ['1', '2']));
+  const fl = p.fx ? -1 : 1;   // (flipped: its tags drawn the other way round, so they end up where they always are)
+  el('rect', { x: x - fl * (hw - 23) - 16, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  el('rect', { x: x + fl * (hw - 24) - 17, y: bot - 25, width: 34, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g);
+  const tg = (t, tx, fs) => { const e = el('text', { x: tx, y: bot - 12.5, 'text-anchor': 'middle', 'font-size': fs, 'font-weight': 800, fill: '#fff', 'pointer-events': 'none' }, g); e.textContent = t; };
+  tg('SW' + p.L, x - fl * (hw - 23), 9); tg('DPDT', x + fl * (hw - 24), 8);
+  setDpdt(v, p, editing ? (p.held ? 1 : 0) : lswPos(p));   // (in Build: as it starts)
+}
+function setDpdt(v, p, pos) {
+  const k = pos.toFixed(3); if (v.k === k) return; v.k = k;
+  const a0 = Math.atan2(SP2_DY, 60) * 180 / Math.PI, a = lerp(a0, -a0, pos), up = pos >= .5;   // (down to throw 2 at rest; up to throw 1, worked)
+  for (const q of v.poles) {
+    q.blade.setAttribute('transform', `rotate(${a.toFixed(2)} ${v.hx} ${q.hy})`);
+    for (const [i, on] of [[1, up && pos > .98], [2, !up && pos < .02]]) { q.rings[i].setAttribute('stroke', on ? p.color : GREY); q.stub[i].setAttribute('fill', on ? p.color : GREY); }
+    q.n1.setAttribute('fill', up ? p.color : '#6a6a6a'); q.n2.setAttribute('fill', up ? '#6a6a6a' : p.color);
+  }
+  // (the link: down from the top blade's middle to the bottom one's, as they turn)
+  const t = a * Math.PI / 180, mx = v.hx + 30 * Math.cos(t), dy = 30 * Math.sin(t);
+  v.link.setAttribute('x1', mx.toFixed(2)); v.link.setAttribute('x2', mx.toFixed(2)); v.link.setAttribute('y1', (v.ly + dy + 5).toFixed(2)); v.link.setAttribute('y2', (v.ly + DPD_DY + dy - 5).toFixed(2));
   v.lev[0].setAttribute('display', up ? 'none' : ''); v.lev[1].setAttribute('display', up ? '' : 'none');
   v.lOn.setAttribute('fill', up ? p.color : '#5a5a5a'); v.lOff.setAttribute('fill', up ? '#5a5a5a' : p.color);
 }

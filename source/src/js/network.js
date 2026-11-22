@@ -91,6 +91,13 @@ function network() {
   }
   // a crossover (Dallas, 21 Nov 2026): its four ends (top left, top right, bottom left, bottom right) and four ways through it: straight
   // across (top to top, bottom to bottom) as it starts, lever up; crossed (top left to bottom right, bottom left to top right), lever down
+  // a DPDT (Dallas, 21 Nov 2026, option A): two SPDTs worked together, the second 180 below the first: its ends the top common,
+  // its throws 1 and 2, the bottom common, its throws 1 and 2; four ways through, each common to its throw 1 or 2
+  for (const p of parts) if (p.t === 'dpd') {
+    p._t = terms(p).map(([x, y]) => node(x, y, key(x, y)));
+    p._poles = p._poles || [0, 1, 2, 3].map(i => ({ t: 'pp', id: p.id + '.' + i, i }));
+    p._poles.forEach((k, i) => { const c = i < 2 ? 0 : 3; Object.assign(k, { x: p, _a: p._t[c], _b: p._t[c + 1 + (i % 2)] }); edges.push({ a: k._a, b: k._b, w: 120, kind: 'part', part: k }); jedges.push({ kind: 'part', a: k._a, b: k._b, len: 120, part: k }); });
+  }
   for (const p of parts) if (p.t === 'xov' || p.t === 'dps') {
     p._t = terms(p).map(([x, y]) => node(x, y, key(x, y)));
     p._poles = p._poles || (p.t === 'dps' ? [0, 1] : [0, 1, 2, 3]).map(i => ({ t: 'pp', id: p.id + '.' + i, i }));
@@ -156,6 +163,7 @@ function wiringIssues(net) {
     if (p.t === 'stand') { out.set(p.id, { note: 'A stand-in: drawn, not run' }); continue; }
     if (isSrc(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); continue; }
     if (p.t === 'xov' || p.t === 'dps') { if (p._t.some(i => net.adj[i].length < 2)) out.set(p.id, 'An end is not connected'); continue; }
+    if (p.t === 'dpd') { if ([0, 3].some(c => net.adj[p._t[c]].length < 2 || !p._t.slice(c + 1, c + 3).some(i => net.adj[i].length > 1))) out.set(p.id, 'An end is not connected'); continue; }
     if (p.t === 'sp2') { if (net.adj[p._t[0]].length < 2 || !p._t.slice(1).some(i => net.adj[i].length > 1)) out.set(p.id, 'An end is not connected'); continue; }
     if (isPwr3(p)) {
       if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything');
