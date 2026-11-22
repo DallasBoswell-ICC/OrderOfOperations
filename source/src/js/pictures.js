@@ -10,7 +10,7 @@
 var PIC_READY = false;   // (set at the foot of this file: nothing is drawn before it has run)
 const PIC_W = 260, PIC_H = 100, DOCK_W = 150, DOCK_H = 50, DOCK_GAP = 14;
 let picSel = null, picDragV = null, picN = 0, picClick = { v: null, t: 0 };   // the value whose card is selected (Build); the one being dragged
-const picTag = p => ({ sol: 'SOL', mtr: 'MTR', htr: 'HTR', lsw: 'LS', psw: 'PS', fsw: 'FLS', flt: 'FS', tgl: 'SW', sp2: 'SW', xov: 'SW', dps: 'SW', dpd: 'SW', tsw: 'TS' }[p.t] || '') + p.L;
+const picTag = p => ({ sol: 'SOL', mtr: 'MTR', htr: 'HTR', lsw: 'LS', psw: 'PS', fsw: 'FLS', flt: 'FS', tgl: 'SW', sp2: 'SW', xov: 'SW', dps: 'SW', dpd: 'SW', tps: 'SW', tsw: 'TS' }[p.t] || '') + p.L;
 const picShown = p => isDrv(p) && !p.nopic && !!pvOf(p);
 /* where output p's docked picture sits ({ x, y: its top left corner; w, h; small }): under it, unless a part, a name or
    a wire is in the way there; then the first clear spot of a few round it (beside it, below or above its rung's wire;

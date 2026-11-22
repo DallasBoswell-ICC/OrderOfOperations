@@ -3705,6 +3705,44 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('3PST toggle switch (Dallas, 22 Nov 2026): in the Toggle Switches menu; six ends, 60 out, its poles 120 apart; all three open with the lever down (off) as it starts, all closed with it up (on); Starts and Flip; saved; crosses to Print Builder\'s new 3PST Switch (the 3-phase disconnect\'s drawing, a switch) and back', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60); await toolbarDrop(page, 'tps', 300, 200);
+    const placed = await page.evaluate(() => { const t = parts.find(p => p.t === 'tps'); return t ? captionOf(t) + (t.maint ? ' m' : '') : 'none'; });
+    if (placed !== 'SW1 Toggle Switch (3PST) m') out.push('placed from the menu: ' + placed);
+    await page.evaluate(() => { sel = null; loadPreset('blank'); W = Math.max(W_MIN, 1100); const t = newPart('tps', 700, 300); parts.push(t); const lx = W - 180;
+      parts.push(...[180, 300, 420].map(y => P('lamp', lx, y, { L: '', color: '#00B050' })));
+      wires.push(...[180, 300, 420].flatMap(y => [Wr(0, y, 640, y), Wr(760, y, lx - 60, y), Wr(lx + 60, y, W, y)])); normalize(); draw(); });
+    const ts = await page.evaluate(() => JSON.stringify(terms(parts.find(p => p.t === 'tps'))) + ' ' + [...wiringIssues(NET).values()].filter(v => typeof v === 'string').join());
+    if (ts !== '[[640,180],[760,180],[640,300],[760,300],[640,420],[760,420]] ') out.push('ends: ' + ts);
+    const L = () => page.evaluate(() => parts.filter(p => p.t === 'lamp').sort((a, b) => a.y - b.y).map(l => coilOn[l.id] ? 'lit' : 'dark').join('/'));
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    let s = await L(); if (s !== 'dark/dark/dark') out.push('at rest (off): ' + s);
+    await page.evaluate(() => press(opKey(parts.find(p => p.t === 'tps')), true)); await page.waitForTimeout(500);
+    s = await L(); if (s !== 'lit/lit/lit') out.push('on: ' + s);
+    await page.evaluate(() => press(opKey(parts.find(p => p.t === 'tps')), false)); await page.waitForTimeout(500);
+    s = await L(); if (s !== 'dark/dark/dark') out.push('back off: ' + s);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    await page.evaluate(() => { const t = parts.find(p => p.t === 'tps'); t.held = true; t.fx = true; normalize(); draw(); });
+    const fl = await page.evaluate(() => JSON.stringify(terms(parts.find(p => p.t === 'tps'))));
+    if (fl !== '[[760,180],[640,180],[760,300],[640,300],[760,420],[640,420]]') out.push('flipped ends: ' + fl);
+    await page.evaluate(() => { const t = parts.find(p => p.t === 'tps'); t.fx = false; normalize(); draw(); });
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    s = await L(); if (s !== 'lit/lit/lit') out.push('starts on: ' + s);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    const back = await page.evaluate(() => readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.filter(p => p.t === 'tps').map(p => p.t + p.L + (p.maint ? 'm' : '') + (p.held ? 'h' : '')).join());
+    if (back !== 'tps1mh') out.push('read back: ' + back);
+    await page.evaluate(() => { const t = parts.find(p => p.t === 'tps'); t.fx = true; t.held = false; normalize(); draw(); });
+    const d = await page.evaluate(() => circuitData());
+    const pb = await withPB(page, pb => pb.evaluate(d => { const r = circuitToPrint(d, { uid, defaultTB, long: 'tight' }); loadDoc(JSON.parse(JSON.stringify(r.doc))); refresh(true);
+      return [r.doc.sheets.flatMap(s => s.parts).filter(p => p.t === 'tpst').map(p => p.t + (p.fx ? '/fx' : '') + ' ' + p.tag).join(), checkPrint().filter(i => i.sev === 'e').map(i => i.title).join(), JSON.parse(JSON.stringify(r.doc))]; }, d));
+    if (pb[0] !== 'tpst/fx SW1') out.push('in Print Builder: ' + pb[0]);
+    if (pb[1]) out.push('Check Print: ' + pb[1]);
+    pb[2].link.fp = 'changed'; const again = await page.evaluate(doc => { openFromPrint(doc, 'x'); document.getElementById('link-dlg').close(); return parts.filter(p => p.t === 'tps' || p.t === 'stand').map(p => p.t + (p.fx ? '/fx' : '')).join() + ' ' + wires.filter(w => w.x1 !== w.x2 && w.y1 !== w.y2).length + ' ' + [...wiringIssues(NET).values()].filter(v => typeof v === 'string').join(); }, pb[2]);
+    if (again !== 'tps/fx 0 ') out.push('drawn again in Circuit Builder from the print: ' + again);
+    return out;
+  });
+
   await check('DPDT toggle switch (Dallas, 21 Nov 2026, option A): in the Toggle Switches menu; two SPDTs 180 apart, rows 60 apart; each common at its throw 2 with the lever down as it starts, at throw 1 with it up; Starts and Flip; saved; crosses to Print Builder\'s DPDT Switch and back, its wires straight', async page => {
     const out = [];
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60); await toolbarDrop(page, 'dpd', 300, 200);
