@@ -5141,10 +5141,10 @@ function drawBreaker(p, g, x, y, v) {
 // (wait: open, the colour waiting at it and which end it waits at (0 its left, 1 its right), lit up to that end's contact)
 function setBreaker(v, p, pos, tripped, flow, wait) {
   const k = pos.toFixed(3) + (tripped ? 't' : '') + (flow || '') + (wait ? wait.side + wait.col : ''); if (v.k === k) return; v.k = k;
-  const lift = tripped ? 1 : 1 - pos, shut = !tripped && pos > .98, c = shut ? CBK_COL : GREY;
+  const lift = tripped ? 1 : 1 - pos, shut = !tripped && pos > .98, c = shut ? flow || CBK_COL : GREY;   // (on, its contacts too the colour of the current through it, 22 Nov 2026)
   v.arc.setAttribute('transform', `translate(0 ${(-16 * lift).toFixed(2)})`); v.arcC.setAttribute('stroke', shut ? flow || CBK_COL : BLADE_GREY);
   v.posts.forEach((q, i) => q.setAttribute('fill', !shut && wait && wait.side === i ? wait.col : c)); v.rings.forEach((q, i) => q.setAttribute('stroke', !shut && wait && wait.side === i ? wait.col : c));
-  for (const q of v.pins) q.setAttribute('fill', shut ? CBK_COL : BLADE_GREY);
+  for (const q of v.pins) q.setAttribute('fill', shut ? flow || CBK_COL : BLADE_GREY);
   v.handle.setAttribute('transform', `translate(0 ${tripped ? 0 : lerp(10, -10, pos).toFixed(2)})`);
   const st = tripped ? 'trip' : pos >= .5 ? 'on' : 'off';
   v.mOn.setAttribute('fill', st === 'on' ? CBK_COL : '#5a5a5a'); v.mOff.setAttribute('fill', st === 'off' ? CBK_COL : '#5a5a5a');
