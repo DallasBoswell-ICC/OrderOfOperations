@@ -909,7 +909,7 @@ function linkBuild(doc, back) {
       // (the box sits behind its terminal: its right terminal there if the wire goes right, and so on)
       const cx = at[0] - dir[0] * 40, cy = at[1] - dir[1] * 40, rot = 0;
       let row;
-      if (t === 'ph') row = ['ph', cx, cy, linkDigits(p.tag, '1'), 0, 1, ''];
+      if (t === 'ph') row = ['ph', cx, cy, /^N$/i.test(String(p.tag || '').trim()) ? 'N' : linkDigits(p.tag, '1'), 0, 1, ''];   // (N: the neutral)
       else if (t === 'jmp') { const key = (p.tag || '').toUpperCase() || '?'; if (!jmpN.has(key)) jmpN.set(key, jmpN.size + 1); row = ['jmp', cx, cy, String(jmpN.get(key)), 0, 1, '']; }
       else row = [t, cx, cy, '', 0, 1, ''];
       add(it, row, [at]);
@@ -1019,7 +1019,7 @@ function linkMerge(old, nu, cbi, ownCol = new Set()) {
     if (a.length > 12 && (b[0] === 'btn' || b[0] === 'sel' || b[0] === 'lamp')) { while (b.length < 12) b.push(null); b.push(...a.slice(12)); }   // (its dashed link line)
   }
   const map = o => oi.has(o) ? oi.get(o) : -1;
-  const keep = ['name', 'sc', 'pc', 'wo', 'ffo', 'pv', 'pp'];
+  const keep = ['name', 'sc', 'pc', 'vs', 'wo', 'ffo', 'pv', 'pp'];   // (vs: the voltage system)
   for (const k of keep) if (old[k] !== undefined) nu[k] = old[k];
   if (old.pw === 'boxes') nu.pw = 'boxes';
   if (old.pd) nu.pd = old.pd.map(a => [map(a[0]), ...a.slice(1)]).filter(a => a[0] >= 0);
@@ -1149,7 +1149,7 @@ function circuitToPrint(d, env) {
       case 'fus': t = 'fus3'; o.tag = 'FU' + r.L; break;
       case 'fu1': t = 'fuse'; o.tag = 'FU' + r.L; o.rot = [0, 90, 180, 270][rotOf(r)]; break;
       case 'xfm': t = 'xfmr'; o.tag = 'CPT' + r.L; break;
-      case 'ph': t = 'sup'; o.tag = 'L' + r.L; break;
+      case 'ph': t = 'sup'; o.tag = r.L === 'N' ? 'N' : 'L' + r.L; break;
       case 'l1': t = 'src_l1'; break;
       case 'l2': t = 'src_l2'; break;
       case 'stand': { const q = r.a[10]; if (!q || !LINK_PB_TERMS[q.t]) break; t = q.t; o.rot = +q.r || 0; o.tag = r.L; o.desc = typeof r.a[9] === 'string' ? r.a[9] : ''; break; }

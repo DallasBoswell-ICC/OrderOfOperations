@@ -1,14 +1,14 @@
 /* =====================================================================
    Troubleshooter: what the meter reads between two junctions of the circuit as it is right now.
    Voltage: the live circuit, worked out as a network of resistances fed by the supplies (L1 at 120 V and L2 at 0 V
-   for the control circuit; the three phases at 480 V between any two, each a third of a turn behind the last), so a
+   for the control circuit; the phases as the circuit's voltage system has them: see VSYS_LIST), so a
    junction joined to L1 only through a coil, with nothing beyond it, sits at 120 V (no current, so no drop across the
    coil), as on a real panel. A lead on a junction with no way back to any supply reads nothing.
    Resistance: the same network with every supply off (locked out): wires and closed contacts are 0 Ω; coils,
    lights, solenoids, heaters and transformer and motor windings their own resistance; open contacts, open wires and
    open loads no way through at all (OL).
    ===================================================================== */
-const TS_SUPPLY = 120, TS_LINE = 480;
+const TS_SUPPLY = 120;
 // a load's resistance in ohms
 const TS_OHMS = p => LOAD_OHMS(p);   // (the same resistances the circuit itself works with: see solve.js)
 const TS_XFM_SEC = 0.5, TS_MOTOR = 2;
@@ -42,8 +42,7 @@ function tsSources(T) {
   const fix = new Map(), set = (n, v) => { const k = T.sn[n]; if (!fix.has(k)) fix.set(k, v); };
   if (!LOCKOUT && !SUPPLY_CUT) { set(NET.L1, [TS_SUPPLY, 0]); set(NET.L2, [0, 0]); }
   if (!(LOCKOUT && !parts.some(p => p.t === 'dsc'))) {
-    const Vp = TS_LINE / Math.sqrt(3);
-    for (const L in NET.PH) { const a = -(+L - 1) * 2 * Math.PI / 3; set(NET.PH[L], [Vp * Math.cos(a), Vp * Math.sin(a)]); }
+    for (const L in NET.PH) { const v = phVolt(phK(L)); if (v) set(NET.PH[L], v); }   // (each phase from the voltage system; the neutral at 0 V)
   }
   return fix;
 }

@@ -334,7 +334,7 @@ function drawPart(p, g, x, y, chan, onStation) {
     if (ph) {
       const bx = x - BOX / 2 + 2, by = y - BOX / 2 + 2;
       el('rect', { x: bx - 15, y: by - 11, width: 30, height: 22, rx: 6, fill: '#1f1f1f', stroke: edge, 'stroke-width': 1.6 }, g);
-      el('text', { x: bx, y: by + 4.4, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 800, fill: chev }, g).textContent = 'L' + p.L;
+      el('text', { x: bx, y: by + 4.4, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 800, fill: chev }, g).textContent = phName(p.L);
     }
   } else if (isSolT(p.t)) {
     // a solenoid: see SOL_S. The bolt and its dots are the grey of a coil's middle; once it pulls in, the solenoid's

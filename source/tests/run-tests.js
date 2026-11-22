@@ -1777,7 +1777,7 @@ const DEF_CIRCUIT = `
     // each phase lights its own line in its colour
     // (L1 and L2 lit in their colours as far as the transformer's taps; L3, leading to no load, and L1 past its tap, dark)
     const lines = await page.evaluate(() => [[200, 80], [200, 200], [200, 320], [600, 80]].map(([x, y]) => { const n = NET.nodes.findIndex(q => q.x === x && q.y === y); return colAt(n, simT) || '-'; }).join());
-    if (lines !== await page.evaluate(() => [PH_DEFAULT[0], PH_DEFAULT[1], '-', '-'].join())) out.push('line colours: ' + lines);
+    if (lines !== await page.evaluate(() => [VSYS_LIST[VSYS].col[0], VSYS_LIST[VSYS].col[1], '-', '-'].join())) out.push('line colours: ' + lines);
     await page.evaluate(() => press('A', true)); await page.waitForTimeout(1200);
     let st = await state();
     if (st !== 'true,true') out.push('fed: transformer, X = ' + st);
@@ -3800,6 +3800,41 @@ const DEF_CIRCUIT = `
     if (!(r.knob > r.low)) out.push('knob not below the bottom pole: ' + JSON.stringify(r));
     if (!(r.tag > r.knob)) out.push('tag not below the knob: ' + JSON.stringify(r));
     if (r.down !== 238 || r.up !== 173 || r.cap !== 166) out.push('room: ' + JSON.stringify(r));
+    return out;
+  });
+  await check('Voltage system (Dallas, 22 Nov 2026): Power menu choice of 480Y/277, 208Y/120 or 120/240 split-phase (a new circuit 208Y/120, an older file 480Y/277), saved; a Neutral box; split-phase has no L3; lights and heaters run from a phase to the neutral or across two phases, getting that voltage', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    let r = await page.evaluate(() => ({ vs: VSYS, col: PH_COL.join(), menu: [...document.querySelectorAll('[data-vs]')].map(b => b.dataset.vs + (b.getAttribute('aria-pressed') === 'true' ? '*' : '')).join() }));
+    if (r.vs !== '208' || r.menu !== '480,208*,240' || r.col !== '#6E6E6E,#E8413C,#3F7FFF') out.push('new circuit: ' + JSON.stringify(r));
+    const old = await page.evaluate(() => { const d = circuitData(); delete d.vs; delete d.pc; const c = readCircuit(d); return c.vs + ' ' + c.ph.join(); });
+    if (old !== '480 #B5793F,#FF8A1F,#F2D21B') out.push('older file: ' + old);
+    await page.evaluate(() => document.querySelector('[data-vs="240"]').click()); await page.waitForTimeout(60);
+    r = await page.evaluate(() => ({ vs: VSYS, l3: document.querySelector('[data-part="ph-3"]').hidden, back: readCircuit(JSON.parse(JSON.stringify(circuitData()))).vs }));
+    if (r.vs !== '240' || !r.l3 || r.back !== '240') out.push('split-phase chosen: ' + JSON.stringify(r));
+    // L1, L2 and N boxes: a light from L1 to N, a heater across L1 and L2, and an L3 box (no L3 on split-phase)
+    const run = async vs => page.evaluate(vs => { sel = null; loadPreset('blank'); VSYS = vs; PH_COL = [...VSYS_LIST[vs].col]; POWER = 'boxes'; W = 1300;
+      for (const [L, y] of [['1', 140], ['2', 300], ['N', 460], ['3', 620]]) parts.push(newPart('ph-' + L, 80, y));
+      parts.push(P('lamp', 600, 140, { L: '', color: '#FFDC00' }), P('htr', 600, 300, { L: '1' }));
+      wires.push(Wr(120, 140, 540, 140), Wr(660, 140, 900, 140), Wr(900, 140, 900, 460), Wr(120, 460, 900, 460),
+        Wr(200, 140, 200, 220), Wr(200, 220, 540, 220), Wr(540, 220, 540, 300), Wr(120, 300, 480, 300), Wr(480, 300, 480, 380), Wr(480, 380, 700, 380), Wr(700, 380, 700, 300), Wr(660, 300, 700, 300));
+      normalize(); draw();
+      const iss = wiringIssues(NET), l3 = parts.find(p => p.t === 'ph' && p.L === '3'), h = parts.find(p => p.t === 'htr');
+      return { l3: iss.get(l3.id) || '', htr: JSON.stringify(iss.get(h.id) || '') }; }, vs);
+    const get = () => page.evaluate(() => parts.filter(p => p.t === 'lamp' || p.t === 'htr').map(p => p.t + (coilOn[p.id] ? ' on ' : ' off ') + (p._sh || 0).toFixed(2)).join(', '));
+    let b = await run('240');
+    if (b.l3 !== 'No L3 in a 120/240 V Split-Phase system') out.push('L3 on split-phase: ' + b.l3);
+    if (b.htr !== '{"note":"On 240 V"}') out.push('heater note: ' + b.htr);
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    let g = await get(); if (g !== 'lamp on 1.00, htr on 2.00') out.push('split-phase running: ' + g);
+    const cols = await page.evaluate(() => [NET.PH['1'], NET.PH['N']].map(n => showCol(n, simT)).join());
+    if (cols !== '#6E6E6E,#E8E8E8') out.push('L1 and N wires: ' + cols);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    b = await run('208');
+    if (b.l3 !== 'Not wired to anything' || b.htr !== '{"note":"On 208 V"}') out.push('208Y/120 notes: ' + JSON.stringify(b));
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    g = await get(); if (g !== 'lamp on 1.00, htr on 1.73') out.push('208Y/120 running: ' + g);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
     return out;
   });
   await check('Wide parts\' leads stay inside their ends (Dallas, 22 Nov 2026): the current leaves a limit switch, toggle switch or circuit breaker the moment it gets across, with nothing painted out over the wire past it', async page => {

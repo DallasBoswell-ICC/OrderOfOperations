@@ -35,7 +35,7 @@ function newPart(kind, x, y) {
   if (kind === 'dsc' || kind === 'olh' || kind === 'mtr') return P(kind, x, y, { L: nextNum(new Set(parts.filter(q => q.t === kind).map(q => q.L))) });   // the next number
   if (kind === 'mst') return P('mst', x, y, { L: 'M' });   // a starter: worked by the M coil (change it in its settings)
   if (kind === 'olc') { const ols = parts.filter(q => q.t === 'olh').map(q => q.L), free = ols.find(L => !parts.some(q => q.t === 'olc' && q.L === L)); return P('olc', x, y, { L: free || ols[0] || '1', nc: true }); }   // an overload's contact: one not yet in the control circuit
-  if (kind.startsWith('ph-')) return P('ph', x, y, { L: kind.slice(3) });   // a phase box: L1, L2 or L3
+  if (kind.startsWith('ph-')) return P('ph', x, y, { L: kind.slice(3) });   // a phase box: L1, L2 or L3, or N (the neutral)
   if (kind === 'src-l1' || kind === 'src-l2') return P(kind.slice(4), x, y, { L: '' });   // a supply box   // a light of its own (build it into a button in its settings)
   if (kind.startsWith('con')) {
     // worked by the first coil (change it in its settings): a timing contact by the first timer; an instantaneous one by

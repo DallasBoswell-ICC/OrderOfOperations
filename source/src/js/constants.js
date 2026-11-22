@@ -159,10 +159,29 @@ const turns = p => turns7(p) || twoEnded(p), vert = p => (p.t === 'fu1' || twoEn
    of it that phase. Each phase has its own colour (each circuit keeps its own; brown, orange and yellow, as on 480 V).
    Every box turns, a quarter turn at a time (p.rot), as a continuation does. */
 const isPh = p => p.t === 'ph';
-const PH_PAL = [['Brown', '#B5793F'], ['Orange', '#FF8A1F'], ['Yellow', '#F2D21B'], ['Red', '#E8413C'], ['Blue', '#3F7FFF'], ['Violet', '#A66BFF'], ['Grey', '#9AA0A6'], ['White', '#E8E8E8']];
+const PH_PAL = [['Black', '#6E6E6E'], ['Brown', '#B5793F'], ['Orange', '#FF8A1F'], ['Yellow', '#F2D21B'], ['Red', '#E8413C'], ['Blue', '#3F7FFF'], ['Violet', '#A66BFF'], ['Grey', '#9AA0A6'], ['White', '#E8E8E8']];
 const PH_DEFAULT = ['#B5793F', '#FF8A1F', '#F2D21B'];
 let PH_COL = [...PH_DEFAULT];
-const phCol = p => PH_COL[(+p.L || 1) - 1];
+/* The voltage system (Dallas, 22 Nov 2026): what the phase boxes are, set from a preset for the whole circuit (Power menu;
+   saved as vs; a circuit saved before there was a choice is 480Y/277, as it always was). Each phase is a fixed voltage to
+   the neutral and a fixed angle (no swinging back and forth: only how far round each one is), so phase to phase comes out
+   at 1.73 times phase to neutral in a wye, and across the two legs of a split-phase supply at twice it. The neutral (an N
+   box) is at 0 V. Black is shown as a charcoal grey, so it can be told from a dead wire (Dallas). */
+const VSYS_LIST = {
+  '480': { name: '480Y/277 V', short: '480Y/277', ph: 3, vpn: 480 / Math.sqrt(3), ang: [0, -120, 120], col: ['#B5793F', '#FF8A1F', '#F2D21B'] },
+  '208': { name: '208Y/120 V', short: '208Y/120', ph: 3, vpn: 120, ang: [0, -120, 120], col: ['#6E6E6E', '#E8413C', '#3F7FFF'] },
+  '240': { name: '120/240 V Split-Phase', short: '120/240', ph: 2, vpn: 120, ang: [0, 180], col: ['#6E6E6E', '#E8413C', '#3F7FFF'] }
+};
+let VSYS = '208';
+const NEU_COL = '#E8E8E8';
+const phK = L => L === 'N' ? 4 : +L;   // (a phase box's phase as a number: L1-L3 1-3, the neutral 4)
+const phName = L => L === 'N' || L === 4 ? 'N' : 'L' + L;
+const phLive = k => k === 4 || (k >= 1 && k <= VSYS_LIST[VSYS].ph);   // (a split-phase supply has no L3)
+const phColK = k => k === 4 ? NEU_COL : PH_COL[k - 1];
+const phCol = p => phColK(phK(p.L) || 1);
+// a phase's voltage to the neutral, as [re, im] (null: the system has no such phase)
+const phVolt = k => { if (k === 4) return [0, 0]; if (!phLive(k)) return null; const s = VSYS_LIST[VSYS], a = s.ang[k - 1] * Math.PI / 180; return [s.vpn * Math.cos(a), s.vpn * Math.sin(a)]; };
+const phAcross = (ka, kb) => { const a = phVolt(ka), b = phVolt(kb); return a && b ? Math.hypot(a[0] - b[0], a[1] - b[1]) : 0; };
 const lighten = (c, f) => { const n = parseInt(c.slice(1), 16), m = k => Math.round(((n >> k) & 255) + (255 - ((n >> k) & 255)) * f); return '#' + ((1 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)).toString(16).slice(1).toUpperCase(); };
 const JMP_EDGE = '#b8c2cf';
 const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel' || p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw' || p.t === 'fsw' || p.t === 'flt' || p.t === 'tgl' || p.t === 'cbk' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc' || p.t === 'fu1';

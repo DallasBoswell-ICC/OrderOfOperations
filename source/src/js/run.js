@@ -71,7 +71,8 @@ function paintView(V) {
       continue;
     }
     if (isSrc(p) || isPh(p)) { if (v.src) for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } continue; }
-    for (const S of ['A', 'B']) paintLead(v.lead[S], p._lead && p._lead[S]);
+    // (a load across the phases or a phase and the neutral: each lead the colour of the phase at its end)
+    for (const S of ['A', 'B']) { const k = LOADT(p.t) && PARR.size ? phaseOfAt(S === 'A' ? p._a : p._b, simT) : 0; paintLead(v.lead[S], k ? [{ t0: -1e9, col: phColK(k), from: 'term' }] : p._lead && p._lead[S]); }
     let k;
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
     else if (p.t === 'lsw') setLimit(v, p, lswPos(p), lswClosed(p));
@@ -152,7 +153,10 @@ function paintSel(p, v) {
    wire (taking as long as the current takes to cross its body), and drains away the same way once the current has
    gone. Current through it without pulling it in (too little voltage, in series) leaves it grey. */
 function paintSol(p, v) {
-  const S = p._inS || 'A', evs = p._lead && p._lead[S], Ls = TERM(p) - BODYH(p.t) / 2, at = e => e.t0 + Ls / V;
+  const Ls = TERM(p) - BODYH(p.t) / 2, at = e => e.t0 + Ls / V;
+  // (across the phases or a phase and the neutral: it fills as it comes on, and empties as it goes off)
+  const pe = p._pf ? (coilOn[p.id] ? [{ t0: (p._chg ?? -1e9) - Ls / V, col: 'on' }] : [{ t0: -1e9, col: 'on' }, { t0: (p._chg ?? -1e9) - Ls / V, col: null }]) : null;
+  const S = p._inS || 'A', evs = pe || (p._lead && p._lead[S]);
   let i = -1; if (evs) for (let k = 0; k < evs.length; k++) if (at(evs[k]) <= simT + 1e-9) i = k;
   const show = !!coilOn[p.id] || !COND[p.id], c = e => show && e && e.col ? v.col : null;
   const cur = i >= 0 ? evs[i] : null, now = c(cur), prev = i > 0 ? c(evs[i - 1]) : null;

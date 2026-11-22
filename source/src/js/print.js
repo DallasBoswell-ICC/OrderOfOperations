@@ -96,12 +96,12 @@ function printSheet(drawnBy, fit = false) {
   // (each device a line passes takes that line's next letter, level by level, in reading order: every fused
   // branch its own letter, Dallas 19 Nov 2026; the same as Print Builder)
   for (const q of P) if (q.t === 'ph') { const n0 = netAt(...q.terms[0]); if (n0 == null || NUM.has(n0)) continue;
-    NUM.set(n0, 'L' + q.L); PHASE.add(n0);
+    NUM.set(n0, phName(q.L)); PHASE.add(n0);
     let front = [n0], k = 0;
     while (front.length) { const hop = [];
       for (const a of front) for (const o of acrossQ(a)) if (!NUM.has(o.m) && !mstLoad.has(o.m)) hop.push(o);
       hop.sort((u, v) => u.q.y - v.q.y || u.q.x - v.q.x); front = [];
-      for (const { m } of hop) if (!NUM.has(m)) { NUM.set(m, 'L' + q.L + LET(++k)); front.push(m); } } }
+      for (const { m } of hop) if (!NUM.has(m)) { NUM.set(m, phName(q.L) + LET(++k)); front.push(m); } } }
   const motors = P.filter(q => q.t === 'mtr').sort((a, b) => +a.L - +b.L || a.y - b.y || a.x - b.x);
   motors.forEach((m, k) => m.terms.forEach((t, i) => {
     const chain = [netAt(...t)]; if (chain[0] == null) return;
@@ -164,7 +164,7 @@ function printSheet(drawnBy, fit = false) {
   for (const q of P) {
     const { x, y, p } = q;
     switch (q.t) {
-      case 'ph': case 'l1': case 'l2': { const name = q.t === 'ph' ? 'L' + q.L : q.t.toUpperCase();
+      case 'ph': case 'l1': case 'l2': { const name = q.t === 'ph' ? phName(q.L) : q.t.toUpperCase();
         // (coming from somewhere else: an arrow at the start of each wire it feeds, pointing in to the wire; its name behind)
         const fed = q.terms.filter(wired);
         for (const [tx, ty] of fed) { const ux = Math.sign(tx - x), uy = Math.sign(ty - y); inArrow(tx, ty, ux, uy);

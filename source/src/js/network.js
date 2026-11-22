@@ -120,7 +120,7 @@ function network() {
   // three-phase power is kept apart from L1 and L2, see phasesNow)
   const PH = {};
   for (const p of parts) if (isPh(p)) {
-    const h = PH[p.L] ?? (PH[p.L] = node(-10 - +p.L, 0, 'PH' + p.L));
+    const h = PH[p.L] ?? (PH[p.L] = node(-10 - phK(p.L), 0, 'PH' + p.L));
     p._t = terms(p).map(([x, y]) => { const i = node(x, y, key(x, y)); edges.push({ a: h, b: i, w: 0, kind: 'w' }); return i; });
   }
   // the supply boxes: every connection point of an L1 box is L1, of an L2 box L2
@@ -158,7 +158,7 @@ function wiringIssues(net) {
   const fixed = e => e.kind === 'w' || (isSw(e.part) && !isSt(e)), V = [components(net, fixed), ...sts.map(m => components(net, e => fixed(e) || (isSt(e) && e.part.x === m)))];
   const f0 = V[0], k1 = f0(net.L1), k2 = f0(net.L2);
   sts.forEach((m, i) => { const fm = V[i + 1], hs = Object.keys(net.PH);
-    for (const a of hs) for (const b of hs) if (a < b && fm(net.PH[a]) === fm(net.PH[b]) && f0(net.PH[a]) !== f0(net.PH[b]) && !out.has(m.id)) out.set(m.id, `Closing it joins L${a} to L${b}`); });
+    for (const a of hs) for (const b of hs) if (a < b && fm(net.PH[a]) === fm(net.PH[b]) && f0(net.PH[a]) !== f0(net.PH[b]) && !out.has(m.id)) out.set(m.id, `Closing it joins ${phName(a)} to ${phName(b)}`); });
   for (const p of parts) {
     if (p.t === 'stand') { out.set(p.id, { note: 'A stand-in: drawn, not run' }); continue; }
     if (isSrc(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); continue; }
@@ -172,22 +172,26 @@ function wiringIssues(net) {
     }
     if (p.t === 'mtr') {
       if (!p._t.some(i => net.adj[i].length > 0)) out.set(p.id, 'Not wired to anything');
-      else if (!V.some(fv => new Set(p._t.map(i => phaseAt(net, fv, i)).filter(k => k > 0)).size === 3)) out.set(p.id, 'Not fed all three phases');
+      else if (!V.some(fv => new Set(p._t.map(i => phaseAt(net, fv, i)).filter(k => k > 0 && k < 4)).size === 3)) out.set(p.id, 'Not fed all three phases');
       continue;
     }
     if (isPh(p)) {
       const c = f0(net.PH[p.L]), o = Object.keys(net.PH).filter(k => k !== p.L && f0(net.PH[k]) === c);
-      if (o.length) { out.set(p.id, `Shorted to L${o[0]}`); out.set('phshort', `L${p.L} connects straight to L${o[0]}`); }
-      else if (c === k1 || c === k2) { out.set(p.id, 'Joined to the control circuit'); out.set('phshort', `L${p.L} connects straight to the control circuit's ${c === k1 ? 'L1' : 'L2'}`); }
+      if (!phLive(phK(p.L))) out.set(p.id, `No ${phName(p.L)} in a ${VSYS_LIST[VSYS].name} system`);   // (an L3 box on a split-phase supply)
+      else if (o.length) { out.set(p.id, `Shorted to ${phName(o[0])}`); out.set('phshort', `${phName(p.L)} connects straight to ${phName(o[0])}`); }
+      else if (c === k1 || c === k2) { out.set(p.id, 'Joined to the control circuit'); out.set('phshort', `${phName(p.L)} connects straight to the control circuit's ${c === k1 ? 'L1' : 'L2'}`); }
       else if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything');
       continue;
     }
     if (isJmp(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); else if (!parts.some(q => q !== p && isJmp(q) && q.L === p.L)) out.set(p.id, `No other continuation ${p.L}`); continue; }
     const a = f(p._a), b = f(p._b);
-    if (p.t === 'xfm' && V.some(fv => phaseFed(net, fv, p))) continue;   // (its primary across two phases)
+    // (a transformer's primary, or a light, coil, solenoid or heater, across two phases or a phase and the neutral (Dallas, 22
+    // Nov 2026): fine; one not on the voltage it's made for gets a note)
+    if (LOADT(p.t)) { const fv = V.find(fv => phaseFed(net, fv, p)); if (fv) { const v = phAcross(phaseAt(net, fv, p._a), phaseAt(net, fv, p._b));
+      if (p.t !== 'xfm' && Math.abs(v - SUPPLY_V * ratedShare(p)) > 2) out.set(p.id, { note: `On ${Math.round(v)} V` }); continue; } }
     if (LOADT(p.t)) {
       const sh = S ? S.share.get(p.id) || 0 : 1;
-      if (sh < 1e-9) out.set(p.id, p.t === 'xfm' && (phaseAt(net, f0, p._a) || phaseAt(net, f0, p._b)) ? 'Not wired across two phases' : 'Not wired from L1 to L2');
+      if (sh < 1e-9) out.set(p.id, p.t === 'xfm' && (phaseAt(net, f0, p._a) || phaseAt(net, f0, p._b)) ? 'Not wired across two phases' : phaseAt(net, f0, p._a) > 0 || phaseAt(net, f0, p._b) > 0 ? 'Not wired across a phase and the neutral or another phase' : 'Not wired from L1 to L2');
       else if (sh < 1 - 1e-6) out.set(p.id, { note: `In series: ${Math.round(sh * SUPPLY_V * 10) / 10} V` });
     }
     else if (net.adj[p._a].length < 2 || net.adj[p._b].length < 2) out.set(p.id, 'An end is not connected');
@@ -197,7 +201,7 @@ function wiringIssues(net) {
 // the phase that junction n is joined to through f (0: none; -1: more than one, or a phase and the control circuit)
 function phaseAt(net, f, n) {
   let k = 0; const c = f(n);
-  for (const L in net.PH) if (f(net.PH[L]) === c) { if (k) return -1; k = +L; }
+  for (const L in net.PH) if (f(net.PH[L]) === c && phLive(phK(L))) { if (k) return -1; k = phK(L); }
   return k && (c === f(net.L1) || c === f(net.L2)) ? -1 : k;
 }
 // a transformer whose primary is across two different phases

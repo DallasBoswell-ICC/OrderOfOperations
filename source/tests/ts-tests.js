@@ -256,6 +256,20 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     return out;
   });
 
+  await check('Voltage systems (Dallas, 22 Nov 2026): the meter reads 208Y/120 (120 V phase to neutral, 208 V between phases) and 120/240 split-phase (120 V each leg to neutral, 240 V across the legs), at the boxes and across a light from L1 to N', async page => {
+    const out = [];
+    for (const [vs, want] of [['208', [207.8, 120, 120, 120]], ['240', [240, 120, 120, 120]], ['480', [480, 277.1, 277.1, 277.1]]]) {
+      const r = await page.evaluate(vs => { sel = null; loadPreset('blank'); VSYS = vs; PH_COL = [...VSYS_LIST[vs].col]; POWER = 'boxes'; W = 1300;
+        for (const [L, y] of [['1', 140], ['2', 300], ['N', 460]]) parts.push(newPart('ph-' + L, 80, y));
+        parts.push(P('lamp', 600, 140, { L: '', color: '#FFDC00' }));
+        wires.push(Wr(120, 140, 540, 140), Wr(660, 140, 900, 140), Wr(900, 140, 900, 460), Wr(120, 460, 900, 460), Wr(120, 300, 300, 300));
+        normalize(); const c = readCircuit(JSON.parse(JSON.stringify(circuitData()))); tsUse(c, '', true); setSpeed(300);
+        const lamp = parts.find(p => p.t === 'lamp'), r1 = x => Math.round(x * 10) / 10;
+        return [r1(tsVolts(NET.PH['1'], NET.PH['2'])), r1(tsVolts(NET.PH['1'], NET.PH['N'])), r1(tsVolts(NET.PH['2'], NET.PH['N'])), r1(tsVolts(lamp._a, lamp._b))]; }, vs);
+      if (r.join() !== want.join()) out.push(vs + ': ' + r.join() + ' (want ' + want.join() + ')');
+    }
+    return out;
+  });
   await check('Three-phase (FWD/REV template): 480 V between phases; locked out, the disconnect opens: its line side still 480 V, its load side dead', async page => {
     const out = [];
     await page.evaluate(() => { loadPreset('fwdrev'); const c = readCircuit(JSON.parse(JSON.stringify(circuitData()))); tsUse(c, '', true); setSpeed(300); });

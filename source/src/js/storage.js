@@ -22,7 +22,7 @@ function circuitData() {
   if (typeof scenSync === 'function') scenSync();
   const w = W_USER ? W : contentRight(), x = v => barsOn() && v === W ? w : v;   // (a length set by moving the bars is kept)
   return {
-    app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}), ...(barsOn() ? {} : { pw: 'boxes' }), ...(SRC_COL !== SRC_DEFAULT ? { sc: SRC_COL } : {}), ...(PH_COL.join() !== PH_DEFAULT.join() ? { pc: PH_COL.map(c => c.slice(1)) } : {}),
+    app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}), ...(barsOn() ? {} : { pw: 'boxes' }), ...(SRC_COL !== SRC_DEFAULT ? { sc: SRC_COL } : {}), ...(VSYS !== '480' ? { vs: VSYS } : {}), ...(PH_COL.join() !== VSYS_LIST[VSYS].col.join() ? { pc: PH_COL.map(c => c.slice(1)) } : {}),   // (the voltage system: none saved means 480Y/277, as before there was a choice)
     parts: parts.map(p => { if (p.t === 'stand') return ['stand', p.x, p.y, p.L || '', 0, 1, '', null, null, p.desc || '', { t: p.sym, r: p.srot || 0, o: p.st }];   // (a stand-in for a Print Builder part: what it stands for, kept whole)
       const a = [p.estop ? 'est' : p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if ((p.t === 'lsw' || flips(p) || isBrk(p)) && p.held) a.push(1); if (HILO(p.t) && p.low) a.push(1); if (turns7(p) && p.rot) a.push(p.rot); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
       if (p.t === 'sel') { while (a.length < 7) a.push(null); a.length = 7; a.push(selN(p), (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, (p.names || []).join('/'), p.pos || 0); }   // a selector switch: positions, closed-in mask, (no label), names, start
@@ -56,7 +56,7 @@ function readCircuit(d) {
       if (typeof q.t === 'string' && st.length) { const p = P('stand', snap(num(a[1])), snap(num(a[2])), { L: String(a[3] ?? '').slice(0, 12) }); p.sym = q.t.slice(0, 16); p.srot = [0, 90, 180, 270].includes(+q.r) ? +q.r : 0; p.st = st; p.desc = typeof a[9] === 'string' ? a[9].slice(0, 40) : ''; delete p.color; return p; } }
     const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'htr' ? 'htr' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'sp2', 'xov', 'dps', 'dpd', 'tps', 'cbk', 'cbd', 'cbt'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
     const p = P(t, snap(num(a[1])), snap(num(a[2])), {   // (on the grid: a part saved off it, by an older version, could never be wired)
-      L: ['dsc', 'fus', 'fu1', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'sp2', 'xov', 'dps', 'dpd', 'tps', 'cbk', 'cbd', 'cbt'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1))) : t === 'sol' || t === 'htr' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'htr' ? HTR_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : t === 'lsw' ? LSW_COL : t === 'tsw' ? TSW_COL : t === 'psw' ? PSW_COL : t === 'fsw' ? FSW_COL : BTN_COL[L] || '#FF0032') });
+      L: ['dsc', 'fus', 'fu1', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'sp2', 'xov', 'dps', 'dpd', 'tps', 'cbk', 'cbd', 'cbt'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? (a[3] === 'N' ? 'N' : String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1)))) : t === 'sol' || t === 'htr' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'htr' ? HTR_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : t === 'lsw' ? LSW_COL : t === 'tsw' ? TSW_COL : t === 'psw' ? PSW_COL : t === 'fsw' ? FSW_COL : BTN_COL[L] || '#FF0032') });
     if (t === 'lsw') { p.nc = !!a[4]; if (a[7] === 1) p.held = true; }
     if (flips(p) || isBrk(p)) { p.maint = true; p.nc = false; if (a[7] === 1) p.held = true; }   // (held: it starts on (an SPST) or at throw 1 (an SPDT))   // (a toggle switch: always maintained, an SPST's one NO contact)
     if (t === 'psw' || t === 'fsw' || t === 'flt') { p.nc = !!a[4]; if (a[7] === 1) p.low = true; }   // (a pressure or flow switch: NO or NC)
@@ -112,11 +112,11 @@ function readCircuit(d) {
   const ffo = Array.isArray(d.ffo) && (d.ffo[0] || d.ffo[1]) ? { r: !!d.ffo[0], n: !!d.ffo[1] } : null;
   const pr = d.pr && typeof d.pr === 'object' && d.pr.pb && d.pr.pb.kind === 'o3-print' && typeof d.pr.fp === 'string' ? d.pr : null;
   const sp = Number.isFinite(+d.sp) && +d.sp >= 0.1 && +d.sp <= 300 ? +d.sp : null;
-  return { sp, pr, sn, si, swo, ffo, wo: swo ? swo[si] : typeof d.wo === 'string' ? d.wo.slice(0, 400) : '', w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', src: SRC_PAL.some(([, h]) => h === d.sc) ? d.sc : SRC_DEFAULT, ph: Array.isArray(d.pc) && d.pc.length === 3 && d.pc.every(hex) ? d.pc.map(hex) : [...PH_DEFAULT], pv, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
+  return { sp, pr, sn, si, swo, ffo, wo: swo ? swo[si] : typeof d.wo === 'string' ? d.wo.slice(0, 400) : '', w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', src: SRC_PAL.some(([, h]) => h === d.sc) ? d.sc : SRC_DEFAULT, vs: VSYS_LIST[d.vs] ? d.vs : '480', ph: Array.isArray(d.pc) && d.pc.length === 3 && d.pc.every(hex) ? d.pc.map(hex) : [...VSYS_LIST[VSYS_LIST[d.vs] ? d.vs : '480'].col], pv, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
 }
 function useCircuit(c, how) {
   snapshot();
-  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize(); sel = null;
+  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; VSYS = c.vs; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize(); sel = null;
   fitView(); fit(true);
   say(how);
   if (editing) draw(); else { NET = network(); draw(); startRun(); afterRunStart(); }
@@ -258,7 +258,7 @@ function scheduleAutosave() {
   autosaveTimer = setTimeout(() => { try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(circuitData())); } catch (_) {} }, 400);
 }
 function restoreAutosave() {
-  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize(); return true; }
+  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; VSYS = c.vs; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize(); return true; }
   catch (_) { return false; }
 }
 

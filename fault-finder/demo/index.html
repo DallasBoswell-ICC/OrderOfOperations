@@ -215,6 +215,12 @@ body.ribbon-min.ribbon-peek .rbody { display: flex; position: absolute; left: -1
 .tool.small svg { width: 17px; height: 17px; }
 .srcrow { display: flex; align-items: center; gap: 7px; padding: 3px 9px 3px 6px; font-size: .8rem; white-space: nowrap; }
 #src-swatches { display: flex; gap: 4px; }
+/* the voltage system: a check box beside each, the one chosen ticked (Dallas, 22 Nov 2026) */
+.vsrow { display: flex; flex-direction: column; margin-top: 5px; padding-top: 6px; border-top: 1px solid #3a3d42; }
+.vs-h { font-size: .74rem; color: #a9adb5; padding: 0 9px 2px 6px; }
+.vs-box { width: 12px; height: 12px; border: 1.4px solid #8a8f98; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; line-height: 1; color: #1f1f1f; flex: none; }
+.vs-b[aria-pressed="true"] .vs-box { background: var(--gold); border-color: var(--gold); }
+.vs-b[aria-pressed="true"] .vs-box::after { content: '✓'; font-weight: 900; }
 #src-swatches button { width: 15px; height: 15px; padding: 0; border-radius: 3px; border: 1px solid rgba(0,0,0,.45); cursor: pointer; }
 #src-swatches button[aria-pressed="true"] { outline: 2px solid #e2cc85; outline-offset: 1px; }
 #src-swatches button:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
@@ -805,8 +811,8 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
         <div class="tgroup" id="l-colour-note" hidden><span class="label">Colour</span><span class="selname">the button's colour</span></div>
       </div>
       <div class="props" id="props-ph" hidden>
-        <div class="tgroup"><span class="label">Phase</span><select id="ph-num" aria-label="Phase"><option value="1">L1</option><option value="2">L2</option><option value="3">L3</option></select></div>
-        <div class="tgroup"><span class="label" id="ph-colour-label">Colour</span><div class="swatches phsw" id="ph-colour" role="radiogroup" aria-label="Phase colour" data-tip="The colour of this phase: every box and wire of it, everywhere in the circuit"></div><input type="color" id="ph-custom" aria-label="Another colour" data-tip="Pick any other colour for this phase"></div>
+        <div class="tgroup"><span class="label">Phase</span><select id="ph-num" aria-label="Phase"><option value="1">L1</option><option value="2">L2</option><option value="3">L3</option><option value="N">N (Neutral)</option></select></div>
+        <div class="tgroup" id="ph-colour-grp"><span class="label" id="ph-colour-label">Colour</span><div class="swatches phsw" id="ph-colour" role="radiogroup" aria-label="Phase colour" data-tip="The colour of this phase: every box and wire of it, everywhere in the circuit"></div><input type="color" id="ph-custom" aria-label="Another colour" data-tip="Pick any other colour for this phase"></div>
       </div>
       <div class="props" id="props-box" hidden>
         <div class="tgroup"><button type="button" class="tool small" id="box-rot" data-kb data-tip="Turn it a quarter turn clockwise, so its connection points face other ways (or press {rotate})"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 10a5.5 5.5 0 1 1-1.8-4.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M14.2 2.6v3.8h-3.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Rotate</span></button></div>
@@ -1064,9 +1070,10 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
           <button type="button" class="tool small" data-power="bars" aria-pressed="true" data-tip="Power the circuit from the L1 and L2 bars down its sides, as a ladder diagram is drawn"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="2" width="3" height="16" rx="1" fill="currentColor"/><rect x="15" y="2" width="3" height="16" rx="1" fill="currentColor"/><path d="M5 7h10M5 13h10" stroke="currentColor" stroke-width="1.3"/></svg><span>Bars</span></button>
           <button type="button" class="tool small" data-power="boxes" aria-pressed="false" data-tip="Power the circuit from supply boxes placed anywhere instead of the bars"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="6" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="11" y="6" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span>Boxes</span></button>
           <div class="srcrow" data-tip="Source colour: the colour of the current straight from L1. Each coil or pilot light it goes through takes away its share of it, down to the neutral's off-white at L2."><span>Source</span><span id="src-swatches" role="group" aria-label="Source colour"></span></div>
+          <div class="vsrow" role="group" aria-label="Voltage System"><span class="vs-h">Voltage System</span><button type="button" class="tool small vs-b" data-vs="480" aria-pressed="false" data-tip="Three-phase wye: 277 V from each phase to the neutral, 480 V between phases"><span class="vs-box" aria-hidden="true"></span><span>480Y/277 V</span></button><button type="button" class="tool small vs-b" data-vs="208" aria-pressed="false" data-tip="Three-phase wye: 120 V from each phase to the neutral, 208 V between phases"><span class="vs-box" aria-hidden="true"></span><span>208Y/120 V</span></button><button type="button" class="tool small vs-b" data-vs="240" aria-pressed="false" data-tip="Split-phase, as in American homes: 120 V from L1 or L2 to the neutral, 240 V from L1 to L2"><span class="vs-box" aria-hidden="true"></span><span>120/240 V Split-Phase</span></button></div>
         </div></div><div class="gname">Power</div></div>
   <div class="rgrp" id="supply-grp"><div class="gbody"><button type="button" class="tool big src-tool" data-part="src-l1" hidden data-tip="L1 Supply: where the circuit gets its power. Wire to its left, right or bottom; use as many as you like."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#e2cc85" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="#f2e6b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L1<br>Supply</span></button><button type="button" class="tool big src-tool" data-part="src-l2" hidden data-tip="L2 Return: where the current goes back. Wire to its left, right or bottom; use as many as you like."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#e2cc85" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="#f2e6b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L2<br>Return</span></button></div><div class="gname">Supply Boxes</div></div>
-  <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="ph-1" data-tip="L1 phase of a three-phase supply: wire to its left, right or bottom (turn it with R to face other ways). Its phase, in its own colour, reaches everything wired to it."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" style="stroke:var(--ph1)" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" style="stroke:var(--ph1l)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L1<br>Phase</span></button><button type="button" class="tool big" data-part="ph-2" data-tip="L2 phase of a three-phase supply: wire to its left, right or bottom (turn it with R to face other ways). Its phase, in its own colour, reaches everything wired to it."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" style="stroke:var(--ph2)" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" style="stroke:var(--ph2l)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L2<br>Phase</span></button><button type="button" class="tool big" data-part="ph-3" data-tip="L3 phase of a three-phase supply: wire to its left, right or bottom (turn it with R to face other ways). Its phase, in its own colour, reaches everything wired to it."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" style="stroke:var(--ph3)" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" style="stroke:var(--ph3l)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L3<br>Phase</span></button></div><div class="gname">Three Phase</div></div>
+  <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="ph-1" data-tip="L1 phase of a three-phase supply: wire to its left, right or bottom (turn it with R to face other ways). Its phase, in its own colour, reaches everything wired to it."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" style="stroke:var(--ph1)" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" style="stroke:var(--ph1l)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L1<br>Phase</span></button><button type="button" class="tool big" data-part="ph-2" data-tip="L2 phase of a three-phase supply: wire to its left, right or bottom (turn it with R to face other ways). Its phase, in its own colour, reaches everything wired to it."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" style="stroke:var(--ph2)" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" style="stroke:var(--ph2l)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L2<br>Phase</span></button><button type="button" class="tool big" data-part="ph-3" data-tip="L3 phase of a three-phase supply: wire to its left, right or bottom (turn it with R to face other ways). Its phase, in its own colour, reaches everything wired to it."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" style="stroke:var(--ph3)" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" style="stroke:var(--ph3l)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L3<br>Phase</span></button><button type="button" class="tool big" data-part="ph-N" data-name="Neutral" data-tip="Neutral: 0 V, the white wire of a wye or split-phase supply. A light, coil, solenoid or heater wired from a phase to it gets that phase's voltage to the neutral."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#E8E8E8" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="#F4F4F4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Neutral</span></button></div><div class="gname" id="ph-gname">Three Phase</div></div>
   <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="xfm" data-tip="Control transformer: wire its primary, H1 and H2 on top, across the main power (Main Power Voltage); while it is fed, its secondary, X1 and X2 below, powers a control circuit (Control Voltage): X1 like L1, X2 like L2."><svg viewBox="0 0 30 26"><rect x="3" y="3" width="24" height="20" rx="4" fill="#222" stroke="#9aa7b5" stroke-width="1.4"/><path d="M8 7v2.6a2.33 2.33 0 0 0 4.66 0a2.33 2.33 0 0 0 4.67 0a2.33 2.33 0 0 0 4.67 0V7M8 19v-2.6a2.33 2.33 0 0 1 4.66 0a2.33 2.33 0 0 1 4.67 0a2.33 2.33 0 0 1 4.67 0V19" fill="none" stroke="#ff9d6b" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.5 12.2h15M7.5 13.8h15" stroke="#c0c6cc" stroke-width="1"/></svg><span>Transformer</span></button></div><div class="gname">Control Power</div></div>
 </div>
 <div class="tp-menu" id="bt-menu" role="menu" aria-label="Buttons" hidden>
@@ -1455,7 +1462,7 @@ function linkBuild(doc, back) {
       // (the box sits behind its terminal: its right terminal there if the wire goes right, and so on)
       const cx = at[0] - dir[0] * 40, cy = at[1] - dir[1] * 40, rot = 0;
       let row;
-      if (t === 'ph') row = ['ph', cx, cy, linkDigits(p.tag, '1'), 0, 1, ''];
+      if (t === 'ph') row = ['ph', cx, cy, /^N$/i.test(String(p.tag || '').trim()) ? 'N' : linkDigits(p.tag, '1'), 0, 1, ''];   // (N: the neutral)
       else if (t === 'jmp') { const key = (p.tag || '').toUpperCase() || '?'; if (!jmpN.has(key)) jmpN.set(key, jmpN.size + 1); row = ['jmp', cx, cy, String(jmpN.get(key)), 0, 1, '']; }
       else row = [t, cx, cy, '', 0, 1, ''];
       add(it, row, [at]);
@@ -1565,7 +1572,7 @@ function linkMerge(old, nu, cbi, ownCol = new Set()) {
     if (a.length > 12 && (b[0] === 'btn' || b[0] === 'sel' || b[0] === 'lamp')) { while (b.length < 12) b.push(null); b.push(...a.slice(12)); }   // (its dashed link line)
   }
   const map = o => oi.has(o) ? oi.get(o) : -1;
-  const keep = ['name', 'sc', 'pc', 'wo', 'ffo', 'pv', 'pp'];
+  const keep = ['name', 'sc', 'pc', 'vs', 'wo', 'ffo', 'pv', 'pp'];   // (vs: the voltage system)
   for (const k of keep) if (old[k] !== undefined) nu[k] = old[k];
   if (old.pw === 'boxes') nu.pw = 'boxes';
   if (old.pd) nu.pd = old.pd.map(a => [map(a[0]), ...a.slice(1)]).filter(a => a[0] >= 0);
@@ -1695,7 +1702,7 @@ function circuitToPrint(d, env) {
       case 'fus': t = 'fus3'; o.tag = 'FU' + r.L; break;
       case 'fu1': t = 'fuse'; o.tag = 'FU' + r.L; o.rot = [0, 90, 180, 270][rotOf(r)]; break;
       case 'xfm': t = 'xfmr'; o.tag = 'CPT' + r.L; break;
-      case 'ph': t = 'sup'; o.tag = 'L' + r.L; break;
+      case 'ph': t = 'sup'; o.tag = r.L === 'N' ? 'N' : 'L' + r.L; break;
       case 'l1': t = 'src_l1'; break;
       case 'l2': t = 'src_l2'; break;
       case 'stand': { const q = r.a[10]; if (!q || !LINK_PB_TERMS[q.t]) break; t = q.t; o.rot = +q.r || 0; o.tag = r.L; o.desc = typeof r.a[9] === 'string' ? r.a[9] : ''; break; }
@@ -2392,10 +2399,29 @@ const turns = p => turns7(p) || twoEnded(p), vert = p => (p.t === 'fu1' || twoEn
    of it that phase. Each phase has its own colour (each circuit keeps its own; brown, orange and yellow, as on 480 V).
    Every box turns, a quarter turn at a time (p.rot), as a continuation does. */
 const isPh = p => p.t === 'ph';
-const PH_PAL = [['Brown', '#B5793F'], ['Orange', '#FF8A1F'], ['Yellow', '#F2D21B'], ['Red', '#E8413C'], ['Blue', '#3F7FFF'], ['Violet', '#A66BFF'], ['Grey', '#9AA0A6'], ['White', '#E8E8E8']];
+const PH_PAL = [['Black', '#6E6E6E'], ['Brown', '#B5793F'], ['Orange', '#FF8A1F'], ['Yellow', '#F2D21B'], ['Red', '#E8413C'], ['Blue', '#3F7FFF'], ['Violet', '#A66BFF'], ['Grey', '#9AA0A6'], ['White', '#E8E8E8']];
 const PH_DEFAULT = ['#B5793F', '#FF8A1F', '#F2D21B'];
 let PH_COL = [...PH_DEFAULT];
-const phCol = p => PH_COL[(+p.L || 1) - 1];
+/* The voltage system (Dallas, 22 Nov 2026): what the phase boxes are, set from a preset for the whole circuit (Power menu;
+   saved as vs; a circuit saved before there was a choice is 480Y/277, as it always was). Each phase is a fixed voltage to
+   the neutral and a fixed angle (no swinging back and forth: only how far round each one is), so phase to phase comes out
+   at 1.73 times phase to neutral in a wye, and across the two legs of a split-phase supply at twice it. The neutral (an N
+   box) is at 0 V. Black is shown as a charcoal grey, so it can be told from a dead wire (Dallas). */
+const VSYS_LIST = {
+  '480': { name: '480Y/277 V', short: '480Y/277', ph: 3, vpn: 480 / Math.sqrt(3), ang: [0, -120, 120], col: ['#B5793F', '#FF8A1F', '#F2D21B'] },
+  '208': { name: '208Y/120 V', short: '208Y/120', ph: 3, vpn: 120, ang: [0, -120, 120], col: ['#6E6E6E', '#E8413C', '#3F7FFF'] },
+  '240': { name: '120/240 V Split-Phase', short: '120/240', ph: 2, vpn: 120, ang: [0, 180], col: ['#6E6E6E', '#E8413C', '#3F7FFF'] }
+};
+let VSYS = '208';
+const NEU_COL = '#E8E8E8';
+const phK = L => L === 'N' ? 4 : +L;   // (a phase box's phase as a number: L1-L3 1-3, the neutral 4)
+const phName = L => L === 'N' || L === 4 ? 'N' : 'L' + L;
+const phLive = k => k === 4 || (k >= 1 && k <= VSYS_LIST[VSYS].ph);   // (a split-phase supply has no L3)
+const phColK = k => k === 4 ? NEU_COL : PH_COL[k - 1];
+const phCol = p => phColK(phK(p.L) || 1);
+// a phase's voltage to the neutral, as [re, im] (null: the system has no such phase)
+const phVolt = k => { if (k === 4) return [0, 0]; if (!phLive(k)) return null; const s = VSYS_LIST[VSYS], a = s.ang[k - 1] * Math.PI / 180; return [s.vpn * Math.cos(a), s.vpn * Math.sin(a)]; };
+const phAcross = (ka, kb) => { const a = phVolt(ka), b = phVolt(kb); return a && b ? Math.hypot(a[0] - b[0], a[1] - b[1]) : 0; };
 const lighten = (c, f) => { const n = parseInt(c.slice(1), 16), m = k => Math.round(((n >> k) & 255) + (255 - ((n >> k) & 255)) * f); return '#' + ((1 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)).toString(16).slice(1).toUpperCase(); };
 const JMP_EDGE = '#b8c2cf';
 const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel' || p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw' || p.t === 'fsw' || p.t === 'flt' || p.t === 'tgl' || p.t === 'cbk' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc' || p.t === 'fu1';
@@ -2534,8 +2560,8 @@ PRESETS.traffic = () => { const c = readCircuit(TRAFFIC); return [c.parts, c.wir
 const FWDREV_TEMPLATE = {"app":"order-of-operations-circuit-builder","v":1,"name":"FWD/REV Template","w":2180,"pw":"boxes","pc":["E8413C","00FF64","3F7FFF"],"parts":[["ph",100,120,"1",0,1,"",3],["ph",100,240,"2",0,1,"",3],["ph",100,360,"3",0,1,"",3],["dsc",280,240,"1",0,1,""],["fus",440,240,"1",0,1,""],["xfm",640,700,"1",0,1,""],["fu1",580,500,"4",0,1,"",3],["fu1",700,500,"5",0,1,"",3],["mst",1160,240,"X",0,1,""],["olh",1700,240,"1",0,1,""],["mtr",1980,240,"1",0,1,""],["mst",1160,620,"Y",0,1,""],["fu1",420,1000,"6",0,1,""]],"wires":[[140,120,240,120],[320,120,400,120],[480,120,580,120],[580,120,1020,120],[1020,120,1120,120],[1200,120,1500,120],[1500,120,1660,120],[1740,120,1820,120],[140,240,240,240],[320,240,400,240],[480,240,940,240],[940,240,1120,240],[1200,240,1400,240],[1400,240,1660,240],[1740,240,1820,240],[140,360,240,360],[320,360,400,360],[480,360,700,360],[700,360,860,360],[860,360,1120,360],[1200,360,1300,360],[1300,360,1660,360],[1740,360,1820,360],[1020,500,1120,500],[1200,500,1300,500],[940,620,1120,620],[1200,620,1400,620],[860,740,1120,740],[1200,740,1500,740],[460,1000,580,1000],[700,360,700,460],[700,540,700,620],[700,780,700,900],[580,120,580,460],[580,540,580,620],[580,780,580,1000],[1020,120,1020,500],[940,240,940,620],[860,360,860,740],[1300,360,1300,500],[1400,240,1400,620],[1500,120,1500,740]],"pv":[["vapcfat","Pressure 1","pressure","psi",0,100,0],["voh3xcn","Temperature","temperature","°F",32,600,70]],"pd":[],"pl":[]};
 PRESETS.fwdrev = () => { const c = readCircuit(FWDREV_TEMPLATE); return [c.parts, c.wires, c.w, c.fixed, c]; };
 // (a preset saved from the builder brings its own power, colours and process values with it)
-function loadPreset(k) { W = W_MIN; W_USER = null; POWER = 'bars'; PV = []; WORK_ORDER = ''; SCEN = 0; SCEN_N = 1; SCEN_WO = ['']; FF_OFFER = { r: true, n: true }; SRC_COL = SRC_DEFAULT; PH_COL = [...PH_DEFAULT]; const r = PRESETS[k](); [parts, wires] = r; if (r[2]) W = r[2]; if (r[3]) W_USER = W;
-  if (r[4]) { POWER = r[4].power; SRC_COL = r[4].src; PH_COL = r[4].ph; PV = r[4].pv; }
+function loadPreset(k) { W = W_MIN; W_USER = null; POWER = 'bars'; PV = []; WORK_ORDER = ''; SCEN = 0; SCEN_N = 1; SCEN_WO = ['']; FF_OFFER = { r: true, n: true }; SRC_COL = SRC_DEFAULT; VSYS = '208'; PH_COL = [...VSYS_LIST[VSYS].col]; const r = PRESETS[k](); [parts, wires] = r; if (r[2]) W = r[2]; if (r[3]) W_USER = W;
+  if (r[4]) { POWER = r[4].power; SRC_COL = r[4].src; PH_COL = r[4].ph; VSYS = r[4].vs; PV = r[4].pv; }
   normalize(); }
 
 /* ---- js/geometry.js ---- */
@@ -2730,7 +2756,7 @@ function network() {
   // three-phase power is kept apart from L1 and L2, see phasesNow)
   const PH = {};
   for (const p of parts) if (isPh(p)) {
-    const h = PH[p.L] ?? (PH[p.L] = node(-10 - +p.L, 0, 'PH' + p.L));
+    const h = PH[p.L] ?? (PH[p.L] = node(-10 - phK(p.L), 0, 'PH' + p.L));
     p._t = terms(p).map(([x, y]) => { const i = node(x, y, key(x, y)); edges.push({ a: h, b: i, w: 0, kind: 'w' }); return i; });
   }
   // the supply boxes: every connection point of an L1 box is L1, of an L2 box L2
@@ -2768,7 +2794,7 @@ function wiringIssues(net) {
   const fixed = e => e.kind === 'w' || (isSw(e.part) && !isSt(e)), V = [components(net, fixed), ...sts.map(m => components(net, e => fixed(e) || (isSt(e) && e.part.x === m)))];
   const f0 = V[0], k1 = f0(net.L1), k2 = f0(net.L2);
   sts.forEach((m, i) => { const fm = V[i + 1], hs = Object.keys(net.PH);
-    for (const a of hs) for (const b of hs) if (a < b && fm(net.PH[a]) === fm(net.PH[b]) && f0(net.PH[a]) !== f0(net.PH[b]) && !out.has(m.id)) out.set(m.id, `Closing it joins L${a} to L${b}`); });
+    for (const a of hs) for (const b of hs) if (a < b && fm(net.PH[a]) === fm(net.PH[b]) && f0(net.PH[a]) !== f0(net.PH[b]) && !out.has(m.id)) out.set(m.id, `Closing it joins ${phName(a)} to ${phName(b)}`); });
   for (const p of parts) {
     if (p.t === 'stand') { out.set(p.id, { note: 'A stand-in: drawn, not run' }); continue; }
     if (isSrc(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); continue; }
@@ -2782,22 +2808,26 @@ function wiringIssues(net) {
     }
     if (p.t === 'mtr') {
       if (!p._t.some(i => net.adj[i].length > 0)) out.set(p.id, 'Not wired to anything');
-      else if (!V.some(fv => new Set(p._t.map(i => phaseAt(net, fv, i)).filter(k => k > 0)).size === 3)) out.set(p.id, 'Not fed all three phases');
+      else if (!V.some(fv => new Set(p._t.map(i => phaseAt(net, fv, i)).filter(k => k > 0 && k < 4)).size === 3)) out.set(p.id, 'Not fed all three phases');
       continue;
     }
     if (isPh(p)) {
       const c = f0(net.PH[p.L]), o = Object.keys(net.PH).filter(k => k !== p.L && f0(net.PH[k]) === c);
-      if (o.length) { out.set(p.id, `Shorted to L${o[0]}`); out.set('phshort', `L${p.L} connects straight to L${o[0]}`); }
-      else if (c === k1 || c === k2) { out.set(p.id, 'Joined to the control circuit'); out.set('phshort', `L${p.L} connects straight to the control circuit's ${c === k1 ? 'L1' : 'L2'}`); }
+      if (!phLive(phK(p.L))) out.set(p.id, `No ${phName(p.L)} in a ${VSYS_LIST[VSYS].name} system`);   // (an L3 box on a split-phase supply)
+      else if (o.length) { out.set(p.id, `Shorted to ${phName(o[0])}`); out.set('phshort', `${phName(p.L)} connects straight to ${phName(o[0])}`); }
+      else if (c === k1 || c === k2) { out.set(p.id, 'Joined to the control circuit'); out.set('phshort', `${phName(p.L)} connects straight to the control circuit's ${c === k1 ? 'L1' : 'L2'}`); }
       else if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything');
       continue;
     }
     if (isJmp(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); else if (!parts.some(q => q !== p && isJmp(q) && q.L === p.L)) out.set(p.id, `No other continuation ${p.L}`); continue; }
     const a = f(p._a), b = f(p._b);
-    if (p.t === 'xfm' && V.some(fv => phaseFed(net, fv, p))) continue;   // (its primary across two phases)
+    // (a transformer's primary, or a light, coil, solenoid or heater, across two phases or a phase and the neutral (Dallas, 22
+    // Nov 2026): fine; one not on the voltage it's made for gets a note)
+    if (LOADT(p.t)) { const fv = V.find(fv => phaseFed(net, fv, p)); if (fv) { const v = phAcross(phaseAt(net, fv, p._a), phaseAt(net, fv, p._b));
+      if (p.t !== 'xfm' && Math.abs(v - SUPPLY_V * ratedShare(p)) > 2) out.set(p.id, { note: `On ${Math.round(v)} V` }); continue; } }
     if (LOADT(p.t)) {
       const sh = S ? S.share.get(p.id) || 0 : 1;
-      if (sh < 1e-9) out.set(p.id, p.t === 'xfm' && (phaseAt(net, f0, p._a) || phaseAt(net, f0, p._b)) ? 'Not wired across two phases' : 'Not wired from L1 to L2');
+      if (sh < 1e-9) out.set(p.id, p.t === 'xfm' && (phaseAt(net, f0, p._a) || phaseAt(net, f0, p._b)) ? 'Not wired across two phases' : phaseAt(net, f0, p._a) > 0 || phaseAt(net, f0, p._b) > 0 ? 'Not wired across a phase and the neutral or another phase' : 'Not wired from L1 to L2');
       else if (sh < 1 - 1e-6) out.set(p.id, { note: `In series: ${Math.round(sh * SUPPLY_V * 10) / 10} V` });
     }
     else if (net.adj[p._a].length < 2 || net.adj[p._b].length < 2) out.set(p.id, 'An end is not connected');
@@ -2807,7 +2837,7 @@ function wiringIssues(net) {
 // the phase that junction n is joined to through f (0: none; -1: more than one, or a phase and the control circuit)
 function phaseAt(net, f, n) {
   let k = 0; const c = f(n);
-  for (const L in net.PH) if (f(net.PH[L]) === c) { if (k) return -1; k = +L; }
+  for (const L in net.PH) if (f(net.PH[L]) === c && phLive(phK(L))) { if (k) return -1; k = phK(L); }
   return k && (c === f(net.L1) || c === f(net.L2)) ? -1 : k;
 }
 // a transformer whose primary is across two different phases
@@ -3215,7 +3245,7 @@ function startRun() {
   if (LOCKOUT) for (const p of parts) if (p.t === 'dsc') DSC[p.id] = { t: -1e9 };   // (locked out: every disconnect open)
   if (TS_MODE) for (const id in TS_BLOWN) BLOWN[id] = { t: -1e9 };   // (Troubleshooter: a fuse that has blown stays blown, through a reset or a lock out, till it is replaced)
   tl = NET.nodes.map(() => [[-1e9, null]]);
-  for (const p of parts) { delete p._chg; delete p._lead; delete p._sh; delete p._lv; delete p._ph; }
+  for (const p of parts) { delete p._chg; delete p._lead; delete p._sh; delete p._lv; delete p._ph; delete p._pf; }
   // which way each button and coil is passed through (as if every button were passing current); worked out on the
   // circuit as it should be when faults are planted (a dead short would upset the voltages these come from, and turn
   // parts round: the junctions are the same, as a fault only takes ways through away or adds them)
@@ -3586,16 +3616,17 @@ function updateCoils(t) {
     // return current doesn't drop away before the current feeding it)
     if (!cond && !!r && COND[p.id] && faultOf(p) !== 'short' && (shortNow || onToL2(p, d.to))) { cond = true; sh = p._sh ?? 1; }
     else if (cond) { p._sh = sh; p._lv = [levelAt(d.from), levelAt(d.to)]; }
+    // (across two phases, or a phase and the neutral: its share of the voltage it's made for, from the voltage system)
+    const pf = phFedAt(p, t); if (pf) p._pf = true; else if (p._pf && !coilOn[p.id]) delete p._pf;
+    if (pf) { cond = true; sh = p.t === 'xfm' ? 1 : phAcross(phaseOfAt(p._a, t), phaseOfAt(p._b, t)) / SUPPLY_V; p._sh = sh; p._lv = [1, 0]; }
     if (faultOf(p) === 'open') cond = false;   // (an open coil or light: no current through it, whatever reaches it)
-    const pf = p.t === 'xfm' && phFedAt(p, t);
-    if (pf) { cond = true; sh = 1; }
     const pull = p.t === 'lamp' || p.t === 'xfm' || sh >= PULL_IN * ratedShare(p) - 1e-9;   // (a light lights, and a transformer works, on whatever it gets)
-    if (cond && !COND[p.id] && pull && p.t === 'coil' && wouldCutOff(p, f)) cond = false;
+    if (cond && !pf && !COND[p.id] && pull && p.t === 'coil' && wouldCutOff(p, f)) cond = false;
     const want = cond && pull, wasC = !!COND[p.id];
     let atOnce = false; const wasOn = !!coilOn[p.id];
     if (want !== wasOn) {
       coilOn[p.id] = want; p._chg = t;
-      if (p.t === 'xfm') { if (want && pf) p._ph = { a: PH_COL[phaseOfAt(p._a, t) - 1], b: PH_COL[phaseOfAt(p._b, t) - 1], t0: t }; else if (want) delete p._ph; else if (p._ph) p._ph.off = t; }
+      if (p.t === 'xfm') { if (want && pf) p._ph = { a: phColK(phaseOfAt(p._a, t)), b: phColK(phaseOfAt(p._b, t)), t0: t }; else if (want) delete p._ph; else if (p._ph) p._ph.off = t; }
       const moveAll = at => { for (const c of parts) if ((c.t === 'con' || c.t === 'mst') && c.L === p.L) schedule(at + CT, () => moveContact(c, evT)); };
       if (isTimer(p)) {
         // its instantaneous contacts follow it at once; its timed ones as its type says (see sim-core). Every contact of
@@ -3735,15 +3766,15 @@ function phasesNow(t) {
   if (LOCKOUT && !parts.some(p => p.t === 'dsc')) return;   // (locked out with no disconnect to open: the phases are off at the supply)
   const f = compNow(), cph = new Map(), l1 = f(NET.L1), l2 = f(NET.L2);
   // which phase each joined-up piece carries (-1: two phases, or a phase and L1 or L2)
-  for (const L in PH) { const c = f(PH[L]); cph.set(c, cph.has(c) || c === l1 || c === l2 ? -1 : +L); }
+  for (const L in PH) if (phLive(phK(L))) { const c = f(PH[L]); cph.set(c, cph.has(c) || c === l1 || c === l2 ? -1 : phK(L)); }   // (an L3 box on a split-phase supply: no phase)
   phFault = '';
-  for (const L in PH) { const c = f(PH[L]); if (cph.get(c) === -1) { const o = Object.keys(PH).find(k => k !== L && f(PH[k]) === c); phFault = o ? `Short circuit! L${L} is connected straight to L${o}.` : `Short circuit! L${L} is connected straight to the control circuit.`; break; } }
+  for (const L in PH) { const c = f(PH[L]); if (phLive(phK(L)) && cph.get(c) === -1) { const o = Object.keys(PH).find(k => k !== L && phLive(phK(k)) && f(PH[k]) === c); phFault = o ? `Short circuit! ${phName(L)} is connected straight to ${phName(o)}.` : `Short circuit! ${phName(L)} is connected straight to the control circuit.`; break; } }
   // where each phase goes: out from its box, along the ways that lead on to a load, through closed poles from their
   // line side (so never back into another starter's load side)
   const reach = new Map();
-  for (const L in PH) if (cph.get(f(PH[L])) === +L) {
-    reach.set(PH[L], +L); const st = [PH[L]];
-    while (st.length) { const u = st.pop(); for (const i of NET.adj[u]) { const e = NET.edges[i], w = e.a === u ? e.b : e.a; if (!reach.has(w) && phStep(e, u)) { reach.set(w, +L); st.push(w); } } }
+  for (const L in PH) if (phLive(phK(L)) && cph.get(f(PH[L])) === phK(L)) {
+    reach.set(PH[L], phK(L)); const st = [PH[L]];
+    while (st.length) { const u = st.pop(); for (const i of NET.adj[u]) { const e = NET.edges[i], w = e.a === u ? e.b : e.a; if (!reach.has(w) && phStep(e, u)) { reach.set(w, phK(L)); st.push(w); } } }
   }
   const want = n => reach.get(n) || 0;
   const N = NET.nodes.length, lost = [], gain = new Set();
@@ -3761,16 +3792,16 @@ function phasesNow(t) {
   // what a phase can now reach lights up, spreading out from where it already is (or from its box)
   if (gain.size) {
     const d = new Map(), h = heap();
-    for (const L in PH) if (cph.get(f(PH[L])) === +L) { const s = PARR.get(PH[L]); if (s) { d.set(PH[L], Math.max(s.t, t)); h.push(Math.max(s.t, t), PH[L]); } }
+    for (const L in PH) if (phLive(phK(L)) && cph.get(f(PH[L])) === phK(L)) { const s = PARR.get(PH[L]); if (s) { d.set(PH[L], Math.max(s.t, t)); h.push(Math.max(s.t, t), PH[L]); } }
     for (const [n, s] of PARR) if (!d.has(n)) { d.set(n, Math.max(s.t, t)); h.push(Math.max(s.t, t), n); }
     for (const n of gain) if (n === PH[(NET.nodes[n].k || '').slice(2)]) { d.set(n, t); h.push(t, n); }
     walk(h, d, n => gain.has(n), phStep);
-    for (const n of gain) if (d.has(n)) { const k = want(n), at = d.get(n); PARR.set(n, { k, t: at }); put(n, at, PH_COL[k - 1]); }
+    for (const n of gain) if (d.has(n)) { const k = want(n), at = d.get(n); PARR.set(n, { k, t: at }); put(n, at, phColK(k)); }
   }
   // a transformer fed from the phases: look at it again as each phase reaches its primary
   // (and as it goes dark there)
   const when = n => [PARR.get(n)?.t, PDARK.get(n)?.off].filter(x => x !== undefined && x > t);
-  for (const p of parts) if (p.t === 'xfm') for (const n of [p._a, p._b]) for (const at of when(n)) schedule(at, () => updateCoils(evT));
+  for (const p of parts) if (LOADT(p.t) && p._a !== undefined) for (const n of [p._a, p._b]) for (const at of when(n)) schedule(at, () => updateCoils(evT));   // (or a light, coil, solenoid or heater across them)
   for (const p of parts) if (p.t === 'mtr') for (const n of p._t) for (const at of when(n)) schedule(at, () => motorsNow(evT));
   motorsNow(t);
   // two phases joined: the fuses on the way between them blow (just after, so they are seen to)
@@ -3783,7 +3814,7 @@ function phasesNow(t) {
 const HUM_TRIP = 3;
 function motorsNow(t) {
   for (const p of parts) if (p.t === 'mtr' && p._t) {
-    const ks = p._t.map(n => phaseOfAt(n, t)), got = new Set(ks.filter(Boolean));
+    const ks = p._t.map(n => phaseOfAt(n, t)), got = new Set(ks.filter(k => k > 0 && k < 4));   // (the neutral is no phase)
     const st = got.size === 3 ? 'run' : got.size === 2 ? 'hum' : 'off', dir = st !== 'run' ? 0 : ['123', '231', '312'].includes(ks.join('')) ? 1 : -1;
     const m = MOT[p.id];
     if (m && m.st === st && m.dir === dir) continue;
@@ -3884,7 +3915,7 @@ function phaseWays() {
     PLINE.set(pe.part, (d.get(pe.b) ?? Infinity) < (d.get(pe.a) ?? Infinity) ? pe.b : pe.a);
   }
   const T = new Set();
-  for (const p of parts) { if (p.t === 'mtr' && p._t) p._t.forEach(n => T.add(n)); if (p.t === 'xfm' && p._a !== undefined) { T.add(p._a); T.add(p._b); } }
+  for (const p of parts) { if (p.t === 'mtr' && p._t) p._t.forEach(n => T.add(n)); if (LOADT(p.t) && p._a !== undefined) { T.add(p._a); T.add(p._b); } }   // (a transformer, light, coil, solenoid or heater: wired across phases or a phase and the neutral)
   const can = (e, u) => passable(e) && !(isP(e) && PLINE.get(e.part) !== u);
   // (only what the phases can reach at all: on a whole machine's print the control circuit, past the transformer, is
   // most of the wiring, and looking for a way on to a motor from every piece of it took most of the time to start)
@@ -4248,7 +4279,7 @@ function drawPart(p, g, x, y, chan, onStation) {
     if (ph) {
       const bx = x - BOX / 2 + 2, by = y - BOX / 2 + 2;
       el('rect', { x: bx - 15, y: by - 11, width: 30, height: 22, rx: 6, fill: '#1f1f1f', stroke: edge, 'stroke-width': 1.6 }, g);
-      el('text', { x: bx, y: by + 4.4, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 800, fill: chev }, g).textContent = 'L' + p.L;
+      el('text', { x: bx, y: by + 4.4, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 800, fill: chev }, g).textContent = phName(p.L);
     }
   } else if (isSolT(p.t)) {
     // a solenoid: see SOL_S. The bolt and its dots are the grey of a coil's middle; once it pulls in, the solenoid's
@@ -5787,7 +5818,8 @@ function paintView(V) {
       continue;
     }
     if (isSrc(p) || isPh(p)) { if (v.src) for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } continue; }
-    for (const S of ['A', 'B']) paintLead(v.lead[S], p._lead && p._lead[S]);
+    // (a load across the phases or a phase and the neutral: each lead the colour of the phase at its end)
+    for (const S of ['A', 'B']) { const k = LOADT(p.t) && PARR.size ? phaseOfAt(S === 'A' ? p._a : p._b, simT) : 0; paintLead(v.lead[S], k ? [{ t0: -1e9, col: phColK(k), from: 'term' }] : p._lead && p._lead[S]); }
     let k;
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
     else if (p.t === 'lsw') setLimit(v, p, lswPos(p), lswClosed(p));
@@ -5868,7 +5900,10 @@ function paintSel(p, v) {
    wire (taking as long as the current takes to cross its body), and drains away the same way once the current has
    gone. Current through it without pulling it in (too little voltage, in series) leaves it grey. */
 function paintSol(p, v) {
-  const S = p._inS || 'A', evs = p._lead && p._lead[S], Ls = TERM(p) - BODYH(p.t) / 2, at = e => e.t0 + Ls / V;
+  const Ls = TERM(p) - BODYH(p.t) / 2, at = e => e.t0 + Ls / V;
+  // (across the phases or a phase and the neutral: it fills as it comes on, and empties as it goes off)
+  const pe = p._pf ? (coilOn[p.id] ? [{ t0: (p._chg ?? -1e9) - Ls / V, col: 'on' }] : [{ t0: -1e9, col: 'on' }, { t0: (p._chg ?? -1e9) - Ls / V, col: null }]) : null;
+  const S = p._inS || 'A', evs = pe || (p._lead && p._lead[S]);
   let i = -1; if (evs) for (let k = 0; k < evs.length; k++) if (at(evs[k]) <= simT + 1e-9) i = k;
   const show = !!coilOn[p.id] || !COND[p.id], c = e => show && e && e.col ? v.col : null;
   const cur = i >= 0 ? evs[i] : null, now = c(cur), prev = i > 0 ? c(evs[i - 1]) : null;
@@ -6787,12 +6822,12 @@ function printSheet(drawnBy, fit = false) {
   // (each device a line passes takes that line's next letter, level by level, in reading order: every fused
   // branch its own letter, Dallas 19 Nov 2026; the same as Print Builder)
   for (const q of P) if (q.t === 'ph') { const n0 = netAt(...q.terms[0]); if (n0 == null || NUM.has(n0)) continue;
-    NUM.set(n0, 'L' + q.L); PHASE.add(n0);
+    NUM.set(n0, phName(q.L)); PHASE.add(n0);
     let front = [n0], k = 0;
     while (front.length) { const hop = [];
       for (const a of front) for (const o of acrossQ(a)) if (!NUM.has(o.m) && !mstLoad.has(o.m)) hop.push(o);
       hop.sort((u, v) => u.q.y - v.q.y || u.q.x - v.q.x); front = [];
-      for (const { m } of hop) if (!NUM.has(m)) { NUM.set(m, 'L' + q.L + LET(++k)); front.push(m); } } }
+      for (const { m } of hop) if (!NUM.has(m)) { NUM.set(m, phName(q.L) + LET(++k)); front.push(m); } } }
   const motors = P.filter(q => q.t === 'mtr').sort((a, b) => +a.L - +b.L || a.y - b.y || a.x - b.x);
   motors.forEach((m, k) => m.terms.forEach((t, i) => {
     const chain = [netAt(...t)]; if (chain[0] == null) return;
@@ -6855,7 +6890,7 @@ function printSheet(drawnBy, fit = false) {
   for (const q of P) {
     const { x, y, p } = q;
     switch (q.t) {
-      case 'ph': case 'l1': case 'l2': { const name = q.t === 'ph' ? 'L' + q.L : q.t.toUpperCase();
+      case 'ph': case 'l1': case 'l2': { const name = q.t === 'ph' ? phName(q.L) : q.t.toUpperCase();
         // (coming from somewhere else: an arrow at the start of each wire it feeds, pointing in to the wire; its name behind)
         const fed = q.terms.filter(wired);
         for (const [tx, ty] of fed) { const ux = Math.sign(tx - x), uy = Math.sign(ty - y); inArrow(tx, ty, ux, uy);
@@ -7110,7 +7145,7 @@ function newPart(kind, x, y) {
   if (kind === 'dsc' || kind === 'olh' || kind === 'mtr') return P(kind, x, y, { L: nextNum(new Set(parts.filter(q => q.t === kind).map(q => q.L))) });   // the next number
   if (kind === 'mst') return P('mst', x, y, { L: 'M' });   // a starter: worked by the M coil (change it in its settings)
   if (kind === 'olc') { const ols = parts.filter(q => q.t === 'olh').map(q => q.L), free = ols.find(L => !parts.some(q => q.t === 'olc' && q.L === L)); return P('olc', x, y, { L: free || ols[0] || '1', nc: true }); }   // an overload's contact: one not yet in the control circuit
-  if (kind.startsWith('ph-')) return P('ph', x, y, { L: kind.slice(3) });   // a phase box: L1, L2 or L3
+  if (kind.startsWith('ph-')) return P('ph', x, y, { L: kind.slice(3) });   // a phase box: L1, L2 or L3, or N (the neutral)
   if (kind === 'src-l1' || kind === 'src-l2') return P(kind.slice(4), x, y, { L: '' });   // a supply box   // a light of its own (build it into a button in its settings)
   if (kind.startsWith('con')) {
     // worked by the first coil (change it in its settings): a timing contact by the first timer; an instantaneous one by
@@ -7273,8 +7308,8 @@ function movedGroup1(partIds, wireIds, dx, dy, termIds) {
   return { wires: wires.filter(w => !used.has(w)).concat(add.map(q => q.id ? { id: q.id, x1: q[0], y1: q[1], x2: q[2], y2: q[3] } : Wr(...q))), hits };
 }
 function movedWires(p, nx, ny) { return movedGroup(new Set([p.id]), new Set(), nx - p.x, ny - p.y); }
-const stateOf = () => JSON.stringify({ parts, wires, W, WU: W_USER, PW: POWER, SC: SRC_COL, PC: PH_COL, PV, SP: CIRC_SPEED, SN: [SCEN, SCEN_N, SCEN_WO, WORK_ORDER] }, (k, v) => k.startsWith('_') ? undefined : v);
-function restore(st) { const o = JSON.parse(st); parts = o.parts; wires = o.wires; CIRC_SPEED = o.SP ?? null; if (o.SN) [SCEN, SCEN_N, SCEN_WO, WORK_ORDER] = o.SN; if (o.W) W = o.W; W_USER = o.WU ?? null; POWER = o.PW || 'bars'; SRC_COL = o.SC || SRC_DEFAULT; PH_COL = o.PC || [...PH_DEFAULT]; PV = o.PV || []; }
+const stateOf = () => JSON.stringify({ parts, wires, W, WU: W_USER, PW: POWER, SC: SRC_COL, PC: PH_COL, VS: VSYS, PV, SP: CIRC_SPEED, SN: [SCEN, SCEN_N, SCEN_WO, WORK_ORDER] }, (k, v) => k.startsWith('_') ? undefined : v);
+function restore(st) { const o = JSON.parse(st); parts = o.parts; wires = o.wires; CIRC_SPEED = o.SP ?? null; if (o.SN) [SCEN, SCEN_N, SCEN_WO, WORK_ORDER] = o.SN; if (o.W) W = o.W; W_USER = o.WU ?? null; POWER = o.PW || 'bars'; SRC_COL = o.SC || SRC_DEFAULT; VSYS = o.VS || '480'; PH_COL = o.PC || [...VSYS_LIST[VSYS].col]; PV = o.PV || []; }
 
 // a wire running across a part's body (other than the run it sits in, along its own line): a part can't go there, as
 // the wire would be hidden under it and cut
@@ -8100,6 +8135,10 @@ function showPower() {
   document.querySelectorAll('.src-tool').forEach(b => b.hidden = barsOn()); document.getElementById('supply-grp').hidden = barsOn();
   const pm = document.getElementById('pw-menu'); if (!pm.hidden) placeMenu(pm);   // (the Power menu is wider with the supply boxes in it)
   document.querySelectorAll('[data-src]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.src === SRC_COL)));
+  // the voltage system: the one chosen ticked; a split-phase supply has no L3, and its phase list says so
+  document.querySelectorAll('[data-vs]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vs === VSYS)));
+  { const sp = VSYS_LIST[VSYS].ph === 2, b3 = document.querySelector('[data-part="ph-3"]'); if (b3) b3.hidden = sp;
+    const it = b3 && b3.closest('.tl-sub'); if (it) { it.querySelector('.tl-n').textContent = sp ? 'Split-Phase' : 'Three Phase'; it.querySelector('.tl-c').textContent = sp ? 3 : 4; } }
   PH_COL.forEach((c, i) => { document.documentElement.style.setProperty(`--ph${i + 1}`, c); document.documentElement.style.setProperty(`--ph${i + 1}l`, lighten(c, .45)); });
 }
 // the source's colour: a swatch for each (see SRC_PAL)
@@ -8109,6 +8148,11 @@ for (const [name, hex] of SRC_PAL) {
   b.addEventListener('click', () => { if (!editing || hex === SRC_COL) return; snapshot(); SRC_COL = hex; say(`Source colour: ${name}.`); draw(); });
   document.getElementById('src-swatches').appendChild(b);
 }
+document.querySelectorAll('[data-vs]').forEach(b => b.addEventListener('click', () => {
+  if (b.dataset.vs === VSYS || !editing) return;
+  snapshot(); VSYS = b.dataset.vs; PH_COL = [...VSYS_LIST[VSYS].col]; normalize();
+  say(`Voltage system: ${VSYS_LIST[VSYS].name}.`); draw();
+}));
 document.querySelectorAll('[data-power]').forEach(b => b.addEventListener('click', () => {
   if (b.dataset.power === POWER || !editing) return;
   snapshot(); POWER = b.dataset.power; normalize(); sel = null;
@@ -8353,6 +8397,8 @@ function renderProps() {
   if (p && isPh(p)) {
     // which phase it is, and that phase's colour (the colour of every box and wire of that phase)
     document.getElementById('ph-num').value = p.L;
+    for (const o of document.getElementById('ph-num').options) o.hidden = o.value !== 'N' && !phLive(phK(o.value)) && o.value !== p.L;   // (a split-phase supply: no L3)
+    document.getElementById('ph-colour-grp').hidden = p.L === 'N';   // (the neutral is always white)
     const box = document.getElementById('ph-colour'), cur = phCol(p);
     box.innerHTML = '';
     for (const [name, hex] of PH_PAL) {
@@ -8361,7 +8407,7 @@ function renderProps() {
       b.addEventListener('click', () => setPhaseCol(p.L, hex)); box.append(b);
     }
     document.getElementById('ph-custom').value = cur.toLowerCase();
-    document.getElementById('ph-colour-label').textContent = `L${p.L} Colour`;
+    document.getElementById('ph-colour-label').textContent = `${phName(p.L)} Colour`;
   }
   document.getElementById('props-lsw').hidden = !(p && isLim(p));
   if (p && isLim(p)) {
@@ -8653,7 +8699,7 @@ function rotateJmp(p) { snapshot(); p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) 
 document.getElementById('j-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(isJmp)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
 document.getElementById('x-num').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'xfm') return; snapshot(); p.L = e.target.value; draw(); });
 // a phase box: which phase, and each phase's colour (shared by all of that phase's boxes and wires)
-function setPhaseCol(L, hex) { hex = hex.toUpperCase(); if (PH_COL[L - 1] === hex) return; snapshot(); PH_COL = PH_COL.map((c, i) => i === L - 1 ? hex : c); say(`L${L} colour changed.`); draw(); }
+function setPhaseCol(L, hex) { hex = hex.toUpperCase(); if (PH_COL[L - 1] === hex) return; snapshot(); PH_COL = PH_COL.map((c, i) => i === L - 1 ? hex : c); say(`${phName(L)} colour changed.`); draw(); }
 document.getElementById('ph-num').addEventListener('change', e => { if (selGroup().every(isPh)) each(p => p.L = e.target.value); });
 document.getElementById('ph-custom').addEventListener('change', e => { const p = selGroup()[0]; if (p && isPh(p)) setPhaseCol(p.L, e.target.value); });
 document.getElementById('ls-start').addEventListener('change', e => { const on = e.target.value === '1'; if (selGroup().every(q => flips(q) || isBrk(q))) each(p => { if (on) p.held = true; else delete p.held; }); });
@@ -8846,7 +8892,7 @@ function circuitData() {
   if (typeof scenSync === 'function') scenSync();
   const w = W_USER ? W : contentRight(), x = v => barsOn() && v === W ? w : v;   // (a length set by moving the bars is kept)
   return {
-    app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}), ...(barsOn() ? {} : { pw: 'boxes' }), ...(SRC_COL !== SRC_DEFAULT ? { sc: SRC_COL } : {}), ...(PH_COL.join() !== PH_DEFAULT.join() ? { pc: PH_COL.map(c => c.slice(1)) } : {}),
+    app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}), ...(barsOn() ? {} : { pw: 'boxes' }), ...(SRC_COL !== SRC_DEFAULT ? { sc: SRC_COL } : {}), ...(VSYS !== '480' ? { vs: VSYS } : {}), ...(PH_COL.join() !== VSYS_LIST[VSYS].col.join() ? { pc: PH_COL.map(c => c.slice(1)) } : {}),   // (the voltage system: none saved means 480Y/277, as before there was a choice)
     parts: parts.map(p => { if (p.t === 'stand') return ['stand', p.x, p.y, p.L || '', 0, 1, '', null, null, p.desc || '', { t: p.sym, r: p.srot || 0, o: p.st }];   // (a stand-in for a Print Builder part: what it stands for, kept whole)
       const a = [p.estop ? 'est' : p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if ((p.t === 'lsw' || flips(p) || isBrk(p)) && p.held) a.push(1); if (HILO(p.t) && p.low) a.push(1); if (turns7(p) && p.rot) a.push(p.rot); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
       if (p.t === 'sel') { while (a.length < 7) a.push(null); a.length = 7; a.push(selN(p), (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, (p.names || []).join('/'), p.pos || 0); }   // a selector switch: positions, closed-in mask, (no label), names, start
@@ -8880,7 +8926,7 @@ function readCircuit(d) {
       if (typeof q.t === 'string' && st.length) { const p = P('stand', snap(num(a[1])), snap(num(a[2])), { L: String(a[3] ?? '').slice(0, 12) }); p.sym = q.t.slice(0, 16); p.srot = [0, 90, 180, 270].includes(+q.r) ? +q.r : 0; p.st = st; p.desc = typeof a[9] === 'string' ? a[9].slice(0, 40) : ''; delete p.color; return p; } }
     const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'htr' ? 'htr' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'sp2', 'xov', 'dps', 'dpd', 'tps', 'cbk', 'cbd', 'cbt'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
     const p = P(t, snap(num(a[1])), snap(num(a[2])), {   // (on the grid: a part saved off it, by an older version, could never be wired)
-      L: ['dsc', 'fus', 'fu1', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'sp2', 'xov', 'dps', 'dpd', 'tps', 'cbk', 'cbd', 'cbt'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1))) : t === 'sol' || t === 'htr' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'htr' ? HTR_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : t === 'lsw' ? LSW_COL : t === 'tsw' ? TSW_COL : t === 'psw' ? PSW_COL : t === 'fsw' ? FSW_COL : BTN_COL[L] || '#FF0032') });
+      L: ['dsc', 'fus', 'fu1', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'sp2', 'xov', 'dps', 'dpd', 'tps', 'cbk', 'cbd', 'cbt'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? (a[3] === 'N' ? 'N' : String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1)))) : t === 'sol' || t === 'htr' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'htr' ? HTR_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : t === 'lsw' ? LSW_COL : t === 'tsw' ? TSW_COL : t === 'psw' ? PSW_COL : t === 'fsw' ? FSW_COL : BTN_COL[L] || '#FF0032') });
     if (t === 'lsw') { p.nc = !!a[4]; if (a[7] === 1) p.held = true; }
     if (flips(p) || isBrk(p)) { p.maint = true; p.nc = false; if (a[7] === 1) p.held = true; }   // (held: it starts on (an SPST) or at throw 1 (an SPDT))   // (a toggle switch: always maintained, an SPST's one NO contact)
     if (t === 'psw' || t === 'fsw' || t === 'flt') { p.nc = !!a[4]; if (a[7] === 1) p.low = true; }   // (a pressure or flow switch: NO or NC)
@@ -8936,11 +8982,11 @@ function readCircuit(d) {
   const ffo = Array.isArray(d.ffo) && (d.ffo[0] || d.ffo[1]) ? { r: !!d.ffo[0], n: !!d.ffo[1] } : null;
   const pr = d.pr && typeof d.pr === 'object' && d.pr.pb && d.pr.pb.kind === 'o3-print' && typeof d.pr.fp === 'string' ? d.pr : null;
   const sp = Number.isFinite(+d.sp) && +d.sp >= 0.1 && +d.sp <= 300 ? +d.sp : null;
-  return { sp, pr, sn, si, swo, ffo, wo: swo ? swo[si] : typeof d.wo === 'string' ? d.wo.slice(0, 400) : '', w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', src: SRC_PAL.some(([, h]) => h === d.sc) ? d.sc : SRC_DEFAULT, ph: Array.isArray(d.pc) && d.pc.length === 3 && d.pc.every(hex) ? d.pc.map(hex) : [...PH_DEFAULT], pv, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
+  return { sp, pr, sn, si, swo, ffo, wo: swo ? swo[si] : typeof d.wo === 'string' ? d.wo.slice(0, 400) : '', w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', src: SRC_PAL.some(([, h]) => h === d.sc) ? d.sc : SRC_DEFAULT, vs: VSYS_LIST[d.vs] ? d.vs : '480', ph: Array.isArray(d.pc) && d.pc.length === 3 && d.pc.every(hex) ? d.pc.map(hex) : [...VSYS_LIST[VSYS_LIST[d.vs] ? d.vs : '480'].col], pv, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
 }
 function useCircuit(c, how) {
   snapshot();
-  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize(); sel = null;
+  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; VSYS = c.vs; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize(); sel = null;
   fitView(); fit(true);
   say(how);
   if (editing) draw(); else { NET = network(); draw(); startRun(); afterRunStart(); }
@@ -9082,7 +9128,7 @@ function scheduleAutosave() {
   autosaveTimer = setTimeout(() => { try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(circuitData())); } catch (_) {} }, 400);
 }
 function restoreAutosave() {
-  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize(); return true; }
+  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; VSYS = c.vs; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize(); return true; }
   catch (_) { return false; }
 }
 
@@ -9326,7 +9372,7 @@ window.addEventListener('resize', () => { if (fit(editing && !dragging())) { if 
 
 if (LOCKED) {
   // a locked simulator: its own circuit, straight into Run mode, with its name as the title
-  try { const c = readCircuit(LOCKED.circuit); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize(); }
+  try { const c = readCircuit(LOCKED.circuit); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; VSYS = c.vs; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize(); }
   catch (_) { loadPreset('blank'); }
   document.body.classList.add('locked');
   document.querySelector('h1 span').textContent = circuitName || 'Circuit';
@@ -9624,14 +9670,14 @@ kbRefresh();
 /* =====================================================================
    Troubleshooter: what the meter reads between two junctions of the circuit as it is right now.
    Voltage: the live circuit, worked out as a network of resistances fed by the supplies (L1 at 120 V and L2 at 0 V
-   for the control circuit; the three phases at 480 V between any two, each a third of a turn behind the last), so a
+   for the control circuit; the phases as the circuit's voltage system has them: see VSYS_LIST), so a
    junction joined to L1 only through a coil, with nothing beyond it, sits at 120 V (no current, so no drop across the
    coil), as on a real panel. A lead on a junction with no way back to any supply reads nothing.
    Resistance: the same network with every supply off (locked out): wires and closed contacts are 0 Ω; coils,
    lights, solenoids, heaters and transformer and motor windings their own resistance; open contacts, open wires and
    open loads no way through at all (OL).
    ===================================================================== */
-const TS_SUPPLY = 120, TS_LINE = 480;
+const TS_SUPPLY = 120;
 // a load's resistance in ohms
 const TS_OHMS = p => LOAD_OHMS(p);   // (the same resistances the circuit itself works with: see solve.js)
 const TS_XFM_SEC = 0.5, TS_MOTOR = 2;
@@ -9665,8 +9711,7 @@ function tsSources(T) {
   const fix = new Map(), set = (n, v) => { const k = T.sn[n]; if (!fix.has(k)) fix.set(k, v); };
   if (!LOCKOUT && !SUPPLY_CUT) { set(NET.L1, [TS_SUPPLY, 0]); set(NET.L2, [0, 0]); }
   if (!(LOCKOUT && !parts.some(p => p.t === 'dsc'))) {
-    const Vp = TS_LINE / Math.sqrt(3);
-    for (const L in NET.PH) { const a = -(+L - 1) * 2 * Math.PI / 3; set(NET.PH[L], [Vp * Math.cos(a), Vp * Math.sin(a)]); }
+    for (const L in NET.PH) { const v = phVolt(phK(L)); if (v) set(NET.PH[L], v); }   // (each phase from the voltage system; the neutral at 0 V)
   }
   return fix;
 }
@@ -9751,7 +9796,7 @@ function tsShowRibbon() {
 // ---- what is kept between visits (in this browser): the assignment, the test log, the steps ticked off
 function tsSave() { try { localStorage.setItem(TS_KEY, JSON.stringify({ circuit: circuitData(), log: TS.log, steps: TS.steps, t0: TS.t0, showSteps: TS.showSteps, blown: TS_BLOWN, scen: TS.scen, repairs: TS.repairs, signoff: TS.signoff })); } catch (_) {} }
 function tsUse(c, msg, fresh) {
-  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize();
+  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; VSYS = c.vs; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize();
   if (fresh) { TS.log = []; TS.steps = []; TS.t0 = Date.now(); TS_BLOWN = {}; TS.scen = c.pick || null; TS.repairs = []; TS.signoff = null; }
   LOCKOUT = false; TS_PUSHED = {}; TSM.push = false; TSM.repair = null; tsCardOff(); TSM.red = TSM.black = null; TSM.next = 'red'; TSM.lastLog = ''; TSM.sig = '';
   if (editing) { fit(true); fitView(); setMode(true); } else { fit(true); fitView(); NET = network(); draw(); startRun(); afterRunStart(); }

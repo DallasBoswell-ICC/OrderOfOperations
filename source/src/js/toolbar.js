@@ -127,6 +127,10 @@ function showPower() {
   document.querySelectorAll('.src-tool').forEach(b => b.hidden = barsOn()); document.getElementById('supply-grp').hidden = barsOn();
   const pm = document.getElementById('pw-menu'); if (!pm.hidden) placeMenu(pm);   // (the Power menu is wider with the supply boxes in it)
   document.querySelectorAll('[data-src]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.src === SRC_COL)));
+  // the voltage system: the one chosen ticked; a split-phase supply has no L3, and its phase list says so
+  document.querySelectorAll('[data-vs]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vs === VSYS)));
+  { const sp = VSYS_LIST[VSYS].ph === 2, b3 = document.querySelector('[data-part="ph-3"]'); if (b3) b3.hidden = sp;
+    const it = b3 && b3.closest('.tl-sub'); if (it) { it.querySelector('.tl-n').textContent = sp ? 'Split-Phase' : 'Three Phase'; it.querySelector('.tl-c').textContent = sp ? 3 : 4; } }
   PH_COL.forEach((c, i) => { document.documentElement.style.setProperty(`--ph${i + 1}`, c); document.documentElement.style.setProperty(`--ph${i + 1}l`, lighten(c, .45)); });
 }
 // the source's colour: a swatch for each (see SRC_PAL)
@@ -136,6 +140,11 @@ for (const [name, hex] of SRC_PAL) {
   b.addEventListener('click', () => { if (!editing || hex === SRC_COL) return; snapshot(); SRC_COL = hex; say(`Source colour: ${name}.`); draw(); });
   document.getElementById('src-swatches').appendChild(b);
 }
+document.querySelectorAll('[data-vs]').forEach(b => b.addEventListener('click', () => {
+  if (b.dataset.vs === VSYS || !editing) return;
+  snapshot(); VSYS = b.dataset.vs; PH_COL = [...VSYS_LIST[VSYS].col]; normalize();
+  say(`Voltage system: ${VSYS_LIST[VSYS].name}.`); draw();
+}));
 document.querySelectorAll('[data-power]').forEach(b => b.addEventListener('click', () => {
   if (b.dataset.power === POWER || !editing) return;
   snapshot(); POWER = b.dataset.power; normalize(); sel = null;

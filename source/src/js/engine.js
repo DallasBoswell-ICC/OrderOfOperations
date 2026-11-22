@@ -51,7 +51,7 @@ function startRun() {
   if (LOCKOUT) for (const p of parts) if (p.t === 'dsc') DSC[p.id] = { t: -1e9 };   // (locked out: every disconnect open)
   if (TS_MODE) for (const id in TS_BLOWN) BLOWN[id] = { t: -1e9 };   // (Troubleshooter: a fuse that has blown stays blown, through a reset or a lock out, till it is replaced)
   tl = NET.nodes.map(() => [[-1e9, null]]);
-  for (const p of parts) { delete p._chg; delete p._lead; delete p._sh; delete p._lv; delete p._ph; }
+  for (const p of parts) { delete p._chg; delete p._lead; delete p._sh; delete p._lv; delete p._ph; delete p._pf; }
   // which way each button and coil is passed through (as if every button were passing current); worked out on the
   // circuit as it should be when faults are planted (a dead short would upset the voltages these come from, and turn
   // parts round: the junctions are the same, as a fault only takes ways through away or adds them)
@@ -422,16 +422,17 @@ function updateCoils(t) {
     // return current doesn't drop away before the current feeding it)
     if (!cond && !!r && COND[p.id] && faultOf(p) !== 'short' && (shortNow || onToL2(p, d.to))) { cond = true; sh = p._sh ?? 1; }
     else if (cond) { p._sh = sh; p._lv = [levelAt(d.from), levelAt(d.to)]; }
+    // (across two phases, or a phase and the neutral: its share of the voltage it's made for, from the voltage system)
+    const pf = phFedAt(p, t); if (pf) p._pf = true; else if (p._pf && !coilOn[p.id]) delete p._pf;
+    if (pf) { cond = true; sh = p.t === 'xfm' ? 1 : phAcross(phaseOfAt(p._a, t), phaseOfAt(p._b, t)) / SUPPLY_V; p._sh = sh; p._lv = [1, 0]; }
     if (faultOf(p) === 'open') cond = false;   // (an open coil or light: no current through it, whatever reaches it)
-    const pf = p.t === 'xfm' && phFedAt(p, t);
-    if (pf) { cond = true; sh = 1; }
     const pull = p.t === 'lamp' || p.t === 'xfm' || sh >= PULL_IN * ratedShare(p) - 1e-9;   // (a light lights, and a transformer works, on whatever it gets)
-    if (cond && !COND[p.id] && pull && p.t === 'coil' && wouldCutOff(p, f)) cond = false;
+    if (cond && !pf && !COND[p.id] && pull && p.t === 'coil' && wouldCutOff(p, f)) cond = false;
     const want = cond && pull, wasC = !!COND[p.id];
     let atOnce = false; const wasOn = !!coilOn[p.id];
     if (want !== wasOn) {
       coilOn[p.id] = want; p._chg = t;
-      if (p.t === 'xfm') { if (want && pf) p._ph = { a: PH_COL[phaseOfAt(p._a, t) - 1], b: PH_COL[phaseOfAt(p._b, t) - 1], t0: t }; else if (want) delete p._ph; else if (p._ph) p._ph.off = t; }
+      if (p.t === 'xfm') { if (want && pf) p._ph = { a: phColK(phaseOfAt(p._a, t)), b: phColK(phaseOfAt(p._b, t)), t0: t }; else if (want) delete p._ph; else if (p._ph) p._ph.off = t; }
       const moveAll = at => { for (const c of parts) if ((c.t === 'con' || c.t === 'mst') && c.L === p.L) schedule(at + CT, () => moveContact(c, evT)); };
       if (isTimer(p)) {
         // its instantaneous contacts follow it at once; its timed ones as its type says (see sim-core). Every contact of
@@ -571,15 +572,15 @@ function phasesNow(t) {
   if (LOCKOUT && !parts.some(p => p.t === 'dsc')) return;   // (locked out with no disconnect to open: the phases are off at the supply)
   const f = compNow(), cph = new Map(), l1 = f(NET.L1), l2 = f(NET.L2);
   // which phase each joined-up piece carries (-1: two phases, or a phase and L1 or L2)
-  for (const L in PH) { const c = f(PH[L]); cph.set(c, cph.has(c) || c === l1 || c === l2 ? -1 : +L); }
+  for (const L in PH) if (phLive(phK(L))) { const c = f(PH[L]); cph.set(c, cph.has(c) || c === l1 || c === l2 ? -1 : phK(L)); }   // (an L3 box on a split-phase supply: no phase)
   phFault = '';
-  for (const L in PH) { const c = f(PH[L]); if (cph.get(c) === -1) { const o = Object.keys(PH).find(k => k !== L && f(PH[k]) === c); phFault = o ? `Short circuit! L${L} is connected straight to L${o}.` : `Short circuit! L${L} is connected straight to the control circuit.`; break; } }
+  for (const L in PH) { const c = f(PH[L]); if (phLive(phK(L)) && cph.get(c) === -1) { const o = Object.keys(PH).find(k => k !== L && phLive(phK(k)) && f(PH[k]) === c); phFault = o ? `Short circuit! ${phName(L)} is connected straight to ${phName(o)}.` : `Short circuit! ${phName(L)} is connected straight to the control circuit.`; break; } }
   // where each phase goes: out from its box, along the ways that lead on to a load, through closed poles from their
   // line side (so never back into another starter's load side)
   const reach = new Map();
-  for (const L in PH) if (cph.get(f(PH[L])) === +L) {
-    reach.set(PH[L], +L); const st = [PH[L]];
-    while (st.length) { const u = st.pop(); for (const i of NET.adj[u]) { const e = NET.edges[i], w = e.a === u ? e.b : e.a; if (!reach.has(w) && phStep(e, u)) { reach.set(w, +L); st.push(w); } } }
+  for (const L in PH) if (phLive(phK(L)) && cph.get(f(PH[L])) === phK(L)) {
+    reach.set(PH[L], phK(L)); const st = [PH[L]];
+    while (st.length) { const u = st.pop(); for (const i of NET.adj[u]) { const e = NET.edges[i], w = e.a === u ? e.b : e.a; if (!reach.has(w) && phStep(e, u)) { reach.set(w, phK(L)); st.push(w); } } }
   }
   const want = n => reach.get(n) || 0;
   const N = NET.nodes.length, lost = [], gain = new Set();
@@ -597,16 +598,16 @@ function phasesNow(t) {
   // what a phase can now reach lights up, spreading out from where it already is (or from its box)
   if (gain.size) {
     const d = new Map(), h = heap();
-    for (const L in PH) if (cph.get(f(PH[L])) === +L) { const s = PARR.get(PH[L]); if (s) { d.set(PH[L], Math.max(s.t, t)); h.push(Math.max(s.t, t), PH[L]); } }
+    for (const L in PH) if (phLive(phK(L)) && cph.get(f(PH[L])) === phK(L)) { const s = PARR.get(PH[L]); if (s) { d.set(PH[L], Math.max(s.t, t)); h.push(Math.max(s.t, t), PH[L]); } }
     for (const [n, s] of PARR) if (!d.has(n)) { d.set(n, Math.max(s.t, t)); h.push(Math.max(s.t, t), n); }
     for (const n of gain) if (n === PH[(NET.nodes[n].k || '').slice(2)]) { d.set(n, t); h.push(t, n); }
     walk(h, d, n => gain.has(n), phStep);
-    for (const n of gain) if (d.has(n)) { const k = want(n), at = d.get(n); PARR.set(n, { k, t: at }); put(n, at, PH_COL[k - 1]); }
+    for (const n of gain) if (d.has(n)) { const k = want(n), at = d.get(n); PARR.set(n, { k, t: at }); put(n, at, phColK(k)); }
   }
   // a transformer fed from the phases: look at it again as each phase reaches its primary
   // (and as it goes dark there)
   const when = n => [PARR.get(n)?.t, PDARK.get(n)?.off].filter(x => x !== undefined && x > t);
-  for (const p of parts) if (p.t === 'xfm') for (const n of [p._a, p._b]) for (const at of when(n)) schedule(at, () => updateCoils(evT));
+  for (const p of parts) if (LOADT(p.t) && p._a !== undefined) for (const n of [p._a, p._b]) for (const at of when(n)) schedule(at, () => updateCoils(evT));   // (or a light, coil, solenoid or heater across them)
   for (const p of parts) if (p.t === 'mtr') for (const n of p._t) for (const at of when(n)) schedule(at, () => motorsNow(evT));
   motorsNow(t);
   // two phases joined: the fuses on the way between them blow (just after, so they are seen to)
@@ -619,7 +620,7 @@ function phasesNow(t) {
 const HUM_TRIP = 3;
 function motorsNow(t) {
   for (const p of parts) if (p.t === 'mtr' && p._t) {
-    const ks = p._t.map(n => phaseOfAt(n, t)), got = new Set(ks.filter(Boolean));
+    const ks = p._t.map(n => phaseOfAt(n, t)), got = new Set(ks.filter(k => k > 0 && k < 4));   // (the neutral is no phase)
     const st = got.size === 3 ? 'run' : got.size === 2 ? 'hum' : 'off', dir = st !== 'run' ? 0 : ['123', '231', '312'].includes(ks.join('')) ? 1 : -1;
     const m = MOT[p.id];
     if (m && m.st === st && m.dir === dir) continue;
@@ -720,7 +721,7 @@ function phaseWays() {
     PLINE.set(pe.part, (d.get(pe.b) ?? Infinity) < (d.get(pe.a) ?? Infinity) ? pe.b : pe.a);
   }
   const T = new Set();
-  for (const p of parts) { if (p.t === 'mtr' && p._t) p._t.forEach(n => T.add(n)); if (p.t === 'xfm' && p._a !== undefined) { T.add(p._a); T.add(p._b); } }
+  for (const p of parts) { if (p.t === 'mtr' && p._t) p._t.forEach(n => T.add(n)); if (LOADT(p.t) && p._a !== undefined) { T.add(p._a); T.add(p._b); } }   // (a transformer, light, coil, solenoid or heater: wired across phases or a phase and the neutral)
   const can = (e, u) => passable(e) && !(isP(e) && PLINE.get(e.part) !== u);
   // (only what the phases can reach at all: on a whole machine's print the control circuit, past the transformer, is
   // most of the wiring, and looking for a way on to a motor from every piece of it took most of the time to start)

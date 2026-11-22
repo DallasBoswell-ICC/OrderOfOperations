@@ -72,6 +72,8 @@ function renderProps() {
   if (p && isPh(p)) {
     // which phase it is, and that phase's colour (the colour of every box and wire of that phase)
     document.getElementById('ph-num').value = p.L;
+    for (const o of document.getElementById('ph-num').options) o.hidden = o.value !== 'N' && !phLive(phK(o.value)) && o.value !== p.L;   // (a split-phase supply: no L3)
+    document.getElementById('ph-colour-grp').hidden = p.L === 'N';   // (the neutral is always white)
     const box = document.getElementById('ph-colour'), cur = phCol(p);
     box.innerHTML = '';
     for (const [name, hex] of PH_PAL) {
@@ -80,7 +82,7 @@ function renderProps() {
       b.addEventListener('click', () => setPhaseCol(p.L, hex)); box.append(b);
     }
     document.getElementById('ph-custom').value = cur.toLowerCase();
-    document.getElementById('ph-colour-label').textContent = `L${p.L} Colour`;
+    document.getElementById('ph-colour-label').textContent = `${phName(p.L)} Colour`;
   }
   document.getElementById('props-lsw').hidden = !(p && isLim(p));
   if (p && isLim(p)) {
@@ -372,7 +374,7 @@ function rotateJmp(p) { snapshot(); p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) 
 document.getElementById('j-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(isJmp)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
 document.getElementById('x-num').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'xfm') return; snapshot(); p.L = e.target.value; draw(); });
 // a phase box: which phase, and each phase's colour (shared by all of that phase's boxes and wires)
-function setPhaseCol(L, hex) { hex = hex.toUpperCase(); if (PH_COL[L - 1] === hex) return; snapshot(); PH_COL = PH_COL.map((c, i) => i === L - 1 ? hex : c); say(`L${L} colour changed.`); draw(); }
+function setPhaseCol(L, hex) { hex = hex.toUpperCase(); if (PH_COL[L - 1] === hex) return; snapshot(); PH_COL = PH_COL.map((c, i) => i === L - 1 ? hex : c); say(`${phName(L)} colour changed.`); draw(); }
 document.getElementById('ph-num').addEventListener('change', e => { if (selGroup().every(isPh)) each(p => p.L = e.target.value); });
 document.getElementById('ph-custom').addEventListener('change', e => { const p = selGroup()[0]; if (p && isPh(p)) setPhaseCol(p.L, e.target.value); });
 document.getElementById('ls-start').addEventListener('change', e => { const on = e.target.value === '1'; if (selGroup().every(q => flips(q) || isBrk(q))) each(p => { if (on) p.held = true; else delete p.held; }); });
