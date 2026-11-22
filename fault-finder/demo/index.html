@@ -2649,7 +2649,7 @@ function network() {
     if (f === 'open') { jedges.push({ kind: 'part', a: p._a, b: p._b, len: 2 * TERM(p), part: p }); continue; }   // (open: no current through it; still a load for the current's display, so the wiring up to it lights and the current goes up to it and stops)
     if (f === 'short') { edges.push({ a: p._a, b: p._b, w: 1, kind: 'w' }); jedges.push({ kind: 'part', a: p._a, b: p._b, len: 2 * TERM(p), part: p }); continue; }
     edges.push({ a: p._a, b: p._b, w: 2 * TERM(p), kind: 'part', part: p });
-    jedges.push({ kind: 'part', a: p._a, b: p._b, len: 2 * TERM(p), part: p });
+    jedges.push({ kind: 'part', a: p._a, b: p._b, len: p.t === 'cbk' ? 2 : 2 * TERM(p), part: p });   // (a circuit breaker: the current, or its going, crosses it at once, so the wire past it goes dark the moment it opens (Dallas, 22 Nov 2026))
   }
   // continuations: each box's connection points join at its middle, and the middles of all the boxes with the same
   // number join one another (a very short run, so the current is through at once)
@@ -5139,9 +5139,9 @@ function drawBreaker(p, g, x, y, v) {
   setBreaker(v, p, editing ? (p.held ? 1 : 0) : lswPos(p), editing ? false : !!BLOWN[p.id], null);   // (in Build: as it starts)
 }
 // (wait: open, the colour waiting at it and which end it waits at (0 its left, 1 its right), lit up to that end's contact)
-function setBreaker(v, p, pos, tripped, flow, wait) {
-  const k = pos.toFixed(3) + (tripped ? 't' : '') + (flow || '') + (wait ? wait.side + wait.col : ''); if (v.k === k) return; v.k = k;
-  const lift = tripped ? 1 : 1 - pos, shut = !tripped && pos > .98, c = shut ? flow || CBK_COL : GREY;   // (on, its contacts too the colour of the current through it, 22 Nov 2026)
+function setBreaker(v, p, pos, tripped, flow, wait, now) {   // (now: whether it is closed (in Run): lit at once as it closes, grey at once as it opens, as the current is)
+  const k = pos.toFixed(3) + (tripped ? 't' : '') + (flow || '') + (wait ? wait.side + wait.col : '') + now; if (v.k === k) return; v.k = k;
+  const lift = tripped ? 1 : 1 - pos, shut = !tripped && (now === undefined ? pos > .98 : now), c = shut ? flow || CBK_COL : GREY;   // (on, its contacts too the colour of the current through it, 22 Nov 2026)
   v.arc.setAttribute('transform', `translate(0 ${(-16 * lift).toFixed(2)})`); v.arcC.setAttribute('stroke', shut ? flow || CBK_COL : BLADE_GREY);
   v.posts.forEach((q, i) => q.setAttribute('fill', !shut && wait && wait.side === i ? wait.col : c)); v.rings.forEach((q, i) => q.setAttribute('stroke', !shut && wait && wait.side === i ? wait.col : c));
   for (const q of v.pins) q.setAttribute('fill', shut ? flow || CBK_COL : BLADE_GREY);
@@ -5770,8 +5770,11 @@ function paintView(V) {
     else if (p.t === 'fsw') setFlow(v, p, lswPos(p), lswClosed(p));
     else if (p.t === 'flt') setFloat(v, p, lswPos(p), lswClosed(p));
     else if (p.t === 'tgl') setToggle(v, p, lswPos(p), lswClosed(p));
-    else if (p.t === 'cbk') { const a = showCol(p._a, simT), b = showCol(p._b, simT);   // (open: the colour waiting at whichever end has it)
-      setBreaker(v, p, lswPos(p), !!BLOWN[p.id], lswClosed(p) ? a || b : null, lswClosed(p) ? null : a && !b ? { side: 0, col: a } : b && !a ? { side: 1, col: b } : null); }
+    else if (p.t === 'cbk') {
+      // (the end current comes in at (its line side): open, or moving, the colour waiting there lights it up to its contact; even
+      // while what is past it drains away, so it never flickers grey as it is switched (Dallas, 22 Nov 2026))
+      const a = showCol(p._a, simT), b = showCol(p._b, simT), d = DIRS.find(x => x.e.part === p), side = d ? (d.from === p._b ? 1 : 0) : a ? 0 : b ? 1 : 0, w = side ? b : a;
+      setBreaker(v, p, lswPos(p), !!BLOWN[p.id], a || b, w ? { side, col: w } : null, lswClosed(p)); }   // (the colour through it: shown only while its arc is down)
     else if (p.t === 'con' || p.t === 'olc') {
       const s = p.t === 'olc' ? olState(p.L) : CON[p.id]; if (!s) continue;
       const f = clamp01((simT - s.t0) / SWING), e = f * f * (3 - 2 * f);   // ease in and out

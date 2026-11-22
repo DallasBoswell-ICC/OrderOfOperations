@@ -50,7 +50,7 @@ function network() {
     if (f === 'open') { jedges.push({ kind: 'part', a: p._a, b: p._b, len: 2 * TERM(p), part: p }); continue; }   // (open: no current through it; still a load for the current's display, so the wiring up to it lights and the current goes up to it and stops)
     if (f === 'short') { edges.push({ a: p._a, b: p._b, w: 1, kind: 'w' }); jedges.push({ kind: 'part', a: p._a, b: p._b, len: 2 * TERM(p), part: p }); continue; }
     edges.push({ a: p._a, b: p._b, w: 2 * TERM(p), kind: 'part', part: p });
-    jedges.push({ kind: 'part', a: p._a, b: p._b, len: 2 * TERM(p), part: p });
+    jedges.push({ kind: 'part', a: p._a, b: p._b, len: p.t === 'cbk' ? 2 : 2 * TERM(p), part: p });   // (a circuit breaker: the current, or its going, crosses it at once, so the wire past it goes dark the moment it opens (Dallas, 22 Nov 2026))
   }
   // continuations: each box's connection points join at its middle, and the middles of all the boxes with the same
   // number join one another (a very short run, so the current is through at once)

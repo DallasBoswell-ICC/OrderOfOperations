@@ -78,8 +78,11 @@ function paintView(V) {
     else if (p.t === 'fsw') setFlow(v, p, lswPos(p), lswClosed(p));
     else if (p.t === 'flt') setFloat(v, p, lswPos(p), lswClosed(p));
     else if (p.t === 'tgl') setToggle(v, p, lswPos(p), lswClosed(p));
-    else if (p.t === 'cbk') { const a = showCol(p._a, simT), b = showCol(p._b, simT);   // (open: the colour waiting at whichever end has it)
-      setBreaker(v, p, lswPos(p), !!BLOWN[p.id], lswClosed(p) ? a || b : null, lswClosed(p) ? null : a && !b ? { side: 0, col: a } : b && !a ? { side: 1, col: b } : null); }
+    else if (p.t === 'cbk') {
+      // (the end current comes in at (its line side): open, or moving, the colour waiting there lights it up to its contact; even
+      // while what is past it drains away, so it never flickers grey as it is switched (Dallas, 22 Nov 2026))
+      const a = showCol(p._a, simT), b = showCol(p._b, simT), d = DIRS.find(x => x.e.part === p), side = d ? (d.from === p._b ? 1 : 0) : a ? 0 : b ? 1 : 0, w = side ? b : a;
+      setBreaker(v, p, lswPos(p), !!BLOWN[p.id], a || b, w ? { side, col: w } : null, lswClosed(p)); }   // (the colour through it: shown only while its arc is down)
     else if (p.t === 'con' || p.t === 'olc') {
       const s = p.t === 'olc' ? olState(p.L) : CON[p.id]; if (!s) continue;
       const f = clamp01((simT - s.t0) / SWING), e = f * f * (3 - 2 * f);   // ease in and out

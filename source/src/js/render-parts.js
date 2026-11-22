@@ -1236,9 +1236,9 @@ function drawBreaker(p, g, x, y, v) {
   setBreaker(v, p, editing ? (p.held ? 1 : 0) : lswPos(p), editing ? false : !!BLOWN[p.id], null);   // (in Build: as it starts)
 }
 // (wait: open, the colour waiting at it and which end it waits at (0 its left, 1 its right), lit up to that end's contact)
-function setBreaker(v, p, pos, tripped, flow, wait) {
-  const k = pos.toFixed(3) + (tripped ? 't' : '') + (flow || '') + (wait ? wait.side + wait.col : ''); if (v.k === k) return; v.k = k;
-  const lift = tripped ? 1 : 1 - pos, shut = !tripped && pos > .98, c = shut ? flow || CBK_COL : GREY;   // (on, its contacts too the colour of the current through it, 22 Nov 2026)
+function setBreaker(v, p, pos, tripped, flow, wait, now) {   // (now: whether it is closed (in Run): lit at once as it closes, grey at once as it opens, as the current is)
+  const k = pos.toFixed(3) + (tripped ? 't' : '') + (flow || '') + (wait ? wait.side + wait.col : '') + now; if (v.k === k) return; v.k = k;
+  const lift = tripped ? 1 : 1 - pos, shut = !tripped && (now === undefined ? pos > .98 : now), c = shut ? flow || CBK_COL : GREY;   // (on, its contacts too the colour of the current through it, 22 Nov 2026)
   v.arc.setAttribute('transform', `translate(0 ${(-16 * lift).toFixed(2)})`); v.arcC.setAttribute('stroke', shut ? flow || CBK_COL : BLADE_GREY);
   v.posts.forEach((q, i) => q.setAttribute('fill', !shut && wait && wait.side === i ? wait.col : c)); v.rings.forEach((q, i) => q.setAttribute('stroke', !shut && wait && wait.side === i ? wait.col : c));
   for (const q of v.pins) q.setAttribute('fill', shut ? flow || CBK_COL : BLADE_GREY);
