@@ -368,7 +368,7 @@ function tsTerminals(V, B, net) {
       continue;
     }
     if (isJmp(p) || !p._t) continue;
-    const name = (i, side) => p.t === 'xfm' ? ['H1', 'H2', 'X1', 'X2'][i] : isPwr3(p) ? `${['L1', 'L2', 'L3'][i >> 1]} ${i & 1 ? 'load' : 'line'} side` : p.t === 'mtr' ? `T${i + 1}` : p.t === 'sp2' ? ['common', 'throw 1', 'throw 2'][i] : p.t === 'dpd' ? ['top common', 'top throw 1', 'top throw 2', 'bottom common', 'bottom throw 1', 'bottom throw 2'][i] : p.t === 'tps' ? ['pole 1 left', 'pole 1 right', 'pole 2 left', 'pole 2 right', 'pole 3 left', 'pole 3 right'][i] : p.t === 'xov' || p.t === 'dps' || p.t === 'cbd' ? ['top left', 'top right', 'bottom left', 'bottom right'][i] : side;
+    const name = (i, side) => p.t === 'xfm' ? ['H1', 'H2', 'X1', 'X2'][i] : isPwr3(p) ? `${['L1', 'L2', 'L3'][i >> 1]} ${i & 1 ? 'load' : 'line'} side` : p.t === 'mtr' ? `T${i + 1}` : p.t === 'sp2' ? ['common', 'throw 1', 'throw 2'][i] : p.t === 'dpd' ? ['top common', 'top throw 1', 'top throw 2', 'bottom common', 'bottom throw 1', 'bottom throw 2'][i] : p.t === 'tps' || p.t === 'cbt' ? ['pole 1 left', 'pole 1 right', 'pole 2 left', 'pole 2 right', 'pole 3 left', 'pole 3 right'][i] : p.t === 'xov' || p.t === 'dps' || p.t === 'cbd' ? ['top left', 'top right', 'bottom left', 'bottom right'][i] : side;
     T.forEach(([tx, ty], i) => { const n = at.get(key(tx, ty)); if (n !== undefined) pts.push({ x: tx, y: ty, n, label: `${captionOf(p)}, ${name(i, ['left', 'right', 'bottom', 'top'][i] || '')}` }); });
   }
   const seen = new Set();

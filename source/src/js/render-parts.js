@@ -92,7 +92,7 @@ function drawEstop(p, v, x, y, g) {
     el('path', { d: `M ${P1[0] + tx * L} ${P1[1] + ty * L} L ${P1[0] + nx * w} ${P1[1] + ny * w} L ${P1[0] - nx * w} ${P1[1] - ny * w} Z`, fill: ESTOP_PLATE }, v.twist);
   }
 }
-const captionOf = p => p.t === 'stand' ? `${p.L ? p.L + ' ' : ''}${LINK_PB_SYMN[p.sym] || p.sym} (stand-in)` : p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} ${p.low ? 'Low' : 'High'} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} ${p.low ? 'Low' : 'High'} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'flt' ? `FS${p.L} ${p.low ? 'Low' : 'High'} Level Float Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tgl' ? `SW${p.L} Toggle Switch (SPST)` : p.t === 'sp2' ? `SW${p.L} Toggle Switch (SPDT)` : p.t === 'xov' ? `SW${p.L} Crossover Switch (DPDT)` : p.t === 'dps' ? `SW${p.L} Toggle Switch (DPST)` : p.t === 'tps' ? `SW${p.L} Toggle Switch (3PST)` : p.t === 'cbk' ? `CB${p.L} Circuit Breaker` : p.t === 'cbd' ? `CB${p.L} Circuit Breaker (DPST)` : p.t === 'dpd' ? `SW${p.L} Toggle Switch (DPDT)` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'stand' ? `${p.L ? p.L + ' ' : ''}${LINK_PB_SYMN[p.sym] || p.sym} (stand-in)` : p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} ${p.low ? 'Low' : 'High'} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} ${p.low ? 'Low' : 'High'} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'flt' ? `FS${p.L} ${p.low ? 'Low' : 'High'} Level Float Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tgl' ? `SW${p.L} Toggle Switch (SPST)` : p.t === 'sp2' ? `SW${p.L} Toggle Switch (SPDT)` : p.t === 'xov' ? `SW${p.L} Crossover Switch (DPDT)` : p.t === 'dps' ? `SW${p.L} Toggle Switch (DPST)` : p.t === 'tps' ? `SW${p.L} Toggle Switch (3PST)` : p.t === 'cbk' ? `CB${p.L} Circuit Breaker` : p.t === 'cbd' ? `CB${p.L} Circuit Breaker (DPST)` : p.t === 'cbt' ? `CB${p.L} Circuit Breaker (3PST)` : p.t === 'dpd' ? `SW${p.L} Toggle Switch (DPDT)` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -121,7 +121,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => p.t === 'stand' ? standBox(p).hh + 11 : (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'flt' ? FLT_UP + 2 : p.t === 'tgl' ? LSW_TOP + 2 : isTglN(p) || p.t === 'cbk' || p.t === 'cbd' ? bodyUp(p) + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => p.t === 'stand' ? standBox(p).hh + 11 : (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'flt' ? FLT_UP + 2 : p.t === 'tgl' ? LSW_TOP + 2 : isTglN(p) || isBrk(p) ? bodyUp(p) + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -280,7 +280,7 @@ function drawPart(p, g, x, y, chan, onStation) {
     drawXover(p, g, x, y, v, chan);
   } else if (p.t === 'dps' || p.t === 'tps') {
     drawDpst(p, g, x, y, v, chan);
-  } else if (p.t === 'cbk' || p.t === 'cbd') {
+  } else if (isBrk(p)) {
     drawBreaker(p, g, x, y, v, chan);
   } else if (p.t === 'dpd') {
     drawDpdt(p, g, x, y, v, chan);
@@ -1207,8 +1207,9 @@ function setDpdt(v, p, pos) {
 // none). Below, its handle (up on, in the middle tripped, down off) and a window reading ON, TRIP or OFF; its tags.
 function drawBreaker(p, g, x, y, v, chan) {
   // (a DPST circuit breaker (Dallas, 22 Nov 2026, option A): the single one's pole twice, 120 apart (its ends where a DPST
-  // toggle switch's are), the NEMA dashed link between the two arcs, lifting with them; the one handle below them both)
-  const col = CBK_COL, hw = LSW_W / 2, two = p.t === 'cbd', rows = two ? [y - SP2_DY, y + SP2_DY] : [y], top = y - bodyUp(p), bot = y + bodyDown(p), px1 = x - 30, px2 = x + 30, sy = BOX * .045, r = 7;
+  // toggle switch's are), the NEMA dashed link between the two arcs, lifting with them; the one handle below them both. A 3PST
+  // (22 Nov 2026): the same with a third pole, its ends where a 3PST toggle switch's are)
+  const col = CBK_COL, hw = LSW_W / 2, two = p.t !== 'cbk', rows = p.t === 'cbt' ? [y - 120, y, y + 120] : two ? [y - SP2_DY, y + SP2_DY] : [y], top = y - bodyUp(p), bot = y + bodyDown(p), px1 = x - 30, px2 = x + 30, sy = BOX * .045, r = 7;
   if (two) { v.lead = null; v.src = [];
     rows.flatMap(ty => [[-1, ty], [1, ty]]).forEach(([sx, ty], i) => { const tx = x + sx * 60, bx = x + sx * hw;   // (its ends' short leads in to the body, lit as the current reaches them)
       el('line', { x1: tx, y1: ty, x2: bx, y2: ty, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
@@ -1217,7 +1218,7 @@ function drawBreaker(p, g, x, y, v, chan) {
   v.poles = rows.map((yy, i) => { const q = {};
     q.posts = [el('rect', { x: x - hw + 4.5, y: yy - sy, width: px1 - r - (x - hw + 4.5), height: 2 * sy, fill: col }, g), el('rect', { x: px2 + r, y: yy - sy, width: x + hw - 4.5 - px2 - r, height: 2 * sy, fill: col }, g)];
     q.arc = el('g', { filter: 'url(#fShadow)' }, g);
-    if (two && i === 0) el('line', { x1: x, y1: yy - 10, x2: x, y2: rows[1] - 29, stroke: '#8a8a8a', 'stroke-width': 2, 'stroke-dasharray': '5 4' }, q.arc);   // (the link, from the top arc down to just above the bottom one)
+    if (two && i === 0) el('line', { x1: x, y1: yy - 10, x2: x, y2: rows[rows.length - 1] - 29, stroke: '#8a8a8a', 'stroke-width': 2, 'stroke-dasharray': '5 4' }, q.arc);   // (the link, from the top arc down to just above the bottom one)
     const d = `M${px1} ${yy - 1}Q${x} ${yy - 30} ${px2} ${yy - 1}`;
     el('path', { d, fill: 'none', stroke: 'rgba(0,0,0,.45)', 'stroke-width': 8.2, 'stroke-linecap': 'round' }, q.arc);
     q.arcC = el('path', { d, fill: 'none', stroke: col, 'stroke-width': 7, 'stroke-linecap': 'round' }, q.arc);
@@ -1241,7 +1242,7 @@ function drawBreaker(p, g, x, y, v, chan) {
   v.flagT = el('text', { x: hx, y: ly + 115, 'text-anchor': 'middle', 'font-size': 6.5, 'font-weight': 800, fill: '#111', 'pointer-events': 'none' }, g);
   // its tags
   const tg = (t, tx, fs) => { el('rect', { x: tx - 16, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: col, 'stroke-width': 1.2 }, g); const e = el('text', { x: tx, y: bot - 12.5, 'text-anchor': 'middle', 'font-size': fs, 'font-weight': 800, fill: '#fff', 'pointer-events': 'none' }, g); e.textContent = t; };
-  tg('CB' + p.L, x - (hw - 23), 9); tg(two ? 'DPST' : 'SPST', x + (hw - 23), 8);
+  tg('CB' + p.L, x - (hw - 23), 9); tg(p.t === 'cbt' ? '3PST' : two ? 'DPST' : 'SPST', x + (hw - 23), 8);
   setBreaker(v, p, editing ? (p.held ? 1 : 0) : lswPos(p), editing ? false : !!BLOWN[p.id], []);   // (in Build: as it starts)
 }
 // (st: each pole's flow, the colour through it, and wait: open, the colour waiting at it and which end it waits at (0 its

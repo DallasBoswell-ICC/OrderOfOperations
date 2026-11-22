@@ -128,10 +128,10 @@ const coilColour = L => (parts.find(q => q.t === 'coil' && q.L === L) || {}).col
    whole until it blows (BLOWN); a starter's poles shut once its contacts have (CON, as a relay contact's); an
    overload's heaters always pass power (OLTRIP: the overloads tripped, by number). */
 let DSC = {}, BLOWN = {}, OLTRIP = {}, MOT = {};
-const poleClosed = k => { const p = k.x; return p.t === 'dpd' ? (k.i % 2 === 0) === lswAct(p) : p.t === 'dps' || p.t === 'tps' ? lswAct(p) : p.t === 'cbd' ? lswClosed(p) : p.t === 'xov' ? (k.i < 2) !== lswAct(p) : p.t === 'sp2' ? (k.i === 0) === lswAct(p) : p.t === 'dsc' ? !DSC[p.id] : p.t === 'fus' ? !BLOWN[k.id] : p.t === 'mst' ? !!(CON[p.id] && CON[p.id].shut) : true; };
+const poleClosed = k => { const p = k.x; return p.t === 'dpd' ? (k.i % 2 === 0) === lswAct(p) : p.t === 'dps' || p.t === 'tps' ? lswAct(p) : p.t === 'cbd' || p.t === 'cbt' ? lswClosed(p) : p.t === 'xov' ? (k.i < 2) !== lswAct(p) : p.t === 'sp2' ? (k.i === 0) === lswAct(p) : p.t === 'dsc' ? !DSC[p.id] : p.t === 'fus' ? !BLOWN[k.id] : p.t === 'mst' ? !!(CON[p.id] && CON[p.id].shut) : true; };
 // a limit switch: actuated while worked (a held one: while not), and closed accordingly
 const lswAct = p => TS_PUSHED['s:' + opKey(p)] ? true : (pvLinked(p) ? !!PVACT[opKey(p)] : !!down[opKey(p)]) !== !!p.held,   // (worked by hand, or by its process value; or forced on in the Fault Finder)
-      lswClosed = p => (p.t === 'cbk' || p.t === 'cbd') && BLOWN[p.id] ? false : p.nc ? !lswAct(p) : lswAct(p);   // (a circuit breaker: open once tripped, whatever its handle)
+      lswClosed = p => isBrk(p) && BLOWN[p.id] ? false : p.nc ? !lswAct(p) : lswAct(p);   // (a circuit breaker: open once tripped, whatever its handle)
 // how far a limit switch has moved from at rest (0) to worked (1): easing in and out over LSW_MOVE after it was last
 // worked or let go
 const LSW_MOVE = .3;

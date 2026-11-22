@@ -62,8 +62,8 @@ function paintView(V) {
     if (p.t === 'xfm') { paintXfm(p, v); continue; }
     if (isPwr3(p)) { paintPwr(p, v); continue; }
     if (p.t === 'mtr') { paintMtr(p, v); continue; }
-    if (p.t === 'cbd') { for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
-      setBreaker(v, p, lswPos(p), !!BLOWN[p.id], (p._poles || []).map(cbkPole), lswClosed(p)); continue; }   // (a DPST circuit breaker: each pole as a single one's, below)
+    if (p.t === 'cbd' || p.t === 'cbt') { for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
+      setBreaker(v, p, lswPos(p), !!BLOWN[p.id], (p._poles || []).map(cbkPole), lswClosed(p)); continue; }   // (a DPST or 3PST circuit breaker: each pole as a single one's, below)
     if (isTglN(p)) { for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } if (p.t === 'xov') setXover(v, p, lswPos(p)); else if (p.t === 'dps' || p.t === 'tps') setDpst(v, p, lswPos(p)); else if (p.t === 'dpd') setDpdt(v, p, lswPos(p)); else setSpdt(v, p, lswPos(p)); continue; }
     if (isJmp(p)) {
       for (const q of v.src || []) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
@@ -268,7 +268,7 @@ function bindButton(g, p) {
   const linkedSay = () => { const v = pvOf(p); say(`${captionOf(p)} is worked by ${v.name}: set it in the Process window.`); };
   const dn = () => {
     if (pvLinked(p)) return linkedSay();   // (worked by its process value, not by hand)
-    if ((p.t === 'cbk' || p.t === 'cbd') && BLOWN[p.id]) { delete BLOWN[p.id]; FU1T[p.id] = simT; if (!lswAct(p)) press(K, !down[K]); else switched(p.t === 'cbd' ? p._poles || [] : [p], simT); needPaint = true; return; }   // (a tripped circuit breaker: a click resets it, on)
+    if (isBrk(p) && BLOWN[p.id]) { delete BLOWN[p.id]; FU1T[p.id] = simT; if (!lswAct(p)) press(K, !down[K]); else switched(isMulti(p) ? p._poles || [] : [p], simT); needPaint = true; return; }   // (a tripped circuit breaker: a click resets it, on)
     if (p.maint) return press(K, !down[K]);
     if (mode === 'latch') return press(K, !down[K]);   // (the Troubleshooter's Click to Hold: a click holds it down, another lets it go)
     if (mode === 'click') { if (down[K]) return; press(K, true); autoRel[K] = true; } else press(K, true);

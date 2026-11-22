@@ -122,7 +122,7 @@ function printSheet(drawnBy, fit = false) {
   const lampN = new Map(); P.filter(q => q.t === 'lamp').sort((a, b) => a.y - b.y || a.x - b.x).forEach((q, i) => lampN.set(q, i + 1));
   // (a button or coil with a label of its own, that no other has, goes by it: no PB-A, its contacts named by it too)
   const tag = q => ({ btn: uniqueLabel('btn', q.L) || (q.p.estop ? 'ES-' : 'PB-') + q.L, sel: 'SS-' + q.L, coil: uniqueLabel('coil', q.L) || q.L, con: uniqueLabel('coil', q.L) || q.L, olc: 'OL' + q.L, lamp: 'PL' + lampN.get(q), sol: 'SOL' + q.L, htr: 'HTR' + q.L, tsw: 'TS' + q.L,
-    psw: 'PS' + q.L, fsw: 'FLS' + q.L, flt: 'FS' + q.L, tgl: 'SW' + q.L, sp2: 'SW' + q.L, xov: 'SW' + q.L, dps: 'SW' + q.L, dpd: 'SW' + q.L, tps: 'SW' + q.L, cbk: 'CB' + q.L, cbd: 'CB' + q.L, lsw: 'LS' + q.L, fu1: 'FU' + q.L, fus: 'FU' + q.L, dsc: 'DS' + q.L, mst: q.L, olh: 'OL' + q.L, mtr: 'M' + q.L, xfm: 'CPT' + q.L })[q.t] || '';
+    psw: 'PS' + q.L, fsw: 'FLS' + q.L, flt: 'FS' + q.L, tgl: 'SW' + q.L, sp2: 'SW' + q.L, xov: 'SW' + q.L, dps: 'SW' + q.L, dpd: 'SW' + q.L, tps: 'SW' + q.L, cbk: 'CB' + q.L, cbd: 'CB' + q.L, cbt: 'CB' + q.L, lsw: 'LS' + q.L, fu1: 'FU' + q.L, fus: 'FU' + q.L, dsc: 'DS' + q.L, mst: q.L, olh: 'OL' + q.L, mtr: 'M' + q.L, xfm: 'CPT' + q.L })[q.t] || '';
   const COLOURS = { '#00B050': 'GREEN', '#FF0032': 'RED', '#FF9600': 'AMBER', '#FFDC00': 'YELLOW', '#0070C0': 'BLUE', '#FFFFFF': 'WHITE', '#7030A0': 'PURPLE' };
   const colourName = c => COLOURS[(c || '').toUpperCase()] || '';
 
@@ -193,7 +193,7 @@ function printSheet(drawnBy, fit = false) {
       case 'psw': two(q, `${p.nc ? 'NC' : 'NO'} Pressure Switch`, p.low ? 'LOW PRESS' : 'HIGH PRESS'); break;
       case 'fsw': two(q, `${p.nc ? 'NC' : 'NO'} Flow Switch`, p.low ? 'LOW FLOW' : 'HIGH FLOW'); break;
       case 'cbk': two(q, 'Circuit Breaker'); break;
-      case 'cbd': { const s = PSYM['DPST Circuit Breaker'] || LINK_PB_PSYM['DPST Circuit Breaker']; if (!s) break;   // (a DPST circuit breaker: Print Builder's symbol, its ends joined to the part's)
+      case 'cbd': case 'cbt': { const nm = p.t === 'cbt' ? '3PST Circuit Breaker' : 'DPST Circuit Breaker', s = PSYM[nm] || LINK_PB_PSYM[nm]; if (!s) break;   // (a DPST circuit breaker: Print Builder's symbol, its ends joined to the part's)
         g += `<g class="sym" transform="translate(${x} ${y})">${s.b}</g>`; q.terms.forEach((t, i) => { const u = s.t[i]; if (u) line(t[0], t[1], x + u[0], y + u[1]); });
         text(x, y + s.y0 - 8, 'CB' + p.L, 26); break; }
       case 'tgl': { const k = g.length; two(q, 'SPST Switch'); if (p.fx) g = g.slice(0, k) + g.slice(k).replace(/<g class="sym" transform="([^"]*)">/, (m, t) => `<g class="sym" transform="${t} scale(-1 1)">`); break; }   // (flipped: its hinge on the right)
