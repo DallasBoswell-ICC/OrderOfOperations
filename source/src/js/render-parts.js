@@ -121,7 +121,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => p.t === 'stand' ? standBox(p).hh + 11 : (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'flt' ? FLT_UP + 2 : p.t === 'tgl' ? LSW_TOP + 2 : isTglN(p) || isBrk(p) ? bodyUp(p) + 2 : p.t === 'dsc' ? PWR_H / 2 + DSC_HEAD + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => p.t === 'stand' ? standBox(p).hh + 11 : (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'flt' ? FLT_UP + 2 : p.t === 'tgl' ? LSW_TOP + 2 : isTglN(p) || isBrk(p) ? bodyUp(p) + 2 : p.t === 'dsc' ? PWR_H / 2 + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -591,7 +591,7 @@ function fuseBody(g, x, y, rot) {
 }
 /* A disconnect, fuses, a starter's main contacts or an overload's heaters: one tall box with a pole on each of the
    three lines (see PWR_DY), its ends out to the left and right. The poles that are worked together (all but the
-   fuses) are joined by a dashed line, as on a print; a disconnect has its handle on top. */
+   fuses) are joined by a dashed line, as on a print; a disconnect has its handle below its poles, in its body. */
 function drawPwr(p, g, x, y, v, chan) {
   v.lead = null; v.src = [];
   const H = PWR_H, edge = pwrEdge(p);
@@ -600,7 +600,7 @@ function drawPwr(p, g, x, y, v, chan) {
     el('line', { x1: tx, y1: ty, x2: bx, y2: ty, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
     if (!editing && p._t) v.src.push({ n: p._t[i], ln: el('line', { x1: tx, y1: ty, x2: bx, y2: ty, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g) });
   });
-  framed('rect', { x: x - BOX / 2, y: y - H / 2, width: BOX, height: H, rx: 14, fill: 'url(#gWell)', stroke: edge, 'stroke-width': 2.2 }, g);
+  framed('rect', { x: x - BOX / 2, y: y - H / 2, width: BOX, height: H / 2 + (p.t === 'dsc' ? DSC_DOWN : H / 2), rx: 14, fill: 'url(#gWell)', stroke: edge, 'stroke-width': 2.2 }, g);   // (a disconnect: down past its poles to its handle)
   if (p.t !== 'fus') el('line', { x1: x + 1, y1: y - PWR_DY + 4, x2: x + 1, y2: y + PWR_DY - 4, stroke: '#9a9a9a', 'stroke-width': 1.6, 'stroke-dasharray': '4 4' }, g);
   v.poles = [-1, 0, 1].map(k => {
     const py = y + k * PWR_DY, q = {};
@@ -623,17 +623,18 @@ function drawPwr(p, g, x, y, v, chan) {
     return q;
   });
   if (p.t === 'dsc') {
-    // its operating handle, on a head on top of the box: a selector switch's knob and handle (in red), turned to OFF
-    // (left) or ON (right), the one it points to lit
-    const top = y - H / 2 - DSC_HEAD, kx = x, ky = top + DSC_HEAD / 2 + 6;
-    framed('rect', { x: x - BOX / 2, y: top, width: BOX, height: DSC_HEAD - 4, rx: 12, fill: 'url(#gWell)', stroke: DSC_COL, 'stroke-width': 2.2 }, g);
-    v.offT = el('text', { x: x - 19, y: top + 15, 'text-anchor': 'middle', 'font-size': 9.5, 'font-weight': 800, fill: '#6a6a6a' }, g); v.offT.textContent = 'OFF';
-    v.onT = el('text', { x: x + 19, y: top + 15, 'text-anchor': 'middle', 'font-size': 9.5, 'font-weight': 800, fill: DSC_HANDLE }, g); v.onT.textContent = 'ON';
+    // its operating handle, below its poles in its body, as a circuit breaker's (Dallas, 22 Nov 2026, option A): a selector
+    // switch's knob and handle (in red), turned to OFF (left) or ON (right), the one it points to lit; and its tag below
+    const ly = y + PWR_DY, kx = x, ky = ly + 62, bot = y + DSC_DOWN;
+    v.offT = el('text', { x: x - 17, y: ly + 38, 'text-anchor': 'middle', 'font-size': 9.5, 'font-weight': 800, fill: '#6a6a6a' }, g); v.offT.textContent = 'OFF';
+    v.onT = el('text', { x: x + 17, y: ly + 38, 'text-anchor': 'middle', 'font-size': 9.5, 'font-weight': 800, fill: DSC_HANDLE }, g); v.onT.textContent = 'ON';
     el('circle', { cx: kx, cy: ky, r: 13, fill: 'url(#gKnob)', stroke: '#1d2733', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, g);
     v.lever = el('g', { transform: `rotate(45 ${kx} ${ky})` }, g); v.hx = kx; v.hy = ky;
     el('rect', { x: kx - 4.5, y: ky - 14, width: 9, height: 28, rx: 4.5, fill: DSC_HANDLE, stroke: '#1d2733', 'stroke-width': 1.1 }, v.lever);
     el('rect', { x: kx - 4.5, y: ky - 14, width: 9, height: 28, rx: 4.5, fill: 'url(#gGloss)' }, v.lever);
     el('line', { x1: kx, y1: ky - 11, x2: kx, y2: ky - 5, stroke: '#fff', 'stroke-width': 2, 'stroke-linecap': 'round', opacity: .85 }, v.lever);
+    el('rect', { x: x - 16, y: bot - 25, width: 32, height: 18, rx: 5, fill: '#1f1f1f', stroke: DSC_COL, 'stroke-width': 1.2 }, g);
+    el('text', { x, y: bot - 12.5, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 800, fill: '#fff', 'pointer-events': 'none' }, g).textContent = 'DS' + p.L;
   }
   if (p.t === 'olh') { v.trip = el('text', { x, y: y + H / 2 + 22, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 800, fill: '#ff8a7a', display: 'none', stroke: '#404040', 'stroke-width': 4, 'paint-order': 'stroke' }, g); v.trip.textContent = 'TRIPPED'; }
 }

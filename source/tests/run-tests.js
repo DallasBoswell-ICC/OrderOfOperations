@@ -3792,6 +3792,16 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Disconnect (Dallas, 22 Nov 2026, option A): its knob below its poles, in its body, as a circuit breaker\'s, with no head on top; its tag at the bottom; the room it takes reaching down to it', async page => {
+    const out = [];
+    const r = await page.evaluate(() => { sel = null; loadPreset('blank'); W = Math.max(W_MIN, 1100); const p = newPart('dsc', 300, 300); parts.push(p); normalize(); draw();
+      const v = view.parts.get(p.id), kb = v.lever.getBBox(), tag = [...document.querySelectorAll('svg text')].find(t => t.textContent === 'DS1');
+      return { knob: kb.y, low: p.y + PWR_DY, tag: tag ? +tag.getAttribute('y') : null, down: roomDown('dsc'), up: roomUp('dsc'), cap: capTop(p) }; });
+    if (!(r.knob > r.low)) out.push('knob not below the bottom pole: ' + JSON.stringify(r));
+    if (!(r.tag > r.knob)) out.push('tag not below the knob: ' + JSON.stringify(r));
+    if (r.down !== 238 || r.up !== 173 || r.cap !== 166) out.push('room: ' + JSON.stringify(r));
+    return out;
+  });
   await check('Wide parts\' leads stay inside their ends (Dallas, 22 Nov 2026): the current leaves a limit switch, toggle switch or circuit breaker the moment it gets across, with nothing painted out over the wire past it', async page => {
     const bad = await page.evaluate(() => ['lsw', 'tgl', 'sp2', 'xov', 'dps', 'tps', 'dpd', 'cbk', 'psw', 'fsw', 'flt'].filter(t => { const p = { t }; return LEADH(p) > TERM(p); }));
     if (bad.length) throw new Error('leads past their ends: ' + bad.join(', '));

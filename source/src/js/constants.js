@@ -54,9 +54,10 @@ const XFM_W = 210, XFM_H = 148, XFM_TX = 60, XFM_TY = 80, XFM_EDGE = '#9aa7b5';
    contact for the control circuit (olc, normally closed: it opens when the overload with its number trips); and a
    motor (mtr), with T1, T2 and T3 down its left side. */
 const isPwr3 = p => p.t === 'dsc' || p.t === 'fus' || p.t === 'mst' || p.t === 'olh', isPwrT = t => t === 'dsc' || t === 'fus' || t === 'mst' || t === 'olh';
-const DSC_HEAD = 50, DSC_HANDLE = '#E8413C';   // (a disconnect's head on top, with its handle)
+const DSC_HEAD = 50, DSC_HANDLE = '#E8413C', DSC_DOWN = 120 + 118;   // (a disconnect's handle (Dallas, 22 Nov 2026, option A: below its poles, in its body, as a circuit breaker's; its body
+// reaching DSC_DOWN below its middle))
 const PWR_DY = 120, PWR_H = 2 * PWR_DY + 66, MTR_W = 280, MTR_H = 280, MTR_COL = '#9aa7b5', OL_COL = '#FF6F59', DSC_COL = '#c9d2dd', FUS_COL = '#c8c8c8';
-const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : t === 'tsw' ? TSW_T : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : t === 'psw' ? PSW_UP : t === 'fsw' ? FSW_UP : t === 'lsw' || t === 'tsw' ? LSW_S / 2 : t === 'tgl' ? TGL_BOT : t === 'dpd' ? DPD_BOT : t === 'tps' ? TPS_BOT : t === 'cbd' ? CBD_BOT : t === 'cbt' ? CBT_BOT : t === 'sp2' || t === 'xov' || t === 'dps' ? SP2_BOT : t === 'mtr' ? MTR_H / 2 : t === 'dsc' ? PWR_H / 2 + DSC_HEAD : isPwrT(t) ? PWR_H / 2 : 40;   // (the room a part takes)
+const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : t === 'tsw' ? TSW_T : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : t === 'psw' ? PSW_UP : t === 'fsw' ? FSW_UP : t === 'lsw' || t === 'tsw' ? LSW_S / 2 : t === 'tgl' ? TGL_BOT : t === 'dpd' ? DPD_BOT : t === 'tps' ? TPS_BOT : t === 'cbd' ? CBD_BOT : t === 'cbt' ? CBT_BOT : t === 'sp2' || t === 'xov' || t === 'dps' ? SP2_BOT : t === 'mtr' ? MTR_H / 2 : t === 'dsc' ? DSC_DOWN : isPwrT(t) ? PWR_H / 2 : 40;   // (the room a part takes)
 const SOL_COL = '#00D2BE';
 /* a solenoid (as on Dallas's drawing): a diamond (a rounded square on its corner) as tall and wide as a coil, with a
    dot at each end where the rung comes in, joined by the lightning bolt: along the rung, up to a peak, straight down and
@@ -145,13 +146,13 @@ const isBrk = p => p.t === 'cbk' || p.t === 'cbd' || p.t === 'cbt';   // (a circ
 const isMulti = p => isTglN(p) || p.t === 'cbd' || p.t === 'cbt';   // (the parts with more than two ends that switch: the toggle switches below, and a DPST or 3PST circuit breaker; each run as its poles)
 const isTglN = p => p.t === 'sp2' || p.t === 'xov' || p.t === 'dps' || p.t === 'dpd' || p.t === 'tps';   // (the toggle switches with more than two ends: an SPDT, a crossover, a DPST, a DPDT)
 // (how far a part's body reaches above and below its wire: the toggle switches reach further down than up)
-const bodyUp = p => p.t === 'cbk' ? CBK_TOP : p.t === 'cbd' ? CBD_TOP : p.t === 'cbt' ? CBT_TOP : p.t === 'tps' ? TPS_TOP : isTglN(p) ? SP2_TOP : p.t === 'tgl' ? LSW_TOP : BODYH(p.t) / 2, bodyDown = p => p.t === 'cbk' ? CBK_BOT : p.t === 'cbd' ? CBD_BOT : p.t === 'cbt' ? CBT_BOT : p.t === 'tps' ? TPS_BOT : p.t === 'dpd' ? DPD_BOT : isTglN(p) ? SP2_BOT : p.t === 'tgl' ? TGL_BOT : BODYH(p.t) / 2;   // (toggle switches mirror left to right: Dallas, 21 Nov 2026)
+const bodyUp = p => p.t === 'dsc' ? PWR_H / 2 : p.t === 'cbk' ? CBK_TOP : p.t === 'cbd' ? CBD_TOP : p.t === 'cbt' ? CBT_TOP : p.t === 'tps' ? TPS_TOP : isTglN(p) ? SP2_TOP : p.t === 'tgl' ? LSW_TOP : BODYH(p.t) / 2, bodyDown = p => p.t === 'dsc' ? DSC_DOWN : p.t === 'cbk' ? CBK_BOT : p.t === 'cbd' ? CBD_BOT : p.t === 'cbt' ? CBT_BOT : p.t === 'tps' ? TPS_BOT : p.t === 'dpd' ? DPD_BOT : isTglN(p) ? SP2_BOT : p.t === 'tgl' ? TGL_BOT : BODYH(p.t) / 2;   // (toggle switches mirror left to right: Dallas, 21 Nov 2026)
 // the room a part takes above and below its middle, and whether two parts' rooms meet (Dallas, 22 Nov 2026: a toggle switch's
 // body reaches far further below its wire than above it, a DPDT's 360 below to 108 above, so its room is counted as it is, not
 // as the most of the two either way, which kept it 360 off parts above it as well)
 const isTglT = t => t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'tps' || t === 'dpd' || t === 'cbk' || t === 'cbd' || t === 'cbt';
-const roomUp = t => isTglT(t) ? bodyUp({ t }) + 20 : halfH(t),   // (and room for its name over it)
-      roomDown = t => isTglT(t) ? bodyDown({ t }) : halfH(t);
+const roomUp = t => isTglT(t) ? bodyUp({ t }) + 20 : t === 'dsc' ? PWR_H / 2 + 20 : halfH(t),   // (and room for its name over it)
+      roomDown = t => isTglT(t) ? bodyDown({ t }) : t === 'dsc' ? DSC_DOWN : halfH(t);
 const vClash = (ta, ya, tb, yb) => ya - roomUp(ta) < yb + roomDown(tb) && yb - roomUp(tb) < ya + roomDown(ta);
 const turns = p => turns7(p) || twoEnded(p), vert = p => (p.t === 'fu1' || twoEnded(p)) && !!((p.rot || 0) & 1);
 /* Three-phase power: an L1, L2 or L3 phase box (p.L '1', '2' or '3'), built like a supply box, every connection point
