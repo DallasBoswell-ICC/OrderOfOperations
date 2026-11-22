@@ -174,9 +174,10 @@ function linkBuild(doc, back) {
     const sp = p => (p.t === 'spdt' || p.t === 'xover' || p.t === 'dpdt') && !(((+p.rot || 0) % 360 + 360) % 360), spans = sh.parts.filter(sp).map(p => { const ys = linkPbTerms(p).map(q => q[1]); return [Math.min(...ys), Math.max(...ys)]; });
     // (a toggle switch's body reaches further below its wire than other parts: the row under an SPST, or under an SPDT's lower throw, kept further off)
     const deep = new Set([...sh.parts.filter(p => p.t === 'spst' && !(((+p.rot || 0) % 180 + 180) % 180)).map(p => p.y), ...spans.map(q => q[1]), ...sh.parts.filter(p => p.t === 'dpst' && !(((+p.rot || 0) % 360 + 360) % 360)).map(p => Math.max(...linkPbTerms(p).map(q => q[1])))]);
+    const mids = sh.parts.filter(p => p.t === 'dpdt' && sp(p)).map(p => { const ys = linkPbTerms(p).map(q => q[1]).sort((a, b) => a - b); return [ys[2], ys[3]]; });   // (a DPDT: the gap between its poles, 80 on the print, 60 in Circuit Builder)
     const rigid = sh.parts.filter(p => p.t !== 'rail' && !sp(p) && linkPbTerms(p).length > 2).map(p => { const ys = linkPbTerms(p).map(q => q[1]); return [Math.min(...ys), Math.max(...ys)]; });
     const to = [keys[0]]; for (let i = 1; i < keys.length; i++) { const g = keys[i] - keys[i - 1], inn = ([a, b]) => keys[i - 1] >= a && keys[i] <= b;
-      to.push(to[i - 1] + (spans.some(inn) ? Math.max(20, linkSnap(g * LINK_CB_TERMS.sp2[2][1] / 40)) : rigid.some(inn) ? g : Math.max(g, deep.has(keys[i - 1]) ? 220 : 160))); }
+      to.push(to[i - 1] + (mids.some(inn) ? Math.max(20, linkSnap(g * 60 / 80)) : spans.some(inn) ? Math.max(20, linkSnap(g * LINK_CB_TERMS.sp2[2][1] / 40)) : rigid.some(inn) ? g : Math.max(g, deep.has(keys[i - 1]) ? 220 : 160))); }
     return y => { if (y <= keys[0]) return y; for (let i = 1; i < keys.length; i++) if (y <= keys[i]) return to[i - 1] + (y - keys[i - 1]) * (to[i] - to[i - 1]) / (keys[i] - keys[i - 1]); return y - keys[keys.length - 1] + to[to.length - 1]; };
   });
   const DY = []; let y0 = 0; doc.sheets.forEach((s, k) => { const ys = s.parts.filter(p => p.t !== 'rail').map(p => p.y).concat(s.parts.filter(p => p.t === 'rail').map(p => p.y0)); const top = ys.length ? Math.min(...ys) : 0;
@@ -521,7 +522,8 @@ function circuitToPrint(d, env) {
   // whose terminals keep their own spacing on the print, or its wires would no longer meet them. And an SPDT toggle switch's
   // throws, 60 above and below its common in Circuit Builder, drawn 40 from it on the print, as his SPDT symbol has them: the rows
   // between its common and its throws closed up to that, so the wires to its throws meet them straight, with no jog)
-  { const SP = d.parts.filter(a => a[0] === 'sp2' || a[0] === 'xov' || a[0] === 'dpd').flatMap(a => { const y = +a[2], t = LINK_CB_TERMS.sp2[1][1]; return a[0] === 'dpd' ? [[y + t, y + 4 * -t, 40 / -t]] : [[y + t, y, 40 / -t], [y, y - t, 40 / -t]]; });
+  { const SP = d.parts.filter(a => a[0] === 'sp2' || a[0] === 'xov' || a[0] === 'dpd').flatMap(a => { const y = +a[2], t = LINK_CB_TERMS.sp2[1][1]; return a[0] === 'dpd' ? [[y + t, y - t, 40 / -t], [y - t, y - 2 * t, 80 / -t], [y - 2 * t, y - 4 * t, 40 / -t]] :   // (a DPDT: each pole's rows closed to 40, the gap between the poles opened to 80, as the print's)
+       [[y + t, y, 40 / -t], [y, y - t, 40 / -t]]; });
     if (sy > 1 || SP.length) {
       const keep = d.parts.filter(a => a[0] !== 'sp2' && a[0] !== 'xov' && a[0] !== 'dpd').map(a => { const ys = linkRowTerms(a).map(q => +q[1]); return ys.length ? [Math.min(...ys), Math.max(...ys)] : null; }).filter(k => k && k[1] > k[0]);
       const lv = [...new Set([...d.parts.map(a => +a[2]), ...d.wires.flatMap(w => [+w[1], +w[3]]), ...keep.flat(), ...SP.flatMap(q => [q[0], q[1]])])].sort((a, b) => a - b), at = new Map();
@@ -543,7 +545,7 @@ function circuitToPrint(d, env) {
   for (const r of R.filter(r => r.t === 'btn' || r.t === 'est' || r.t === 'sel')) { const k = (r.t === 'sel' ? 'S:' : 'B:') + r.L; if (!tagOf.has(k)) { const pre = r.t === 'sel' ? 'SS' : r.t === 'est' ? 'ES' : 'PB'; tagOf.set(k, new RegExp('^' + (r.t === 'sel' ? 'SS' : 'PB|ES')).test(r.L) ? r.L : pre + '-' + r.L); } }
   const descOf = new Map(R.filter(r => (r.t === 'btn' || r.t === 'est' || r.t === 'coil') && lbl(r)).map(r => [(r.t === 'coil' ? 'C:' : 'B:') + r.L, lbl(r)]));
   // ---- 1. each part as it will be on the print, at the circuit's own place for now (G: the circuit's grid)
-  const parts0 = R.map(r => ({ r, ts: r.t === 'sp2' || r.t === 'xov' || r.t === 'dpd' ? linkRowTerms(r.a).map(([x, y]) => [x, r.y + (y - r.y) * 2 / 3]) : linkRowTerms(r.a) }));   // (an SPDT's throws: where the rows were closed up to, 40 from its common)
+  const parts0 = R.map(r => ({ r, ts: r.t === 'dpd' ? linkRowTerms(r.a).map(([x, y]) => [x, r.y + ({ '-60': -40, 0: 0, 60: 40, 120: 120, 180: 160, 240: 200 })[y - r.y]]) : r.t === 'sp2' || r.t === 'xov' ? linkRowTerms(r.a).map(([x, y]) => [x, r.y + (y - r.y) * 2 / 3]) : linkRowTerms(r.a) }));   // (an SPDT's throws: where the rows were closed up to, 40 from its common)
   const wired = new Set(d.wires.flatMap(w => [w[0] + ',' + w[1], w[2] + ',' + w[3]]));
   const made = [];   // ({ r, o }: a circuit part and its print part, o.x/o.y in G for now)
   const COLN = { 'FF0032': 'RED', '00B050': 'GREEN', 'FFDC00': 'YELLOW', 'FF9600': 'AMBER', '0070C0': 'BLUE', 'FFFFFF': 'WHITE', '7030A0': 'VIOLET', 'EC008C': 'MAGENTA', '99E600': 'LIME', '00D2BE': 'TEAL' };
@@ -561,7 +563,7 @@ function circuitToPrint(d, env) {
       case 'fsw': t = (r.nc ? 'fls_nc' : 'fls_no') + (r.a[7] === 1 ? 'l' : ''); o.tag = 'FLS' + r.L; break;
       case 'tgl': t = 'spst'; o.tag = 'SW' + r.L; if (r.a[15] && r.a[15].f) o.fx = true; break;
       case 'sp2': t = 'spdt'; o.tag = 'SW' + r.L; if (r.a[15] && r.a[15].f) o.fx = true; break;
-      case 'dpd': t = 'dpdt'; o.tag = 'SW' + r.L; o.y = r.y + 60; if (r.a[15] && r.a[15].f) o.fx = true; break;   // (a DPDT: the print's symbol centred 60 below its top common)
+      case 'dpd': t = 'dpdt'; o.tag = 'SW' + r.L; o.y = r.y + 80; if (r.a[15] && r.a[15].f) o.fx = true; break;   // (a DPDT: the print's symbol centred 80 below its top common)
       case 'dps': t = 'dpst'; o.tag = 'SW' + r.L; if (r.a[15] && r.a[15].f) o.fx = true; break;
       case 'xov': t = 'xover'; o.tag = 'SW' + r.L; if (r.a[15] && r.a[15].f) o.fx = true; break;
       case 'flt': t = (r.nc ? 'fs_nc' : 'fs_no') + (r.a[7] === 1 ? 'l' : ''); o.tag = 'FS' + r.L; break;
