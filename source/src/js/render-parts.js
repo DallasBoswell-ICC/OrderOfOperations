@@ -1208,8 +1208,7 @@ function setDpdt(v, p, pos) {
 function drawBreaker(p, g, x, y, v) {
   const col = CBK_COL, hw = LSW_W / 2, top = y - CBK_TOP, bot = y + CBK_BOT, px1 = x - 30, px2 = x + 30, sy = BOX * .045, r = 7;
   framed('rect', { x: x - hw, y: top, width: LSW_W, height: bot - top, rx: 15, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
-  v.posts = el('g', { fill: col }, g);
-  el('rect', { x: x - hw + 4.5, y: y - sy, width: px1 - r - (x - hw + 4.5), height: 2 * sy }, v.posts); el('rect', { x: px2 + r, y: y - sy, width: x + hw - 4.5 - px2 - r, height: 2 * sy }, v.posts);
+  v.posts = [el('rect', { x: x - hw + 4.5, y: y - sy, width: px1 - r - (x - hw + 4.5), height: 2 * sy, fill: col }, g), el('rect', { x: px2 + r, y: y - sy, width: x + hw - 4.5 - px2 - r, height: 2 * sy, fill: col }, g)];
   v.arc = el('g', { filter: 'url(#fShadow)' }, g);
   const d = `M${px1} ${y - 1}Q${x} ${y - 30} ${px2} ${y - 1}`;
   el('path', { d, fill: 'none', stroke: 'rgba(0,0,0,.45)', 'stroke-width': 8.2, 'stroke-linecap': 'round' }, v.arc);
@@ -1236,11 +1235,13 @@ function drawBreaker(p, g, x, y, v) {
   tg('CB' + p.L, x - (hw - 23), 9); tg('SPST', x + (hw - 23), 8);
   setBreaker(v, p, editing ? (p.held ? 1 : 0) : lswPos(p), editing ? false : !!BLOWN[p.id], null);   // (in Build: as it starts)
 }
-function setBreaker(v, p, pos, tripped, flow) {
-  const k = pos.toFixed(3) + (tripped ? 't' : '') + (flow || ''); if (v.k === k) return; v.k = k;
+// (wait: open, the colour waiting at it and which end it waits at (0 its left, 1 its right), lit up to that end's contact)
+function setBreaker(v, p, pos, tripped, flow, wait) {
+  const k = pos.toFixed(3) + (tripped ? 't' : '') + (flow || '') + (wait ? wait.side + wait.col : ''); if (v.k === k) return; v.k = k;
   const lift = tripped ? 1 : 1 - pos, shut = !tripped && pos > .98, c = shut ? CBK_COL : GREY;
   v.arc.setAttribute('transform', `translate(0 ${(-16 * lift).toFixed(2)})`); v.arcC.setAttribute('stroke', shut ? flow || CBK_COL : BLADE_GREY);
-  v.posts.setAttribute('fill', c); for (const q of v.rings) q.setAttribute('stroke', c); for (const q of v.pins) q.setAttribute('fill', shut ? CBK_COL : BLADE_GREY);
+  v.posts.forEach((q, i) => q.setAttribute('fill', !shut && wait && wait.side === i ? wait.col : c)); v.rings.forEach((q, i) => q.setAttribute('stroke', !shut && wait && wait.side === i ? wait.col : c));
+  for (const q of v.pins) q.setAttribute('fill', shut ? CBK_COL : BLADE_GREY);
   v.handle.setAttribute('transform', `translate(0 ${tripped ? 0 : lerp(10, -10, pos).toFixed(2)})`);
   const st = tripped ? 'trip' : pos >= .5 ? 'on' : 'off';
   v.mOn.setAttribute('fill', st === 'on' ? CBK_COL : '#5a5a5a'); v.mOff.setAttribute('fill', st === 'off' ? CBK_COL : '#5a5a5a');

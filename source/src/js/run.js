@@ -78,7 +78,8 @@ function paintView(V) {
     else if (p.t === 'fsw') setFlow(v, p, lswPos(p), lswClosed(p));
     else if (p.t === 'flt') setFloat(v, p, lswPos(p), lswClosed(p));
     else if (p.t === 'tgl') setToggle(v, p, lswPos(p), lswClosed(p));
-    else if (p.t === 'cbk') setBreaker(v, p, lswPos(p), !!BLOWN[p.id], lswClosed(p) ? showCol(p._a, simT) || showCol(p._b, simT) : null);
+    else if (p.t === 'cbk') { const a = showCol(p._a, simT), b = showCol(p._b, simT);   // (open: the colour waiting at whichever end has it)
+      setBreaker(v, p, lswPos(p), !!BLOWN[p.id], lswClosed(p) ? a || b : null, lswClosed(p) ? null : a && !b ? { side: 0, col: a } : b && !a ? { side: 1, col: b } : null); }
     else if (p.t === 'con' || p.t === 'olc') {
       const s = p.t === 'olc' ? olState(p.L) : CON[p.id]; if (!s) continue;
       const f = clamp01((simT - s.t0) / SWING), e = f * f * (3 - 2 * f);   // ease in and out

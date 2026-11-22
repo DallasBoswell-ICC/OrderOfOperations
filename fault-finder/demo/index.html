@@ -2314,7 +2314,7 @@ const WIDE = t => LOADT(t) || t === 'sel' || t === 'lsw' || t === 'psw' || t ===
 const BODYH = t => t === 'lsw' || t === 'tsw' || t === 'psw' || t === 'fsw' || t === 'flt' || t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'tps' || t === 'dpd' || t === 'cbk' ? LSW_S : t === 'xfm' ? XFM_H : t === 'mtr' ? MTR_H : isPwrT(t) ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
 const TERM = p => p.t === 'stand' ? Math.max(40, ...(p.st || []).map(q => Math.abs(q[0]))) : p.t === 'mtr' ? MTR_W / 2 + 20 : p.t === 'tsw' ? TSW_T : WIDE(p.t) ? 60 : 40;
 const HILO = t => t === 'tsw' || t === 'psw' || t === 'fsw' || t === 'flt';   // (switches made in high and low kinds: temperature, pressure, flow, float; Dallas, 20 Nov 2026)
-const isOp = p => p.t === 'btn' || p.t === 'sel' || p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw' || p.t === 'fsw' || p.t === 'flt' || p.t === 'tgl' || p.t === 'cbk' || isTglN(p) || (p.t === 'pp' && !!p.x && isTglN(p.x));   // (an SPDT's two ways through: each tints the current as the switch does)
+const isOp = p => p.t === 'btn' || p.t === 'sel' || p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw' || p.t === 'fsw' || p.t === 'flt' || p.t === 'tgl' || isTglN(p) || (p.t === 'pp' && !!p.x && isTglN(p.x));   // (an SPDT's two ways through: each tints the current as the switch does)
 /* A temperature switch (tsw): numbered (TS1, TS2...), the limit switch's body without its head, the NEMA temperature
    switch's stepped stem under its blade, and joined to its right side a sensing bulb's box with a thermometer in it.
    For now it is worked as a limit switch is (as a momentary pushbutton), by its own key (opKey: 'T' and its number,
@@ -2388,7 +2388,7 @@ const phCol = p => PH_COL[(+p.L || 1) - 1];
 const lighten = (c, f) => { const n = parseInt(c.slice(1), 16), m = k => Math.round(((n >> k) & 255) + (255 - ((n >> k) & 255)) * f); return '#' + ((1 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)).toString(16).slice(1).toUpperCase(); };
 const JMP_EDGE = '#b8c2cf';
 const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel' || p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw' || p.t === 'fsw' || p.t === 'flt' || p.t === 'tgl' || p.t === 'cbk' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc' || p.t === 'fu1';
-const isCon = p => p.t === 'con' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc' || p.t === 'fu1';   // (a relay contact, or a transformer's switch inside it: passes on what it is given)   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre
+const isCon = p => p.t === 'con' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc' || p.t === 'fu1' || p.t === 'cbk';   // (a circuit breaker too: it passes on the colour it is given, Dallas 22 Nov 2026)   // (a relay contact, or a transformer's switch inside it: passes on what it is given)   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre
 /* Faults (Troubleshooter, stage 1, Dallas 15 Nov 2026): planted on parts and wires in Build, they act while running
    (FAULTS_ON; it can be turned off to run the circuit as it should be). A part (switch, contact, button, fuse,
    overload contact, coil, light, solenoid, heating element) can be open (never passes current: a switch stuck open,
@@ -5111,8 +5111,7 @@ function setDpdt(v, p, pos) {
 function drawBreaker(p, g, x, y, v) {
   const col = CBK_COL, hw = LSW_W / 2, top = y - CBK_TOP, bot = y + CBK_BOT, px1 = x - 30, px2 = x + 30, sy = BOX * .045, r = 7;
   framed('rect', { x: x - hw, y: top, width: LSW_W, height: bot - top, rx: 15, fill: 'url(#gWell)', stroke: col, 'stroke-width': 1.8 }, g);
-  v.posts = el('g', { fill: col }, g);
-  el('rect', { x: x - hw + 4.5, y: y - sy, width: px1 - r - (x - hw + 4.5), height: 2 * sy }, v.posts); el('rect', { x: px2 + r, y: y - sy, width: x + hw - 4.5 - px2 - r, height: 2 * sy }, v.posts);
+  v.posts = [el('rect', { x: x - hw + 4.5, y: y - sy, width: px1 - r - (x - hw + 4.5), height: 2 * sy, fill: col }, g), el('rect', { x: px2 + r, y: y - sy, width: x + hw - 4.5 - px2 - r, height: 2 * sy, fill: col }, g)];
   v.arc = el('g', { filter: 'url(#fShadow)' }, g);
   const d = `M${px1} ${y - 1}Q${x} ${y - 30} ${px2} ${y - 1}`;
   el('path', { d, fill: 'none', stroke: 'rgba(0,0,0,.45)', 'stroke-width': 8.2, 'stroke-linecap': 'round' }, v.arc);
@@ -5139,11 +5138,13 @@ function drawBreaker(p, g, x, y, v) {
   tg('CB' + p.L, x - (hw - 23), 9); tg('SPST', x + (hw - 23), 8);
   setBreaker(v, p, editing ? (p.held ? 1 : 0) : lswPos(p), editing ? false : !!BLOWN[p.id], null);   // (in Build: as it starts)
 }
-function setBreaker(v, p, pos, tripped, flow) {
-  const k = pos.toFixed(3) + (tripped ? 't' : '') + (flow || ''); if (v.k === k) return; v.k = k;
+// (wait: open, the colour waiting at it and which end it waits at (0 its left, 1 its right), lit up to that end's contact)
+function setBreaker(v, p, pos, tripped, flow, wait) {
+  const k = pos.toFixed(3) + (tripped ? 't' : '') + (flow || '') + (wait ? wait.side + wait.col : ''); if (v.k === k) return; v.k = k;
   const lift = tripped ? 1 : 1 - pos, shut = !tripped && pos > .98, c = shut ? CBK_COL : GREY;
   v.arc.setAttribute('transform', `translate(0 ${(-16 * lift).toFixed(2)})`); v.arcC.setAttribute('stroke', shut ? flow || CBK_COL : BLADE_GREY);
-  v.posts.setAttribute('fill', c); for (const q of v.rings) q.setAttribute('stroke', c); for (const q of v.pins) q.setAttribute('fill', shut ? CBK_COL : BLADE_GREY);
+  v.posts.forEach((q, i) => q.setAttribute('fill', !shut && wait && wait.side === i ? wait.col : c)); v.rings.forEach((q, i) => q.setAttribute('stroke', !shut && wait && wait.side === i ? wait.col : c));
+  for (const q of v.pins) q.setAttribute('fill', shut ? CBK_COL : BLADE_GREY);
   v.handle.setAttribute('transform', `translate(0 ${tripped ? 0 : lerp(10, -10, pos).toFixed(2)})`);
   const st = tripped ? 'trip' : pos >= .5 ? 'on' : 'off';
   v.mOn.setAttribute('fill', st === 'on' ? CBK_COL : '#5a5a5a'); v.mOff.setAttribute('fill', st === 'off' ? CBK_COL : '#5a5a5a');
@@ -5769,7 +5770,8 @@ function paintView(V) {
     else if (p.t === 'fsw') setFlow(v, p, lswPos(p), lswClosed(p));
     else if (p.t === 'flt') setFloat(v, p, lswPos(p), lswClosed(p));
     else if (p.t === 'tgl') setToggle(v, p, lswPos(p), lswClosed(p));
-    else if (p.t === 'cbk') setBreaker(v, p, lswPos(p), !!BLOWN[p.id], lswClosed(p) ? showCol(p._a, simT) || showCol(p._b, simT) : null);
+    else if (p.t === 'cbk') { const a = showCol(p._a, simT), b = showCol(p._b, simT);   // (open: the colour waiting at whichever end has it)
+      setBreaker(v, p, lswPos(p), !!BLOWN[p.id], lswClosed(p) ? a || b : null, lswClosed(p) ? null : a && !b ? { side: 0, col: a } : b && !a ? { side: 1, col: b } : null); }
     else if (p.t === 'con' || p.t === 'olc') {
       const s = p.t === 'olc' ? olState(p.L) : CON[p.id]; if (!s) continue;
       const f = clamp01((simT - s.t0) / SWING), e = f * f * (3 - 2 * f);   // ease in and out

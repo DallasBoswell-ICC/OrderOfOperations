@@ -3804,10 +3804,14 @@ const DEF_CIRCUIT = `
     const st = () => page.evaluate(() => { const p = parts.find(q => q.t === 'cbk'), v = view.parts.get(p.id); return (coilOn[parts.find(q => q.t === 'lamp').id] ? 'lit' : 'dark') + ' ' + v.flagT.textContent; });
     await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
     let s = await st(); if (s !== 'lit ON') out.push('at rest: ' + s);
+    const thru = await page.evaluate(() => { const p = parts.find(q => q.t === 'cbk'); return [showCol(p._a, simT), showCol(p._b, simT)].join(' '); });   // (it passes on the colour it is given, 22 Nov 2026)
+    if (thru.split(' ')[0] !== thru.split(' ')[1] || thru.split(' ')[0] === 'null') out.push('colour in and out: ' + thru);
     await page.evaluate(() => press('A', true)); await page.waitForTimeout(500);
     s = await st(); if (s !== 'dark TRIP') out.push('shorted: ' + s);
     await page.evaluate(() => press('A', false)); await page.waitForTimeout(300);
     s = await st(); if (s !== 'dark TRIP') out.push('short gone, still tripped: ' + s);
+    const wait = await page.evaluate(() => { const p = parts.find(q => q.t === 'cbk'), v = view.parts.get(p.id); return v.posts[0].getAttribute('fill') === showCol(p._a, simT) && v.rings[0].getAttribute('stroke') === showCol(p._a, simT); });   // (tripped: the colour waiting there lit up to its contact)
+    if (!wait) out.push('tripped: the line side not lit up to its contact');
     const click = () => page.evaluate(() => { const g = view.parts.get(parts.find(q => q.t === 'cbk').id).g || document.querySelector(`[data-id="${parts.find(q => q.t === 'cbk').id}"]`); return !!g; });
     const hit = async () => { const b = await page.evaluate(() => { const p = parts.find(q => q.t === 'cbk'); const m = WORLD.getScreenCTM(); return [m.a * (p.x + 10) + m.e, m.d * (p.y + 70) + m.f]; }); await page.mouse.click(b[0], b[1]); await page.waitForTimeout(500); };
     await hit(); s = await st(); if (s !== 'lit ON') out.push('reset by a click: ' + s);

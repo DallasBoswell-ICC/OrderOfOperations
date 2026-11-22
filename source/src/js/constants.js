@@ -85,7 +85,7 @@ const WIDE = t => LOADT(t) || t === 'sel' || t === 'lsw' || t === 'psw' || t ===
 const BODYH = t => t === 'lsw' || t === 'tsw' || t === 'psw' || t === 'fsw' || t === 'flt' || t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'tps' || t === 'dpd' || t === 'cbk' ? LSW_S : t === 'xfm' ? XFM_H : t === 'mtr' ? MTR_H : isPwrT(t) ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
 const TERM = p => p.t === 'stand' ? Math.max(40, ...(p.st || []).map(q => Math.abs(q[0]))) : p.t === 'mtr' ? MTR_W / 2 + 20 : p.t === 'tsw' ? TSW_T : WIDE(p.t) ? 60 : 40;
 const HILO = t => t === 'tsw' || t === 'psw' || t === 'fsw' || t === 'flt';   // (switches made in high and low kinds: temperature, pressure, flow, float; Dallas, 20 Nov 2026)
-const isOp = p => p.t === 'btn' || p.t === 'sel' || p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw' || p.t === 'fsw' || p.t === 'flt' || p.t === 'tgl' || p.t === 'cbk' || isTglN(p) || (p.t === 'pp' && !!p.x && isTglN(p.x));   // (an SPDT's two ways through: each tints the current as the switch does)
+const isOp = p => p.t === 'btn' || p.t === 'sel' || p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw' || p.t === 'fsw' || p.t === 'flt' || p.t === 'tgl' || isTglN(p) || (p.t === 'pp' && !!p.x && isTglN(p.x));   // (an SPDT's two ways through: each tints the current as the switch does)
 /* A temperature switch (tsw): numbered (TS1, TS2...), the limit switch's body without its head, the NEMA temperature
    switch's stepped stem under its blade, and joined to its right side a sensing bulb's box with a thermometer in it.
    For now it is worked as a limit switch is (as a momentary pushbutton), by its own key (opKey: 'T' and its number,
@@ -159,7 +159,7 @@ const phCol = p => PH_COL[(+p.L || 1) - 1];
 const lighten = (c, f) => { const n = parseInt(c.slice(1), 16), m = k => Math.round(((n >> k) & 255) + (255 - ((n >> k) & 255)) * f); return '#' + ((1 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)).toString(16).slice(1).toUpperCase(); };
 const JMP_EDGE = '#b8c2cf';
 const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel' || p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw' || p.t === 'fsw' || p.t === 'flt' || p.t === 'tgl' || p.t === 'cbk' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc' || p.t === 'fu1';
-const isCon = p => p.t === 'con' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc' || p.t === 'fu1';   // (a relay contact, or a transformer's switch inside it: passes on what it is given)   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre
+const isCon = p => p.t === 'con' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc' || p.t === 'fu1' || p.t === 'cbk';   // (a circuit breaker too: it passes on the colour it is given, Dallas 22 Nov 2026)   // (a relay contact, or a transformer's switch inside it: passes on what it is given)   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre
 /* Faults (Troubleshooter, stage 1, Dallas 15 Nov 2026): planted on parts and wires in Build, they act while running
    (FAULTS_ON; it can be turned off to run the circuit as it should be). A part (switch, contact, button, fuse,
    overload contact, coil, light, solenoid, heating element) can be open (never passes current: a switch stuck open,
