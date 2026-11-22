@@ -90,7 +90,7 @@ function placeFree(kind) {
   if (!spot) {
     // (below everything on the panel, lined up with the middle of the view)
     const bottom = Math.max(0, ...parts.map(q => q.y + halfH(q.t)), ...wires.map(w => Math.max(w.y1, w.y2)));
-    let y = snap(bottom + halfH(t) + 80); const x = clampPart(c.x, y, t)[0];
+    let y = snap(bottom + roomUp(t) + 80); const x = clampPart(c.x, y, t)[0];
     for (let k = 0; k < 200 && !free(x, y); k++) y += G;
     spot = [x, y]; below = true;
   }

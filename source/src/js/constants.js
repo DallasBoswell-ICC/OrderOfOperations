@@ -140,6 +140,13 @@ const flips = p => p.t === 'tgl' || isTglN(p);
 const isTglN = p => p.t === 'sp2' || p.t === 'xov' || p.t === 'dps' || p.t === 'dpd';   // (the toggle switches with more than two ends: an SPDT, a crossover, a DPST, a DPDT)
 // (how far a part's body reaches above and below its wire: the toggle switches reach further down than up)
 const bodyUp = p => isTglN(p) ? SP2_TOP : p.t === 'tgl' ? LSW_TOP : BODYH(p.t) / 2, bodyDown = p => p.t === 'dpd' ? DPD_BOT : isTglN(p) ? SP2_BOT : p.t === 'tgl' ? TGL_BOT : BODYH(p.t) / 2;   // (toggle switches mirror left to right: Dallas, 21 Nov 2026)
+// the room a part takes above and below its middle, and whether two parts' rooms meet (Dallas, 22 Nov 2026: a toggle switch's
+// body reaches far further below its wire than above it, a DPDT's 360 below to 108 above, so its room is counted as it is, not
+// as the most of the two either way, which kept it 360 off parts above it as well)
+const isTglT = t => t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'dpd';
+const roomUp = t => isTglT(t) ? bodyUp({ t }) + 20 : halfH(t),   // (and room for its name over it)
+      roomDown = t => isTglT(t) ? bodyDown({ t }) : halfH(t);
+const vClash = (ta, ya, tb, yb) => ya - roomUp(ta) < yb + roomDown(tb) && yb - roomUp(tb) < ya + roomDown(ta);
 const turns = p => turns7(p) || twoEnded(p), vert = p => (p.t === 'fu1' || twoEnded(p)) && !!((p.rot || 0) & 1);
 /* Three-phase power: an L1, L2 or L3 phase box (p.L '1', '2' or '3'), built like a supply box, every connection point
    of it that phase. Each phase has its own colour (each circuit keeps its own; brown, orange and yellow, as on 480 V).

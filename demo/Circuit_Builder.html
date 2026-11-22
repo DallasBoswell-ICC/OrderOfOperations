@@ -2365,6 +2365,13 @@ const flips = p => p.t === 'tgl' || isTglN(p);
 const isTglN = p => p.t === 'sp2' || p.t === 'xov' || p.t === 'dps' || p.t === 'dpd';   // (the toggle switches with more than two ends: an SPDT, a crossover, a DPST, a DPDT)
 // (how far a part's body reaches above and below its wire: the toggle switches reach further down than up)
 const bodyUp = p => isTglN(p) ? SP2_TOP : p.t === 'tgl' ? LSW_TOP : BODYH(p.t) / 2, bodyDown = p => p.t === 'dpd' ? DPD_BOT : isTglN(p) ? SP2_BOT : p.t === 'tgl' ? TGL_BOT : BODYH(p.t) / 2;   // (toggle switches mirror left to right: Dallas, 21 Nov 2026)
+// the room a part takes above and below its middle, and whether two parts' rooms meet (Dallas, 22 Nov 2026: a toggle switch's
+// body reaches far further below its wire than above it, a DPDT's 360 below to 108 above, so its room is counted as it is, not
+// as the most of the two either way, which kept it 360 off parts above it as well)
+const isTglT = t => t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'dpd';
+const roomUp = t => isTglT(t) ? bodyUp({ t }) + 20 : halfH(t),   // (and room for its name over it)
+      roomDown = t => isTglT(t) ? bodyDown({ t }) : halfH(t);
+const vClash = (ta, ya, tb, yb) => ya - roomUp(ta) < yb + roomDown(tb) && yb - roomUp(tb) < ya + roomDown(ta);
 const turns = p => turns7(p) || twoEnded(p), vert = p => (p.t === 'fu1' || twoEnded(p)) && !!((p.rot || 0) & 1);
 /* Three-phase power: an L1, L2 or L3 phase box (p.L '1', '2' or '3'), built like a supply box, every connection point
    of it that phase. Each phase has its own colour (each circuit keeps its own; brown, orange and yellow, as on 480 V).
@@ -2578,11 +2585,11 @@ const rightEdge = () => barsOn() ? W : Math.max(W + 400, workW());
 // how wide the sheet is drawn: building on supply boxes, out to the right of the view, so there is room to build in
 const workW = () => editing && !barsOn() && typeof cam !== 'undefined' ? Math.max(W, Math.ceil((cam.x + camW() / cam.z) / G) * G) : W;
 function overlaps(p, x, y, t) {
-  return parts.some(q => q !== p && Math.abs(q.x - x) < halfW(t) + halfW(q.t) && Math.abs(q.y - y) < halfH(t) + halfH(q.t));
+  return parts.some(q => q !== p && Math.abs(q.x - x) < halfW(t) + halfW(q.t) && vClash(t, y, q.t, q.y));
 }
 // a part's spot: on the grid (or its ends would be off it, and no wire could meet them), clear of the bars and the top
 const clampPart = (x, y, t) => { const h = halfW(t), up = n => Math.ceil(n / G) * G, down = n => Math.floor(n / G) * G;
-  return [Math.min(down(rightEdge() - h - 40), Math.max(up(h + 40), snap(x))), Math.max(up(halfH(t) + 20), snap(y))]; };
+  return [Math.min(down(rightEdge() - h - 40), Math.max(up(h + 40), snap(x))), Math.max(up(roomUp(t) + 20), snap(y))]; };
 const clampX = x => Math.min(rightEdge(), Math.max(0, snap(x))), clampY = y => Math.max(40, snap(y));
 
 /* ---- js/network.js ---- */
@@ -7068,7 +7075,7 @@ function placeFree(kind) {
   if (!spot) {
     // (below everything on the panel, lined up with the middle of the view)
     const bottom = Math.max(0, ...parts.map(q => q.y + halfH(q.t)), ...wires.map(w => Math.max(w.y1, w.y2)));
-    let y = snap(bottom + halfH(t) + 80); const x = clampPart(c.x, y, t)[0];
+    let y = snap(bottom + roomUp(t) + 80); const x = clampPart(c.x, y, t)[0];
     for (let k = 0; k < 200 && !free(x, y); k++) y += G;
     spot = [x, y]; below = true;
   }
@@ -7186,9 +7193,10 @@ function wireInTheWay(p) {
     return wires.some(w => w.y1 === w.y2
       ? w.y1 > T && w.y1 < Bm && Math.max(w.x1, w.x2) > p.x - h && Math.min(w.x1, w.x2) < p.x + h
       : w.x1 !== p.x && Math.abs(w.x1 - p.x) < h && Math.max(w.y1, w.y2) > T && Math.min(w.y1, w.y2) < Bm); }
+  const T = isTglT(p.t) ? p.y - bodyUp(p) : p.y - h, Bm = isTglT(p.t) ? p.y + bodyDown(p) : p.y + h;   // (a toggle switch: its whole body, high above its wire and far below)
   return wires.some(w => w.x1 === w.x2
-    ? w.x1 > L && w.x1 < R && Math.max(w.y1, w.y2) > p.y - h && Math.min(w.y1, w.y2) < p.y + h
-    : w.y1 !== p.y && Math.abs(w.y1 - p.y) < h && Math.max(w.x1, w.x2) > L && Math.min(w.x1, w.x2) < R);
+    ? w.x1 > L && w.x1 < R && Math.max(w.y1, w.y2) > T && Math.min(w.y1, w.y2) < Bm
+    : w.y1 !== p.y && w.y1 > T && w.y1 < Bm && Math.max(w.x1, w.x2) > L && Math.min(w.x1, w.x2) < R);
 }
 
 /* ---- js/wires-edit.js ---- */
@@ -7335,7 +7343,7 @@ function groupDrag(e, p0) {
     for (let pass = 0; pass < 2; pass++) for (const q of P0) { const [cx, cy] = clampPart(q.x + dx, q.y + dy, q.t); dx = cx - q.x; dy = cy - q.y; }
     for (const y of T0) if (y + dy < 40) dy = 40 - y;   // (terminals stay on the panel too)
     const moving = parts.filter(q => pIds.has(q.id));
-    if (P0.some(q => parts.some(o => !pIds.has(o.id) && Math.abs(o.x - (q.x + dx)) < halfW(q.t) + halfW(o.t) && Math.abs(o.y - (q.y + dy)) < halfH(q.t) + halfH(o.t)))) return blocked('There is already a part there.');
+    if (P0.some(q => parts.some(o => !pIds.has(o.id) && Math.abs(o.x - (q.x + dx)) < halfW(q.t) + halfW(o.t) && vClash(q.t, q.y + dy, o.t, o.y)))) return blocked('There is already a part there.');
     say('');
     const m = movedGroup(pIds, wIds, dx, dy, tIds); wires = m.wires;
     for (const q of moving) { const o = P0.find(z => z.id === q.id); q.x = o.x + dx; q.y = o.y + dy; }
@@ -9352,7 +9360,7 @@ function nudge(sx, sy) {
     restore(N.start);
     for (let pass = 0; pass < 2; pass++) for (const q of N.P0) { const [cx, cy] = clampPart(q.x + dx, q.y + dy, q.t); dx = cx - q.x; dy = cy - q.y; }
     for (const y of N.T0) if (y + dy < 40) dy = 40 - y;
-    if (N.P0.some(q => parts.some(o => !N.pIds.has(o.id) && Math.abs(o.x - (q.x + dx)) < halfW(q.t) + halfW(o.t) && Math.abs(o.y - (q.y + dy)) < halfH(q.t) + halfH(o.t)))) return 'There is already a part there.';
+    if (N.P0.some(q => parts.some(o => !N.pIds.has(o.id) && Math.abs(o.x - (q.x + dx)) < halfW(q.t) + halfW(o.t) && vClash(q.t, q.y + dy, o.t, o.y)))) return 'There is already a part there.';
     const m = movedGroup(N.pIds, N.wIds, dx, dy, N.tIds); wires = m.wires;
     for (const q of parts) if (N.pIds.has(q.id)) { const o = N.P0.find(z => z.id === q.id); q.x = o.x + dx; q.y = o.y + dy; }
     normalize();

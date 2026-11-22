@@ -103,7 +103,7 @@ function nudge(sx, sy) {
     restore(N.start);
     for (let pass = 0; pass < 2; pass++) for (const q of N.P0) { const [cx, cy] = clampPart(q.x + dx, q.y + dy, q.t); dx = cx - q.x; dy = cy - q.y; }
     for (const y of N.T0) if (y + dy < 40) dy = 40 - y;
-    if (N.P0.some(q => parts.some(o => !N.pIds.has(o.id) && Math.abs(o.x - (q.x + dx)) < halfW(q.t) + halfW(o.t) && Math.abs(o.y - (q.y + dy)) < halfH(q.t) + halfH(o.t)))) return 'There is already a part there.';
+    if (N.P0.some(q => parts.some(o => !N.pIds.has(o.id) && Math.abs(o.x - (q.x + dx)) < halfW(q.t) + halfW(o.t) && vClash(q.t, q.y + dy, o.t, o.y)))) return 'There is already a part there.';
     const m = movedGroup(N.pIds, N.wIds, dx, dy, N.tIds); wires = m.wires;
     for (const q of parts) if (N.pIds.has(q.id)) { const o = N.P0.find(z => z.id === q.id); q.x = o.x + dx; q.y = o.y + dy; }
     normalize();

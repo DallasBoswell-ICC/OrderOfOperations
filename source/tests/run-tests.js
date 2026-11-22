@@ -3743,6 +3743,17 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Toggle switch room (Dallas, 22 Nov 2026): counted as each body really is, high above its wire and far below, with room for its name over it, not the most of the two either way; a wire across any part of the body is in the way', async page => {
+    const out = [];
+    const r = await page.evaluate(() => { sel = null; loadPreset('blank'); W = Math.max(W_MIN, 1300); const a = newPart('dps', 440, 520); parts.push(a); normalize();
+      const res = { dpdFree: !overlaps(null, 440, 840, 'dpd'), dpdHit: overlaps(null, 440, 820, 'dpd'), sp2Free: !overlaps(null, 440, 180 + 0, 'sp2') === false };
+      res.sp2Above = !overlaps(null, 440, 200, 'sp2'); res.sp2Close = overlaps(null, 440, 220, 'sp2');
+      const d = newPart('dpd', 900, 300); wires.push(Wr(860, 560, 940, 560)); res.lowWire = wireInTheWay(d); wires.pop(); res.clear = !wireInTheWay(d);
+      return res; });
+    for (const [k, v] of Object.entries({ dpdFree: true, dpdHit: true, sp2Above: true, sp2Close: true, lowWire: true, clear: true })) if (r[k] !== v) out.push(k + ': ' + r[k]);
+    return out;
+  });
+
   await check('Toggle switches start as set (Dallas, 21 Nov 2026): Starts (Off / On for an SPST; At 2 / At 1 for an SPDT) on the Part tab; drawn so in Build; in Run it starts that way, a click flips it from there, Reset puts it back; saved', async page => {
     const out = [];
     await page.evaluate(() => { loadPreset('blank'); W = Math.max(W_MIN, 1100); const a = newPart('tgl', 400, 200), b = newPart('sp2', 400, 560); parts.push(a, b); normalize(); draw(); });

@@ -59,9 +59,9 @@ const rightEdge = () => barsOn() ? W : Math.max(W + 400, workW());
 // how wide the sheet is drawn: building on supply boxes, out to the right of the view, so there is room to build in
 const workW = () => editing && !barsOn() && typeof cam !== 'undefined' ? Math.max(W, Math.ceil((cam.x + camW() / cam.z) / G) * G) : W;
 function overlaps(p, x, y, t) {
-  return parts.some(q => q !== p && Math.abs(q.x - x) < halfW(t) + halfW(q.t) && Math.abs(q.y - y) < halfH(t) + halfH(q.t));
+  return parts.some(q => q !== p && Math.abs(q.x - x) < halfW(t) + halfW(q.t) && vClash(t, y, q.t, q.y));
 }
 // a part's spot: on the grid (or its ends would be off it, and no wire could meet them), clear of the bars and the top
 const clampPart = (x, y, t) => { const h = halfW(t), up = n => Math.ceil(n / G) * G, down = n => Math.floor(n / G) * G;
-  return [Math.min(down(rightEdge() - h - 40), Math.max(up(h + 40), snap(x))), Math.max(up(halfH(t) + 20), snap(y))]; };
+  return [Math.min(down(rightEdge() - h - 40), Math.max(up(h + 40), snap(x))), Math.max(up(roomUp(t) + 20), snap(y))]; };
 const clampX = x => Math.min(rightEdge(), Math.max(0, snap(x))), clampY = y => Math.max(40, snap(y));
