@@ -82,7 +82,7 @@ function renderProps() {
       b.addEventListener('click', () => setPhaseCol(p.L, hex)); box.append(b);
     }
     document.getElementById('ph-custom').value = cur.toLowerCase();
-    document.getElementById('ph-colour-label').textContent = `${phName(p.L)} Colour`;
+    document.getElementById('ph-colour-label').textContent = `${phName(p.L)} Color`;
   }
   document.getElementById('props-lsw').hidden = !(p && isLim(p));
   if (p && isLim(p)) {
@@ -148,6 +148,9 @@ function renderProps() {
     const ns = document.getElementById('x-num'), taken = new Set(parts.filter(q => q.t === 'xfm' && q !== p).map(q => q.L));
     ns.innerHTML = '';
     for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n))) ns.add(new Option('T' + n, String(n), false, String(n) === p.L));
+    // its primary's rating, its secondary, and whether that's grounded (Dallas, 22 Nov 2026)
+    document.getElementById('x-pr').value = p.pr || ''; document.getElementById('x-sec').value = p.ct ? 'ct' : '';
+    document.getElementById('x-gnd').setAttribute('aria-pressed', String(!p.ug)); document.getElementById('x-gnd-n').textContent = p.ct ? 'X0 Grounded' : 'X2 Grounded';
   }
   document.getElementById('props-sol').hidden = !(p && p.t === 'sol');
   if (p && p.t === 'sol') {
@@ -372,9 +375,12 @@ document.getElementById('j-num').addEventListener('change', e => { if (selGroup(
 // turn a continuation a quarter turn clockwise (the R key, or Rotate on its tab)
 function rotateJmp(p) { snapshot(); p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; normalize(); draw(); }
 document.getElementById('j-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(isJmp)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
+document.getElementById('x-pr').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'xfm') return; snapshot(); if (e.target.value) p.pr = e.target.value; else delete p.pr; draw(); });
+document.getElementById('x-sec').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'xfm') return; snapshot(); if (e.target.value) p.ct = true; else delete p.ct; delete p._sw; normalize(); draw(); });
+document.getElementById('x-gnd').addEventListener('click', () => { const p = selPart(); if (!p || p.t !== 'xfm' || !editing) return; snapshot(); if (p.ug) delete p.ug; else p.ug = true; draw(); });
 document.getElementById('x-num').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'xfm') return; snapshot(); p.L = e.target.value; draw(); });
 // a phase box: which phase, and each phase's colour (shared by all of that phase's boxes and wires)
-function setPhaseCol(L, hex) { hex = hex.toUpperCase(); if (PH_COL[L - 1] === hex) return; snapshot(); PH_COL = PH_COL.map((c, i) => i === L - 1 ? hex : c); say(`${phName(L)} colour changed.`); draw(); }
+function setPhaseCol(L, hex) { hex = hex.toUpperCase(); if (PH_COL[L - 1] === hex) return; snapshot(); PH_COL = PH_COL.map((c, i) => i === L - 1 ? hex : c); say(`${phName(L)} color changed.`); draw(); }
 document.getElementById('ph-num').addEventListener('change', e => { if (selGroup().every(isPh)) each(p => p.L = e.target.value); });
 document.getElementById('ph-custom').addEventListener('change', e => { const p = selGroup()[0]; if (p && isPh(p)) setPhaseCol(p.L, e.target.value); });
 document.getElementById('ls-start').addEventListener('change', e => { const on = e.target.value === '1'; if (selGroup().every(q => flips(q) || isBrk(q))) each(p => { if (on) p.held = true; else delete p.held; }); });

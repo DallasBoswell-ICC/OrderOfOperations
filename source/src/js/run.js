@@ -70,7 +70,7 @@ function paintView(V) {
       const c = (p._c !== undefined && showCol(p._c, simT)) || '#8a8a8a'; if (c !== v.cc) { v.cc = c; for (const ch of v.chev) ch.setAttribute('stroke', c); }
       continue;
     }
-    if (isSrc(p) || isPh(p)) { if (v.src) for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } continue; }
+    if (isSrc(p) || isPh(p) || isGnd(p)) { if (v.src) for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } continue; }
     // (a load across the phases or a phase and the neutral: each lead the colour of the phase at its end)
     for (const S of ['A', 'B']) { const k = LOADT(p.t) && PARR.size ? phaseOfAt(S === 'A' ? p._a : p._b, simT) : 0; paintLead(v.lead[S], k ? [{ t0: -1e9, col: phColK(k), from: 'term' }] : p._lead && p._lead[S]); }
     let k;
@@ -233,7 +233,7 @@ function paintXfm(p, v) {
   const cur = i >= 0 ? evs[i] : null, f = cur ? clamp01((simT - cur.t0) * V / body) : 0;
   const on = !!coilOn[p.id], g = p._chg == null ? 1 : clamp01((simT - p._chg) * V / body);
   const P = p._ph, h = P ? (P.off == null ? clamp01((simT - P.t0) * V / (body / 2)) : 1 - clamp01((simT - P.off) * V / (body / 2))) : 0;
-  const pri = P ? ['ph', h.toFixed(3), P.a, P.b] : [S === 'A' ? 0 : 1, f, cur && cur.col, i > 0 ? evs[i - 1].col : null], sec = [0, g, on ? SRC_COL : null, on || p._chg == null ? null : SRC_COL];
+  const pri = P ? ['ph', h.toFixed(3), P.a, P.b] : [S === 'A' ? 0 : 1, f, cur && cur.col, i > 0 ? evs[i - 1].col : null], sc = v.secCol || SRC_COL, sec = [0, g, on ? sc : null, on || p._chg == null ? null : sc];
   const k = pri.join('|') + '/' + sec.join('|');
   if (k === v.k) return; v.k = k;
   const fillW = (W, dir, f, now, before) => {
@@ -251,10 +251,14 @@ function paintXfm(p, v) {
     W.dots[0].setAttribute('fill', h > 0 ? P.a : 'transparent'); W.dots[1].setAttribute('fill', h > 0 ? P.b : 'transparent');
   } else fillW(v.pri, ...pri);
   fillW(v.sec, ...sec);
+  if (v.tap) { const c = g >= .5 && on ? NEU_COL : g < .5 && !on && p._chg != null ? NEU_COL : 'transparent'; v.tap.setAttribute('stroke', c); v.tapDot.setAttribute('fill', c); }   // (a centre tap: the neutral's white while it's on)
 }
 // a circuit breaker's pole (a single breaker, or one of a DPST's two): the colour through it, and, open, the colour waiting at the end
 // current comes in at (0 its left, 1 its right)
-function cbkPole(k) { const a = showCol(k._a, simT), b = showCol(k._b, simT), d = DIRS.find(x => x.e.part === k), side = d ? (d.from === k._b ? 1 : 0) : a ? 0 : b ? 1 : 0, w = side ? b : a; return { flow: a || b, wait: w ? { side, col: w } : null }; }
+function cbkPole(k) { const a = showCol(k._a, simT), b = showCol(k._b, simT), d = DIRS.find(x => x.e.part === k);
+  // (on a phase or the neutral: the end the phase is still at, whichever way it comes (Dallas, 22 Nov 2026: from the right); in a
+  // control circuit, the end its current comes in at)
+  const pa = PARR.has(k._a), pb = PARR.has(k._b), side = pa !== pb ? (pb ? 1 : 0) : d ? (d.from === k._b ? 1 : 0) : a ? 0 : b ? 1 : 0, w = side ? b : a; return { flow: a || b, wait: w ? { side, col: w } : null }; }
 function paintLead(L, evs) {
   if (TS_MODE) return;
   let i = -1; if (evs) for (let k = 0; k < evs.length; k++) if (evs[k].t0 <= simT + 1e-9) i = k;

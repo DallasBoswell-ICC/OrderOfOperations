@@ -62,7 +62,7 @@ const SOL_COL = '#00D2BE';
 /* a solenoid (as on Dallas's drawing): a diamond (a rounded square on its corner) as tall and wide as a coil, with a
    dot at each end where the rung comes in, joined by the lightning bolt: along the rung, up to a peak, straight down and
    back up to the rung. Sizes in units, centred on 0, 0: SOL_DIAMOND the diamond's side and corner radius, SOL_DOT the
-   dots' centres and radius, SOL_BW the bolt's width, SOL_X where it leaves the rung, SOL_P its peak. */
+   dots' centers and radius, SOL_BW the bolt's width, SOL_X where it leaves the rung, SOL_P its peak. */
 const SOL_S = 82.296, SOL_SIDE = SOL_S / 2 / .6325, SOL_RAD = SOL_SIDE * .18;
 const SOL_GREY = '#575757';   // (its bolt, not pulled in: the grey a coil's middle shows)
 const SOL_DOT = 25.05, SOL_DR = 6.75, SOL_BW = 6.8, SOL_X = 11.4, SOL_P = 22.6;
@@ -139,8 +139,17 @@ const isJmp = p => p.t === 'jmp', isBox = p => isSrc(p) || isJmp(p) || isPh(p);
 const FU1_COL = '#c8c8c8';   // (its silver edge)
 // (Dallas, 19 Nov 2026: every two-ended part turns too, a quarter turn at a time, as in Print Builder: drawn turned about its middle,
 // its name upright. Boxes and a single fuse keep their turn where they always have (a[7]); the others at a[15], { r })
-const turns7 = p => isBox(p) || p.t === 'fu1';
-const twoEnded = p => !isBox(p) && !isPwr3(p) && p.t !== 'xfm' && p.t !== 'mtr' && p.t !== 'stand' && !isMulti(p);
+const turns7 = p => isBox(p) || p.t === 'fu1' || p.t === 'gnd';
+/* Ground (Dallas, 22 Nov 2026, design B2): a box like the supply boxes, green-edged, with a GND badge and Dallas's ground
+   symbol in it, wired from one end (its top, turned like the boxes). It is the earth: 0 V, the neutral bonded to it, and a
+   transformer's grounded terminal too. It carries no current of its own in the circuit (it is for the meter, and to draw). */
+const isGnd = p => p.t === 'gnd', GND_COL = '#3FBF5F';
+/* A control transformer (Dallas, 22 Nov 2026): its primary's rating (p.pr: '480', '240', '208' or '120'; none: it matches
+   whatever it's wired across), its secondary 120 V when it gets that (in proportion when it gets more or less: a 480 V
+   primary on 208 V gives 52 V), or 120/240 V centre-tapped (p.ct: X1, X0 and X2, X0 the middle); its secondary grounded,
+   X2 (or X0), unless p.ug. Its secondary is isolated from its primary. */
+const XFM_PR = ['480', '240', '208', '120'];
+const twoEnded = p => !isBox(p) && !isPwr3(p) && p.t !== 'xfm' && p.t !== 'mtr' && p.t !== 'stand' && p.t !== 'gnd' && !isMulti(p);
 const flips = p => p.t === 'tgl' || isTglN(p);
 const isBrk = p => p.t === 'cbk' || p.t === 'cbd' || p.t === 'cbt';   // (a circuit breaker: single, DPST or 3PST)
 const isMulti = p => isTglN(p) || p.t === 'cbd' || p.t === 'cbt';   // (the parts with more than two ends that switch: the toggle switches below, and a DPST or 3PST circuit breaker; each run as its poles)
@@ -159,7 +168,7 @@ const turns = p => turns7(p) || twoEnded(p), vert = p => (p.t === 'fu1' || twoEn
    of it that phase. Each phase has its own colour (each circuit keeps its own; brown, orange and yellow, as on 480 V).
    Every box turns, a quarter turn at a time (p.rot), as a continuation does. */
 const isPh = p => p.t === 'ph';
-const PH_PAL = [['Black', '#6E6E6E'], ['Brown', '#B5793F'], ['Orange', '#FF8A1F'], ['Yellow', '#F2D21B'], ['Red', '#E8413C'], ['Blue', '#3F7FFF'], ['Violet', '#A66BFF'], ['Grey', '#9AA0A6'], ['White', '#E8E8E8']];
+const PH_PAL = [['Black', '#6E6E6E'], ['Brown', '#B5793F'], ['Orange', '#FF8A1F'], ['Yellow', '#F2D21B'], ['Red', '#E8413C'], ['Blue', '#3F7FFF'], ['Violet', '#A66BFF'], ['Gray', '#9AA0A6'], ['White', '#E8E8E8']];
 const PH_DEFAULT = ['#B5793F', '#FF8A1F', '#F2D21B'];
 let PH_COL = [...PH_DEFAULT];
 /* The voltage system (Dallas, 22 Nov 2026): what the phase boxes are, set from a preset for the whole circuit (Power menu;
@@ -174,17 +183,23 @@ const VSYS_LIST = {
 };
 let VSYS = '208';
 const NEU_COL = '#E8E8E8';
-const phK = L => L === 'N' ? 4 : +L;   // (a phase box's phase as a number: L1-L3 1-3, the neutral 4)
-const phName = L => L === 'N' || L === 4 ? 'N' : 'L' + L;
-const phLive = k => k === 4 || (k >= 1 && k <= VSYS_LIST[VSYS].ph);   // (a split-phase supply has no L3)
-const phColK = k => k === 4 ? NEU_COL : PH_COL[k - 1];
+const phK = L => L === 'N' ? 4 : /^S[120]:/.test(L) ? { S1: 5, S2: 6, S0: 7 }[L.slice(0, 2)] : +L;   // (a phase box's phase as a number: L1-L3 1-3, the neutral 4; a centre-tapped transformer's X1, X2 and X0 5-7)
+const phName = L => L === 'N' || L === 4 ? 'N' : L === 5 || L === 6 || L === 7 ? ['X1', 'X2', 'X0'][L - 5] : /^S[120]:/.test(L) ? { S1: 'X1', S2: 'X2', S0: 'X0' }[L.slice(0, 2)] : 'L' + L;
+const phLive = k => k === 4 || (k >= 5 && k <= 7) || (k >= 1 && k <= VSYS_LIST[VSYS].ph);   // (a split-phase supply has no L3)
+const phColK = k => k === 4 || k === 7 ? NEU_COL : k === 5 ? '#6E6E6E' : k === 6 ? '#E8413C' : PH_COL[k - 1];   // (a centre-tapped secondary: black, red and white, as a split-phase supply)
 const phCol = p => phColK(phK(p.L) || 1);
 // a phase's voltage to the neutral, as [re, im] (null: the system has no such phase)
-const phVolt = k => { if (k === 4) return [0, 0]; if (!phLive(k)) return null; const s = VSYS_LIST[VSYS], a = s.ang[k - 1] * Math.PI / 180; return [s.vpn * Math.cos(a), s.vpn * Math.sin(a)]; };
+const phVolt = k => { if (k === 4 || k === 7) return [0, 0]; if (k === 5 || k === 6) { const s = ctSecNow(); return polarV(s.mag / 2, s.ang + (k === 6 ? Math.PI : 0)); } if (!phLive(k)) return null; const s = VSYS_LIST[VSYS], a = s.ang[k - 1] * Math.PI / 180; return [s.vpn * Math.cos(a), s.vpn * Math.sin(a)]; };
+const polarV = (m, a) => [m * Math.cos(a), m * Math.sin(a)];
 const phAcross = (ka, kb) => { const a = phVolt(ka), b = phVolt(kb); return a && b ? Math.hypot(a[0] - b[0], a[1] - b[1]) : 0; };
 const lighten = (c, f) => { const n = parseInt(c.slice(1), 16), m = k => Math.round(((n >> k) & 255) + (255 - ((n >> k) & 255)) * f); return '#' + ((1 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)).toString(16).slice(1).toUpperCase(); };
 const JMP_EDGE = '#b8c2cf';
 const isSw = p => p.t === 'btn' || p.t === 'con' || p.t === 'sel' || p.t === 'lsw' || p.t === 'tsw' || p.t === 'psw' || p.t === 'fsw' || p.t === 'flt' || p.t === 'tgl' || p.t === 'cbk' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc' || p.t === 'fu1';
+/* Buttons Colour the Current (Dallas, 22 Nov 2026; Power menu, saved per circuit as bt: 0 when off): with it off, pushbuttons,
+   selectors and the limit, sensing and toggle switches pass the current on as a relay contact does, in the colour it
+   comes in, rather than giving it their own colour */
+let TINT_OPS = true;
+const tints = p => TINT_OPS && isOp(p), passes = p => isCon(p) || (isOp(p) && !TINT_OPS);
 const isCon = p => p.t === 'con' || p.t === 'xsw' || p.t === 'pp' || p.t === 'olc' || p.t === 'fu1' || p.t === 'cbk';   // (a circuit breaker too: it passes on the colour it is given, Dallas 22 Nov 2026)   // (a relay contact, or a transformer's switch inside it: passes on what it is given)   // things that pass current or not: pushbuttons and relay contacts   // a part's ends sit this far either side of its centre
 /* Faults (Troubleshooter, stage 1, Dallas 15 Nov 2026): planted on parts and wires in Build, they act while running
    (FAULTS_ON; it can be turned off to run the circuit as it should be). A part (switch, contact, button, fuse,

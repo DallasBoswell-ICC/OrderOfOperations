@@ -35,15 +35,40 @@ function tsNetwork() {
   const cp = Int32Array.from(sn);
   const g = i => { while (cp[i] !== i) { cp[i] = cp[cp[i]]; i = cp[i]; } return i; };
   for (const [a, b] of loads) { const x = g(sn[a]), y = g(sn[b]); if (x !== y) cp[x] = y; }
-  return { sn, M, loads: loads.map(([a, b, c]) => [sn[a], sn[b], c]), comp: i => g(sn[i]) };
+  // the systems that can be measured against each other (Dallas, 22 Nov 2026): what is linked by anything, and what is
+  // grounded linked through the earth: the ground, the phases' supply (its neutral is bonded to it), the control circuit
+  // unless every transformer feeding it has its secondary ungrounded, and each grounded transformer's X2 (or X0). A
+  // transformer's secondary is isolated from its primary, so with it ungrounded it can only be read against itself.
+  const ep = new Int32Array(M + 1).map((_, i) => i < M ? g(sn[i]) : M), EARTH = M;
+  const h = i => { while (ep[i] !== i) { ep[i] = ep[ep[i]]; i = ep[i]; } return i; };
+  const tie = (a, b) => { if (a === undefined || b === undefined) return; const x = h(a === EARTH ? EARTH : g(sn[a])), y = h(b === EARTH ? EARTH : g(sn[b])); if (x !== y) ep[x] = y; }, earth = n => tie(n, EARTH);
+  tie(net.L1, net.L2);   // (the control circuit's two sides: one supply)
+  for (const n of net.GND || []) earth(n);
+  for (const L in net.PH) if (!/^S[120]:/.test(L)) earth(net.PH[L]);
+  const xs = parts.filter(p => p.t === 'xfm' && p._t);
+  if (!xs.some(p => !p.ct) || xs.some(p => !p.ct && !p.ug)) earth(net.L2);
+  for (const p of xs) { if (p.ct) { tie(p._t[2], p._t[4]); tie(p._t[2], net.PH['S0:' + p.id]); tie(p._t[2], net.PH['S1:' + p.id]); tie(p._t[2], net.PH['S2:' + p.id]); }   // (a secondary's terminals: one winding)
+    if (!p.ug) { earth(p._t[p.ct ? 4 : 3]); if (p.ct) earth(net.PH['S0:' + p.id]); } }
+  return { sn, M, loads: loads.map(([a, b, c]) => [sn[a], sn[b], c]), comp: i => g(sn[i]), grp: i => h(g(sn[i])) };
 }
 // the supplies that are on: piece -> [re, im] volts
 function tsSources(T) {
   const fix = new Map(), set = (n, v) => { const k = T.sn[n]; if (!fix.has(k)) fix.set(k, v); };
-  if (!LOCKOUT && !SUPPLY_CUT) { set(NET.L1, [TS_SUPPLY, 0]); set(NET.L2, [0, 0]); }
-  if (!(LOCKOUT && !parts.some(p => p.t === 'dsc'))) {
-    for (const L in NET.PH) { const v = phVolt(phK(L)); if (v) set(NET.PH[L], v); }   // (each phase from the voltage system; the neutral at 0 V)
+  // the control circuit: 120 V from the bars or supply boxes; or what its transformer gives (Dallas, 22 Nov 2026: in proportion
+  // to what its primary gets against what it's rated for), and dead while its transformer isn't fed
+  const xs = parts.filter(p => p.t === 'xfm' && !p.ct);
+  if (!LOCKOUT && !SUPPLY_CUT) {
+    if (!xs.length) { set(NET.L1, [TS_SUPPLY, 0]); set(NET.L2, [0, 0]); }
+    else { const p = xs.find(q => coilOn[q.id]); if (p) { const s = xfmSec(p, simT); set(NET.L1, polarV(s.mag, s.ang)); set(NET.L2, [0, 0]); } }
   }
+  if (!(LOCKOUT && !parts.some(p => p.t === 'dsc'))) {
+    for (const L in NET.PH) {
+      if (/^S[120]:/.test(L)) { const p = parts.find(q => q.id == L.slice(3)); if (!p || !coilOn[p.id]) continue;   // (a centre-tapped secondary: while its primary is fed)
+        const s = xfmSec(p, simT), k = phK(L); set(NET.PH[L], k === 7 ? [0, 0] : polarV(s.mag / 2, s.ang + (k === 6 ? Math.PI : 0))); continue; }
+      const v = phVolt(phK(L)); if (v) set(NET.PH[L], v);   // (each phase from the voltage system; the neutral at 0 V)
+    }
+  }
+  for (const n of NET.GND || []) set(n, [0, 0]);   // (the ground: 0 V)
   return fix;
 }
 // node voltages (complex): Laplace's equation over the pieces, with the supplies held; pieces with no way to a supply: 0
@@ -73,7 +98,7 @@ function tsSolve(T, fix) {
 // the voltage the meter reads (RMS) between junctions a and b: nothing unless both have a way back to a supply
 function tsVolts(a, b) {
   const T = tsNetwork(), { V, live } = tsSolve(T, tsSources(T)), A = T.sn[a], B = T.sn[b];
-  if (!live.has(A) || !live.has(B)) return 0;
+  if (!live.has(A) || !live.has(B) || T.grp(a) !== T.grp(b)) return 0;   // (or on two systems isolated from each other)
   const va = V.get(A), vb = V.get(B);
   return Math.hypot(va[0] - vb[0], va[1] - vb[1]);
 }

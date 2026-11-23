@@ -40,7 +40,7 @@ function linkCbTerms(t, x, y, rot) { const own = rot && LINK_CB_TERMS[t + '@' + 
 // o: its terminals from its middle })
 const linkStandOK = a => a[0] === 'stand' && a[10] && Array.isArray(a[10].o);
 function linkRowTerms(a) { if (a[0] === 'stand') return linkStandOK(a) ? a[10].o.map(([u, v]) => [+a[1] + u, +a[2] + v]) : [];
-  const r = ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(a[0]) ? (Math.round(+a[7]) || 0) : a[15] && typeof a[15] === 'object' && [1, 2, 3].includes(+a[15].r) ? +a[15].r : 0;
+  const r = ['fu1', 'ph', 'gnd', 'l1', 'l2', 'jmp'].includes(a[0]) ? (Math.round(+a[7]) || 0) : a[15] && typeof a[15] === 'object' && [1, 2, 3].includes(+a[15].r) ? +a[15].r : 0;
   const ts = linkCbTerms(a[0] === 'est' ? 'btn' : a[0], +a[1], +a[2], r);
   return a[15] && typeof a[15] === 'object' && a[15].f ? ts.map(([x, y]) => [2 * +a[1] - x, y]) : ts; }   // (a toggle switch flipped left to right)
 
@@ -337,6 +337,8 @@ function linkBuild(doc, back) {
       const sorted = up ? ts.slice().sort((a, b) => a[1] - b[1]) : ts.slice().sort((a, b) => a[0] - b[0]);
       add(it, ['fu1', cx, cy, linkDigits(p.tag, '1'), 0, 1, '', ...(rot ? [rot] : [])], first === 0 ? sorted : [sorted[1], sorted[0]]);
     } else if (p.t === 'xfmr') add(it, ['xfm', x, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('xfm', x, y, 0));
+    else if (p.t === 'gnd') { const at = pb[0], d = [Math.sign(at[0] - x), Math.sign(at[1] - y)], rot = d[1] < 0 ? 0 : d[0] > 0 ? 1 : d[1] > 0 ? 2 : 3, u = [[0, -1], [1, 0], [0, 1], [-1, 0]][rot];   // (ground: Circuit Builder's, its terminal where the print's is, 22 Nov 2026)
+      add(it, ['gnd', at[0] - u[0] * 40, at[1] - u[1] * 40, '', 0, 1, '', ...(rot ? [rot] : [])], [at]); }
     else if (p.t === 'sup' || p.t === 'src_l1' || p.t === 'src_l2' || p.t === 'cnt_out' || p.t === 'cnt_in') {
       // (one terminal on the print: a Circuit Builder box with one of its terminals there, facing the way its wire goes)
       const at = pb[0], t = p.t === 'sup' ? 'ph' : p.t === 'src_l1' ? 'l1' : p.t === 'src_l2' ? 'l2' : 'jmp';
@@ -392,7 +394,7 @@ function linkBuild(doc, back) {
 }
 const LIB_NAME_FOR = { fuse: 'A fuse', cb: 'A circuit breaker', cb2: 'A circuit breaker', cb3: 'A circuit breaker', ol: 'An overload heater', fdsc3: 'A fused disconnect', spst: 'A switch', spdt: 'A switch', dpst: 'A switch', dpdt: 'A switch', xover: 'A switch' };
 // Circuit Builder's joins, as it makes them: where a wire ends, or at a terminal (only crossing, not joined); its bars; jumpers by number
-const linkRotOf = a => ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(a[0]) ? (Math.round(+a[7]) || 0) : 0;
+const linkRotOf = a => ['fu1', 'ph', 'gnd', 'l1', 'l2', 'jmp'].includes(a[0]) ? (Math.round(+a[7]) || 0) : 0;
 function linkCbJoin(d, C) {
   const bars = d.pw !== 'boxes', W = +d.w, at = new Map(), ends = new Set();
   d.wires.forEach((w, wi) => { const [x1, y1, x2, y2] = w.map(Number), n = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) / 20; C.f('w' + wi);
@@ -450,13 +452,13 @@ function linkMerge(old, nu, cbi, ownCol = new Set()) {
   for (const [o, n] of oi) {
     const a = old.parts[o], b = nu.parts[n];
     if (!ownCol.has(n)) b[6] = a[6];   // (its colour, unless the print names a light's colour)
-    if (['ph', 'l1', 'l2', 'jmp', 'fu1'].includes(b[0]) && a[1] === b[1] && a[2] === b[2] && a[7]) { while (b.length < 7) b.push(''); b[7] = a[7]; }   // (a supply box or continuation where it was: turned as it was)
+    if (['ph', 'gnd', 'l1', 'l2', 'jmp', 'fu1'].includes(b[0]) && a[1] === b[1] && a[2] === b[2] && a[7]) { while (b.length < 7) b.push(''); b[7] = a[7]; }   // (a supply box or continuation where it was: turned as it was)
     if ((b[0] === 'btn' || b[0] === 'coil') && typeof a[9] === 'string') { while (b.length < 9) b.push(null); b[9] = a[9]; }
     if (b[0] === 'btn' || b[0] === 'coil' || b[0] === 'sel' || b[0] === 'con' || b[0] === 'mst' || b[0] === 'lamp') { /* (letters: as the print made them) */ }
     if (a.length > 12 && (b[0] === 'btn' || b[0] === 'sel' || b[0] === 'lamp')) { while (b.length < 12) b.push(null); b.push(...a.slice(12)); }   // (its dashed link line)
   }
   const map = o => oi.has(o) ? oi.get(o) : -1;
-  const keep = ['name', 'sc', 'pc', 'vs', 'wo', 'ffo', 'pv', 'pp'];   // (vs: the voltage system)
+  const keep = ['name', 'sc', 'pc', 'vs', 'bt', 'wo', 'ffo', 'pv', 'pp'];   // (vs: the voltage system)
   for (const k of keep) if (old[k] !== undefined) nu[k] = old[k];
   if (old.pw === 'boxes') nu.pw = 'boxes';
   if (old.pd) nu.pd = old.pd.map(a => [map(a[0]), ...a.slice(1)]).filter(a => a[0] >= 0);
@@ -534,7 +536,7 @@ function circuitToPrint(d, env) {
       syMap = [lv, lv.map(y => at.get(y))];
       d = { ...d, parts: d.parts.map(a => { const b = a.slice(); b[2] = at.get(+a[2]); return b; }), wires: d.wires.map(w => { const b = w.slice(); b[1] = at.get(+w[1]); b[3] = at.get(+w[3]); return b; }) }; } }
   const R = d.parts.map((a, i) => ({ i, t: a[0], x: +a[1], y: +a[2], L: String(a[3] ?? ''), nc: !!a[4], maint: a[5] !== 0, color: a[6] || '', a }));
-  const rotOf = r => ['fu1', 'ph', 'l1', 'l2', 'jmp'].includes(r.t) ? (Math.round(+r.a[7]) || 0) : 0;
+  const rotOf = r => ['fu1', 'ph', 'gnd', 'l1', 'l2', 'jmp'].includes(r.t) ? (Math.round(+r.a[7]) || 0) : 0;
   const coilBy = new Map(R.filter(r => r.t === 'coil').map(r => [r.L, r]));
   const isTimer = r => r && r.t === 'coil' && +r.a[7] >= 1;
   const W = Math.max(d.fw ? 400 : LINK_W_MIN, +d.w || 0);   // (as Circuit Builder reads it: never under its W_MIN unless its bars were set by hand)
@@ -587,6 +589,7 @@ function circuitToPrint(d, env) {
       case 'fu1': t = 'fuse'; o.tag = 'FU' + r.L; o.rot = [0, 90, 180, 270][rotOf(r)]; break;
       case 'xfm': t = 'xfmr'; o.tag = 'CPT' + r.L; break;
       case 'ph': t = 'sup'; o.tag = r.L === 'N' ? 'N' : 'L' + r.L; break;
+      case 'gnd': t = 'gnd'; o.rot = [0, 90, 180, 270][rotOf(r)]; break;
       case 'l1': t = 'src_l1'; break;
       case 'l2': t = 'src_l2'; break;
       case 'stand': { const q = r.a[10]; if (!q || !LINK_PB_TERMS[q.t]) break; t = q.t; o.rot = +q.r || 0; o.tag = r.L; o.desc = typeof r.a[9] === 'string' ? r.a[9] : ''; break; }

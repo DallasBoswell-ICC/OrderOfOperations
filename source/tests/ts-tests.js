@@ -5,6 +5,18 @@
    Each check opens the built page (dist/fault-finder/index.html, or its demo) in a headless browser, as the
    Circuit Builder's checks do (tests/run-tests.js). */
 const path = require('path');
+const BUILD_S2 = String.raw`(opt) => { sel = null; loadPreset('blank'); VSYS = '208'; PH_COL = [...VSYS_LIST['208'].col]; W = 1800;
+      for (const [L, x] of [['1', 120], ['2', 220]]) parts.push(newPart('ph-' + L, x, 80));
+      const t1 = newPart('xfm', 500, 300); if (opt.pr) t1.pr = opt.pr; if (opt.ug) t1.ug = true; parts.push(t1);
+      const t2 = newPart('xfm', 1100, 300); t2.ct = true; t2.L = '2'; parts.push(t2);
+      wires.push(Wr(120, 120, 120, 160), Wr(120, 160, 1040, 160), Wr(440, 160, 440, 220), Wr(1040, 160, 1040, 220), Wr(220, 120, 220, 190), Wr(220, 190, 1160, 190), Wr(560, 190, 560, 220), Wr(1160, 190, 1160, 220));
+      wires.push(Wr(440, 380, 440, 600), Wr(560, 380, 560, 520));
+      parts.push(P('coil', 500, 600, { L: 'X', color: '#FFDC00' })); wires.push(Wr(560, 520, 600, 520), Wr(600, 520, 600, 600), Wr(560, 600, 600, 600));
+      wires.push(Wr(1040, 380, 1040, 700), Wr(1100, 380, 1100, 420), Wr(1100, 420, 1500, 420), Wr(1500, 420, 1500, 600), Wr(1160, 380, 1160, 400), Wr(1160, 400, 1600, 400), Wr(1600, 400, 1600, 700));
+      parts.push(P('lamp', 1270, 560, { L: '', color: '#FFDC00' })); wires.push(Wr(1040, 560, 1210, 560), Wr(1330, 560, 1500, 560));
+      parts.push(P('htr', 1320, 700, { L: '1' })); wires.push(Wr(1040, 700, 1260, 700), Wr(1380, 700, 1600, 700));
+      parts.push(newPart('gnd', 300, 800)); if (opt.wired) { parts.push(newPart('gnd', 680, 560)); wires.push(Wr(600, 520, 680, 520)); }
+      normalize(); }`;
 const fs = require('fs');
 const os = require('os');
 const { chromium } = require('playwright');
@@ -267,6 +279,17 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
         const lamp = parts.find(p => p.t === 'lamp'), r1 = x => Math.round(x * 10) / 10;
         return [r1(tsVolts(NET.PH['1'], NET.PH['2'])), r1(tsVolts(NET.PH['1'], NET.PH['N'])), r1(tsVolts(NET.PH['2'], NET.PH['N'])), r1(tsVolts(lamp._a, lamp._b))]; }, vs);
       if (r.join() !== want.join()) out.push(vs + ': ' + r.join() + ' (want ' + want.join() + ')');
+    }
+    return out;
+  });
+  await check('Transformers and ground (Dallas, 22 Nov 2026): a 208 V primary gives 120 V, or 52 V rated 480 V; its grounded X2 reads 120 V from X1 to ground, and floating (not grounded) 0 V, unless a Ground part is wired to it; a center-tapped one gives 120 V from X1 or X2 to X0 and 240 V across', async page => {
+    const out = [];
+    for (const [opt, want] of [[{}, '207.8 120 120 | 120 120 240 120'], [{ pr: '480' }, '207.8 52 52 | 120 120 240 120'], [{ ug: true }, '207.8 120 0 | 120 120 240 120'], [{ ug: true, wired: true }, '207.8 120 120 | 120 120 240 120']]) {
+      const r = await page.evaluate(([b, opt]) => { eval('(' + b + ')')(opt); const c = readCircuit(JSON.parse(JSON.stringify(circuitData()))); tsUse(c, '', true); setSpeed(300); return 1; }, [BUILD_S2, opt]);
+      await page.waitForTimeout(900);
+      const got = await page.evaluate(() => { const [t1, t2] = parts.filter(q => q.t === 'xfm'), gd = NET.GND[0], r1 = x => Math.round(x * 10) / 10;
+        return [r1(tsVolts(t1._a, t1._b)), r1(tsVolts(t1._t[2], t1._t[3])), r1(tsVolts(t1._t[2], gd))].join(' ') + ' | ' + [r1(tsVolts(t2._t[2], t2._t[4])), r1(tsVolts(t2._t[3], t2._t[4])), r1(tsVolts(t2._t[2], t2._t[3])), r1(tsVolts(t2._t[2], gd))].join(' '); });
+      if (got !== want) out.push(JSON.stringify(opt) + ': ' + got + ' (want ' + want + ')');
     }
     return out;
   });

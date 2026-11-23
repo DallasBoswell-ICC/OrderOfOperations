@@ -189,7 +189,7 @@ function findNoway() {
   for (const coilsIn of [false, true]) for (const path of PATHS) {
     let label = '';
     for (const d of path) {
-      if (d.e.kind === 'part') { if (isOp(d.e.part)) label = loopKey(d.e.part, label); else if (isCon(d.e.part)) add(d, label); else if (LOADT(d.e.part.t) && coilsIn) label = 'ret'; continue; }
+      if (d.e.kind === 'part') { if (tints(d.e.part)) label = loopKey(d.e.part, label); else if (passes(d.e.part)) add(d, label); else if (LOADT(d.e.part.t) && coilsIn) label = 'ret'; continue; }
       add(d, label);
     }
   }
@@ -247,13 +247,13 @@ function findReach() {
     let label = '', key = '', s = 0;   // (s: how long the current takes to get there, in seconds; key: see loopKey)
     for (const d of path) {
       s += d.e.kind === 'seg' ? d.delay : d.e.len / V;
-      if (d.e.kind === 'part' && !isCon(d.e.part)) { if (isOp(d.e.part)) { key = loopKey(d.e.part, label); label = opLabel(d.e.part, label); } else if (LOADT(d.e.part.t)) label = key = 'ret'; continue; }
+      if (d.e.kind === 'part' && !passes(d.e.part)) { if (tints(d.e.part)) { key = loopKey(d.e.part, label); label = opLabel(d.e.part, label); } else if (LOADT(d.e.part.t)) label = key = 'ret'; continue; }
       if (!onward(d, key)) break;   // (the colour cannot go this way: this path carries none of it on from here)
       const m = REACH.get(d) || {}; m[label] = Math.max(m[label] || 0, s); REACH.set(d, m);
     }
   }
 }
-const filtered = d => d.e.kind === 'seg' || (isCon(d.e.part) && !isOp(d.e.part));   // (an SPDT's way through is a switch of its own colour, not a contact)   // lanes that only carry the colours with a path along them
+const filtered = d => d.e.kind === 'seg' || (passes(d.e.part) && !tints(d.e.part));   // (an SPDT's way through is a switch of its own colour, not a contact)   // lanes that only carry the colours with a path along them
 function allowNow() {
   const A = new Map();
   for (const path of PATHS) {
@@ -261,7 +261,7 @@ function allowNow() {
     for (const d of path) {
       if (d.e.kind === 'part') {
         if (d.e.part.t === 'brk') break;   // (a wire broken by a fault: open, always)
-        if (isSw(d.e.part)) { if (!closed(d.e.part)) break; if (isOp(d.e.part)) { key = loopKey(d.e.part, label); label = opLabel(d.e.part, label); } else { if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label); } }   // a contact passes on the colour it is given
+        if (isSw(d.e.part)) { if (!closed(d.e.part)) break; if (tints(d.e.part)) { key = loopKey(d.e.part, label); label = opLabel(d.e.part, label); } else { if (!A.has(d)) A.set(d, new Set()); A.get(d).add(label); } }   // a contact passes on the colour it is given
         else if (COND[d.e.part.id]) label = key = 'ret';   // past a coil with current through it: the return side, back to L2
         // (in a short circuit, a load passes nothing on but its own return current: its far side is joined to L2, not
         // live, and the current takes the short instead; a load with a short planted on it is the short itself, so the
@@ -299,8 +299,8 @@ function through(d, r) {
   if (d.e.part.t === 'brk') return null;   // (a broken wire: nothing gets across)
   // a switch past a coil (on its way back to L2) carries the return current through as it is, as a contact does: only
   // current still on its way from L1 takes on a button's colour
-  if (isOp(d.e.part)) return r.ret ? along(r, d.e.len) : { set: new Set([opKey(d.e.part)]), from: colourOf(r), rd: 0 };
-  if (isCon(d.e.part)) return along(r, d.e.len);   // a relay contact passes the current on as it is
+  if (tints(d.e.part)) return r.ret ? along(r, d.e.len) : { set: new Set([opKey(d.e.part)]), from: colourOf(r), rd: 0 };
+  if (passes(d.e.part)) return along(r, d.e.len);   // a relay contact passes the current on as it is (and so does a button, with Buttons Colour the Current off)
   // through a coil that is in: the return side, fading to egg. Through a coil that cannot pick up: the colour
   // waiting at it, on up to whatever is open past it
   if (faultOf(d.e.part) === 'short') { if (SHORT_WAIT && !r.ret) { SHORT_WAIT = false; schedule(evT + d.delay + .02, shortTakeUp); } return along(r, d.e.len); }   // (a coil or light with a short planted on it: a piece of wire, passing on whatever reaches it, the current running out behind a blown fuse too)
@@ -417,7 +417,7 @@ function updateCoils(t) {
     // A coil picks up with enough of the voltage across it (see loadShares), and not ahead of a coil that was first
     // and that it would cut off; a pilot light lights with whatever share it gets
     // (its supply cut off on the way to it: it carries on, as it was, until the last of its current has reached it)
-    let sh = shareOf(p), cond = !shortNow && !!r && sh > 1e-9;
+    let sh = shareOf(p) * (p.t === 'xfm' ? 1 : ctrlK(t)), cond = !shortNow && !!r && sh > 1e-9;   // (on a transformer's secondary: in proportion to its voltage)
     // (in a short too, Dallas 15 Nov 2026: a light or coil goes out as the last of its current reaches it, so its
     // return current doesn't drop away before the current feeding it)
     if (!cond && !!r && COND[p.id] && faultOf(p) !== 'short' && (shortNow || onToL2(p, d.to))) { cond = true; sh = p._sh ?? 1; }
@@ -687,6 +687,23 @@ function walk(h, d, ok, step = e => conducts(e)) {
   }
 }
 // a transformer's primary fed across two phases at time t (each phase there by then)
+// a transformer's primary voltage at time t ([re, im]: across the phases it's wired to, or 120 V from the control circuit;
+// null: not fed), and its secondary's ({ mag, ang }: the whole winding, 120 V, or 240 V centre-tapped, at its rated primary
+// voltage, and in proportion to what it gets)
+function xfmPri(p, t) {
+  const a = phaseOfAt(p._a, t), b = phaseOfAt(p._b, t);
+  if (a > 0 && b > 0 && a !== b) { const va = phVolt(a), vb = phVolt(b); if (va && vb) return [va[0] - vb[0], va[1] - vb[1]]; }
+  return coilOn[p.id] ? [SUPPLY_V, 0] : null;
+}
+function xfmSec(p, t) {
+  const v = xfmPri(p, t), nom = p.ct ? 2 * SUPPLY_V : SUPPLY_V; if (!v) return { mag: 0, ang: 0 };
+  const m = Math.hypot(v[0], v[1]), r = p.pr ? +p.pr : m;
+  return { mag: r > 0 ? nom * m / r : 0, ang: Math.atan2(v[1], v[0]) };
+}
+// a centre-tapped secondary's, while running (the first one that's fed; while building, as it's rated)
+function ctSecNow() { if (typeof simT !== 'undefined' && !editing) for (const p of parts) if (p.t === 'xfm' && p.ct && coilOn[p.id]) return xfmSec(p, simT); return { mag: 2 * SUPPLY_V, ang: 0 }; }
+// the control circuit's voltage, as a share of 120 V: from the (plain) transformer feeding it, if there is one
+function ctrlK(t) { for (const p of parts) if (p.t === 'xfm' && !p.ct && coilOn[p.id]) return xfmSec(p, t).mag / SUPPLY_V; return 1; }
 function phFedAt(p, t) { const a = phaseOfAt(p._a, t), b = phaseOfAt(p._b, t); return a > 0 && b > 0 && a !== b; }
 // the phase at junction n at time t: once it has got there, and until the dark has (PDARK: where a phase has been
 // cut off, and when it goes dark there)
@@ -711,6 +728,7 @@ function phaseWays() {
   const J = NET.jadj, srcs = [], isP = e => e.kind === 'part' && (e.part.t === 'pp' || e.part.t === 'fu1'),   // (a single fuse on a line: a pole of its own)
     passable = e => e.kind === 'seg' || (e.part && !LOADT(e.part.t));
   for (const p of parts) if (isPh(p) && p._t) srcs.push(...p._t);
+  for (const L in NET.PH) if (/^S[120]:/.test(L)) srcs.push(NET.PH[L]);   // (a centre-tapped transformer's secondary)
   for (const pe of NET.jedges) if (isP(pe)) {
     PJE.set(pe.part, pe);
     const d = new Map(), h = heap();

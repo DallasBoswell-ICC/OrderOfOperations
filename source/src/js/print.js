@@ -164,6 +164,8 @@ function printSheet(drawnBy, fit = false) {
   for (const q of P) {
     const { x, y, p } = q;
     switch (q.t) {
+      case 'gnd': { const s = PSYM.Ground || LINK_PB_PSYM.Ground; if (!s) break;   // (ground: Dallas's symbol, its stem to the part's terminal)
+        g += `<g class="sym" transform="translate(${x} ${y}) rotate(${(p.rot || 0) * 90})">${s.b}</g>`; break; }
       case 'ph': case 'l1': case 'l2': { const name = q.t === 'ph' ? phName(q.L) : q.t.toUpperCase();
         // (coming from somewhere else: an arrow at the start of each wire it feeds, pointing in to the wire; its name behind)
         const fed = q.terms.filter(wired);

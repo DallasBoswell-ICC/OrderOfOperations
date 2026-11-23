@@ -7,6 +7,18 @@
    all visible to the checks, so they can set up circuits and read back exactly what is lit and when.
    Needs Node.js and Playwright (npm install playwright, or set NODE_PATH to where it is installed). */
 const path = require('path');
+const BUILD_S2 = String.raw`(opt) => { sel = null; loadPreset('blank'); VSYS = '208'; PH_COL = [...VSYS_LIST['208'].col]; W = 1800;
+      for (const [L, x] of [['1', 120], ['2', 220]]) parts.push(newPart('ph-' + L, x, 80));
+      const t1 = newPart('xfm', 500, 300); if (opt.pr) t1.pr = opt.pr; if (opt.ug) t1.ug = true; parts.push(t1);
+      const t2 = newPart('xfm', 1100, 300); t2.ct = true; t2.L = '2'; parts.push(t2);
+      wires.push(Wr(120, 120, 120, 160), Wr(120, 160, 1040, 160), Wr(440, 160, 440, 220), Wr(1040, 160, 1040, 220), Wr(220, 120, 220, 190), Wr(220, 190, 1160, 190), Wr(560, 190, 560, 220), Wr(1160, 190, 1160, 220));
+      wires.push(Wr(440, 380, 440, 600), Wr(560, 380, 560, 520));
+      parts.push(P('coil', 500, 600, { L: 'X', color: '#FFDC00' })); wires.push(Wr(560, 520, 600, 520), Wr(600, 520, 600, 600), Wr(560, 600, 600, 600));
+      wires.push(Wr(1040, 380, 1040, 700), Wr(1100, 380, 1100, 420), Wr(1100, 420, 1500, 420), Wr(1500, 420, 1500, 600), Wr(1160, 380, 1160, 400), Wr(1160, 400, 1600, 400), Wr(1600, 400, 1600, 700));
+      parts.push(P('lamp', 1270, 560, { L: '', color: '#FFDC00' })); wires.push(Wr(1040, 560, 1210, 560), Wr(1330, 560, 1500, 560));
+      parts.push(P('htr', 1320, 700, { L: '1' })); wires.push(Wr(1040, 700, 1260, 700), Wr(1380, 700, 1600, 700));
+      parts.push(newPart('gnd', 300, 800)); if (opt.wired) { parts.push(newPart('gnd', 680, 560)); wires.push(Wr(600, 520, 680, 520)); }
+      normalize(); }`;
 const { chromium } = require('playwright');
 
 const PAGE = 'file://' + path.resolve(__dirname, '..', 'dist', ...(process.argv.includes('--demo') ? ['demo'] : []), 'Circuit_Builder.html');   // (--demo: the demo build)
@@ -3837,6 +3849,74 @@ const DEF_CIRCUIT = `
     await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
     return out;
   });
+  await check('A breaker pole fed by a phase from its right (Dallas, 22 Nov 2026): switched off, the phase lights it up to its right-hand contact, not its left', async page => {
+    const out = [];
+    await page.evaluate(() => { sel = null; loadPreset('blank'); POWER = 'boxes'; W = 1500;
+      parts.push(newPart('ph-1', 80, 240), newPart('ph-3', 1300, 360), newPart('ph-N', 80, 600), newPart('cbd', 500, 300));
+      parts.push(P('lamp', 900, 240, { L: '', color: '#FFDC00' }), P('lamp', 200, 360, { L: '', color: '#00B050' }));
+      wires.push(Wr(120, 240, 440, 240), Wr(560, 240, 840, 240), Wr(960, 240, 1000, 240), Wr(1000, 240, 1000, 600), Wr(120, 600, 1000, 600),
+        Wr(560, 360, 1260, 360), Wr(260, 360, 440, 360), Wr(140, 360, 100, 360), Wr(100, 360, 100, 500), Wr(100, 500, 1000, 500), Wr(1000, 500, 1000, 600));
+      normalize(); draw(); });
+    const issues = await page.evaluate(() => [...wiringIssues(NET).values()].filter(v => typeof v === 'string').join());
+    if (issues) out.push('wiring: ' + issues);
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
+    const lit = await page.evaluate(() => parts.filter(p => p.t === 'lamp').map(p => !!coilOn[p.id]).join());
+    if (lit !== 'true,true') out.push('lights on: ' + lit);
+    const b = await page.evaluate(() => { const p = parts.find(q => q.t === 'cbd'); const m = WORLD.getScreenCTM(); return [m.a * (p.x + 10) + m.e, m.d * (p.y + 130) + m.f]; });
+    await page.mouse.click(b[0], b[1]); await page.waitForTimeout(500);
+    const r = await page.evaluate(() => { const v = view.parts.get(parts.find(q => q.t === 'cbd').id); return v.poles.map(q => q.rings.map(e => e.getAttribute('stroke')).join('/')).join(' '); });
+    const want = await page.evaluate(() => `${PH_COL[0]}/${GREY} ${GREY}/${PH_COL[2]}`);
+    if (r !== want) out.push('rings, off: ' + r + ' (want ' + want + ')');
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    return out;
+  });
+  await check('Buttons Colour the Current (Dallas, 22 Nov 2026): a Power menu setting, on by default and saved; off, the current through a pushbutton keeps the source colour, and a coil past it still picks up', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    if (await page.evaluate(() => TINT_OPS && document.getElementById('bt-tint').getAttribute('aria-pressed')) !== 'true') out.push('not on to start with');
+    await page.evaluate(() => { sel = null; loadPreset('blank'); W = Math.max(W_MIN, 1100); parts.push(P('btn', 300, 240, { L: 'A', color: '#00B050', maint: true }), P('coil', 700, 240, { L: 'X', color: '#FFDC00' }));
+      wires.push(Wr(0, 240, 260, 240), Wr(340, 240, 640, 240), Wr(760, 240, W, 240)); normalize(); draw(); });
+    const col = async () => { await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.evaluate(() => press('A', true)); await page.waitForTimeout(500);
+      const r = await page.evaluate(() => { const b = parts.find(p => p.t === 'btn'), c = parts.find(p => p.t === 'coil'); return [showCol(b._b, simT), !!coilOn[c.id]]; });
+      await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit'); return r; };
+    let [c, on] = await col();
+    if (c === await page.evaluate(() => SRC_COL) || !on) out.push('on: ' + c + ' ' + on);
+    await page.evaluate(() => document.getElementById('bt-tint').click()); await page.waitForTimeout(60);
+    const saved = await page.evaluate(() => [TINT_OPS, circuitData().bt, readCircuit(JSON.parse(JSON.stringify(circuitData()))).bt].join());
+    if (saved !== 'false,0,false') out.push('saved: ' + saved);
+    [c, on] = await col();
+    if (c !== await page.evaluate(() => SRC_COL) || !on) out.push('off: ' + c + ' ' + on);
+    await page.evaluate(() => { TINT_OPS = true; });
+    return out;
+  });
+  await check('Stage 2 (Dallas, 22 Nov 2026): a Ground part (Power menu), saved turned and crossing to Print Builder\'s Ground and back; a transformer\'s Primary Rating, Secondary and X2 Grounded settings, saved; a center-tapped secondary runs a light from X1 to X0 and a heater across X1 and X2; a 480 V-rated primary on 208 V gives too little to pull a coil in', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60); await toolbarDrop(page, 'gnd', 400, 300);
+    const g = await page.evaluate(() => { const p = parts.find(q => q.t === 'gnd'); if (!p) return 'none'; p.rot = 2; return captionOf(p) + ' ' + readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.filter(q => q.t === 'gnd').map(q => q.rot).join(); });
+    if (g !== 'Ground 2') out.push('ground placed and saved: ' + g);
+    const pbg = await page.evaluate(() => circuitData()).then(d => withPB(page, pb => pb.evaluate(d => { const r = circuitToPrint(d, { uid, defaultTB, long: 'tight' }); return [r.doc.sheets.flatMap(s => s.parts).filter(p => p.t === 'gnd').map(p => p.t + ' ' + (p.rot || 0)).join(), JSON.parse(JSON.stringify(r.doc))]; }, d)));
+    if (pbg[0] !== 'gnd 180') out.push('in Print Builder: ' + pbg[0]);
+    pbg[1].link.fp = 'changed'; const back = await page.evaluate(doc => { openFromPrint(doc, 'x'); document.getElementById('link-dlg').close(); return parts.filter(p => p.t === 'gnd' || p.t === 'stand').map(p => p.t + (p.rot || 0)).join(); }, pbg[1]);
+    if (back !== 'gnd2') out.push('back from Print Builder: ' + back);
+    // the transformer's settings on its Part tab
+    await page.evaluate(() => { sel = null; loadPreset('blank'); parts.push(newPart('xfm', 500, 300)); normalize(); draw(); });
+    const at = await page.evaluate(() => { const q = parts.find(p => p.t === 'xfm'), m = WORLD.getScreenCTM(); return { x: m.a * q.x + m.e, y: m.d * q.y + m.f }; });
+    await page.mouse.click(at.x, at.y); await page.waitForTimeout(120);
+    await page.selectOption('#x-pr', '480'); await page.selectOption('#x-sec', 'ct'); await page.click('#x-gnd'); await page.waitForTimeout(80);
+    const xs = await page.evaluate(() => { const q = readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.find(p => p.t === 'xfm'); return [q.pr, !!q.ct, !!q.ug, terms(q).length, document.getElementById('x-gnd-n').textContent].join(); });
+    if (xs !== '480,true,true,5,X0 Grounded') out.push('settings saved: ' + xs);
+    // running: 208Y/120 feeding a plain and a center-tapped transformer
+    for (const [opt, want] of [[{}, 'coil on, lamp on 1.00, htr on 2.00'], [{ pr: '480' }, 'coil off, lamp on 1.00, htr on 2.00']]) {
+      await page.evaluate(([b, opt]) => { eval('(' + b + ')')(opt); draw(); }, [BUILD_S2, opt]);
+      const iss = await page.evaluate(() => [...wiringIssues(NET).entries()].filter(([k, v]) => typeof v === 'string').map(([k, v]) => (parts.find(p => p.id === k) || { t: k }).t + ': ' + v).join());
+      if (iss !== 'gnd: Not wired to anything') out.push('wiring: ' + iss);
+      await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(700);
+      const r = await page.evaluate(() => parts.filter(p => LOADT(p.t) && p.t !== 'xfm').map(p => p.t + (coilOn[p.id] ? ' on' : ' off') + (p.t === 'coil' ? '' : ' ' + (p._sh || 0).toFixed(2))).join(', '));
+      if (r !== want) out.push(JSON.stringify(opt) + ': ' + r);
+      await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    }
+    return out;
+  });
   await check('Wide parts\' leads stay inside their ends (Dallas, 22 Nov 2026): the current leaves a limit switch, toggle switch or circuit breaker the moment it gets across, with nothing painted out over the wire past it', async page => {
     const bad = await page.evaluate(() => ['lsw', 'tgl', 'sp2', 'xov', 'dps', 'tps', 'dpd', 'cbk', 'psw', 'fsw', 'flt'].filter(t => { const p = { t }; return LEADH(p) > TERM(p); }));
     if (bad.length) throw new Error('leads past their ends: ' + bad.join(', '));
@@ -4059,7 +4139,7 @@ const DEF_CIRCUIT = `
     return out;
   });
   await check('Stand-ins (Dallas, 19 Nov 2026): every Print Builder part Circuit Builder has none of comes in as a stand-in (its symbol in a box, terminals as the print joins them), draws, runs (passing nothing) and prints, and goes back to the print as the same part, tag and name', async page => {
-    const TYPES = ['prs_no', 'fdsc3', 'ol', 'gnd'];
+    const TYPES = ['prs_no', 'fdsc3', 'ol'];
     const pr = await withPB(page, pb => pb.evaluate(TYPES => { loadDoc(withDrawnBy(template('blank'))); const L1 = S.parts.find(q => q.label === 'L1'); let y = 260;
       for (const t of TYPES) { const p = addPart(S, t, 900, y); p.tag = t.toUpperCase().replace(/_/g, '') + '1'; p.desc = 'D' + t; const tm = linkPbTerms(p)[0]; addWire(S, [[L1.x, tm[1]], tm]); y += 340; }
       refresh(true); return JSON.parse(JSON.stringify(doc)); }, TYPES));

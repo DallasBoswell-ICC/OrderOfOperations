@@ -129,6 +129,7 @@ function showPower() {
   document.querySelectorAll('[data-src]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.src === SRC_COL)));
   // the voltage system: the one chosen ticked; a split-phase supply has no L3, and its phase list says so
   document.querySelectorAll('[data-vs]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vs === VSYS)));
+  document.getElementById('bt-tint').setAttribute('aria-pressed', String(TINT_OPS));
   { const sp = VSYS_LIST[VSYS].ph === 2, b3 = document.querySelector('[data-part="ph-3"]'); if (b3) b3.hidden = sp;
     const it = b3 && b3.closest('.tl-sub'); if (it) { it.querySelector('.tl-n').textContent = sp ? 'Split-Phase' : 'Three Phase'; it.querySelector('.tl-c').textContent = sp ? 3 : 4; } }
   PH_COL.forEach((c, i) => { document.documentElement.style.setProperty(`--ph${i + 1}`, c); document.documentElement.style.setProperty(`--ph${i + 1}l`, lighten(c, .45)); });
@@ -137,9 +138,13 @@ function showPower() {
 for (const [name, hex] of SRC_PAL) {
   const b = document.createElement('button');
   b.type = 'button'; b.dataset.src = hex; b.style.background = hex; b.setAttribute('aria-label', name + ' source'); b.title = name;
-  b.addEventListener('click', () => { if (!editing || hex === SRC_COL) return; snapshot(); SRC_COL = hex; say(`Source colour: ${name}.`); draw(); });
+  b.addEventListener('click', () => { if (!editing || hex === SRC_COL) return; snapshot(); SRC_COL = hex; say(`Source color: ${name}.`); draw(); });
   document.getElementById('src-swatches').appendChild(b);
 }
+document.getElementById('bt-tint').addEventListener('click', () => {
+  if (!editing) return; snapshot(); TINT_OPS = !TINT_OPS;
+  say(TINT_OPS ? 'Buttons and switches give the current their color.' : 'Buttons and switches pass the current on in the color it comes in.'); draw();
+});
 document.querySelectorAll('[data-vs]').forEach(b => b.addEventListener('click', () => {
   if (b.dataset.vs === VSYS || !editing) return;
   snapshot(); VSYS = b.dataset.vs; PH_COL = [...VSYS_LIST[VSYS].col]; normalize();

@@ -92,7 +92,7 @@ function drawEstop(p, v, x, y, g) {
     el('path', { d: `M ${P1[0] + tx * L} ${P1[1] + ty * L} L ${P1[0] + nx * w} ${P1[1] + ny * w} L ${P1[0] - nx * w} ${P1[1] - ny * w} Z`, fill: ESTOP_PLATE }, v.twist);
   }
 }
-const captionOf = p => p.t === 'stand' ? `${p.L ? p.L + ' ' : ''}${LINK_PB_SYMN[p.sym] || p.sym} (stand-in)` : p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} ${p.low ? 'Low' : 'High'} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} ${p.low ? 'Low' : 'High'} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'flt' ? `FS${p.L} ${p.low ? 'Low' : 'High'} Level Float Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tgl' ? `SW${p.L} Toggle Switch (SPST)` : p.t === 'sp2' ? `SW${p.L} Toggle Switch (SPDT)` : p.t === 'xov' ? `SW${p.L} Crossover Switch (DPDT)` : p.t === 'dps' ? `SW${p.L} Toggle Switch (DPST)` : p.t === 'tps' ? `SW${p.L} Toggle Switch (3PST)` : p.t === 'cbk' ? `CB${p.L} Circuit Breaker` : p.t === 'cbd' ? `CB${p.L} Circuit Breaker (DPST)` : p.t === 'cbt' ? `CB${p.L} Circuit Breaker (3PST)` : p.t === 'dpd' ? `SW${p.L} Toggle Switch (DPDT)` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'gnd' ? 'Ground' : p.t === 'stand' ? `${p.L ? p.L + ' ' : ''}${LINK_PB_SYMN[p.sym] || p.sym} (stand-in)` : p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} ${p.low ? 'Low' : 'High'} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} ${p.low ? 'Low' : 'High'} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'flt' ? `FS${p.L} ${p.low ? 'Low' : 'High'} Level Float Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tgl' ? `SW${p.L} Toggle Switch (SPST)` : p.t === 'sp2' ? `SW${p.L} Toggle Switch (SPDT)` : p.t === 'xov' ? `SW${p.L} Crossover Switch (DPDT)` : p.t === 'dps' ? `SW${p.L} Toggle Switch (DPST)` : p.t === 'tps' ? `SW${p.L} Toggle Switch (3PST)` : p.t === 'cbk' ? `CB${p.L} Circuit Breaker` : p.t === 'cbd' ? `CB${p.L} Circuit Breaker (DPST)` : p.t === 'cbt' ? `CB${p.L} Circuit Breaker (3PST)` : p.t === 'dpd' ? `SW${p.L} Toggle Switch (DPDT)` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -130,7 +130,7 @@ let solMaskN = 0;   // (each solenoid drawing's mask has an id of its own)
 function framed(tag, a, g) { el(tag, Object.assign({}, a, { fill: 'none', stroke: WELL, 'stroke-width': (a['stroke-width'] || 1.8) + 2 * BEZEL }), g); return el(tag, a, g); }
 // a part, in the same style as the Order of Operations simulators
 /* A stand-in (Dallas, 19 Nov 2026): a Print Builder part Circuit Builder has none of, drawn as a NO pushbutton's square
-   with the part's own NEMA symbol inside, in colour, its edge dashed. Two terminals: a button's square and terminals, the
+   with the part's own NEMA symbol inside, in color, its edge dashed. Two terminals: a button's square and terminals, the
    symbol drawn smaller to fit. More: the box as big as the symbol, its terminals just outside the symbol's, a lead to each.
    Drawn, not run: nothing passes through it. */
 const STAND_COL = '#FFC000';
@@ -179,7 +179,7 @@ function drawPart(p, g, x, y, chan, onStation) {
     return v;
   }
   const v = {}, T = TERM(p), half = LEADH(p);
-  if (!isBox(p) && p.t !== 'xfm' && !isPwr3(p) && p.t !== 'mtr' && !isMulti(p)) el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
+  if (!isBox(p) && p.t !== 'xfm' && !isPwr3(p) && p.t !== 'mtr' && !isGnd(p) && !isMulti(p)) el('line', { x1: x - T, y1: y, x2: x + T, y2: y, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
   // the short leads between the part's ends and its body: each drawn in two pieces, so the current can flow along
   // them (the new colour, and what was there before it)
   const lead = () => el('line', { x1: x, y1: y, x2: x, y2: y, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g);
@@ -311,6 +311,19 @@ function drawPart(p, g, x, y, chan, onStation) {
     framed('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: JMP_EDGE, 'stroke-width': 2.2 }, g);
     const cg = el('g', p.rot ? { transform: `rotate(${p.rot * 90} ${x} ${y})` } : {}, g);
     v.chev = [-7, 7].map(oy => el('path', { d: `M ${x - 13} ${y + oy - 6.5} L ${x} ${y + oy + 6.5} L ${x + 13} ${y + oy - 6.5}`, fill: 'none', stroke: '#8a8a8a', 'stroke-width': 3.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, cg));
+  } else if (isGnd(p)) {
+    // ground (design B2): a supply box's well, green-edged, with a GND badge on its top left and Dallas's ground symbol
+    // (his Symbol Design-Ground: a stem down to three bars, each 10 shorter than the last, evenly spaced, square-ended),
+    // its stem from the side it's wired at; turned with the box
+    v.lead = null; v.src = [];
+    for (const [tx, ty] of terms(p)) { const bx = x + (tx - x) * BOX / 2 / TERM(p), by = y + (ty - y) * BOX / 2 / TERM(p);
+      el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
+      if (!editing && p._t) v.src.push({ n: p._t[0], ln: el('line', { x1: bx, y1: by, x2: tx, y2: ty, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g) }); }
+    framed('rect', { x: x - BOX / 2, y: y - BOX / 2, width: BOX, height: BOX, rx: BOX * .1667, fill: 'url(#gWell)', stroke: GND_COL, 'stroke-width': 2.2 }, g);
+    gndSym(el('g', p.rot ? { transform: `rotate(${p.rot * 90} ${x} ${y})` } : {}, g), x, y, 1);
+    const bx = x - BOX / 2 + 2, by = y - BOX / 2 + 2;
+    el('rect', { x: bx - 17, y: by - 11, width: 34, height: 22, rx: 6, fill: '#1f1f1f', stroke: GND_COL, 'stroke-width': 1.6 }, g);
+    el('text', { x: bx, y: by + 4.4, 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 800, fill: lighten(GND_COL, .45) }, g).textContent = 'GND';
   } else if (isSrc(p) || isPh(p)) {
     // a supply box: L1 or L2, wired from its left, its right or its bottom (a double chevron, as on a print), turned
     // with its chevrons; or a phase box, the same in its phase's colour, with the phase on a badge on its top left
@@ -379,7 +392,7 @@ function drawPart(p, g, x, y, chan, onStation) {
     else drawTimer(p, g, x, y, v);
   }
   // its name, above it (the other contact blocks of a pushbutton or selector switch go without: the dashed line joins them to it)
-  if (!v.sec && !onStation && !isJmp(p) && !isPh(p) && p.t !== 'xfm') {
+  if (!v.sec && !onStation && !isJmp(p) && !isPh(p) && !isGnd(p) && p.t !== 'xfm') {
     // (a supply box turned: its caption goes to the side that has no lead, beside or below it)
     const [fx, fy] = isSrc(p) && p.rot ? rotQ(p, 0, -1).map((c, i) => Math.sign(c - [x, y][i])) : [0, -1];
     const at = fy < 0 ? { x, y: y - capTop(p), 'text-anchor': 'middle' } : fy > 0 ? { x, y: y + BOX / 2 + 21, 'text-anchor': 'middle' } : { x: x + fx * (BOX / 2 + 12), y: y + 4.5, 'text-anchor': fx > 0 ? 'start' : 'end' };
@@ -489,6 +502,18 @@ function setSelector(v, p, pos, ang) {
    and once the primary is fed the secondary fills from X1 in the colour of the supply it now is (see paintXfm). Its
    name and voltages sit beside it, as on a nameplate. */
 const XFM_LEG = 20, XFM_R = XFM_TX / 4, XFM_LEN = 2 * XFM_LEG + 4 * Math.PI * XFM_R;
+// the Ground part, small (32 across), centred at x, y: beside a transformer's grounded terminal
+function gndMini(g, x, y) {
+  const k = 32 / BOX, s = 32;
+  framed('rect', { x: x - s / 2, y: y - s / 2, width: s, height: s, rx: s * .1667, fill: 'url(#gWell)', stroke: GND_COL, 'stroke-width': 1.4 }, g);
+  gndSym(g, x, y + 2, k);
+}
+// Dallas's ground symbol (Symbol Design-Ground), in a box centred at x, y, its stem up to the box's top (k: its scale)
+function gndSym(g, x, y, k) {
+  const c = lighten(GND_COL, .45), w = 3.6 * k, top = y - BOX / 2 * k + 3 * k, y1 = y - 4 * k;
+  el('line', { x1: x, y1: top, x2: x, y2: y1, stroke: c, 'stroke-width': w }, g);
+  [[18, 0], [12, 10], [6, 20]].forEach(([h, dy]) => el('line', { x1: x - h * k, y1: y1 + dy * k, x2: x + h * k, y2: y1 + dy * k, stroke: c, 'stroke-width': w }, g));
+}
 function drawXfm(p, g, x, y, v, chan) {
   v.lead = null; v.src = [];
   const W = XFM_W, H = XFM_H, w = XFM_TX, yp = y - H / 2 + 15, ys = y + H / 2 - 15;
@@ -516,14 +541,31 @@ function drawXfm(p, g, x, y, v, chan) {
     return { d, old, cur, dots };
   };
   v.pri = winding(yp, false); v.sec = winding(ys, true);
+  // a centre-tapped secondary (Dallas, 22 Nov 2026): a lead from the middle of its turns down to a round contact point, as
+  // its ends have, and out through X0 at the bottom middle
+  if (p.ct) {
+    const yb = ys - XFM_LEG, d = `M${x} ${yb}V${ys}`, round = { fill: 'none', 'stroke-linecap': 'round' };
+    el('path', Object.assign({ d, stroke: '#111', 'stroke-width': SOL_BW + 1.8, filter: 'url(#fShadow)' }, round), g);
+    el('circle', { cx: x, cy: ys, r: SOL_DR + .9, fill: '#111' }, g);
+    el('path', Object.assign({ d, stroke: SOL_GREY, 'stroke-width': SOL_BW }, round), g);
+    el('circle', { cx: x, cy: ys, r: SOL_DR, fill: SOL_GREY }, g);
+    v.tap = el('path', Object.assign({ d, stroke: 'transparent', 'stroke-width': SOL_BW }, round), g);
+    v.tapDot = el('circle', { cx: x, cy: ys, r: SOL_DR, fill: 'transparent' }, g);
+    el('circle', { cx: x, cy: ys, r: SOL_DR, fill: 'url(#gDome)' }, g);
+  }
+  // its grounded terminal (X2, or X0): the Ground part, small, beside its lead, joined to it by a dashed line
+  if (!p.ug) { const gx = x + (p.ct ? 0 : w), mx = p.ct ? x - 30 : x + w + 36, my = y + XFM_TY + 20;
+    el('line', { x1: gx, y1: my, x2: mx + (p.ct ? 16 : -16), y2: my, stroke: GND_COL, 'stroke-width': 1.8, 'stroke-dasharray': '4 3' }, g);
+    gndMini(g, mx, my); }
   // (across two phases, the primary shades from H1's phase's colour into H2's along its turns: see paintXfm)
   const gid = 'xfg' + (++solMaskN), gr = el('linearGradient', { id: gid, gradientUnits: 'userSpaceOnUse', x1: x - w, y1: 0, x2: x + w, y2: 0 }, g);
   v.pri.grad = { id: gid, stops: [.12, .88].map(o => el('stop', { offset: o, 'stop-color': 'transparent' }, gr)) };
+  // (a centre-tapped secondary: from X1's black into X2's red, as a split-phase supply)
+  if (p.ct) { const id2 = 'xfs' + (++solMaskN), g2 = el('linearGradient', { id: id2, gradientUnits: 'userSpaceOnUse', x1: x - w, y1: 0, x2: x + w, y2: 0 }, g); [[.12, phColK(5)], [.88, phColK(6)]].forEach(([o, c]) => el('stop', { offset: o, 'stop-color': c }, g2)); v.secCol = `url(#${id2})`; }
   // the core: two raised steel bars, evenly spaced between the windings
   for (const dy of [-6.5, 6.5]) el('rect', { x: x - w - 6, y: y + dy - 2.5, width: 2 * w + 12, height: 5, rx: 2.5, fill: 'url(#gTerm)', filter: 'url(#fShadow)' }, g);
   // the terminals' names, on rounded squares beside the windings' ends
-  for (const [k, ky, s] of [[-1, -1, 'H1'], [1, -1, 'H2'], [-1, 1, 'X1'], [1, 1, 'X2']]) {
-    const tx = x + k * (w + 22), ty = y + ky * 33;
+  for (const [tx, ty, s] of [[x - w - 22, y - 33, 'H1'], [x + w + 22, y - 33, 'H2'], [x - w - 22, y + 33, 'X1'], [x + w + 22, y + 33, 'X2'], ...(p.ct ? [[x + 26, y + XFM_TY + 16, 'X0']] : [])]) {
     el('rect', { x: tx - 12, y: ty - 12, width: 24, height: 24, rx: 6, fill: '#1f1f1f', stroke: '#e2cc85', 'stroke-width': 1.2 }, g);
     el('text', { x: tx, y: ty + 4.3, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 700, fill: '#f2e6b8' }, g).textContent = s;
   }
@@ -553,7 +595,7 @@ function rdot(g, cx, cy, r) {
 const pwrEdge = p => p.t === 'dsc' ? DSC_COL : p.t === 'fus' ? FUS_COL : p.t === 'mst' ? coilColour(p.L) : OL_COL;
 /* The fuse of a single fuse, and of each pole of the three-pole fuses (Dallas's design): a contact's stems in from either
    side of a box BOX wide to a cartridge fuse, its body between two square metal end caps. The way through (stems and
-   body as one shape) is a relay's grey beneath, and over that the current's colour in two layers, each cut to length by
+   body as one shape) is a relay's gray beneath, and over that the current's colour in two layers, each cut to length by
    a clip, so the current can be seen to cross it (see paintFuse). Blown: a clean break slanting through its body, the
    ends either side scorched, and a red badge on the top right corner of its square (as it is seen, however it is
    turned: rot, quarter turns). */

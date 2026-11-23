@@ -40,7 +40,7 @@ function network() {
     }
   }
   for (const p of parts) {
-    if (isBox(p) || isPwr3(p) || p.t === 'mtr' || p.t === 'stand' || isMulti(p)) continue;   // (a stand-in: drawn, not run; supply boxes are not a way through: their connection points are L1 or L2, below; continuations: further down)
+    if (isBox(p) || isPwr3(p) || p.t === 'mtr' || p.t === 'stand' || isMulti(p) || isGnd(p)) continue;   // (a stand-in: drawn, not run; supply boxes are not a way through: their connection points are L1 or L2, below; continuations: further down)
     const [[ax, ay], [bx, by]] = terms(p);
     p._a = node(ax, ay, key(ax, ay)); p._b = node(bx, by, key(bx, by));
     // (a fault planted on a load, while running: open, no way through it electrically; shorted, its ends joined straight through
@@ -69,6 +69,7 @@ function network() {
   const xfmFeeds = [];
   for (const p of parts) if (p.t === 'xfm') {
     p._t = terms(p).map(([x, y]) => node(x, y, key(x, y)));
+    if (p.ct) continue;   // (a centre-tapped one feeds its own split-phase supply, not the control circuit: below)
     const f1 = node(p.x, p.y - 1, 'xf1-' + p.id), f2 = node(p.x, p.y + 1, 'xf2-' + p.id);
     edges.push({ a: L1, b: f1, w: 0, kind: 'w' }, { a: L2, b: f2, w: 0, kind: 'w' }); xfmFeeds.push([f1, 1], [f2, 0]);
     p._sw = p._sw || [{ t: 'xsw', id: 'xa' + p.id }, { t: 'xsw', id: 'xb' + p.id }];
@@ -123,11 +124,22 @@ function network() {
     const h = PH[p.L] ?? (PH[p.L] = node(-10 - phK(p.L), 0, 'PH' + p.L));
     p._t = terms(p).map(([x, y]) => { const i = node(x, y, key(x, y)); edges.push({ a: h, b: i, w: 0, kind: 'w' }); return i; });
   }
+  // a centre-tapped transformer's secondary: a split-phase supply of its own, X1, X2 and X0 (its middle) each a 'phase' (S1:,
+  // S2: and S0: with its id, see phK), joined to its terminal through a switch inside it, closed while its primary is fed
+  for (const p of parts) if (p.t === 'xfm' && p.ct) {
+    const ks = ['S1:', 'S2:', 'S0:'].map((s, i) => { const L = s + p.id; return PH[L] = node(-20 - i, 0, 'PH' + L); });
+    if (!p._sw || p._sw.length !== 3) p._sw = [0, 1, 2].map(i => ({ t: 'xsw', id: 'xc' + i + p.id }));
+    p._sw.forEach((k, i) => { Object.assign(k, { x: p, _a: ks[i], _b: p._t[[2, 3, 4][i]] }); edges.push({ a: k._a, b: k._b, w: 2, kind: 'part', part: k });
+      const je = { kind: 'part', a: k._a, b: k._b, len: 2, part: k, i: jedges.length }; jedges.push(je); for (const v of [je.a, je.b]) { if (!jadj.has(v)) jadj.set(v, []); jadj.get(v).push(je); } });   // (the runs of wire are listed already)
+  }
   // the supply boxes: every connection point of an L1 box is L1, of an L2 box L2
   for (const p of parts) if (isSrc(p)) {
     const one = p.t === 'l1';
     p._t = terms(p).map(([x, y]) => { const i = node(x, y, key(x, y)); edges.push({ a: one ? L1 : L2, b: i, w: 0, kind: 'w' }); feeds.push({ x, y, t: one ? 'L1' : 'L2', box: p }); feedV.set(i, one ? 1 : 0); return i; });
   }
+  // ground: each Ground part's end is earth (the meter holds it at 0 V; the circuit itself sends no current into it)
+  const GND = [];
+  for (const p of parts) if (isGnd(p)) { p._t = terms(p).map(([x, y]) => node(x, y, key(x, y))); GND.push(p._t[0]); }
   const adj = nodes.map(() => []);
   edges.forEach((e, i) => { e.i = i; adj[e.a].push(i); adj[e.b].push(i); });
   // wires that cross without joining: the horizontal one hops over the vertical one
@@ -136,7 +148,7 @@ function network() {
     const x = v.x1, y = h.y1;
     if (x > Math.min(h.x1, h.x2) && x < Math.max(h.x1, h.x2) && y > Math.min(v.y1, v.y2) && y < Math.max(v.y1, v.y2) && !shared.has(key(x, y))) hops.push([x, y]);
   }
-  return { nodes, edges, adj, subs, L1, L2, feeds, hops, jedges, jadj, feedV, PH };
+  return { nodes, edges, adj, subs, L1, L2, feeds, hops, jedges, jadj, feedV, PH, GND };
 }
 function components(net, ok) {
   const par = net.nodes.map((_, i) => i);
@@ -183,6 +195,7 @@ function wiringIssues(net) {
       else if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything');
       continue;
     }
+    if (isGnd(p)) { const k = phaseAt(net, f0, p._t[0]); if (!net.adj[p._t[0]].length) out.set(p.id, 'Not wired to anything'); else if (k > 0 && k < 4) out.set(p.id, `${phName(k)} is joined straight to ground`); else if (f0(p._t[0]) === k1) out.set(p.id, 'L1 is joined straight to ground'); continue; }
     if (isJmp(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); else if (!parts.some(q => q !== p && isJmp(q) && q.L === p.L)) out.set(p.id, `No other continuation ${p.L}`); continue; }
     const a = f(p._a), b = f(p._b);
     // (a transformer's primary, or a light, coil, solenoid or heater, across two phases or a phase and the neutral (Dallas, 22

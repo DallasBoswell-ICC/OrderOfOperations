@@ -22,12 +22,13 @@ function circuitData() {
   if (typeof scenSync === 'function') scenSync();
   const w = W_USER ? W : contentRight(), x = v => barsOn() && v === W ? w : v;   // (a length set by moving the bars is kept)
   return {
-    app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}), ...(barsOn() ? {} : { pw: 'boxes' }), ...(SRC_COL !== SRC_DEFAULT ? { sc: SRC_COL } : {}), ...(VSYS !== '480' ? { vs: VSYS } : {}), ...(PH_COL.join() !== VSYS_LIST[VSYS].col.join() ? { pc: PH_COL.map(c => c.slice(1)) } : {}),   // (the voltage system: none saved means 480Y/277, as before there was a choice)
+    app: APP_ID, v: 1, name: circuitName || '', w, ...(W_USER ? { fw: 1 } : {}), ...(barsOn() ? {} : { pw: 'boxes' }), ...(SRC_COL !== SRC_DEFAULT ? { sc: SRC_COL } : {}), ...(VSYS !== '480' ? { vs: VSYS } : {}), ...(TINT_OPS ? {} : { bt: 0 }), ...(PH_COL.join() !== VSYS_LIST[VSYS].col.join() ? { pc: PH_COL.map(c => c.slice(1)) } : {}),   // (the voltage system: none saved means 480Y/277, as before there was a choice)
     parts: parts.map(p => { if (p.t === 'stand') return ['stand', p.x, p.y, p.L || '', 0, 1, '', null, null, p.desc || '', { t: p.sym, r: p.srot || 0, o: p.st }];   // (a stand-in for a Print Builder part: what it stands for, kept whole)
       const a = [p.estop ? 'est' : p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if ((p.t === 'lsw' || flips(p) || isBrk(p)) && p.held) a.push(1); if (HILO(p.t) && p.low) a.push(1); if (turns7(p) && p.rot) a.push(p.rot); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
       if (p.t === 'sel') { while (a.length < 7) a.push(null); a.length = 7; a.push(selN(p), (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, (p.names || []).join('/'), p.pos || 0); }   // a selector switch: positions, closed-in mask, (no label), names, start
       if (p.lk || p.ls) { while (a.length < 12) a.push(null); a.push(p.lk ? p.lk[0] : 0, p.lk ? p.lk[1] : 0); if (p.ls) a.push(p.ls.join('')); }   // (its dashed link line, moved out of the way; the sides its ends join)
-      if (!turns7(p) && turns(p) && p.rot || p.fx) { while (a.length < 15) a.push(null); a.push({ ...(p.rot ? { r: p.rot } : {}), ...(p.fx ? { f: 1 } : {}) }); }   // (a two-ended part turned, or a toggle switch flipped: its 16th)
+      if (!turns7(p) && turns(p) && p.rot || p.fx) { while (a.length < 15) a.push(null); a.push({ ...(p.rot ? { r: p.rot } : {}), ...(p.fx ? { f: 1 } : {}) }); }
+      if (p.t === 'xfm' && (p.pr || p.ct || p.ug)) { while (a.length < 15) a.push(null); a.push({ ...(p.pr ? { pr: p.pr } : {}), ...(p.ct ? { ct: 1 } : {}), ...(p.ug ? { ug: 1 } : {}) }); }   // (a transformer: its primary's rating, a centre-tapped secondary, its secondary not grounded)   // (a two-ended part turned, or a toggle switch flipped: its 16th)
       return a; }),
     wires: wires.map(q => { const a = [x(q.x1), q.y1, x(q.x2), q.y2]; if (WIRE_FAULTS[q.fault]) a.push(q.fault); return a; }),   // (a fault planted on a wire: its 5th)
     // (faults planted on parts: [part, fault]; the work order for the student)
@@ -54,7 +55,7 @@ function readCircuit(d) {
     // (a stand-in for a Print Builder part Circuit Builder has none of: its symbol in a box, its terminals as the print had them)
     if (a[0] === 'stand') { const q = a[10] || {}, st = Array.isArray(q.o) ? q.o.slice(0, 12).filter(o => Array.isArray(o) && o.every(n => Number.isFinite(+n) && Math.abs(+n) <= 400)).map(o => [snap(+o[0]), snap(+o[1])]) : [];
       if (typeof q.t === 'string' && st.length) { const p = P('stand', snap(num(a[1])), snap(num(a[2])), { L: String(a[3] ?? '').slice(0, 12) }); p.sym = q.t.slice(0, 16); p.srot = [0, 90, 180, 270].includes(+q.r) ? +q.r : 0; p.st = st; p.desc = typeof a[9] === 'string' ? a[9].slice(0, 40) : ''; delete p.color; return p; } }
-    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'htr' ? 'htr' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'sp2', 'xov', 'dps', 'dpd', 'tps', 'cbk', 'cbd', 'cbt'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
+    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'htr' ? 'htr' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'gnd', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'sp2', 'xov', 'dps', 'dpd', 'tps', 'cbk', 'cbd', 'cbt'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
     const p = P(t, snap(num(a[1])), snap(num(a[2])), {   // (on the grid: a part saved off it, by an older version, could never be wired)
       L: ['dsc', 'fus', 'fu1', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'sp2', 'xov', 'dps', 'dpd', 'tps', 'cbk', 'cbd', 'cbt'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? (a[3] === 'N' ? 'N' : String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1)))) : t === 'sol' || t === 'htr' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'htr' ? HTR_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : t === 'lsw' ? LSW_COL : t === 'tsw' ? TSW_COL : t === 'psw' ? PSW_COL : t === 'fsw' ? FSW_COL : BTN_COL[L] || '#FF0032') });
     if (t === 'lsw') { p.nc = !!a[4]; if (a[7] === 1) p.held = true; }
@@ -70,11 +71,12 @@ function readCircuit(d) {
       p.pos = Math.max(0, Math.min(p.n - 1, Math.round(Number(a[11])) || 0));
     }
     if ((t === 'btn' || t === 'sel' || t === 'lamp') && a.length >= 14) { const dx = Math.round(Number(a[12])) || 0, dy = Math.round(Number(a[13])) || 0; if (dx || dy) p.lk = [Math.max(-5000, Math.min(5000, dx)), Math.max(-5000, Math.min(5000, dy))]; if (/^[tblr]{2}$/.test(a[14] || '')) p.ls = [...a[14]]; }
-    if (['l1', 'l2', 'ph', 'jmp', 'xfm', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'cbk', 'cbd', 'cbt'].includes(t)) delete p.color;
+    if (['l1', 'l2', 'ph', 'gnd', 'jmp', 'xfm', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'cbk', 'cbd', 'cbt'].includes(t)) delete p.color;
     if (t === 'olc') p.nc = true;
-    if (t === 'jmp' || t === 'l1' || t === 'l2' || t === 'ph' || t === 'fu1') { const r = Math.round(Number(a[7])) || 0; if (r >= 1 && r <= 3) p.rot = r; }   // (turned)   // (a supply box has no colour of its own)
+    if (t === 'jmp' || t === 'l1' || t === 'l2' || t === 'ph' || t === 'gnd' || t === 'fu1') { const r = Math.round(Number(a[7])) || 0; if (r >= 1 && r <= 3) p.rot = r; }   // (turned)   // (a supply box has no colour of its own)
     if (a[15] && typeof a[15] === 'object' && [1, 2, 3].includes(+a[15].r) && twoEnded(p)) p.rot = +a[15].r;   // (a two-ended part turned)
-    if (a[15] && typeof a[15] === 'object' && a[15].f && flips(p)) p.fx = true;   // (a toggle switch flipped left to right)
+    if (a[15] && typeof a[15] === 'object' && a[15].f && flips(p)) p.fx = true;
+    if (t === 'xfm' && a[15] && typeof a[15] === 'object') { if (XFM_PR.includes(String(a[15].pr))) p.pr = String(a[15].pr); if (a[15].ct) p.ct = true; if (a[15].ug) p.ug = true; }   // (a toggle switch flipped left to right)
     if (t === 'con') { p.nc = !!a[4]; delete p.color; if (a[7] === 1) p.inst = true; }   // (a timer's instantaneous contact)
     if (t === 'coil' && a[7] !== undefined) { const n = Math.round(Number(a[7])); if (n >= 1) { p.delay = Math.min(999, n); if (a[8] === 1) p.tof = true; } }   // a timer (a[8] = 1: off-delay)
     if ((t === 'btn' || t === 'coil') && typeof a[9] === 'string' && a[9].trim()) p.label = a[9].replace(/\s+/g, ' ').trim().slice(0, 8);   // (a label written on it)
@@ -112,11 +114,11 @@ function readCircuit(d) {
   const ffo = Array.isArray(d.ffo) && (d.ffo[0] || d.ffo[1]) ? { r: !!d.ffo[0], n: !!d.ffo[1] } : null;
   const pr = d.pr && typeof d.pr === 'object' && d.pr.pb && d.pr.pb.kind === 'o3-print' && typeof d.pr.fp === 'string' ? d.pr : null;
   const sp = Number.isFinite(+d.sp) && +d.sp >= 0.1 && +d.sp <= 300 ? +d.sp : null;
-  return { sp, pr, sn, si, swo, ffo, wo: swo ? swo[si] : typeof d.wo === 'string' ? d.wo.slice(0, 400) : '', w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', src: SRC_PAL.some(([, h]) => h === d.sc) ? d.sc : SRC_DEFAULT, vs: VSYS_LIST[d.vs] ? d.vs : '480', ph: Array.isArray(d.pc) && d.pc.length === 3 && d.pc.every(hex) ? d.pc.map(hex) : [...VSYS_LIST[VSYS_LIST[d.vs] ? d.vs : '480'].col], pv, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
+  return { sp, pr, sn, si, swo, ffo, wo: swo ? swo[si] : typeof d.wo === 'string' ? d.wo.slice(0, 400) : '', w, fixed: !!d.fw, power: d.pw === 'boxes' ? 'boxes' : 'bars', src: SRC_PAL.some(([, h]) => h === d.sc) ? d.sc : SRC_DEFAULT, vs: VSYS_LIST[d.vs] ? d.vs : '480', bt: d.bt !== 0, ph: Array.isArray(d.pc) && d.pc.length === 3 && d.pc.every(hex) ? d.pc.map(hex) : [...VSYS_LIST[VSYS_LIST[d.vs] ? d.vs : '480'].col], pv, parts: ps, wires: ws, name: typeof d.name === 'string' ? d.name.slice(0, 60) : '' };
 }
 function useCircuit(c, how) {
   snapshot();
-  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; VSYS = c.vs; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize(); sel = null;
+  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; VSYS = c.vs; TINT_OPS = c.bt; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize(); sel = null;
   fitView(); fit(true);
   say(how);
   if (editing) draw(); else { NET = network(); draw(); startRun(); afterRunStart(); }
@@ -225,7 +227,7 @@ function showLinkNote(c, n) {
   const list = (h, xs) => xs.length ? `<h3>${h} (${xs.length})</h3><ul>${xs.map(x => '<li>' + esc(x) + '</li>').join('')}</ul>` : '';
   document.getElementById('link-body').innerHTML = `<p>“${esc(c.name)}”: ${c.parts.length} parts and ${c.wires.length} wires, ${n.same ? 'exactly as it was before it went to Print Builder.' : 'built as a circuit you can run.'}</p>`
     + list('Changed to fit Circuit Builder', n.changed) + list('Left out, or missing on the print', n.left)
-    + (n.same ? '' : '<p class="hint" style="margin-top:8px">Check the timers’ times and the lights’ colours on each part’s tab before running it.</p>');
+    + (n.same ? '' : '<p class="hint" style="margin-top:8px">Check the timers’ times and the lights’ colors on each part’s tab before running it.</p>');
   document.getElementById('link-dlg').showModal();
 }
 // Export: a window with each other O³ program this circuit can open in
@@ -258,7 +260,7 @@ function scheduleAutosave() {
   autosaveTimer = setTimeout(() => { try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(circuitData())); } catch (_) {} }, 400);
 }
 function restoreAutosave() {
-  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; VSYS = c.vs; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize(); return true; }
+  try { const t = localStorage.getItem(AUTOSAVE_KEY); if (!t) return false; const c = readCircuit(JSON.parse(t)); PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; VSYS = c.vs; TINT_OPS = c.bt; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize(); return true; }
   catch (_) { return false; }
 }
 

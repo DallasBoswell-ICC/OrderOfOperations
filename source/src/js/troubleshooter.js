@@ -27,7 +27,7 @@ function tsShowRibbon() {
 // ---- what is kept between visits (in this browser): the assignment, the test log, the steps ticked off
 function tsSave() { try { localStorage.setItem(TS_KEY, JSON.stringify({ circuit: circuitData(), log: TS.log, steps: TS.steps, t0: TS.t0, showSteps: TS.showSteps, blown: TS_BLOWN, scen: TS.scen, repairs: TS.repairs, signoff: TS.signoff })); } catch (_) {} }
 function tsUse(c, msg, fresh) {
-  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; VSYS = c.vs; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize();
+  PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; VSYS = c.vs; TINT_OPS = c.bt; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize();
   if (fresh) { TS.log = []; TS.steps = []; TS.t0 = Date.now(); TS_BLOWN = {}; TS.scen = c.pick || null; TS.repairs = []; TS.signoff = null; }
   LOCKOUT = false; TS_PUSHED = {}; TSM.push = false; TSM.repair = null; tsCardOff(); TSM.red = TSM.black = null; TSM.next = 'red'; TSM.lastLog = ''; TSM.sig = '';
   if (editing) { fit(true); fitView(); setMode(true); } else { fit(true); fitView(); NET = network(); draw(); startRun(); afterRunStart(); }
@@ -136,7 +136,7 @@ function tsPick1(c) { TSM.next = c; TSM.key = ''; tsShowMeter(); tsSay(`${c === 
    that is for the instructor's report only, never shown to the student. A new part wears a NEW tag; a repaired wire,
    a spliced sleeve where it was cut in. Test the Repair: the student takes the lock off, runs the machine, and signs
    off on what they checked; whether it really is fixed is kept for the report, not told to them. */
-const tsRepairable = p => p && !['l1', 'l2', 'ph', 'jmp'].includes(p.t);
+const tsRepairable = p => p && !['l1', 'l2', 'ph', 'gnd', 'jmp'].includes(p.t);
 function tsRepairTool(k) {
   if (k && !LOCKOUT) { tsSay(`Lock out first: a ${k === 'part' ? 'part is only ever replaced' : 'wire is only ever repaired'} with the power off and locked out.`); return; }
   TSM.repair = TSM.repair === k ? null : k; if (TSM.repair) TSM.push = false;
