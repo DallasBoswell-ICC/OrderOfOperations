@@ -27,8 +27,10 @@ function circuitData() {
       const a = [p.estop ? 'est' : p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if ((p.t === 'lsw' || flips(p) || isBrk(p)) && p.held) a.push(1); if (HILO(p.t) && p.low) a.push(1); if (turns7(p) && p.rot) a.push(p.rot); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
       if (p.t === 'sel') { while (a.length < 7) a.push(null); a.length = 7; a.push(selN(p), (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, (p.names || []).join('/'), p.pos || 0); }   // a selector switch: positions, closed-in mask, (no label), names, start
       if (p.lk || p.ls) { while (a.length < 12) a.push(null); a.push(p.lk ? p.lk[0] : 0, p.lk ? p.lk[1] : 0); if (p.ls) a.push(p.ls.join('')); }   // (its dashed link line, moved out of the way; the sides its ends join)
-      if (!turns7(p) && turns(p) && p.rot || p.fx) { while (a.length < 15) a.push(null); a.push({ ...(p.rot ? { r: p.rot } : {}), ...(p.fx ? { f: 1 } : {}) }); }
-      if (p.t === 'xfm' && (p.pr || p.ct || p.ug)) { while (a.length < 15) a.push(null); a.push({ ...(p.pr ? { pr: p.pr } : {}), ...(p.ct ? { ct: 1 } : {}), ...(p.ug ? { ug: 1 } : {}) }); }   // (a transformer: its primary's rating, a centre-tapped secondary, its secondary not grounded)   // (a two-ended part turned, or a toggle switch flipped: its 16th)
+      // (its 16th: a two-ended part turned, or a toggle switch flipped; a transformer's primary rating, a center-tapped secondary,
+      // its secondary not grounded; a load's rated voltage, when not 120 V)
+      { const o = { ...(!turns7(p) && turns(p) && p.rot ? { r: p.rot } : {}), ...(p.fx ? { f: 1 } : {}), ...(p.t === 'xfm' && p.pr ? { pr: p.pr } : {}), ...(p.t === 'xfm' && p.ct ? { ct: 1 } : {}), ...(p.t === 'xfm' && p.s24 ? { s24: 1 } : {}), ...(p.t === 'xfm' && p.ug ? { ug: 1 } : {}), ...(p.rv && p.rv !== SUPPLY_V ? { rv: p.rv } : {}) };
+        if (Object.keys(o).length) { while (a.length < 15) a.push(null); a.push(o); } }
       return a; }),
     wires: wires.map(q => { const a = [x(q.x1), q.y1, x(q.x2), q.y2]; if (WIRE_FAULTS[q.fault]) a.push(q.fault); return a; }),   // (a fault planted on a wire: its 5th)
     // (faults planted on parts: [part, fault]; the work order for the student)
@@ -76,7 +78,8 @@ function readCircuit(d) {
     if (t === 'jmp' || t === 'l1' || t === 'l2' || t === 'ph' || t === 'gnd' || t === 'fu1') { const r = Math.round(Number(a[7])) || 0; if (r >= 1 && r <= 3) p.rot = r; }   // (turned)   // (a supply box has no colour of its own)
     if (a[15] && typeof a[15] === 'object' && [1, 2, 3].includes(+a[15].r) && twoEnded(p)) p.rot = +a[15].r;   // (a two-ended part turned)
     if (a[15] && typeof a[15] === 'object' && a[15].f && flips(p)) p.fx = true;
-    if (t === 'xfm' && a[15] && typeof a[15] === 'object') { if (XFM_PR.includes(String(a[15].pr))) p.pr = String(a[15].pr); if (a[15].ct) p.ct = true; if (a[15].ug) p.ug = true; }   // (a toggle switch flipped left to right)
+    if (t === 'xfm' && a[15] && typeof a[15] === 'object') { if (XFM_PR.includes(String(a[15].pr))) p.pr = String(a[15].pr); if (a[15].ct) p.ct = true; else if (a[15].s24) p.s24 = true; if (a[15].ug) p.ug = true; }
+    if (a[15] && typeof a[15] === 'object' && LOAD_RV.includes(+a[15].rv) && RATED(t)) p.rv = +a[15].rv;   // (a load's rated voltage)   // (a toggle switch flipped left to right)
     if (t === 'con') { p.nc = !!a[4]; delete p.color; if (a[7] === 1) p.inst = true; }   // (a timer's instantaneous contact)
     if (t === 'coil' && a[7] !== undefined) { const n = Math.round(Number(a[7])); if (n >= 1) { p.delay = Math.min(999, n); if (a[8] === 1) p.tof = true; } }   // a timer (a[8] = 1: off-delay)
     if ((t === 'btn' || t === 'coil') && typeof a[9] === 'string' && a[9].trim()) p.label = a[9].replace(/\s+/g, ' ').trim().slice(0, 8);   // (a label written on it)

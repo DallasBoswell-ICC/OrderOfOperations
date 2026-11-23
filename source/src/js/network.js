@@ -158,6 +158,15 @@ function components(net, ok) {
 }
 // build-mode check: with every button passing current, is each coil wired from L1 to L2? (A load in series with
 // others is fine, with a note of the voltage it gets: { note }.)
+// a load not on the voltage it's made for (Dallas, 23 Nov 2026): what it gets, what it's made for, and whether it'll burn out
+const voltNote = (p, v) => `On ${Math.round(v * 10) / 10} V, made for ${p.rv || SUPPLY_V} V` + (v > BURN_OVER * SUPPLY_V * ratedShare(p) + 1e-6 ? ': it will burn out' : '');
+// the control circuit's voltage while building: 120 V, or what its transformer gives as wired (its primary across the phases
+// it's on, against its rating)
+function ctrlVolts(net, f0) {
+  const p = parts.find(q => q.t === 'xfm' && !q.ct && q._a !== undefined); if (!p) return SUPPLY_V;
+  const a = phaseAt(net, f0, p._a), b = phaseAt(net, f0, p._b), across = a > 0 && b > 0 && a !== b ? phAcross(a, b) : SUPPLY_V, r = p.pr ? +p.pr : across;
+  return (p.s24 ? 24 : SUPPLY_V) * across / r;
+}
 function wiringIssues(net) {
   const f = components(net, e => e.kind === 'w' || isSw(e.part)), l1 = f(net.L1), l2 = f(net.L2), out = new Map();
   if (l1 === l2) out.set('short', true);
@@ -201,11 +210,12 @@ function wiringIssues(net) {
     // (a transformer's primary, or a light, coil, solenoid or heater, across two phases or a phase and the neutral (Dallas, 22
     // Nov 2026): fine; one not on the voltage it's made for gets a note)
     if (LOADT(p.t)) { const fv = V.find(fv => phaseFed(net, fv, p)); if (fv) { const v = phAcross(phaseAt(net, fv, p._a), phaseAt(net, fv, p._b));
-      if (p.t !== 'xfm' && Math.abs(v - SUPPLY_V * ratedShare(p)) > 2) out.set(p.id, { note: `On ${Math.round(v)} V` }); continue; } }
+      if (p.t !== 'xfm' && Math.abs(v - SUPPLY_V * ratedShare(p)) > 2) out.set(p.id, { note: voltNote(p, v) }); continue; } }
     if (LOADT(p.t)) {
       const sh = S ? S.share.get(p.id) || 0 : 1;
       if (sh < 1e-9) out.set(p.id, p.t === 'xfm' && (phaseAt(net, f0, p._a) || phaseAt(net, f0, p._b)) ? 'Not wired across two phases' : phaseAt(net, f0, p._a) > 0 || phaseAt(net, f0, p._b) > 0 ? 'Not wired across a phase and the neutral or another phase' : 'Not wired from L1 to L2');
-      else if (sh < 1 - 1e-6) out.set(p.id, { note: `In series: ${Math.round(sh * SUPPLY_V * 10) / 10} V` });
+      else { const v = sh * ctrlVolts(net, f0); if (RATED(p.t) && Math.abs(v - SUPPLY_V * ratedShare(p)) > 2 && (sh >= 1 - 1e-6 || p.rv || v > BURN_OVER * SUPPLY_V * ratedShare(p))) out.set(p.id, { note: (sh < 1 - 1e-6 ? 'In series: ' : '') + voltNote(p, v) });
+        else if (sh < 1 - 1e-6) out.set(p.id, { note: `In series: ${Math.round(sh * SUPPLY_V * 10) / 10} V` }); }
     }
     else if (net.adj[p._a].length < 2 || net.adj[p._b].length < 2) out.set(p.id, 'An end is not connected');
   }

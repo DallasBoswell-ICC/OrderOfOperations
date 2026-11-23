@@ -431,6 +431,29 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     await page.evaluate(() => { localStorage.clear(); });
     return out;
   });
+  await check('Stage 3 (Dallas, 23 Nov 2026): a coil that has burned out reads open on the meter, locked out, stays burned out after a reload, and Replace Part brings it back', async page => {
+    const out = [];
+    await page.evaluate(() => { localStorage.clear(); }); await page.reload(); await page.waitForTimeout(900);
+    await page.click('#ts-lock'); await page.waitForTimeout(300);
+    const om = () => page.evaluate(() => { const p = parts.find(q => q.t === 'coil'); return tsOhms(p._a, p._b); });
+    await page.evaluate(() => { delete parts.find(q => q.t === 'coil').fault; NET = network(); tsSave(); });
+    const before = await om();
+    await page.evaluate(() => { const p = parts.find(q => q.t === 'coil'); BLOWN[p.id] = { t: simT }; TS_BLOWN[p.id] = 1; tsSave(); });
+    const after = await om();
+    if (!(after > before * 50)) out.push('ohms ' + before + ' then ' + after);
+    await page.reload(); await page.waitForTimeout(1200);
+    const rl = await page.evaluate(() => { const p = parts.find(q => q.t === 'coil'); return [!!TS_BLOWN[p.id], Object.keys(TS_BLOWN).length, !!p.fault].join(); });
+    if (rl !== 'true,1,false') out.push('after a reload: ' + rl);
+    if (!await page.evaluate(() => LOCKOUT)) await page.click('#ts-lock'), await page.waitForTimeout(300);
+    await page.click('#ts-rep');
+    const c = await page.evaluate(() => { const p = parts.find(q => q.t === 'coil'); const r = document.querySelector('#svg [data-part="' + p.id + '"]').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
+    await page.mouse.click(...c); await page.waitForTimeout(150); await page.click('.ts-card-go'); await page.waitForTimeout(200);
+    const r = await page.evaluate(() => { const p = parts.find(q => q.t === 'coil'); return [!!BLOWN[p.id], !!TS_BLOWN[p.id], TS.repairs.map(x => x.needed).join()].join(); });
+    if (r !== 'false,false,true') out.push('after Replace Part: ' + r);
+    if (!(await om() < before * 2)) out.push('still reads open after Replace Part');
+    await page.evaluate(() => { localStorage.clear(); });
+    return out;
+  });
   await check('A whole machine (the drill station, 375 parts): the meter reads volts and ohms at once', async page => {
     const out = [], json = require('fs').readFileSync(require('path').join(__dirname, 'fixtures', 'drill-station.json'), 'utf8');
     await page.evaluate(j => useCircuit(readCircuit(JSON.parse(j)), ''), json);

@@ -25,7 +25,7 @@ function tsShowRibbon() {
 }
 
 // ---- what is kept between visits (in this browser): the assignment, the test log, the steps ticked off
-function tsSave() { try { localStorage.setItem(TS_KEY, JSON.stringify({ circuit: circuitData(), log: TS.log, steps: TS.steps, t0: TS.t0, showSteps: TS.showSteps, blown: TS_BLOWN, scen: TS.scen, repairs: TS.repairs, signoff: TS.signoff })); } catch (_) {} }
+function tsSave() { try { localStorage.setItem(TS_KEY, JSON.stringify({ circuit: circuitData(), log: TS.log, steps: TS.steps, t0: TS.t0, showSteps: TS.showSteps, blown: Object.keys(TS_BLOWN).map(id => parts.findIndex(p => String(p.id) === id)).filter(i => i >= 0), scen: TS.scen, repairs: TS.repairs, signoff: TS.signoff })); } catch (_) {} }
 function tsUse(c, msg, fresh) {
   PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; VSYS = c.vs; TINT_OPS = c.bt; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize();
   if (fresh) { TS.log = []; TS.steps = []; TS.t0 = Date.now(); TS_BLOWN = {}; TS.scen = c.pick || null; TS.repairs = []; TS.signoff = null; }
@@ -564,7 +564,7 @@ function tsInit() {
   let c = null; if (st && st.circuit) try { c = readCircuit(st.circuit); } catch (_) {}
   if (c) {
     TS = { log: Array.isArray(st.log) ? st.log : [], steps: Array.isArray(st.steps) ? st.steps : [], t0: +st.t0 || Date.now(), showSteps: st.showSteps !== false, scen: st.scen && typeof st.scen === 'object' ? st.scen : null, repairs: Array.isArray(st.repairs) ? st.repairs : [], signoff: st.signoff && typeof st.signoff === 'object' ? st.signoff : null };
-    TS_BLOWN = st.blown && typeof st.blown === 'object' ? st.blown : {};
+    TS_BLOWN = {}; if (Array.isArray(st.blown)) for (const i of st.blown) { const q = c.parts[i]; if (q) TS_BLOWN[q.id] = 1; }   // (by place in the list: ids are given afresh when a circuit is read)
     tsUse(c, '', false);
   } else tsUse(tsSample(), '', true);
   // the keys on the buttons' tips (F1 lists them all)

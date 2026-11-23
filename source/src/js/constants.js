@@ -149,6 +149,12 @@ const isGnd = p => p.t === 'gnd', GND_COL = '#3FBF5F';
    primary on 208 V gives 52 V), or 120/240 V centre-tapped (p.ct: X1, X0 and X2, X0 the middle); its secondary grounded,
    X2 (or X0), unless p.ug. Its secondary is isolated from its primary. */
 const XFM_PR = ['480', '240', '208', '120'];
+/* A load's rated voltage (Dallas, 23 Nov 2026): a coil, pilot light, solenoid or heater is made for 24, 120, 208, 240,
+   277 or 480 V (p.rv; none: 120). A coil or solenoid pulls in at 85% of it and, once in, holds in down to 60%; well over
+   it (more than 110%) it burns out after a few seconds (open, until Reset or Replace Part). A tag under the part shows it
+   when it isn't 120 V. A transformer's secondary can also be 24 V (p.s24). */
+const LOAD_RV = [24, 120, 208, 240, 277, 480], RATED = t => t === 'coil' || t === 'lamp' || t === 'sol' || t === 'htr';
+const DROP_OUT = .6, BURN_OVER = 1.1, BURN_TIME = 3;
 const twoEnded = p => !isBox(p) && !isPwr3(p) && p.t !== 'xfm' && p.t !== 'mtr' && p.t !== 'stand' && p.t !== 'gnd' && !isMulti(p);
 const flips = p => p.t === 'tgl' || isTglN(p);
 const isBrk = p => p.t === 'cbk' || p.t === 'cbd' || p.t === 'cbt';   // (a circuit breaker: single, DPST or 3PST)

@@ -51,7 +51,7 @@ function startRun() {
   if (LOCKOUT) for (const p of parts) if (p.t === 'dsc') DSC[p.id] = { t: -1e9 };   // (locked out: every disconnect open)
   if (TS_MODE) for (const id in TS_BLOWN) BLOWN[id] = { t: -1e9 };   // (Troubleshooter: a fuse that has blown stays blown, through a reset or a lock out, till it is replaced)
   tl = NET.nodes.map(() => [[-1e9, null]]);
-  for (const p of parts) { delete p._chg; delete p._lead; delete p._sh; delete p._lv; delete p._ph; delete p._pf; }
+  for (const p of parts) { delete p._chg; delete p._lead; delete p._sh; delete p._lv; delete p._ph; delete p._pf; delete p._ovT; }
   // which way each button and coil is passed through (as if every button were passing current); worked out on the
   // circuit as it should be when faults are planted (a dead short would upset the voltages these come from, and turn
   // parts round: the junctions are the same, as a fault only takes ways through away or adds them)
@@ -425,8 +425,12 @@ function updateCoils(t) {
     // (across two phases, or a phase and the neutral: its share of the voltage it's made for, from the voltage system)
     const pf = phFedAt(p, t); if (pf) p._pf = true; else if (p._pf && !coilOn[p.id]) delete p._pf;
     if (pf) { cond = true; sh = p.t === 'xfm' ? 1 : phAcross(phaseOfAt(p._a, t), phaseOfAt(p._b, t)) / SUPPLY_V; p._sh = sh; p._lv = [1, 0]; }
-    if (faultOf(p) === 'open') cond = false;   // (an open coil or light: no current through it, whatever reaches it)
-    const pull = p.t === 'lamp' || p.t === 'xfm' || sh >= PULL_IN * ratedShare(p) - 1e-9;   // (a light lights, and a transformer works, on whatever it gets)
+    if (faultOf(p) === 'open' || (RATED(p.t) && BLOWN[p.id])) cond = false;   // (an open coil or light, or one burned out: no current through it, whatever reaches it)
+    // (a coil or solenoid pulls in at 85% of the voltage it's made for, and once in holds in down to 60% (Dallas, 23 Nov 2026))
+    const pull = p.t === 'lamp' || p.t === 'xfm' || p.t === 'htr' || sh >= (coilOn[p.id] ? DROP_OUT : PULL_IN) * ratedShare(p) - 1e-9;   // (a light lights, a heater heats, and a transformer works, on whatever it gets)
+    // (well over the voltage it's made for, it burns out after a few seconds: open, until Reset or Replace Part)
+    if (RATED(p.t) && cond && sh > BURN_OVER * ratedShare(p) + 1e-9) { if (p._ovT == null) { const t0 = p._ovT = t; schedule(t + BURN_TIME, () => { if (p._ovT === t0 && !BLOWN[p.id]) { BLOWN[p.id] = { t: evT }; delete p._ovT; updateCoils(evT); } }); } }
+    else delete p._ovT;
     if (cond && !pf && !COND[p.id] && pull && p.t === 'coil' && wouldCutOff(p, f)) cond = false;
     const want = cond && pull, wasC = !!COND[p.id];
     let atOnce = false; const wasOn = !!coilOn[p.id];
@@ -696,7 +700,7 @@ function xfmPri(p, t) {
   return coilOn[p.id] ? [SUPPLY_V, 0] : null;
 }
 function xfmSec(p, t) {
-  const v = xfmPri(p, t), nom = p.ct ? 2 * SUPPLY_V : SUPPLY_V; if (!v) return { mag: 0, ang: 0 };
+  const v = xfmPri(p, t), nom = p.ct ? 2 * SUPPLY_V : p.s24 ? 24 : SUPPLY_V; if (!v) return { mag: 0, ang: 0 };
   const m = Math.hypot(v[0], v[1]), r = p.pr ? +p.pr : m;
   return { mag: r > 0 ? nom * m / r : 0, ang: Math.atan2(v[1], v[0]) };
 }

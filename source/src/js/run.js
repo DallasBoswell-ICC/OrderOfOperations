@@ -59,6 +59,7 @@ function paintView(V) {
   // parts: each one is only touched when how it looks has changed (redrawing a part, with its shadow, is costly)
   for (const p of parts) {
     const v = V.parts.get(p.id); if (!v || p.t === 'stand') continue;
+    if (v.burn) { const b = BLOWN[p.id] ? 'inline' : 'none'; if (v.burn.getAttribute('display') !== b) v.burn.setAttribute('display', b); }   // (burned out)
     if (p.t === 'xfm') { paintXfm(p, v); continue; }
     if (isPwr3(p)) { paintPwr(p, v); continue; }
     if (p.t === 'mtr') { paintMtr(p, v); continue; }
@@ -161,7 +162,7 @@ function paintSol(p, v) {
   const show = !!coilOn[p.id] || !COND[p.id], c = e => show && e && e.col ? v.col : null;
   const cur = i >= 0 ? evs[i] : null, now = c(cur), prev = i > 0 ? c(evs[i - 1]) : null;
   const f = cur ? clamp01((simT - at(cur)) * V / BODYH(p.t)) : 0;
-  if (v.glow) { const o = coilOn[p.id] ? '.9' : '0'; if (v.glow.style.opacity !== o) v.glow.style.opacity = o; }   // (a heating element glows while it heats)
+  if (v.glow) { const o = coilOn[p.id] ? (.9 * Math.min(1, (p._sh ?? 1) / ratedShare(p)) ** 2).toFixed(3) : '0'; if (v.glow.style.opacity !== o) v.glow.style.opacity = o; }   // (a heating element glows while it heats)
   const k = `${S}|${f.toFixed(3)}|${now}|${prev}`;
   if (k === v.k) return; v.k = k;
   const htr = p.t === 'htr', LEN = htr ? HTR_LEN : SOL_LEN, d = (htr ? HTR_D : SOL_D)[S === 'A' ? 0 : 1], n = f * LEN;

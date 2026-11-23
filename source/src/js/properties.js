@@ -46,6 +46,7 @@ function renderProps() {
   // (an emergency stop is always normally closed, maintained, red: none of those to choose)
   for (const e of document.querySelectorAll('#props-btn .notestop')) e.hidden = !!(p && p.estop);
   document.getElementById('props-coil').hidden = !(p && p.t === 'coil');
+  document.getElementById('props-rv').hidden = !(p && RATED(p.t)); if (p && RATED(p.t)) document.getElementById('rv-sel').value = String(p.rv || SUPPLY_V);   // (its rated voltage)
   document.getElementById('props-lamp').hidden = !(p && p.t === 'lamp');
   if (p && p.t === 'lamp') {
     // a light of its own, or built into one of the pushbuttons (it then lights that button up, in the button's colour)
@@ -149,7 +150,7 @@ function renderProps() {
     ns.innerHTML = '';
     for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n))) ns.add(new Option('T' + n, String(n), false, String(n) === p.L));
     // its primary's rating, its secondary, and whether that's grounded (Dallas, 22 Nov 2026)
-    document.getElementById('x-pr').value = p.pr || ''; document.getElementById('x-sec').value = p.ct ? 'ct' : '';
+    document.getElementById('x-pr').value = p.pr || ''; document.getElementById('x-sec').value = p.ct ? 'ct' : p.s24 ? '24' : '';
     document.getElementById('x-gnd').setAttribute('aria-pressed', String(!p.ug)); document.getElementById('x-gnd-n').textContent = p.ct ? 'X0 Grounded' : 'X2 Grounded';
   }
   document.getElementById('props-sol').hidden = !(p && p.t === 'sol');
@@ -375,8 +376,9 @@ document.getElementById('j-num').addEventListener('change', e => { if (selGroup(
 // turn a continuation a quarter turn clockwise (the R key, or Rotate on its tab)
 function rotateJmp(p) { snapshot(); p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; normalize(); draw(); }
 document.getElementById('j-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(isJmp)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
+document.getElementById('rv-sel').addEventListener('change', e => { const ps = selGroup().filter(q => RATED(q.t)); if (!ps.length) return; snapshot(); const v = +e.target.value; for (const q of ps) { if (v === SUPPLY_V) delete q.rv; else q.rv = v; } draw(); });
 document.getElementById('x-pr').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'xfm') return; snapshot(); if (e.target.value) p.pr = e.target.value; else delete p.pr; draw(); });
-document.getElementById('x-sec').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'xfm') return; snapshot(); if (e.target.value) p.ct = true; else delete p.ct; delete p._sw; normalize(); draw(); });
+document.getElementById('x-sec').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'xfm') return; snapshot(); delete p.ct; delete p.s24; if (e.target.value === 'ct') p.ct = true; else if (e.target.value === '24') p.s24 = true; delete p._sw; normalize(); draw(); });
 document.getElementById('x-gnd').addEventListener('click', () => { const p = selPart(); if (!p || p.t !== 'xfm' || !editing) return; snapshot(); if (p.ug) delete p.ug; else p.ug = true; draw(); });
 document.getElementById('x-num').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'xfm') return; snapshot(); p.L = e.target.value; draw(); });
 // a phase box: which phase, and each phase's colour (shared by all of that phase's boxes and wires)

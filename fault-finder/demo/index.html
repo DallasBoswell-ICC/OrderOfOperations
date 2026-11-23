@@ -834,7 +834,7 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
       </div>
       <div class="props" id="props-xfm" hidden>
         <div class="tgroup"><span class="label">Number</span><select id="x-num" aria-label="Transformer number"></select></div>
-        <div class="tgroup"><span class="label">Primary Rating</span><select id="x-pr" style="min-width: 168px" aria-label="Primary rating" data-tip="The voltage its primary is made for: given that, its secondary gives its full voltage; given more or less, its secondary gives more or less in proportion. Matches Its Supply: always made for what it is wired across."><option value="">Matches Its Supply</option><option value="480">480 V</option><option value="240">240 V</option><option value="208">208 V</option><option value="120">120 V</option></select></div><div class="tgroup"><span class="label">Secondary</span><select id="x-sec" style="min-width: 208px" aria-label="Secondary" data-tip="120 V: X1 and X2 power the control circuit, X1 like L1 and X2 like L2. 120/240 V Center-Tapped: X1, X0 and X2 are a split-phase supply of their own, 120 V from X1 or X2 to X0, 240 V across X1 and X2."><option value="">120 V</option><option value="ct">120/240 V Center-Tapped</option></select></div><div class="tgroup"><button type="button" class="tool small vs-b" id="x-gnd" aria-pressed="true" data-tip="Its secondary grounded at X2 (at X0 on a center-tapped one), as a control transformer's usually is. Untick it to leave the secondary floating: isolated from the primary and from ground, it can only be measured against itself."><span class="vs-box" aria-hidden="true"></span><span id="x-gnd-n">X2 Grounded</span></button></div>
+        <div class="tgroup"><span class="label">Primary Rating</span><select id="x-pr" style="min-width: 168px" aria-label="Primary rating" data-tip="The voltage its primary is made for: given that, its secondary gives its full voltage; given more or less, its secondary gives more or less in proportion. Matches Its Supply: always made for what it is wired across."><option value="">Matches Its Supply</option><option value="480">480 V</option><option value="240">240 V</option><option value="208">208 V</option><option value="120">120 V</option></select></div><div class="tgroup"><span class="label">Secondary</span><select id="x-sec" style="min-width: 208px" aria-label="Secondary" data-tip="120 V: X1 and X2 power the control circuit, X1 like L1 and X2 like L2. 120/240 V Center-Tapped: X1, X0 and X2 are a split-phase supply of their own, 120 V from X1 or X2 to X0, 240 V across X1 and X2."><option value="24">24 V</option><option value="">120 V</option><option value="ct">120/240 V Center-Tapped</option></select></div><div class="tgroup"><button type="button" class="tool small vs-b" id="x-gnd" aria-pressed="true" data-tip="Its secondary grounded at X2 (at X0 on a center-tapped one), as a control transformer's usually is. Untick it to leave the secondary floating: isolated from the primary and from ground, it can only be measured against itself."><span class="vs-box" aria-hidden="true"></span><span id="x-gnd-n">X2 Grounded</span></button></div>
       </div>
       <div class="props" id="props-jmp" hidden>
         <div class="tgroup"><span class="label">Number</span><select id="j-num" aria-label="Continuation number" data-tip="Every continuation with the same number is joined to this one: current goes in at one and on out of the others"></select></div>
@@ -847,6 +847,9 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
       <div class="props" id="props-htr" hidden>
         <div class="tgroup"><span class="label">Number</span><select id="h-num" aria-label="Heating element number"></select></div>
         <div class="tgroup"><span class="label">Color</span><div class="swatches" id="h-colour" role="radiogroup" aria-label="Heating element color"></div></div>
+      </div>
+      <div class="props" id="props-rv" hidden>
+        <div class="tgroup"><span class="label">Rated Voltage</span><select id="rv-sel" aria-label="Rated voltage" data-tip="The voltage it is made for. A coil or solenoid pulls in at 85% of it and holds in down to 60%; more than 110% of it burns it out after a few seconds. Shown under the part when it isn't 120 V."><option value="24">24 V</option><option value="120">120 V</option><option value="208">208 V</option><option value="240">240 V</option><option value="277">277 V</option><option value="480">480 V</option></select></div>
       </div>
       <div class="props" id="props-drive" hidden>
         <div class="tgroup"><span class="label" id="d-pv-label">Drives</span><select id="d-pv" aria-label="The process value it drives"></select></div>
@@ -2394,6 +2397,12 @@ const isGnd = p => p.t === 'gnd', GND_COL = '#3FBF5F';
    primary on 208 V gives 52 V), or 120/240 V centre-tapped (p.ct: X1, X0 and X2, X0 the middle); its secondary grounded,
    X2 (or X0), unless p.ug. Its secondary is isolated from its primary. */
 const XFM_PR = ['480', '240', '208', '120'];
+/* A load's rated voltage (Dallas, 23 Nov 2026): a coil, pilot light, solenoid or heater is made for 24, 120, 208, 240,
+   277 or 480 V (p.rv; none: 120). A coil or solenoid pulls in at 85% of it and, once in, holds in down to 60%; well over
+   it (more than 110%) it burns out after a few seconds (open, until Reset or Replace Part). A tag under the part shows it
+   when it isn't 120 V. A transformer's secondary can also be 24 V (p.s24). */
+const LOAD_RV = [24, 120, 208, 240, 277, 480], RATED = t => t === 'coil' || t === 'lamp' || t === 'sol' || t === 'htr';
+const DROP_OUT = .6, BURN_OVER = 1.1, BURN_TIME = 3;
 const twoEnded = p => !isBox(p) && !isPwr3(p) && p.t !== 'xfm' && p.t !== 'mtr' && p.t !== 'stand' && p.t !== 'gnd' && !isMulti(p);
 const flips = p => p.t === 'tgl' || isTglN(p);
 const isBrk = p => p.t === 'cbk' || p.t === 'cbd' || p.t === 'cbt';   // (a circuit breaker: single, DPST or 3PST)
@@ -2814,6 +2823,15 @@ function components(net, ok) {
 }
 // build-mode check: with every button passing current, is each coil wired from L1 to L2? (A load in series with
 // others is fine, with a note of the voltage it gets: { note }.)
+// a load not on the voltage it's made for (Dallas, 23 Nov 2026): what it gets, what it's made for, and whether it'll burn out
+const voltNote = (p, v) => `On ${Math.round(v * 10) / 10} V, made for ${p.rv || SUPPLY_V} V` + (v > BURN_OVER * SUPPLY_V * ratedShare(p) + 1e-6 ? ': it will burn out' : '');
+// the control circuit's voltage while building: 120 V, or what its transformer gives as wired (its primary across the phases
+// it's on, against its rating)
+function ctrlVolts(net, f0) {
+  const p = parts.find(q => q.t === 'xfm' && !q.ct && q._a !== undefined); if (!p) return SUPPLY_V;
+  const a = phaseAt(net, f0, p._a), b = phaseAt(net, f0, p._b), across = a > 0 && b > 0 && a !== b ? phAcross(a, b) : SUPPLY_V, r = p.pr ? +p.pr : across;
+  return (p.s24 ? 24 : SUPPLY_V) * across / r;
+}
 function wiringIssues(net) {
   const f = components(net, e => e.kind === 'w' || isSw(e.part)), l1 = f(net.L1), l2 = f(net.L2), out = new Map();
   if (l1 === l2) out.set('short', true);
@@ -2857,11 +2875,12 @@ function wiringIssues(net) {
     // (a transformer's primary, or a light, coil, solenoid or heater, across two phases or a phase and the neutral (Dallas, 22
     // Nov 2026): fine; one not on the voltage it's made for gets a note)
     if (LOADT(p.t)) { const fv = V.find(fv => phaseFed(net, fv, p)); if (fv) { const v = phAcross(phaseAt(net, fv, p._a), phaseAt(net, fv, p._b));
-      if (p.t !== 'xfm' && Math.abs(v - SUPPLY_V * ratedShare(p)) > 2) out.set(p.id, { note: `On ${Math.round(v)} V` }); continue; } }
+      if (p.t !== 'xfm' && Math.abs(v - SUPPLY_V * ratedShare(p)) > 2) out.set(p.id, { note: voltNote(p, v) }); continue; } }
     if (LOADT(p.t)) {
       const sh = S ? S.share.get(p.id) || 0 : 1;
       if (sh < 1e-9) out.set(p.id, p.t === 'xfm' && (phaseAt(net, f0, p._a) || phaseAt(net, f0, p._b)) ? 'Not wired across two phases' : phaseAt(net, f0, p._a) > 0 || phaseAt(net, f0, p._b) > 0 ? 'Not wired across a phase and the neutral or another phase' : 'Not wired from L1 to L2');
-      else if (sh < 1 - 1e-6) out.set(p.id, { note: `In series: ${Math.round(sh * SUPPLY_V * 10) / 10} V` });
+      else { const v = sh * ctrlVolts(net, f0); if (RATED(p.t) && Math.abs(v - SUPPLY_V * ratedShare(p)) > 2 && (sh >= 1 - 1e-6 || p.rv || v > BURN_OVER * SUPPLY_V * ratedShare(p))) out.set(p.id, { note: (sh < 1 - 1e-6 ? 'In series: ' : '') + voltNote(p, v) });
+        else if (sh < 1 - 1e-6) out.set(p.id, { note: `In series: ${Math.round(sh * SUPPLY_V * 10) / 10} V` }); }
     }
     else if (net.adj[p._a].length < 2 || net.adj[p._b].length < 2) out.set(p.id, 'An end is not connected');
   }
@@ -3278,7 +3297,7 @@ function startRun() {
   if (LOCKOUT) for (const p of parts) if (p.t === 'dsc') DSC[p.id] = { t: -1e9 };   // (locked out: every disconnect open)
   if (TS_MODE) for (const id in TS_BLOWN) BLOWN[id] = { t: -1e9 };   // (Troubleshooter: a fuse that has blown stays blown, through a reset or a lock out, till it is replaced)
   tl = NET.nodes.map(() => [[-1e9, null]]);
-  for (const p of parts) { delete p._chg; delete p._lead; delete p._sh; delete p._lv; delete p._ph; delete p._pf; }
+  for (const p of parts) { delete p._chg; delete p._lead; delete p._sh; delete p._lv; delete p._ph; delete p._pf; delete p._ovT; }
   // which way each button and coil is passed through (as if every button were passing current); worked out on the
   // circuit as it should be when faults are planted (a dead short would upset the voltages these come from, and turn
   // parts round: the junctions are the same, as a fault only takes ways through away or adds them)
@@ -3652,8 +3671,12 @@ function updateCoils(t) {
     // (across two phases, or a phase and the neutral: its share of the voltage it's made for, from the voltage system)
     const pf = phFedAt(p, t); if (pf) p._pf = true; else if (p._pf && !coilOn[p.id]) delete p._pf;
     if (pf) { cond = true; sh = p.t === 'xfm' ? 1 : phAcross(phaseOfAt(p._a, t), phaseOfAt(p._b, t)) / SUPPLY_V; p._sh = sh; p._lv = [1, 0]; }
-    if (faultOf(p) === 'open') cond = false;   // (an open coil or light: no current through it, whatever reaches it)
-    const pull = p.t === 'lamp' || p.t === 'xfm' || sh >= PULL_IN * ratedShare(p) - 1e-9;   // (a light lights, and a transformer works, on whatever it gets)
+    if (faultOf(p) === 'open' || (RATED(p.t) && BLOWN[p.id])) cond = false;   // (an open coil or light, or one burned out: no current through it, whatever reaches it)
+    // (a coil or solenoid pulls in at 85% of the voltage it's made for, and once in holds in down to 60% (Dallas, 23 Nov 2026))
+    const pull = p.t === 'lamp' || p.t === 'xfm' || p.t === 'htr' || sh >= (coilOn[p.id] ? DROP_OUT : PULL_IN) * ratedShare(p) - 1e-9;   // (a light lights, a heater heats, and a transformer works, on whatever it gets)
+    // (well over the voltage it's made for, it burns out after a few seconds: open, until Reset or Replace Part)
+    if (RATED(p.t) && cond && sh > BURN_OVER * ratedShare(p) + 1e-9) { if (p._ovT == null) { const t0 = p._ovT = t; schedule(t + BURN_TIME, () => { if (p._ovT === t0 && !BLOWN[p.id]) { BLOWN[p.id] = { t: evT }; delete p._ovT; updateCoils(evT); } }); } }
+    else delete p._ovT;
     if (cond && !pf && !COND[p.id] && pull && p.t === 'coil' && wouldCutOff(p, f)) cond = false;
     const want = cond && pull, wasC = !!COND[p.id];
     let atOnce = false; const wasOn = !!coilOn[p.id];
@@ -3923,7 +3946,7 @@ function xfmPri(p, t) {
   return coilOn[p.id] ? [SUPPLY_V, 0] : null;
 }
 function xfmSec(p, t) {
-  const v = xfmPri(p, t), nom = p.ct ? 2 * SUPPLY_V : SUPPLY_V; if (!v) return { mag: 0, ang: 0 };
+  const v = xfmPri(p, t), nom = p.ct ? 2 * SUPPLY_V : p.s24 ? 24 : SUPPLY_V; if (!v) return { mag: 0, ang: 0 };
   const m = Math.hypot(v[0], v[1]), r = p.pr ? +p.pr : m;
   return { mag: r > 0 ? nom * m / r : 0, ang: Math.atan2(v[1], v[0]) };
 }
@@ -4114,7 +4137,7 @@ const lampsOf = L => parts.filter(q => q.t === 'lamp' && q.L && q.L === L);
 const lampColour = p => p.L ? (parts.find(q => q.t === 'btn' && q.L === p.L) || p).color || '#00B050' : p.color || '#00B050';
 // how lit a light is right now, 0 to 1 (it comes on and goes off over a moment, as a filament does)
 const LAMP_FADE = 0.2;
-const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
+const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, (q._sh ?? 1) / ratedShare(q)) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
 const capTop = p => p.t === 'stand' ? standBox(p).hh + 11 : (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'flt' ? FLT_UP + 2 : p.t === 'tgl' ? LSW_TOP + 2 : isTglN(p) || isBrk(p) ? bodyUp(p) + 2 : p.t === 'dsc' ? PWR_H / 2 + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
@@ -4386,6 +4409,19 @@ function drawPart(p, g, x, y, chan, onStation) {
     el('circle', { cx: x, cy: y, r: COIL_IN / 2, fill: 'url(#gDome)' }, g);
     if (!isTimer(p)) { v.text = el('text', { x, y: y + 7.5, 'text-anchor': 'middle', class: 'devtext', 'font-size': 21, fill: LIGHT_TEXT }, g); capText(v.text, nameOf(p), 52, 21, y + 7.5); }
     else drawTimer(p, g, x, y, v);
+  }
+  // a load's rated voltage, when it isn't 120 V: a tag under it (beside it, turned upright); and, burned out by too much
+  // voltage, its middle dark and a red badge on its top right, as a blown fuse's (Dallas, 23 Nov 2026)
+  if (RATED(p.t) && !onStation) {
+    if (p.rv && p.rv !== SUPPLY_V) { const up = (p.rot || 0) % 2, tx = up ? x + COIL / 2 + 22 : x, ty = up ? y : y + COIL / 2 + 15;
+      el('rect', { x: tx - 18, y: ty - 9, width: 36, height: 18, rx: 5, fill: '#1f1f1f', stroke: p.color || '#c8c8c8', 'stroke-width': 1.2 }, g);
+      el('text', { x: tx, y: ty + 3.6, 'text-anchor': 'middle', 'font-size': 9.5, 'font-weight': 800, fill: '#fff', 'pointer-events': 'none' }, g).textContent = p.rv + ' V'; }
+    v.burn = el('g', { display: 'none' }, g);
+    el('circle', { cx: x, cy: y, r: COIL_IN / 2 - 1, fill: '#2a2522', opacity: .92 }, v.burn);
+    const bx = x + COIL / 2 * .72, by = y - COIL / 2 * .72;
+    el('circle', { cx: bx, cy: by, r: 10, fill: '#1f1f1f', stroke: '#c8c8c8', 'stroke-width': 1.4 }, v.burn);
+    el('circle', { cx: bx, cy: by, r: 7, fill: '#E8413C' }, v.burn);
+    el('path', { d: `M${bx - 3} ${by - 3}L${bx + 3} ${by + 3}M${bx + 3} ${by - 3}L${bx - 3} ${by + 3}`, stroke: '#fff', 'stroke-width': 1.8, 'stroke-linecap': 'round' }, v.burn);
   }
   // its name, above it (the other contact blocks of a pushbutton or selector switch go without: the dashed line joins them to it)
   if (!v.sec && !onStation && !isJmp(p) && !isPh(p) && !isGnd(p) && p.t !== 'xfm') {
@@ -5899,6 +5935,7 @@ function paintView(V) {
   // parts: each one is only touched when how it looks has changed (redrawing a part, with its shadow, is costly)
   for (const p of parts) {
     const v = V.parts.get(p.id); if (!v || p.t === 'stand') continue;
+    if (v.burn) { const b = BLOWN[p.id] ? 'inline' : 'none'; if (v.burn.getAttribute('display') !== b) v.burn.setAttribute('display', b); }   // (burned out)
     if (p.t === 'xfm') { paintXfm(p, v); continue; }
     if (isPwr3(p)) { paintPwr(p, v); continue; }
     if (p.t === 'mtr') { paintMtr(p, v); continue; }
@@ -6001,7 +6038,7 @@ function paintSol(p, v) {
   const show = !!coilOn[p.id] || !COND[p.id], c = e => show && e && e.col ? v.col : null;
   const cur = i >= 0 ? evs[i] : null, now = c(cur), prev = i > 0 ? c(evs[i - 1]) : null;
   const f = cur ? clamp01((simT - at(cur)) * V / BODYH(p.t)) : 0;
-  if (v.glow) { const o = coilOn[p.id] ? '.9' : '0'; if (v.glow.style.opacity !== o) v.glow.style.opacity = o; }   // (a heating element glows while it heats)
+  if (v.glow) { const o = coilOn[p.id] ? (.9 * Math.min(1, (p._sh ?? 1) / ratedShare(p)) ** 2).toFixed(3) : '0'; if (v.glow.style.opacity !== o) v.glow.style.opacity = o; }   // (a heating element glows while it heats)
   const k = `${S}|${f.toFixed(3)}|${now}|${prev}`;
   if (k === v.k) return; v.k = k;
   const htr = p.t === 'htr', LEN = htr ? HTR_LEN : SOL_LEN, d = (htr ? HTR_D : SOL_D)[S === 'A' ? 0 : 1], n = f * LEN;
@@ -8476,6 +8513,7 @@ function renderProps() {
   // (an emergency stop is always normally closed, maintained, red: none of those to choose)
   for (const e of document.querySelectorAll('#props-btn .notestop')) e.hidden = !!(p && p.estop);
   document.getElementById('props-coil').hidden = !(p && p.t === 'coil');
+  document.getElementById('props-rv').hidden = !(p && RATED(p.t)); if (p && RATED(p.t)) document.getElementById('rv-sel').value = String(p.rv || SUPPLY_V);   // (its rated voltage)
   document.getElementById('props-lamp').hidden = !(p && p.t === 'lamp');
   if (p && p.t === 'lamp') {
     // a light of its own, or built into one of the pushbuttons (it then lights that button up, in the button's colour)
@@ -8579,7 +8617,7 @@ function renderProps() {
     ns.innerHTML = '';
     for (let n = 1; n <= Math.max(9, ...[...taken].map(Number)) + 3; n++) if (!taken.has(String(n))) ns.add(new Option('T' + n, String(n), false, String(n) === p.L));
     // its primary's rating, its secondary, and whether that's grounded (Dallas, 22 Nov 2026)
-    document.getElementById('x-pr').value = p.pr || ''; document.getElementById('x-sec').value = p.ct ? 'ct' : '';
+    document.getElementById('x-pr').value = p.pr || ''; document.getElementById('x-sec').value = p.ct ? 'ct' : p.s24 ? '24' : '';
     document.getElementById('x-gnd').setAttribute('aria-pressed', String(!p.ug)); document.getElementById('x-gnd-n').textContent = p.ct ? 'X0 Grounded' : 'X2 Grounded';
   }
   document.getElementById('props-sol').hidden = !(p && p.t === 'sol');
@@ -8805,8 +8843,9 @@ document.getElementById('j-num').addEventListener('change', e => { if (selGroup(
 // turn a continuation a quarter turn clockwise (the R key, or Rotate on its tab)
 function rotateJmp(p) { snapshot(); p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; normalize(); draw(); }
 document.getElementById('j-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(isJmp)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
+document.getElementById('rv-sel').addEventListener('change', e => { const ps = selGroup().filter(q => RATED(q.t)); if (!ps.length) return; snapshot(); const v = +e.target.value; for (const q of ps) { if (v === SUPPLY_V) delete q.rv; else q.rv = v; } draw(); });
 document.getElementById('x-pr').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'xfm') return; snapshot(); if (e.target.value) p.pr = e.target.value; else delete p.pr; draw(); });
-document.getElementById('x-sec').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'xfm') return; snapshot(); if (e.target.value) p.ct = true; else delete p.ct; delete p._sw; normalize(); draw(); });
+document.getElementById('x-sec').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'xfm') return; snapshot(); delete p.ct; delete p.s24; if (e.target.value === 'ct') p.ct = true; else if (e.target.value === '24') p.s24 = true; delete p._sw; normalize(); draw(); });
 document.getElementById('x-gnd').addEventListener('click', () => { const p = selPart(); if (!p || p.t !== 'xfm' || !editing) return; snapshot(); if (p.ug) delete p.ug; else p.ug = true; draw(); });
 document.getElementById('x-num').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'xfm') return; snapshot(); p.L = e.target.value; draw(); });
 // a phase box: which phase, and each phase's colour (shared by all of that phase's boxes and wires)
@@ -9008,8 +9047,10 @@ function circuitData() {
       const a = [p.estop ? 'est' : p.t, p.x, p.y, p.L, p.nc ? 1 : 0, p.maint === false ? 0 : 1, (p.color || '').replace('#', '')]; if (isTimer(p)) { a.push(p.delay); if (p.tof) a.push(1); } if (p.t === 'con' && p.inst) a.push(1); if ((p.t === 'lsw' || flips(p) || isBrk(p)) && p.held) a.push(1); if (HILO(p.t) && p.low) a.push(1); if (turns7(p) && p.rot) a.push(p.rot); if (p.label) { while (a.length < 9) a.push(null); a.push(p.label); }
       if (p.t === 'sel') { while (a.length < 7) a.push(null); a.length = 7; a.push(selN(p), (p.closedIn || []).reduce((m, i) => m | 1 << i, 0), null, (p.names || []).join('/'), p.pos || 0); }   // a selector switch: positions, closed-in mask, (no label), names, start
       if (p.lk || p.ls) { while (a.length < 12) a.push(null); a.push(p.lk ? p.lk[0] : 0, p.lk ? p.lk[1] : 0); if (p.ls) a.push(p.ls.join('')); }   // (its dashed link line, moved out of the way; the sides its ends join)
-      if (!turns7(p) && turns(p) && p.rot || p.fx) { while (a.length < 15) a.push(null); a.push({ ...(p.rot ? { r: p.rot } : {}), ...(p.fx ? { f: 1 } : {}) }); }
-      if (p.t === 'xfm' && (p.pr || p.ct || p.ug)) { while (a.length < 15) a.push(null); a.push({ ...(p.pr ? { pr: p.pr } : {}), ...(p.ct ? { ct: 1 } : {}), ...(p.ug ? { ug: 1 } : {}) }); }   // (a transformer: its primary's rating, a centre-tapped secondary, its secondary not grounded)   // (a two-ended part turned, or a toggle switch flipped: its 16th)
+      // (its 16th: a two-ended part turned, or a toggle switch flipped; a transformer's primary rating, a center-tapped secondary,
+      // its secondary not grounded; a load's rated voltage, when not 120 V)
+      { const o = { ...(!turns7(p) && turns(p) && p.rot ? { r: p.rot } : {}), ...(p.fx ? { f: 1 } : {}), ...(p.t === 'xfm' && p.pr ? { pr: p.pr } : {}), ...(p.t === 'xfm' && p.ct ? { ct: 1 } : {}), ...(p.t === 'xfm' && p.s24 ? { s24: 1 } : {}), ...(p.t === 'xfm' && p.ug ? { ug: 1 } : {}), ...(p.rv && p.rv !== SUPPLY_V ? { rv: p.rv } : {}) };
+        if (Object.keys(o).length) { while (a.length < 15) a.push(null); a.push(o); } }
       return a; }),
     wires: wires.map(q => { const a = [x(q.x1), q.y1, x(q.x2), q.y2]; if (WIRE_FAULTS[q.fault]) a.push(q.fault); return a; }),   // (a fault planted on a wire: its 5th)
     // (faults planted on parts: [part, fault]; the work order for the student)
@@ -9057,7 +9098,8 @@ function readCircuit(d) {
     if (t === 'jmp' || t === 'l1' || t === 'l2' || t === 'ph' || t === 'gnd' || t === 'fu1') { const r = Math.round(Number(a[7])) || 0; if (r >= 1 && r <= 3) p.rot = r; }   // (turned)   // (a supply box has no colour of its own)
     if (a[15] && typeof a[15] === 'object' && [1, 2, 3].includes(+a[15].r) && twoEnded(p)) p.rot = +a[15].r;   // (a two-ended part turned)
     if (a[15] && typeof a[15] === 'object' && a[15].f && flips(p)) p.fx = true;
-    if (t === 'xfm' && a[15] && typeof a[15] === 'object') { if (XFM_PR.includes(String(a[15].pr))) p.pr = String(a[15].pr); if (a[15].ct) p.ct = true; if (a[15].ug) p.ug = true; }   // (a toggle switch flipped left to right)
+    if (t === 'xfm' && a[15] && typeof a[15] === 'object') { if (XFM_PR.includes(String(a[15].pr))) p.pr = String(a[15].pr); if (a[15].ct) p.ct = true; else if (a[15].s24) p.s24 = true; if (a[15].ug) p.ug = true; }
+    if (a[15] && typeof a[15] === 'object' && LOAD_RV.includes(+a[15].rv) && RATED(t)) p.rv = +a[15].rv;   // (a load's rated voltage)   // (a toggle switch flipped left to right)
     if (t === 'con') { p.nc = !!a[4]; delete p.color; if (a[7] === 1) p.inst = true; }   // (a timer's instantaneous contact)
     if (t === 'coil' && a[7] !== undefined) { const n = Math.round(Number(a[7])); if (n >= 1) { p.delay = Math.min(999, n); if (a[8] === 1) p.tof = true; } }   // a timer (a[8] = 1: off-delay)
     if ((t === 'btn' || t === 'coil') && typeof a[9] === 'string' && a[9].trim()) p.label = a[9].replace(/\s+/g, ' ').trim().slice(0, 8);   // (a label written on it)
@@ -9792,7 +9834,7 @@ kbRefresh();
    ===================================================================== */
 const TS_SUPPLY = 120;
 // a load's resistance in ohms
-const TS_OHMS = p => LOAD_OHMS(p);   // (the same resistances the circuit itself works with: see solve.js)
+const TS_OHMS = p => RATED(p.t) && BLOWN[p.id] ? Infinity : LOAD_OHMS(p);   // (burned out: open)   // (the same resistances the circuit itself works with: see solve.js)
 const TS_XFM_SEC = 0.5, TS_MOTOR = 2;
 
 /* the network as it stands: junctions joined by wire or by a closed contact are one (sn: each junction's piece), and
@@ -9806,7 +9848,7 @@ function tsNetwork() {
   for (const e of net.edges) {
     if (e.kind === 'w') join(e.a, e.b);
     else if (e.part && isSw(e.part)) { if (closed(e.part)) join(e.a, e.b); }
-    else if (e.part) loads.push([e.a, e.b, 1 / TS_OHMS(e.part)]);
+    else if (e.part && TS_OHMS(e.part) < Infinity) loads.push([e.a, e.b, 1 / TS_OHMS(e.part)]);
   }
   for (const p of parts) {
     if (p.t === 'xfm' && p._t) loads.push([p._t[2], p._t[3], 1 / TS_XFM_SEC]);   // (its secondary winding, X1 to X2)
@@ -9932,7 +9974,7 @@ function tsShowRibbon() {
 }
 
 // ---- what is kept between visits (in this browser): the assignment, the test log, the steps ticked off
-function tsSave() { try { localStorage.setItem(TS_KEY, JSON.stringify({ circuit: circuitData(), log: TS.log, steps: TS.steps, t0: TS.t0, showSteps: TS.showSteps, blown: TS_BLOWN, scen: TS.scen, repairs: TS.repairs, signoff: TS.signoff })); } catch (_) {} }
+function tsSave() { try { localStorage.setItem(TS_KEY, JSON.stringify({ circuit: circuitData(), log: TS.log, steps: TS.steps, t0: TS.t0, showSteps: TS.showSteps, blown: Object.keys(TS_BLOWN).map(id => parts.findIndex(p => String(p.id) === id)).filter(i => i >= 0), scen: TS.scen, repairs: TS.repairs, signoff: TS.signoff })); } catch (_) {} }
 function tsUse(c, msg, fresh) {
   PV = c.pv; parts = c.parts; wires = c.wires; W = c.w; W_USER = c.fixed ? c.w : null; POWER = c.power; SRC_COL = c.src; PH_COL = c.ph; VSYS = c.vs; TINT_OPS = c.bt; circuitName = c.name; LINK_PRINT = c.pr || null; CIRC_SPEED = c.sp || null; startSpeed(); scenFrom(c); normalize();
   if (fresh) { TS.log = []; TS.steps = []; TS.t0 = Date.now(); TS_BLOWN = {}; TS.scen = c.pick || null; TS.repairs = []; TS.signoff = null; }
@@ -10471,7 +10513,7 @@ function tsInit() {
   let c = null; if (st && st.circuit) try { c = readCircuit(st.circuit); } catch (_) {}
   if (c) {
     TS = { log: Array.isArray(st.log) ? st.log : [], steps: Array.isArray(st.steps) ? st.steps : [], t0: +st.t0 || Date.now(), showSteps: st.showSteps !== false, scen: st.scen && typeof st.scen === 'object' ? st.scen : null, repairs: Array.isArray(st.repairs) ? st.repairs : [], signoff: st.signoff && typeof st.signoff === 'object' ? st.signoff : null };
-    TS_BLOWN = st.blown && typeof st.blown === 'object' ? st.blown : {};
+    TS_BLOWN = {}; if (Array.isArray(st.blown)) for (const i of st.blown) { const q = c.parts[i]; if (q) TS_BLOWN[q.id] = 1; }   // (by place in the list: ids are given afresh when a circuit is read)
     tsUse(c, '', false);
   } else tsUse(tsSample(), '', true);
   // the keys on the buttons' tips (F1 lists them all)

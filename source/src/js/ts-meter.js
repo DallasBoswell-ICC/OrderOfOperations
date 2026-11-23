@@ -10,7 +10,7 @@
    ===================================================================== */
 const TS_SUPPLY = 120;
 // a load's resistance in ohms
-const TS_OHMS = p => LOAD_OHMS(p);   // (the same resistances the circuit itself works with: see solve.js)
+const TS_OHMS = p => RATED(p.t) && BLOWN[p.id] ? Infinity : LOAD_OHMS(p);   // (burned out: open)   // (the same resistances the circuit itself works with: see solve.js)
 const TS_XFM_SEC = 0.5, TS_MOTOR = 2;
 
 /* the network as it stands: junctions joined by wire or by a closed contact are one (sn: each junction's piece), and
@@ -24,7 +24,7 @@ function tsNetwork() {
   for (const e of net.edges) {
     if (e.kind === 'w') join(e.a, e.b);
     else if (e.part && isSw(e.part)) { if (closed(e.part)) join(e.a, e.b); }
-    else if (e.part) loads.push([e.a, e.b, 1 / TS_OHMS(e.part)]);
+    else if (e.part && TS_OHMS(e.part) < Infinity) loads.push([e.a, e.b, 1 / TS_OHMS(e.part)]);
   }
   for (const p of parts) {
     if (p.t === 'xfm' && p._t) loads.push([p._t[2], p._t[3], 1 / TS_XFM_SEC]);   // (its secondary winding, X1 to X2)

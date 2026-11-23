@@ -118,7 +118,7 @@ const lampsOf = L => parts.filter(q => q.t === 'lamp' && q.L && q.L === L);
 const lampColour = p => p.L ? (parts.find(q => q.t === 'btn' && q.L === p.L) || p).color || '#00B050' : p.color || '#00B050';
 // how lit a light is right now, 0 to 1 (it comes on and goes off over a moment, as a filament does)
 const LAMP_FADE = 0.2;
-const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, q._sh ?? 1) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
+const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, (q._sh ?? 1) / ratedShare(q)) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
 const capTop = p => p.t === 'stand' ? standBox(p).hh + 11 : (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'flt' ? FLT_UP + 2 : p.t === 'tgl' ? LSW_TOP + 2 : isTglN(p) || isBrk(p) ? bodyUp(p) + 2 : p.t === 'dsc' ? PWR_H / 2 + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
@@ -390,6 +390,19 @@ function drawPart(p, g, x, y, chan, onStation) {
     el('circle', { cx: x, cy: y, r: COIL_IN / 2, fill: 'url(#gDome)' }, g);
     if (!isTimer(p)) { v.text = el('text', { x, y: y + 7.5, 'text-anchor': 'middle', class: 'devtext', 'font-size': 21, fill: LIGHT_TEXT }, g); capText(v.text, nameOf(p), 52, 21, y + 7.5); }
     else drawTimer(p, g, x, y, v);
+  }
+  // a load's rated voltage, when it isn't 120 V: a tag under it (beside it, turned upright); and, burned out by too much
+  // voltage, its middle dark and a red badge on its top right, as a blown fuse's (Dallas, 23 Nov 2026)
+  if (RATED(p.t) && !onStation) {
+    if (p.rv && p.rv !== SUPPLY_V) { const up = (p.rot || 0) % 2, tx = up ? x + COIL / 2 + 22 : x, ty = up ? y : y + COIL / 2 + 15;
+      el('rect', { x: tx - 18, y: ty - 9, width: 36, height: 18, rx: 5, fill: '#1f1f1f', stroke: p.color || '#c8c8c8', 'stroke-width': 1.2 }, g);
+      el('text', { x: tx, y: ty + 3.6, 'text-anchor': 'middle', 'font-size': 9.5, 'font-weight': 800, fill: '#fff', 'pointer-events': 'none' }, g).textContent = p.rv + ' V'; }
+    v.burn = el('g', { display: 'none' }, g);
+    el('circle', { cx: x, cy: y, r: COIL_IN / 2 - 1, fill: '#2a2522', opacity: .92 }, v.burn);
+    const bx = x + COIL / 2 * .72, by = y - COIL / 2 * .72;
+    el('circle', { cx: bx, cy: by, r: 10, fill: '#1f1f1f', stroke: '#c8c8c8', 'stroke-width': 1.4 }, v.burn);
+    el('circle', { cx: bx, cy: by, r: 7, fill: '#E8413C' }, v.burn);
+    el('path', { d: `M${bx - 3} ${by - 3}L${bx + 3} ${by + 3}M${bx + 3} ${by - 3}L${bx - 3} ${by + 3}`, stroke: '#fff', 'stroke-width': 1.8, 'stroke-linecap': 'round' }, v.burn);
   }
   // its name, above it (the other contact blocks of a pushbutton or selector switch go without: the dashed line joins them to it)
   if (!v.sec && !onStation && !isJmp(p) && !isPh(p) && !isGnd(p) && p.t !== 'xfm') {
