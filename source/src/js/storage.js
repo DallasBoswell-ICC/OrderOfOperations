@@ -29,7 +29,7 @@ function circuitData() {
       if (p.lk || p.ls) { while (a.length < 12) a.push(null); a.push(p.lk ? p.lk[0] : 0, p.lk ? p.lk[1] : 0); if (p.ls) a.push(p.ls.join('')); }   // (its dashed link line, moved out of the way; the sides its ends join)
       // (its 16th: a two-ended part turned, or a toggle switch flipped; a transformer's primary rating, a center-tapped secondary,
       // its secondary not grounded; a load's rated voltage, when not 120 V)
-      { const o = { ...(!turns7(p) && turns(p) && p.rot ? { r: p.rot } : {}), ...(p.fx ? { f: 1 } : {}), ...(p.t === 'xfm' && p.pr ? { pr: p.pr } : {}), ...(p.t === 'xfm' && p.ct ? { ct: 1 } : {}), ...(p.t === 'xfm' && p.s24 ? { s24: 1 } : {}), ...(p.t === 'xfm' && p.ug ? { ug: 1 } : {}), ...(p.rv && p.rv !== SUPPLY_V ? { rv: p.rv } : {}) };
+      { const o = { ...(!turns7(p) && turns(p) && p.rot ? { r: p.rot } : {}), ...(p.fx ? { f: 1 } : {}), ...(p.t === 'xfm' && p.pr ? { pr: p.pr } : {}), ...(p.t === 'xfm' && p.ct ? { ct: 1 } : {}), ...(p.t === 'xfm' && p.s24 ? { s24: 1 } : {}), ...(p.t === 'xfm' && p.ug ? { ug: 1 } : {}), ...(p.rv ? { rv: p.rv } : {}) };
         if (Object.keys(o).length) { while (a.length < 15) a.push(null); a.push(o); } }
       return a; }),
     wires: wires.map(q => { const a = [x(q.x1), q.y1, x(q.x2), q.y2]; if (WIRE_FAULTS[q.fault]) a.push(q.fault); return a; }),   // (a fault planted on a wire: its 5th)

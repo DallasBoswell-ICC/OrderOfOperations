@@ -394,7 +394,7 @@ function drawPart(p, g, x, y, chan, onStation) {
   // a load's rated voltage, when it isn't 120 V: a tag under it (beside it, turned upright); and, burned out by too much
   // voltage, its middle dark and a red badge on its top right, as a blown fuse's (Dallas, 23 Nov 2026)
   if (RATED(p.t) && !onStation) {
-    if (p.rv && p.rv !== SUPPLY_V) { const up = (p.rot || 0) % 2, tx = up ? x + COIL / 2 + 22 : x, ty = up ? y : y + COIL / 2 + 15;
+    if (p.rv) { const up = (p.rot || 0) % 2, tx = up ? x + COIL / 2 + 22 : x, ty = up ? y : y + COIL / 2 + 15;
       el('rect', { x: tx - 18, y: ty - 9, width: 36, height: 18, rx: 5, fill: '#1f1f1f', stroke: p.color || '#c8c8c8', 'stroke-width': 1.2 }, g);
       el('text', { x: tx, y: ty + 3.6, 'text-anchor': 'middle', 'font-size': 9.5, 'font-weight': 800, fill: '#fff', 'pointer-events': 'none' }, g).textContent = p.rv + ' V'; }
     v.burn = el('g', { display: 'none' }, g);

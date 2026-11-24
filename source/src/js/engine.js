@@ -425,6 +425,7 @@ function updateCoils(t) {
     // (across two phases, or a phase and the neutral: its share of the voltage it's made for, from the voltage system)
     const pf = phFedAt(p, t); if (pf) p._pf = true; else if (p._pf && !coilOn[p.id]) delete p._pf;
     if (pf) { cond = true; sh = p.t === 'xfm' ? 1 : phAcross(phaseOfAt(p._a, t), phaseOfAt(p._b, t)) / SUPPLY_V; p._sh = sh; p._lv = [1, 0]; }
+    if (RATED(p.t) && !p.rv) p._ms = pf ? sh : ctrlNomK();   // (Match Supply (Dallas, 24 Nov 2026): made for what its supply gives, at its nominal voltage)
     if (faultOf(p) === 'open' || (RATED(p.t) && BLOWN[p.id])) cond = false;   // (an open coil or light, or one burned out: no current through it, whatever reaches it)
     // (a coil or solenoid pulls in at 85% of the voltage it's made for, and once in holds in down to 60% (Dallas, 23 Nov 2026))
     const pull = p.t === 'lamp' || p.t === 'xfm' || p.t === 'htr' || sh >= (coilOn[p.id] ? DROP_OUT : PULL_IN) * ratedShare(p) - 1e-9;   // (a light lights, a heater heats, and a transformer works, on whatever it gets)
@@ -707,6 +708,7 @@ function xfmSec(p, t) {
 // a centre-tapped secondary's, while running (the first one that's fed; while building, as it's rated)
 function ctSecNow() { if (typeof simT !== 'undefined' && !editing) for (const p of parts) if (p.t === 'xfm' && p.ct && coilOn[p.id]) return xfmSec(p, simT); return { mag: 2 * SUPPLY_V, ang: 0 }; }
 // the control circuit's voltage, as a share of 120 V: from the (plain) transformer feeding it, if there is one
+function ctrlNomK() { for (const p of parts) if (p.t === 'xfm' && !p.ct) return p.s24 ? 24 / SUPPLY_V : 1; return 1; }
 function ctrlK(t) { for (const p of parts) if (p.t === 'xfm' && !p.ct && coilOn[p.id]) return xfmSec(p, t).mag / SUPPLY_V; return 1; }
 function phFedAt(p, t) { const a = phaseOfAt(p._a, t), b = phaseOfAt(p._b, t); return a > 0 && b > 0 && a !== b; }
 // the phase at junction n at time t: once it has got there, and until the dark has (PDARK: where a phase has been

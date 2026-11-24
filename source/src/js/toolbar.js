@@ -21,8 +21,8 @@ document.querySelectorAll('.tool[data-part]').forEach(b => {
       document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
       if (moved) { ghost.remove(); document.body.classList.remove('dragging'); preview = null; view.overlay.innerHTML = '';
         const r = pt(ev), box = svg.getBoundingClientRect();
-        if (ev.clientX >= box.left && ev.clientX <= box.right && ev.clientY >= box.top && ev.clientY <= box.bottom) placePart(kind, r.x, r.y); }
-      else { closeMenus(); setTool('select'); placeFree(kind); }   // (a click: it goes onto the panel, in a free spot)
+        if (ev.clientX >= box.left && ev.clientX <= box.right && ev.clientY >= box.top && ev.clientY <= box.bottom) { if (kind === 'ph-all') placeGroup(phAllGroup(), r.x, r.y); else placePart(kind, r.x, r.y); } }
+      else { closeMenus(); setTool('select'); if (kind === 'ph-all') { placeFree('ph-1', phAllGroup()); say('Placed. Drag them where you want them.'); } else placeFree(kind); }   // (a click: it goes onto the panel, in a free spot)
     };
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
   });
@@ -124,6 +124,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTip(); }
    the edges of the sheet, and the L1 Supply and L2 Return boxes on the Home tab feed it instead. */
 function showPower() {
   document.querySelectorAll('[data-power]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.power === POWER)));
+  { const d = document.getElementById('pw-def'), on = POWER === powerDefault(); d.disabled = on; d.textContent = on ? (barsOn() ? 'Bars' : 'Boxes') + ' Is the Default' : 'Set As Default'; }
   document.querySelectorAll('.src-tool').forEach(b => b.hidden = barsOn()); document.getElementById('supply-grp').hidden = barsOn();
   const pm = document.getElementById('pw-menu'); if (!pm.hidden) placeMenu(pm);   // (the Power menu is wider with the supply boxes in it)
   document.querySelectorAll('[data-src]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.src === SRC_COL)));
@@ -131,7 +132,7 @@ function showPower() {
   document.querySelectorAll('[data-vs]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vs === VSYS)));
   document.getElementById('bt-tint').setAttribute('aria-pressed', String(TINT_OPS));
   { const sp = VSYS_LIST[VSYS].ph === 2, b3 = document.querySelector('[data-part="ph-3"]'); if (b3) b3.hidden = sp;
-    const it = b3 && b3.closest('.tl-sub'); if (it) { it.querySelector('.tl-n').textContent = sp ? 'Split-Phase' : 'Three Phase'; it.querySelector('.tl-c').textContent = sp ? 3 : 4; } }
+    const it = b3 && b3.closest('.tl-sub'); if (it) { it.querySelector('.tl-n').textContent = sp ? 'Split-Phase' : 'Three Phase'; it.querySelector('.tl-c').textContent = sp ? 4 : 5; } }
   PH_COL.forEach((c, i) => { document.documentElement.style.setProperty(`--ph${i + 1}`, c); document.documentElement.style.setProperty(`--ph${i + 1}l`, lighten(c, .45)); });
 }
 // the source's colour: a swatch for each (see SRC_PAL)
@@ -150,6 +151,7 @@ document.querySelectorAll('[data-vs]').forEach(b => b.addEventListener('click', 
   snapshot(); VSYS = b.dataset.vs; PH_COL = [...VSYS_LIST[VSYS].col]; normalize();
   say(`Voltage system: ${VSYS_LIST[VSYS].name}.`); draw();
 }));
+document.getElementById('pw-def').addEventListener('click', () => { try { localStorage.setItem(POWER_KEY, POWER); } catch (_) {} say(`New circuits on this computer now start with ${barsOn() ? 'the L1 and L2 bars' : 'supply boxes'}.`); draw(); });
 document.querySelectorAll('[data-power]').forEach(b => b.addEventListener('click', () => {
   if (b.dataset.power === POWER || !editing) return;
   snapshot(); POWER = b.dataset.power; normalize(); sel = null;

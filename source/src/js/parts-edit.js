@@ -68,13 +68,22 @@ function placePart(kind, x, y) {
    of every part (with room for its name), of every wire, and with neither of its ends touching anything (so it is
    never wired in by accident). It is selected, ready to be dragged where it is wanted. With no such spot in view, it
    goes below the circuit, and the view moves down to it. */
-function placeFree(kind) {
+/* All Phases (Dallas, 24 Nov 2026): L1, L2, L3 (on a three-phase system) and N, in a column, selected together */
+const PH_ALL_DY = 120, phAllGroup = () => [...[...Array(VSYS_LIST[VSYS].ph).keys()].map(i => 'ph-' + (i + 1)), 'ph-N'].map((k, i) => [k, i * PH_ALL_DY]);
+function placeGroup(group, x, y) {
+  const at = group.map(([k, dy]) => [k, ...clampPart(x, y + dy, kindOf(k))]);
+  if (at.some(([k, px, py]) => overlaps(null, px, py, kindOf(k)) || wireInTheWay({ t: kindOf(k), x: px, y: py }))) { say('There is something in the way there.'); return false; }
+  snapshot();
+  const ps = at.map(([k, px, py]) => newPart(k, px, py)); parts.push(...ps); normalize();
+  sel = { parts: new Set(ps.map(p => p.id)), wires: new Set() }; say(''); draw(); return true;
+}
+function placeFree(kind, group) {   // (group: [kind, dy] for each of a set placed together (All Phases), the first at the spot)
   const t = kindOf(kind), stage = document.getElementById('stage').getBoundingClientRect(), m = svg.getScreenCTM();
   if (!m) return;
   const inv = m.inverse(), at = (cx, cy) => { const q = svg.createSVGPoint(); q.x = cx; q.y = cy; return q.matrixTransform(inv); };
   const l = Math.max(stage.left, 0), tp = Math.max(stage.top, 0), r = Math.min(stage.right, innerWidth), bt = Math.min(stage.bottom, innerHeight);
   const a = at(l, tp), b = at(r, bt), c = at((l + r) / 2, (tp + bt) / 2);
-  const free = (x, y) => {
+  const free1 = (kind, x, y) => {
     const [cx, cy] = clampPart(x, y, t); if (cx !== x || cy !== y) return false;
     // (each part's room: its body, from end to end, and above it its name and a line for a warning)
     const p = newPart(kind, x, y), room = q => [q.x - Math.max(halfW(q.t), 72), q.y - capTop(q) - 30, q.x + Math.max(halfW(q.t), 72), q.y + halfH(q.t) + 6], A = room(p);
@@ -83,9 +92,9 @@ function placeFree(kind) {
     if (wires.some(w => Math.max(w.x1, w.x2) > A[0] - 6 && Math.min(w.x1, w.x2) < A[2] + 6 && Math.max(w.y1, w.y2) > A[1] - 6 && Math.min(w.y1, w.y2) < A[3] + 6)) return false;
     if (barsOn() && (A[0] < 30 || A[2] > W - 30)) return false;
     return !wireInTheWay(p) && !terms(p).some(([tx, ty]) => connects(pointInfo(tx, ty)));
-  };
+  }, grp = group || [[kind, 0]], dyMax = Math.max(...grp.map(g => g[1])), free = (x, y) => grp.every(([k, dy]) => free1(k, x, y + dy));
   // (the spots in view, room left for the part's body and name, nearest the middle first)
-  const ys0 = snap(a.y + capTop(newPart(kind, 0, 0)) + 34), ys1 = b.y - halfH(t) - 10, xs0 = snap(a.x + halfW(t)), xs1 = b.x - halfW(t), spots = [];
+  const ys0 = snap(a.y + capTop(newPart(kind, 0, 0)) + 34), ys1 = b.y - halfH(t) - 10 - dyMax, xs0 = snap(a.x + halfW(t)), xs1 = b.x - halfW(t), spots = [];
   for (let y = ys0; y <= ys1; y += G) for (let x = xs0; x <= xs1; x += G) spots.push([x, y, Math.hypot(x - c.x, (y - c.y) * 1.3)]);
   spots.sort((p, q) => p[2] - q[2]);
   let spot = spots.find(([x, y]) => free(x, y)), below = false;
@@ -96,7 +105,7 @@ function placeFree(kind) {
     for (let k = 0; k < 200 && !free(x, y); k++) y += G;
     spot = [x, y]; below = true;
   }
-  placePart(kind, spot[0], spot[1]);
+  if (group) placeGroup(group, spot[0], spot[1]); else placePart(kind, spot[0], spot[1]);
   if (below && !cam.fit) { cam.y = Math.max(0, spot[1] - viewH() / 2); draw(); }
   say('Placed. Drag it where you want it (or drag a part from the ribbon straight to its place).');
 }

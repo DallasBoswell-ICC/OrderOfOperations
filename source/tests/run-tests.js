@@ -3917,7 +3917,39 @@ const DEF_CIRCUIT = `
     }
     return out;
   });
-  await check('Stage 3 (Dallas, 23 Nov 2026): a coil, light, solenoid or heater has a Rated Voltage (24 to 480 V, 120 by default), saved, with a tag under it only when not 120 V; a 24 V transformer secondary runs a 24 V coil; a 24 V coil on 120 V gets a Build note, picks up, then burns out (reads open, shown dark with a red badge); a coil picks up at 85% and holds in down to 60%', async page => {
+  await check('Match Supply, power default and All Phases (Dallas, 24 Nov 2026): a load with no rating set is made for what its supply gives (277 V from a phase to N and 480 V across two phases on 480Y/277: no note, no burn-out), and one rated 120 V shows its tag; Set As Default makes new circuits start with Bars or Boxes; All Phases places L1, L2, L3 and N in a column, selected', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    const n = await page.evaluate(() => { sel = null; loadPreset('blank'); VSYS = '480'; PH_COL = [...VSYS_LIST['480'].col]; POWER = 'boxes'; W = 1300;
+      for (const [L, y] of [['1', 140], ['2', 300], ['N', 460]]) parts.push(newPart('ph-' + L, 80, y));
+      parts.push(P('lamp', 600, 140, { L: '', color: '#FFDC00' }), P('htr', 600, 300, { L: '1' }));
+      wires.push(Wr(120, 140, 540, 140), Wr(660, 140, 900, 140), Wr(900, 140, 900, 460), Wr(120, 460, 900, 460), Wr(200, 140, 200, 220), Wr(200, 220, 540, 220), Wr(540, 220, 540, 300), Wr(120, 300, 480, 300), Wr(480, 300, 480, 380), Wr(480, 380, 700, 380), Wr(700, 380, 700, 300), Wr(660, 300, 700, 300));
+      normalize(); draw(); return [...wiringIssues(NET).values()].length; });
+    if (n) out.push(n + ' Build notes on matched loads');
+    await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(4000);
+    const r = await page.evaluate(() => parts.filter(p => RATED(p.t)).map(p => p.t + (coilOn[p.id] ? ' on' : ' off') + (BLOWN[p.id] ? ' burned' : '')).join());
+    if (r !== 'lamp on,htr on') out.push('running matched: ' + r);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    const tag = await page.evaluate(() => { const p = parts.find(q => q.t === 'lamp'); p.rv = 120; draw(); const g = document.querySelector('#svg [data-part="' + p.id + '"]'); return [...g.querySelectorAll('text')].some(t => t.textContent === '120 V') + ' ' + JSON.stringify(wiringIssues(NET).get(p.id)); });
+    if (tag !== 'true {"note":"On 277.1 V, made for 120 V: it will burn out"}') out.push('rated 120 V on 277 V: ' + tag);
+    // Set As Default
+    await page.evaluate(() => { POWER = 'boxes'; draw(); });
+    const d = await page.evaluate(() => { const b = document.getElementById('pw-def'), was = [b.disabled, b.textContent].join(); b.click(); return was + ' / ' + [b.disabled, b.textContent, localStorage.getItem(POWER_KEY)].join(); });
+    if (d !== 'false,Set As Default / true,Boxes Is the Default,boxes') out.push('Set As Default: ' + d);
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(80);
+    if (await page.evaluate(() => POWER) !== 'boxes') out.push('a new circuit did not start with Boxes');
+    await page.evaluate(() => { localStorage.removeItem(POWER_KEY); });
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(80);
+    if (await page.evaluate(() => POWER) !== 'bars') out.push('cleared, a new circuit did not start with Bars');
+    // All Phases
+    for (const [vs, want] of [['208', '1,2,3,N'], ['240', '1,2,N']]) {
+      const a = await page.evaluate(vs => { sel = null; loadPreset('blank'); VSYS = vs; PH_COL = [...VSYS_LIST[vs].col]; draw(); placeFree('ph-1', phAllGroup());
+        const ps = parts.filter(p => p.t === 'ph'); return [ps.map(p => p.L).join(), new Set(ps.map(p => p.x)).size, ps.every((p, i) => !i || p.y - ps[i - 1].y === PH_ALL_DY), sel && sel.parts.size === ps.length].join(' '); }, vs);
+      if (a !== want + ' 1 true true') out.push('All Phases on ' + vs + ': ' + a);
+    }
+    return out;
+  });
+  await check('Stage 3 (Dallas, 23 Nov 2026): a coil, light, solenoid or heater has a Rated Voltage (24 to 480 V; Match Supply by default since 24 Nov 2026), saved, with a tag under it only when not 120 V; a 24 V transformer secondary runs a 24 V coil; a 24 V coil on 120 V gets a Build note, picks up, then burns out (reads open, shown dark with a red badge); a coil picks up at 85% and holds in down to 60%', async page => {
     const out = [];
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
     const sv = await page.evaluate(() => { sel = null; loadPreset('blank'); W = 1100; parts.push(P('coil', 500, 240, { L: 'X', color: '#FFDC00', rv: 24 }), P('lamp', 500, 400, { L: '', color: '#00B050' }), P('htr', 500, 560, { L: '1', rv: 480 }));
@@ -3928,7 +3960,7 @@ const DEF_CIRCUIT = `
     await page.mouse.click(at.x, at.y); await page.waitForTimeout(120);
     const shown = await page.evaluate(() => !document.getElementById('props-rv').hidden);
     await page.selectOption('#rv-sel', '277'); const r277 = await page.evaluate(() => parts.find(q => q.t === 'lamp').rv);
-    await page.selectOption('#rv-sel', '120'); const sel1 = shown + ',' + r277 + ' ' + await page.evaluate(() => 'rv' in parts.find(q => q.t === 'lamp'));
+    await page.selectOption('#rv-sel', ''); const sel1 = shown + ',' + r277 + ' ' + await page.evaluate(() => 'rv' in parts.find(q => q.t === 'lamp'));
     if (sel1 !== 'true,277 false') out.push('Rated Voltage on the Part tab: ' + sel1);
     // a 24 V coil straight across 120 V
     const note = await page.evaluate(() => { sel = null; loadPreset('blank'); W = 1100; parts.push(P('coil', 500, 240, { L: 'X', color: '#FFDC00', rv: 24 })); wires.push(Wr(0, 240, 440, 240), Wr(560, 240, W, 240)); normalize(); draw(); return JSON.stringify([...wiringIssues(NET).values()]); });
@@ -3940,7 +3972,7 @@ const DEF_CIRCUIT = `
     if (await page.evaluate(() => TS_OHMS(parts[0])) !== Infinity) out.push('a burned-out coil does not read open');
     await page.click('#tab-edit');
     // a 24 V secondary: a 24 V coil runs on it, a 120 V coil does not
-    for (const [opt, want] of [[{ s24: 1, crv: 24 }, 'coil on'], [{ s24: 1 }, 'coil off']]) {
+    for (const [opt, want] of [[{ s24: 1, crv: 24 }, 'coil on'], [{ s24: 1, crv: 120 }, 'coil off'], [{ s24: 1 }, 'coil on']]) {
       await page.evaluate(([b, opt]) => { eval('(' + b + ')')(opt); draw(); }, [BUILD_S2, opt]);
       await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(500);
       const r = await page.evaluate(() => parts.filter(p => p.t === 'coil').map(p => 'coil' + (coilOn[p.id] ? ' on' : ' off')).join());

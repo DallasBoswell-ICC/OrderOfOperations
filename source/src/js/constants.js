@@ -124,6 +124,8 @@ const LSW_S = 2 * LSW_BOT;   // (the room it takes, up and down)   // operators:
    or by supply boxes placed anywhere on it ('boxes'): an L1 Supply box and an L2 Return box, each with three
    connection points (left, right and bottom), every one of them L1 or L2. */
 let POWER = 'bars';
+const POWER_KEY = 'oo-circuit-builder:power';   // (what a new circuit starts with on this computer: Set As Default (Dallas, 24 Nov 2026))
+const powerDefault = () => { try { return localStorage.getItem(POWER_KEY) === 'boxes' ? 'boxes' : 'bars'; } catch (_) { return 'bars'; } };
 /* The source's colour: the colour of the current straight from L1 (each circuit keeps its own). Every load takes away
    its share of it, down to the neutral's off-white at L2, so it's never white itself; and none of these is a button colour. */
 const SRC_PAL = [['Gold', '#FFC233'], ['Sky', '#3FB8FF'], ['Lime', '#9BE03A'], ['Coral', '#FF6F59'], ['Lavender', '#B49CFF']];

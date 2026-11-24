@@ -141,7 +141,7 @@ const SUPPLY_V = 120, PULL_IN = 0.85;
 const LOAD_OHMS = p => p.t === 'coil' ? (isTimer(p) ? 3000 : parts.some(q => q.t === 'mst' && q.L === p.L) ? 240 : 2500)
   : p.t === 'lamp' ? 2400 : p.t === 'sol' ? 1200 : p.t === 'htr' ? 9.6 : p.t === 'xfm' ? 12 : 1000;
 const loadR = p => LOAD_OHMS(p);                         // (each load's resistance)
-const ratedShare = p => (p.rv || SUPPLY_V) / SUPPLY_V;   // (the voltage it's made for, as a share of the supply)
+const ratedShare = p => p.rv ? p.rv / SUPPLY_V : p._ms ?? 1;   // (the voltage it's made for, as a share of the supply)
 // V: junction group -> voltage (L1 1, L2 0); share: load id -> the share of the supply across it (0: no current)
 function loadShares(f, net = NET) {
   const c1 = f(net.L1), c2 = f(net.L2), V = new Map(), share = new Map();
