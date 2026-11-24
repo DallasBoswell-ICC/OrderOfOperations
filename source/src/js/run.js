@@ -74,7 +74,7 @@ function paintView(V) {
     }
     if (isSrc(p) || isPh(p) || isGnd(p)) { if (v.src) for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } continue; }
     // (a load across the phases or a phase and the neutral: each lead the colour of the phase at its end)
-    for (const S of ['A', 'B']) { const k = LOADT(p.t) && PARR.size ? phaseOfAt(S === 'A' ? p._a : p._b, simT) : 0; paintLead(v.lead[S], k ? [{ t0: -1e9, col: phColK(k), from: 'term' }] : p._lead && p._lead[S]); }
+    for (const S of ['A', 'B']) { const n = S === 'A' ? p._a : p._b, k = LOADT(p.t) && PARR.size ? phaseOfAt(n, simT) : 0; paintLead(v.lead[S], k ? [{ t0: -1e9, col: (PARR.get(n) || PDARK.get(n) || {}).c || phColK(k), from: 'term' }] : p._lead && p._lead[S]); }
     let k;
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
     else if (p.t === 'lsw') setLimit(v, p, lswPos(p), lswClosed(p));
@@ -347,7 +347,7 @@ function paintMtr(p, v) {
   // (each phase runs on in along its lead and out both ways round its winding from the lug, at the current's speed; and
   // drains the same way when it goes)
   const fr = (p._t || []).map(n => { const on = PARR.get(n), off = PDARK.get(n), e = on && on.t <= simT + 1e-9 ? on : off && off.t <= simT + 1e-9 ? off : null;
-    if (!e) return null; const lit = (simT - e.t) * V, dark = e.off != null && e.off <= simT ? (simT - e.off) * V : 0; return { c: phColK(e.k), lit, dark }; });
+    if (!e) return null; const lit = (simT - e.t) * V, dark = e.off != null && e.off <= simT ? (simT - e.off) * V : 0; return { c: e.c || phColK(e.k), lit, dark }; });
   if (m.st !== 'off' && !fr.every((f, i) => !f || f.lit >= v.ldLen[i] || f.dark > 0)) m = { st: 'off', dir: 0 };   // (it starts once the current has reached its windings)
   const key = fr.map(f => f ? f.c + Math.min(f.lit, 999).toFixed(0) + ':' + Math.min(f.dark, 999).toFixed(0) : '-').join('|') + m.st + m.dir; if (key === v.k) return; v.k = key;
   const span = (el_, L, a, b, c) => { a = Math.max(0, Math.min(L, a)); b = Math.max(0, Math.min(L, b)); el_.setAttribute('stroke', c && b > a ? c : 'transparent'); el_.setAttribute('stroke-dasharray', `0 ${a.toFixed(1)} ${(b - a).toFixed(1)} ${L + 2}`); };

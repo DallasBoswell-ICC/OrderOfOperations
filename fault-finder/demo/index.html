@@ -3880,14 +3880,16 @@ function phasesNow(t) {
   for (const L in PH) { const c = f(PH[L]); if (phLive(phK(L)) && cph.get(c) === -1) { const o = Object.keys(PH).find(k => k !== L && phLive(phK(k)) && f(PH[k]) === c); phFault = o ? `Short circuit! ${phName(L)} is connected straight to ${phName(o)}.` : `Short circuit! ${phName(L)} is connected straight to the control circuit.`; break; } }
   // where each phase goes: out from its box, along the ways that lead on to a load, through closed poles from their
   // line side (so never back into another starter's load side)
-  const reach = new Map();
+  // (and its colour: the phase's, or, past a pushbutton, selector or switch with Buttons Color the Current on, that part's
+  // colour, as in the control circuit (Dallas, 24 Nov 2026))
+  const reach = new Map(), rcol = new Map();
   for (const L in PH) if (phLive(phK(L)) && cph.get(f(PH[L])) === phK(L)) {
-    reach.set(PH[L], phK(L)); const st = [PH[L]];
-    while (st.length) { const u = st.pop(); for (const i of NET.adj[u]) { const e = NET.edges[i], w = e.a === u ? e.b : e.a; if (!reach.has(w) && phStep(e, u)) { reach.set(w, phK(L)); st.push(w); } } }
+    reach.set(PH[L], phK(L)); rcol.set(PH[L], phColK(phK(L))); const st = [PH[L]];
+    while (st.length) { const u = st.pop(); for (const i of NET.adj[u]) { const e = NET.edges[i], w = e.a === u ? e.b : e.a; if (!reach.has(w) && phStep(e, u)) { reach.set(w, phK(L)); rcol.set(w, e.kind === 'part' && tints(e.part) ? flowOf(btnColour(opKey(e.part))) : rcol.get(u)); st.push(w); } } }
   }
   const want = n => reach.get(n) || 0;
   const N = NET.nodes.length, lost = [], gain = new Set();
-  for (let n = 0; n < N; n++) { const o = PARR.get(n), k = want(n); if (o && o.k !== k) lost.push(n); if (k && (!o || o.k !== k)) gain.add(n); }
+  for (let n = 0; n < N; n++) { const o = PARR.get(n), k = want(n), c = rcol.get(n); if (o && (o.k !== k || o.c !== c)) lost.push(n); if (k && (!o || o.k !== k || o.c !== c)) gain.add(n); }
   const put = (n, at, c) => { let a = PTL.get(n); if (!a) PTL.set(n, a = [[-1e9, null]]); while (a.length > 1 && a[a.length - 1][0] >= at - 1e-9) a.pop(); a.push([at, c]); if (at > busyUntil) busyUntil = at; };
   // what has been cut off goes dark from where it was cut, outwards
   if (lost.length) {
@@ -3896,7 +3898,7 @@ function phasesNow(t) {
     // transformer's primary, whose other end is on another phase)
     for (const n of lost) for (const i of NET.adj[n]) { const e = NET.edges[i], w = e.a === n ? e.b : e.a; if (!L.has(w) && want(w) && (e.kind !== 'part' || isSw(e.part))) { d.set(n, t); h.push(t, n); break; } }
     walk(h, d, n => L.has(n));
-    for (const n of lost) { const off = Math.max(t, d.get(n) ?? t), o = PARR.get(n); put(n, off, null); PDARK.set(n, { k: o.k, t: o.t, off }); PARR.delete(n); }
+    for (const n of lost) { const off = Math.max(t, d.get(n) ?? t), o = PARR.get(n); put(n, off, null); PDARK.set(n, { k: o.k, c: o.c, t: o.t, off }); PARR.delete(n); }
   }
   // what a phase can now reach lights up, spreading out from where it already is (or from its box)
   if (gain.size) {
@@ -3905,7 +3907,7 @@ function phasesNow(t) {
     for (const [n, s] of PARR) if (!d.has(n)) { d.set(n, Math.max(s.t, t)); h.push(Math.max(s.t, t), n); }
     for (const n of gain) if (n === PH[(NET.nodes[n].k || '').slice(2)]) { d.set(n, t); h.push(t, n); }
     walk(h, d, n => gain.has(n), phStep);
-    for (const n of gain) if (d.has(n)) { const k = want(n), at = d.get(n); PARR.set(n, { k, t: at }); put(n, at, phColK(k)); }
+    for (const n of gain) if (d.has(n)) { const k = want(n), at = d.get(n), c = rcol.get(n) || phColK(k); PARR.set(n, { k, c, t: at }); put(n, at, c); }
   }
   // a transformer fed from the phases: look at it again as each phase reaches its primary
   // (and as it goes dark there)
@@ -6073,7 +6075,7 @@ function paintView(V) {
     }
     if (isSrc(p) || isPh(p) || isGnd(p)) { if (v.src) for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } continue; }
     // (a load across the phases or a phase and the neutral: each lead the colour of the phase at its end)
-    for (const S of ['A', 'B']) { const k = LOADT(p.t) && PARR.size ? phaseOfAt(S === 'A' ? p._a : p._b, simT) : 0; paintLead(v.lead[S], k ? [{ t0: -1e9, col: phColK(k), from: 'term' }] : p._lead && p._lead[S]); }
+    for (const S of ['A', 'B']) { const n = S === 'A' ? p._a : p._b, k = LOADT(p.t) && PARR.size ? phaseOfAt(n, simT) : 0; paintLead(v.lead[S], k ? [{ t0: -1e9, col: (PARR.get(n) || PDARK.get(n) || {}).c || phColK(k), from: 'term' }] : p._lead && p._lead[S]); }
     let k;
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
     else if (p.t === 'lsw') setLimit(v, p, lswPos(p), lswClosed(p));
@@ -6346,7 +6348,7 @@ function paintMtr(p, v) {
   // (each phase runs on in along its lead and out both ways round its winding from the lug, at the current's speed; and
   // drains the same way when it goes)
   const fr = (p._t || []).map(n => { const on = PARR.get(n), off = PDARK.get(n), e = on && on.t <= simT + 1e-9 ? on : off && off.t <= simT + 1e-9 ? off : null;
-    if (!e) return null; const lit = (simT - e.t) * V, dark = e.off != null && e.off <= simT ? (simT - e.off) * V : 0; return { c: phColK(e.k), lit, dark }; });
+    if (!e) return null; const lit = (simT - e.t) * V, dark = e.off != null && e.off <= simT ? (simT - e.off) * V : 0; return { c: e.c || phColK(e.k), lit, dark }; });
   if (m.st !== 'off' && !fr.every((f, i) => !f || f.lit >= v.ldLen[i] || f.dark > 0)) m = { st: 'off', dir: 0 };   // (it starts once the current has reached its windings)
   const key = fr.map(f => f ? f.c + Math.min(f.lit, 999).toFixed(0) + ':' + Math.min(f.dark, 999).toFixed(0) : '-').join('|') + m.st + m.dir; if (key === v.k) return; v.k = key;
   const span = (el_, L, a, b, c) => { a = Math.max(0, Math.min(L, a)); b = Math.max(0, Math.min(L, b)); el_.setAttribute('stroke', c && b > a ? c : 'transparent'); el_.setAttribute('stroke-dasharray', `0 ${a.toFixed(1)} ${(b - a).toFixed(1)} ${L + 2}`); };

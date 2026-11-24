@@ -3886,6 +3886,16 @@ const DEF_CIRCUIT = `
     if (saved !== 'false,0,false') out.push('saved: ' + saved);
     [c, on] = await col();
     if (c !== await page.evaluate(() => SRC_COL) || !on) out.push('off: ' + c + ' ' + on);
+    // (from a phase too (Dallas, 24 Nov 2026): L1 through a button to a light and on to N)
+    for (const tint of [true, false]) {
+      await page.evaluate(t => { sel = null; loadPreset('blank'); TINT_OPS = t; VSYS = '208'; PH_COL = [...VSYS_LIST['208'].col]; POWER = 'boxes'; W = 1200;
+        parts.push(newPart('ph-1', 120, 200), newPart('ph-N', 120, 400), P('btn', 400, 200, { L: 'A', color: '#00B050', maint: true }), P('lamp', 700, 200, { L: '', color: '#FFDC00' }));
+        wires.push(Wr(160, 200, 360, 200), Wr(440, 200, 640, 200), Wr(760, 200, 900, 200), Wr(900, 200, 900, 400), Wr(160, 400, 900, 400)); normalize(); draw(); }, tint);
+      await page.click('#tab-run'); await page.evaluate(() => { setSpeed(4); press('A', true); }); await page.waitForTimeout(1000);
+      const r = await page.evaluate(() => { const l = parts.find(p => p.t === 'lamp'); return [showCol(l._a, simT) === (TINT_OPS ? flowOf(btnColour('A')) : PH_COL[0]), !!coilOn[l.id]].join(); });
+      if (r !== 'true,true') out.push(`from a phase, ${tint ? 'on' : 'off'}: ` + r);
+      await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    }
     await page.evaluate(() => { TINT_OPS = true; });
     return out;
   });
