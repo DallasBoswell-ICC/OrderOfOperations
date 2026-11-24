@@ -159,7 +159,7 @@ function components(net, ok) {
 // build-mode check: with every button passing current, is each coil wired from L1 to L2? (A load in series with
 // others is fine, with a note of the voltage it gets: { note }.)
 // a load not on the voltage it's made for (Dallas, 23 Nov 2026): what it gets, what it's made for, and whether it'll burn out
-const voltNote = (p, v, R) => `On ${Math.round(v * 10) / 10} V, made for ${R} V` + (v > BURN_OVER * R + 1e-6 ? ': it will burn out' : '');
+const voltNote = (p, v, R) => `On ${Math.round(v * 10) / 10} V, made for ${R} V` + (v > BURN_OVER * R + 1e-6 ? ': it will burn out' : p.t === 'mt1' && v < PULL_IN * R - 1e-6 ? ': it will stall' : '');
 // the control circuit's voltage while building: 120 V, or what its transformer gives as wired (its primary across the phases
 // it's on, against its rating)
 function ctrlVolts(net, f0) {
@@ -194,6 +194,8 @@ function wiringIssues(net) {
     if (p.t === 'mtr') {
       if (!p._t.some(i => net.adj[i].length > 0)) out.set(p.id, 'Not wired to anything');
       else if (!V.some(fv => new Set(p._t.map(i => phaseAt(net, fv, i)).filter(k => k > 0 && k < 4)).size === 3)) out.set(p.id, 'Not fed all three phases');
+      else if (p.rv) { const fv = V.find(fv => new Set(p._t.map(i => phaseAt(net, fv, i)).filter(k => k > 0 && k < 4)).size === 3), v = phAcross(phaseAt(net, fv, p._t[0]), phaseAt(net, fv, p._t[1]));   // (on the wrong voltage for its nameplate)
+        if (Math.abs(v - p.rv) > 2) out.set(p.id, { note: `On ${Math.round(v * 10) / 10} V, made for ${p.rv} V` + (v < MTR_LOW * p.rv ? ': it will stall' : v > MTR_HIGH * p.rv ? ': it will overheat' : '') }); }
       continue;
     }
     if (isPh(p)) {

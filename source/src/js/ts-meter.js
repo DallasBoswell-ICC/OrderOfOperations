@@ -28,7 +28,7 @@ function tsNetwork() {
   }
   for (const p of parts) {
     if (p.t === 'xfm' && p._t) loads.push([p._t[2], p._t[3], 1 / TS_XFM_SEC]);   // (its secondary winding, X1 to X2)
-    if (p.t === 'mtr' && p._t) { const c = extra++; for (const t of p._t) loads.push([t, c, 1 / TS_MOTOR]); }   // (its windings, joined at the star point)
+    if (p.t === 'mtr' && p._t) { const c = extra++; p._t.forEach((t, i) => { if (faultOf(p) !== 'w' + (i + 1)) loads.push([t, c, 1 / TS_MOTOR]); }); }   // (an open winding: none)   // (its windings, joined at the star point)
   }
   const M = extra, sn = new Int32Array(M); for (let i = 0; i < M; i++) sn[i] = f(i);
   // the pieces linked by anything (wire, contact or load): the leads on two that are not read nothing

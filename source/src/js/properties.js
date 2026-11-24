@@ -46,7 +46,8 @@ function renderProps() {
   // (an emergency stop is always normally closed, maintained, red: none of those to choose)
   for (const e of document.querySelectorAll('#props-btn .notestop')) e.hidden = !!(p && p.estop);
   document.getElementById('props-coil').hidden = !(p && p.t === 'coil');
-  document.getElementById('props-rv').hidden = !(p && RATED(p.t)); if (p && RATED(p.t)) document.getElementById('rv-sel').value = String(p.rv || '');   // (its rated voltage)
+  document.getElementById('props-rv').hidden = !(p && HAS_RV(p.t)); if (p && HAS_RV(p.t)) { const s = document.getElementById('rv-sel'), want = ['', ...rvList(p.t)].join();   // (a motor: its nameplate voltages)
+    if (s.dataset.list !== want) { s.innerHTML = ['<option value="">Match Supply</option>', ...rvList(p.t).map(v => `<option value="${v}">${v} V</option>`)].join(''); s.dataset.list = want; } s.value = String(p.rv || ''); }   // (its rated voltage)
   document.getElementById('props-lamp').hidden = !(p && p.t === 'lamp');
   if (p && p.t === 'lamp') {
     // a light of its own, or built into one of the pushbuttons (it then lights that button up, in the button's colour)
@@ -117,7 +118,7 @@ function renderProps() {
       for (const u of document.querySelectorAll('.ls-unit')) u.textContent = v.unit;
     }
   }
-  const pw = p && (isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'fu1');
+  const pw = p && (isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'mt1' || p.t === 'fu1');
   document.getElementById('props-pwr').hidden = !pw;
   if (pw) {
     // a number of its own (a disconnect, fuses, an overload, a motor); the overload an OL contact belongs to; the coil
@@ -134,7 +135,7 @@ function renderProps() {
       for (let n = 1; n <= Math.max(5, ...[...ols].map(Number)); n++) ns.add(new Option('OL' + n + (ols.has(String(n)) ? '' : ' (not placed)'), String(n), false, String(n) === p.L));
     } else {
       lab.textContent = 'Number';
-      const pre = { dsc: 'DS', fus: 'FU', fu1: 'FU', olh: 'OL', mtr: 'MTR' }[p.t], fuse = q => q.t === 'fus' || q.t === 'fu1', taken = new Set(parts.filter(q => (q.t === p.t || fuse(p) && fuse(q)) && q !== p).map(q => q.L));   // (fuses, single or three-pole, number from one count)
+      const pre = { dsc: 'DS', fus: 'FU', fu1: 'FU', olh: 'OL', mtr: 'MTR', mt1: 'MTR' }[p.t], fuse = q => q.t === 'fus' || q.t === 'fu1', mot = q => q.t === 'mtr' || q.t === 'mt1', taken = new Set(parts.filter(q => (q.t === p.t || fuse(p) && fuse(q) || mot(p) && mot(q)) && q !== p).map(q => q.L));   // (fuses, single or three-pole, number from one count)
       if (fuse(p)) {   // (fuses: a block takes three numbers, FU1-FU3; each number once)
         const k = p.t === 'fus' ? 3 : 1, tk = fuseNums(p);
         for (let n = 1; n <= Math.max(12, ...[...tk].map(Number)) + 3; n++) { const ok = fuseFits(n, k, tk); if (ok || String(n) === p.L) ns.add(new Option(pre + n + (k > 1 ? '–' + pre + (n + 2) : '') + (ok ? '' : ' (used twice)'), String(n), false, String(n) === p.L)); }
@@ -188,7 +189,7 @@ function renderProps() {
     if (v) {
       const dir = document.getElementById('d-dir'); const fl = p.t === 'mtr' && v.kind === 'flow';   // (a pump on a flow: either way it runs moves the water, reverse sending it back)
       dir.options[0].text = fl ? 'Raises it (Reverse Sends It Back)' : p.t === 'mtr' ? 'Forward raises it' : 'Raises it'; dir.options[1].text = fl ? 'Lowers it' : p.t === 'mtr' ? 'Forward lowers it' : 'Lowers it'; dir.value = p.dir === 'down' ? 'down' : 'up';
-      document.getElementById('d-rate-label').textContent = p.t === 'htr' ? 'Heats at' : p.t === 'mtr' ? 'While It Runs, at' : 'While Energized, at';
+      document.getElementById('d-rate-label').textContent = p.t === 'htr' ? 'Heats at' : p.t === 'mtr' || p.t === 'mt1' ? 'While It Runs, at' : 'While Energized, at';
       document.getElementById('d-rate').value = pvFmt(v, +p.rate || 0); document.getElementById('d-cool').value = pvFmt(v, +p.cool || 0);
       document.getElementById('d-per').value = drvPer(p); document.getElementById('d-off').value = drvOff(p);
       for (const u of document.querySelectorAll('.d-unit')) u.textContent = (v.unit || '') + (u.classList.contains('d-unit-per') ? (drvPer(p) === 'min' ? ' a minute' : ' a second') : '');
@@ -376,7 +377,7 @@ document.getElementById('j-num').addEventListener('change', e => { if (selGroup(
 // turn a continuation a quarter turn clockwise (the R key, or Rotate on its tab)
 function rotateJmp(p) { snapshot(); p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; normalize(); draw(); }
 document.getElementById('j-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(isJmp)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
-document.getElementById('rv-sel').addEventListener('change', e => { const ps = selGroup().filter(q => RATED(q.t)); if (!ps.length) return; snapshot(); const v = +e.target.value; for (const q of ps) { if (!v) { delete q.rv; delete q._ms; } else q.rv = v; } draw(); });
+document.getElementById('rv-sel').addEventListener('change', e => { const ps = selGroup().filter(q => HAS_RV(q.t) && (!+e.target.value || rvList(q.t).includes(+e.target.value))); if (!ps.length) return; snapshot(); const v = +e.target.value; for (const q of ps) { if (!v) { delete q.rv; delete q._ms; } else q.rv = v; } draw(); });
 document.getElementById('x-pr').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'xfm') return; snapshot(); if (e.target.value) p.pr = e.target.value; else delete p.pr; draw(); });
 document.getElementById('x-sec').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'xfm') return; snapshot(); delete p.ct; delete p.s24; if (e.target.value === 'ct') p.ct = true; else if (e.target.value === '24') p.s24 = true; delete p._sw; normalize(); draw(); });
 document.getElementById('x-gnd').addEventListener('click', () => { const p = selPart(); if (!p || p.t !== 'xfm' || !editing) return; snapshot(); if (p.ug) delete p.ug; else p.ug = true; draw(); });
@@ -388,7 +389,7 @@ document.getElementById('ph-custom').addEventListener('change', e => { const p =
 document.getElementById('ls-start').addEventListener('change', e => { const on = e.target.value === '1'; if (selGroup().every(q => flips(q) || isBrk(q))) each(p => { if (on) p.held = true; else delete p.held; }); });
 document.getElementById('box-flip').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(flips)) each(p => { if (p.fx) delete p.fx; else p.fx = true; }); });
 document.getElementById('box-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(turns)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
-document.getElementById('pw-num').addEventListener('change', e => { const G = selGroup(); if (G.length && G.every(p => isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'fu1')) each(p => p.L = e.target.value); });
+document.getElementById('pw-num').addEventListener('change', e => { const G = selGroup(); if (G.length && G.every(p => isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'mt1' || p.t === 'fu1')) each(p => p.L = e.target.value); });
 document.getElementById('ls-num').addEventListener('change', e => { const G = selGroup(); if (!G.every(p => p.t === G[0].t && isLim(p))) return;
   // (a number another switch has: this becomes another contact of it, taking its settings)
   each(p => { const to = parts.find(q => q !== p && !G.includes(q) && q.t === p.t && q.L === e.target.value); p.L = e.target.value; if (to) syncLim(p, to); }); });

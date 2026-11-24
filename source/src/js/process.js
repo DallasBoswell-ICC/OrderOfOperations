@@ -56,14 +56,14 @@ function pvSet(id, x, t = simT) {
    p.pv the value, p.rate how fast while it works (p.per: 's' a second, 'min' a minute), p.dir 'up' (raises it; a
    motor, going forward) or 'down', and once it stops p.off 'hold' (the value stays where it is) or 'back' (back toward
    where it started, at p.cool: a spring return, a leak, an oven cooling). */
-const isDrv = p => p.t === 'sol' || p.t === 'mtr' || p.t === 'htr';
+const isDrv = p => p.t === 'sol' || p.t === 'mtr' || p.t === 'mt1' || p.t === 'htr';
 const drvPer = p => p.per || (p.t === 'htr' ? 'min' : 's');
 const drvOff = p => p.off || (p.t === 'htr' ? 'back' : 'hold');
 const perSec = (p, x) => Math.max(0, +x || 0) / (drvPer(p) === 'min' ? 60 : 1);
 // how fast p is moving its value right now (a second; + up, - down), or 0 while it is not working
 function drvNow(p) {
   const sign = p.dir === 'down' ? -1 : 1;
-  if (p.t === 'mtr') { const m = MOT[p.id]; return m && m.st === 'run' && m.dir ? sign * m.dir * perSec(p, p.rate) : 0; }
+  if (p.t === 'mtr') { const m = MOT[p.id]; return m && (m.st === 'run' || m.st === 'hot') && m.dir ? sign * m.dir * perSec(p, p.rate) : 0; }
   return coilOn[p.id] ? (p.t === 'htr' ? 1 : sign) * perSec(p, p.rate) : 0;
 }
 // while running: every driven value moved on from t0 to t1 (simulation seconds): by all its working outputs together,
@@ -78,7 +78,7 @@ function pvTick(t0, t1, real) {
     // (a flow: a pump running either way moves the water, so it builds the flow up (or down, set so) the same; which way
     // it runs sets which way the water goes, forward or reverse (Dallas, 15 Nov 2026))
     const fl = v.kind === 'flow', x = PVV[v.id] ?? v.start, lo = Math.min(v.min, v.max), hi = Math.max(v.min, v.max), work = ds.map(p => fl && p.t === 'mtr' ? Math.abs(drvNow(p)) * (p.dir === 'down' ? -1 : 1) : drvNow(p));
-    if (fl) { const d = ds.filter(p => p.t === 'mtr').reduce((a, p) => { const m = MOT[p.id]; return a + (m && m.st === 'run' && m.dir ? m.dir : 0); }, 0); if (d) PVDIR[v.id] = Math.sign(d); }
+    if (fl) { const d = ds.filter(p => p.t === 'mtr').reduce((a, p) => { const m = MOT[p.id]; return a + (m && (m.st === 'run' || m.st === 'hot') && m.dir ? m.dir : 0); }, 0); if (d) PVDIR[v.id] = Math.sign(d); }
     let nx = x;
     if (work.some(r => r)) nx = Math.max(lo, Math.min(hi, x + work.reduce((a, r) => a + r, 0) * dt));
     else { const bk = ds.filter(p => drvOff(p) === 'back'); if (bk.length) { const c = Math.max(...bk.map(p => perSec(p, p.cool))) * dt, a = v.start; nx = x > a ? Math.max(a, x - c) : Math.min(a, x + c); } }

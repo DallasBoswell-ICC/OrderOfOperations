@@ -73,7 +73,7 @@ const thumb = t => { if (isArrowIn(t)) return `<svg viewBox="-96 -30 120 60"><g 
   const s = PSYM[LIB[t].sym], e = extentOf(t), pad = 8; return `<svg viewBox="${e.x0 - pad} ${s.y0 - pad} ${e.x1 - e.x0 + 2 * pad} ${s.y1 - s.y0 + 2 * pad}"><g fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${s.b}</g>${thumbMark(t, s)}</svg>`; };
 // (in the menus and the parts list only, not on the sheet: CR in a relay coil, TR in a timer, M in a motor, in its circle)
 function thumbMark(t, s) {
-  const m = t === 'coil' ? 'CR' : LIB[t].preset && LIB[t].preset.pre === 'TR' ? 'TR' : t === 'motor' ? 'M' : null; if (!m) return '';
+  const m = t === 'coil' ? 'CR' : LIB[t].preset && LIB[t].preset.pre === 'TR' ? 'TR' : t === 'motor' || t === 'motor1' ? 'M' : null; if (!m) return '';
   const c = [...s.b.matchAll(/<circle\b[^>]*>/g)].map(x => { const a = n => +((x[0].match(new RegExp(`\\b${n}="([-\\d.]+)"`)) || [])[1] || 0); return { x: a('cx'), y: a('cy'), r: a('r') }; }).sort((u, v) => v.r - u.r)[0];
   if (!c || !c.r) return '';
   return `<text x="${c.x}" y="${c.y + c.r * .36}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="${c.r * (m.length > 1 ? .95 : 1.1)}" fill="#000">${m}</text>`;

@@ -133,7 +133,7 @@ function renderInto(target, V, L) {
   // while running with faults on (Faults tab: Show Fault Badges)
   if (FAULT_BADGES && (editing || FAULTS_ON)) {
     for (const p of parts) if (p.fault && canFault(p)) {   // (on the body's top right corner; on a round or diamond load, at 45° on its edge)
-      const rnd = FAULT_LOADS.includes(p.t), bw = isLim(p) ? LSW_W / 2 : p.t === 'sel' ? SEL_BOX / 2 : rnd ? COIL / 2 * .74 : BOX / 2, bh = isLim(p) ? LSW_TOP : p.t === 'sel' ? SEL_BOX / 2 : rnd ? COIL / 2 * .74 : BOX / 2;
+      const rnd = FAULT_LOADS.includes(p.t) && p.t !== 'mt1', mw = p.t === 'mtr' ? MTR_W / 2 - 4 : p.t === 'mt1' ? MT1_W / 2 - 4 : 0, bw = mw || (isLim(p) ? LSW_W / 2 : p.t === 'sel' ? SEL_BOX / 2 : rnd ? COIL / 2 * .74 : BOX / 2), bh = mw || (isLim(p) ? LSW_TOP : p.t === 'sel' ? SEL_BOX / 2 : rnd ? COIL / 2 * .74 : BOX / 2);
       faultBadge(vert(p) ? p.x + bh : p.x + bw, vert(p) ? p.y - bw : p.y - bh, B(p.y).g, `Fault: ${PART_FAULTS[p.fault]}`); }
     for (const w of wires) if (w.fault) faultBadge((w.x1 + w.x2) / 2, (w.y1 + w.y2) / 2, B((w.y1 + w.y2) / 2).g, `Fault: ${WIRE_FAULTS[w.fault]}`);
   }
@@ -347,7 +347,7 @@ function insulated(tag, a, parent) {
 }
 // how far from its middle a part's body reaches along its wire (to its dark edge)
 const tsBodyEdge = (p, ux) => p.t === 'coil' || p.t === 'lamp' || isSolT(p.t) ? COIL / 2 + BEZEL : p.t === 'sel' ? SEL_BOX / 2 + BEZEL : p.t === 'tsw' ? TSW_HALF + 3 : isLim(p) ? LSW_W / 2 + BEZEL : BOX / 2 + BEZEL;
-const tsBlocked = p => !isBox(p) && !isPwr3(p) && p.t !== 'xfm' && p.t !== 'mtr' && !isGnd(p) && !isMulti(p);
+const tsBlocked = p => !isBox(p) && !isPwr3(p) && p.t !== 'xfm' && p.t !== 'mtr' && p.t !== 'mt1' && !isGnd(p) && !isMulti(p);
 let TS_POINTS = [];   // (where the meter's leads can go: { x, y, n: the junction, label }, in panel units)
 function tsTerminals(V, B, net) {
   const pts = [], at = new Map(net.nodes.map((n, i) => [n.k, i])), ys = rungYs(net);
@@ -368,7 +368,7 @@ function tsTerminals(V, B, net) {
       continue;
     }
     if (isJmp(p) || !p._t) continue;
-    const name = (i, side) => p.t === 'gnd' ? 'its terminal' : p.t === 'xfm' ? ['H1', 'H2', 'X1', 'X2', 'X0'][i] : isPwr3(p) ? `${['L1', 'L2', 'L3'][i >> 1]} ${i & 1 ? 'load' : 'line'} side` : p.t === 'mtr' ? `T${i + 1}` : p.t === 'sp2' ? ['common', 'throw 1', 'throw 2'][i] : p.t === 'dpd' ? ['top common', 'top throw 1', 'top throw 2', 'bottom common', 'bottom throw 1', 'bottom throw 2'][i] : p.t === 'tps' || p.t === 'cbt' ? ['pole 1 left', 'pole 1 right', 'pole 2 left', 'pole 2 right', 'pole 3 left', 'pole 3 right'][i] : p.t === 'xov' || p.t === 'dps' || p.t === 'cbd' ? ['top left', 'top right', 'bottom left', 'bottom right'][i] : side;
+    const name = (i, side) => p.t === 'gnd' ? 'its terminal' : p.t === 'xfm' ? ['H1', 'H2', 'X1', 'X2', 'X0'][i] : isPwr3(p) ? `${['L1', 'L2', 'L3'][i >> 1]} ${i & 1 ? 'load' : 'line'} side` : p.t === 'mtr' || p.t === 'mt1' ? `T${i + 1}` : p.t === 'sp2' ? ['common', 'throw 1', 'throw 2'][i] : p.t === 'dpd' ? ['top common', 'top throw 1', 'top throw 2', 'bottom common', 'bottom throw 1', 'bottom throw 2'][i] : p.t === 'tps' || p.t === 'cbt' ? ['pole 1 left', 'pole 1 right', 'pole 2 left', 'pole 2 right', 'pole 3 left', 'pole 3 right'][i] : p.t === 'xov' || p.t === 'dps' || p.t === 'cbd' ? ['top left', 'top right', 'bottom left', 'bottom right'][i] : side;
     T.forEach(([tx, ty], i) => { const n = at.get(key(tx, ty)); if (n !== undefined) pts.push({ x: tx, y: ty, n, label: `${captionOf(p)}, ${name(i, ['left', 'right', 'bottom', 'top'][i] || '')}` }); });
   }
   const seen = new Set();

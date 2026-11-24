@@ -1100,7 +1100,7 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
   <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="coil" data-tip="Relay coil"><svg viewBox="0 0 30 26"><circle cx="15" cy="13" r="11.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="15" cy="13" r="7.5" fill="#555"/></svg><span>Control<br>Relay</span></button><button type="button" class="tool big" data-part="timer" data-tip="On-delay timer: a relay coil whose contacts change only once it has been energized for its set time. Losing power resets it at once. Set the time in its settings."><svg viewBox="0 0 30 26"><circle cx="13" cy="14" r="10.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="13" cy="14" r="6.8" fill="#555"/><rect x="18" y="1" width="11" height="11" rx="2" fill="#222" stroke="#FFDC00" stroke-width="1.2"/><path d="M21 3.5h5l-2.5 3 2.5 3h-5l2.5-3z" fill="#d8d8d8"/></svg><span>On-Delay<br>Timer</span></button><button type="button" class="tool big" data-part="timer-off" data-tip="Off-delay timer: its timed contacts change as soon as it is energized, and go back only once its set time has run out after it loses power. Energized again before then, it stops timing. Set the time in its settings."><svg viewBox="0 0 30 26"><circle cx="13" cy="14" r="10.5" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><circle cx="13" cy="14" r="6.8" fill="#555"/><rect x="18" y="1" width="11" height="11" rx="2" fill="#222" stroke="#FFDC00" stroke-width="1.2"/><path d="M21 3.5h5l-2.5 3 2.5 3h-5l2.5-3z" fill="#d8d8d8"/></svg><span>Off-Delay<br>Timer</span></button></div><div class="gname">Relays</div></div>
   <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="lamp" data-tip="Pilot light: lights while current flows through it, wired from L1 to L2 like a coil. In its settings it can be built into a pushbutton, so the button lights up with it."><svg viewBox="0 0 30 26"><g stroke="#00B050" stroke-width="1.6" stroke-linecap="round"><path d="M15 1v2.5M15 22.5V25M3 13h2.5M24.5 13H27M6.5 4.5l1.8 1.8M21.7 19.7l1.8 1.8M23.5 4.5l-1.8 1.8M8.3 19.7l-1.8 1.8"/></g><circle cx="15" cy="13" r="8" fill="#222" stroke="#00B050" stroke-width="1.6"/><circle cx="15" cy="13" r="5.2" fill="#00B050"/><path d="M12.8 10.8l4.4 4.4M17.2 10.8l-4.4 4.4" stroke="#fff" stroke-opacity=".85" stroke-width="1.3" stroke-linecap="round"/></svg><span>Pilot<br>Light</span></button></div><div class="gname">Pilot Light</div></div>
   <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="sol" data-tip="Solenoid: pulls in while current flows through it, wired from L1 to L2 like a coil. It works a valve or something else outside the circuit, so it has no contacts. Numbered SOL1, SOL2 and so on."><svg viewBox="0 0 30 26"><rect x="6.2" y="4.2" width="17.6" height="17.6" rx="3.2" transform="rotate(45 15 13)" fill="#222" stroke="#1a1a1a" stroke-width="3.4"/><rect x="6.2" y="4.2" width="17.6" height="17.6" rx="3.2" transform="rotate(45 15 13)" fill="#222" stroke="#00D2BE" stroke-width="1.3"/><path d="M8.6 13H12.2L15 7.6V18.4L17.8 13H21.4" fill="none" stroke="#00D2BE" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8.6" cy="13" r="2.1" fill="#00D2BE"/><circle cx="21.4" cy="13" r="2.1" fill="#00D2BE"/></svg><span>Solenoid</span></button></div><div class="gname">Solenoid</div></div><div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="htr" data-tip="Heating element: heats while current flows through it, wired from L1 to L2 like a coil, and glows while it heats. On its tab, pick the temperature it heats and how fast. Numbered HTR1, HTR2 and so on."><svg viewBox="0 0 30 26"><circle cx="15" cy="13" r="10" fill="#FF5A1F" opacity=".35"/><rect x="6.2" y="4.2" width="17.6" height="17.6" rx="3.2" transform="rotate(45 15 13)" fill="#222" stroke="#1a1a1a" stroke-width="3.4"/><rect x="6.2" y="4.2" width="17.6" height="17.6" rx="3.2" transform="rotate(45 15 13)" fill="#222" stroke="#FF0032" stroke-width="1.3"/><path d="M8.6 13H10.9L11.8 9.8L13.1 16.2L14.4 9.8L15.6 16.2L16.9 9.8L18.2 16.2L19.1 13H21.4" fill="none" stroke="#FF0032" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8.6" cy="13" r="2.1" fill="#FF0032"/><circle cx="21.4" cy="13" r="2.1" fill="#FF0032"/></svg><span>Heating<br>Element</span></button></div><div class="gname">Heat</div></div>
-  <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="mtr" data-tip="Motor: T1, T2 and T3 on its left. It runs with all three phases (forward in order, backward with two swapped) and hums on only two."><svg viewBox="0 0 30 26"><rect x="3" y="1" width="24" height="24" rx="4" fill="#222" stroke="#9aa7b5" stroke-width="1.3"/><g fill="none" stroke-width="2.2"><path d="M9.07 9A8 8 0 0 1 22.93 9" stroke="var(--ph1)"/><path d="M22.93 9A8 8 0 0 1 16 21" stroke="var(--ph2)"/><path d="M16 21A8 8 0 0 1 9.07 9" stroke="var(--ph3)"/></g><g fill="#8b929a"><path d="M16 13l1.4-4.6 2 .8z"/><path d="M16 13l3.6 3.2-1.6 1.4z"/><path d="M16 13l-4.8 1.2-.2-2.1z"/></g><circle cx="16" cy="13" r="1.6" fill="#b0b5bb"/></svg><span>Motor</span></button></div><div class="gname">Motor</div></div>
+  <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="mtr" data-name="3-Phase Motor" data-tip="Three-phase motor: T1, T2 and T3 on its left. It runs with all three phases (forward in order, backward with two swapped) and hums on only two."><svg viewBox="0 0 30 26"><rect x="3" y="1" width="24" height="24" rx="4" fill="#222" stroke="#9aa7b5" stroke-width="1.3"/><g fill="none" stroke-width="2.2"><path d="M9.07 9A8 8 0 0 1 22.93 9" stroke="var(--ph1)"/><path d="M22.93 9A8 8 0 0 1 16 21" stroke="var(--ph2)"/><path d="M16 21A8 8 0 0 1 9.07 9" stroke="var(--ph3)"/></g><g fill="#8b929a"><path d="M16 13l1.4-4.6 2 .8z"/><path d="M16 13l3.6 3.2-1.6 1.4z"/><path d="M16 13l-4.8 1.2-.2-2.1z"/></g><circle cx="16" cy="13" r="1.6" fill="#b0b5bb"/></svg><span>Motor</span></button><button type="button" class="tool big" data-part="mt1" data-name="Single-Phase Motor" data-tip="Single-phase motor: T1 and T2 on its left. It runs from a phase to the neutral, across two phases, or on the control circuit, on the voltage it is made for."><svg viewBox="0 0 30 26"><rect x="5" y="3" width="20" height="20" rx="4" fill="#222" stroke="#9aa7b5" stroke-width="1.3"/><circle cx="16" cy="13" r="6.2" fill="none" stroke="#c9a0ff" stroke-width="2"/><path d="M5 9h5M5 17h5" stroke="#8b929a" stroke-width="1.6"/><circle cx="16" cy="13" r="1.5" fill="#b0b5bb"/></svg><span>Single-Phase Motor</span></button></div><div class="gname">Motor</div></div>
 </div>
 <div class="tp-menu" id="ct-menu" role="menu" aria-label="Contacts" hidden>
   <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="con-no-i" data-tip="Relay contact, normally open, instantaneous: closes as its coil picks up. Choose which coil works it in its settings."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="7" width="14" height="2.6" rx="1.3" fill="#a6a6a6"/><circle cx="10" cy="14" r="2.4" fill="#555"/><circle cx="20" cy="14" r="2.4" fill="#555"/></svg><span>NO<br>Instantaneous</span></button><button type="button" class="tool big" data-part="con-nc-i" data-tip="Relay contact, normally closed, instantaneous: opens as its coil picks up. Choose which coil works it in its settings."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="12.7" width="14" height="2.6" rx="1.3" fill="#FFDC00"/><circle cx="10" cy="14" r="2.4" fill="#FFDC00"/><circle cx="20" cy="14" r="2.4" fill="#FFDC00"/></svg><span>NC<br>Instantaneous</span></button><button type="button" class="tool big" data-part="con-no-t" data-tip="Timer contact, normally open, timing: changes over once its timer has timed out. Worked by the first timer (change it in its settings)."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="7" width="14" height="2.6" rx="1.3" fill="#a6a6a6"/><circle cx="10" cy="14" r="2.4" fill="#555"/><circle cx="20" cy="14" r="2.4" fill="#555"/><rect x="18" y="1" width="11" height="11" rx="2" fill="#222" stroke="#FFDC00" stroke-width="1.2"/><path d="M21 3.5h5l-2.5 3 2.5 3h-5l2.5-3z" fill="#d8d8d8"/></svg><span>NO<br>Timing</span></button><button type="button" class="tool big" data-part="con-nc-t" data-tip="Timer contact, normally closed, timing: changes over once its timer has timed out. Worked by the first timer (change it in its settings)."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#FFDC00" stroke-width="1.6"/><rect x="8" y="12.7" width="14" height="2.6" rx="1.3" fill="#FFDC00"/><circle cx="10" cy="14" r="2.4" fill="#FFDC00"/><circle cx="20" cy="14" r="2.4" fill="#FFDC00"/><rect x="18" y="1" width="11" height="11" rx="2" fill="#222" stroke="#FFDC00" stroke-width="1.2"/><path d="M21 3.5h5l-2.5 3 2.5 3h-5l2.5-3z" fill="#d8d8d8"/></svg><span>NC<br>Timing</span></button></div><div class="gname">Relay Contacts</div></div>
@@ -1114,11 +1114,11 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
    themselves; a check in each program's tests makes sure they still match). Points are from the part's middle, unturned
    (Circuit Builder: a turned fuse, supply box or continuation has its own entry, "type@turns").
    ===================================================================== */
-const LINK_CB_TERMS = {"btn":[[-40,0],[40,0]],"est":[[-40,0],[40,0]],"sel":[[-60,0],[60,0]],"lsw":[[-60,0],[60,0]],"tsw":[[-80,0],[80,0]],"psw":[[-60,0],[60,0]],"fsw":[[-60,0],[60,0]],"flt":[[-60,0],[60,0]],"coil":[[-60,0],[60,0]],"lamp":[[-60,0],[60,0]],"sol":[[-60,0],[60,0]],"htr":[[-60,0],[60,0]],"mtr":[[-160,-120],[-160,0],[-160,120]],"con":[[-40,0],[40,0]],"mst":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"olc":[[-40,0],[40,0]],"olh":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"dsc":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"fus":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"fu1":[[-40,0],[40,0]],"fu1@1":[[0,-40],[0,40]],"fu1@2":[[40,0],[-40,0]],"fu1@3":[[0,40],[0,-40]],"xfm":[[-60,-80],[60,-80],[-60,80],[60,80]],"ph":[[-40,0],[40,0],[0,40]],"ph@1":[[0,-40],[0,40],[-40,0]],"ph@2":[[40,0],[-40,0],[0,-40]],"ph@3":[[0,40],[0,-40],[40,0]],"l1":[[-40,0],[40,0],[0,40]],"l1@1":[[0,-40],[0,40],[-40,0]],"l1@2":[[40,0],[-40,0],[0,-40]],"l1@3":[[0,40],[0,-40],[40,0]],"l2":[[-40,0],[40,0],[0,40]],"l2@1":[[0,-40],[0,40],[-40,0]],"l2@2":[[40,0],[-40,0],[0,-40]],"l2@3":[[0,40],[0,-40],[40,0]],"jmp":[[-40,0],[40,0],[0,40],[0,-40]],"jmp@1":[[0,-40],[0,40],[-40,0],[40,0]],"jmp@2":[[40,0],[-40,0],[0,-40],[0,40]],"jmp@3":[[0,40],[0,-40],[40,0],[-40,0]],"tgl":[[-60,0],[60,0]],"sp2":[[-60,0],[60,-60],[60,60]],"xov":[[-60,-60],[60,-60],[-60,60],[60,60]],"dps":[[-60,-60],[60,-60],[-60,60],[60,60]],"dpd":[[-60,0],[60,-60],[60,60],[-60,180],[60,120],[60,240]],"tps":[[-60,-120],[60,-120],[-60,0],[60,0],[-60,120],[60,120]],"cbk":[[-60,0],[60,0]],"cbd":[[-60,-60],[60,-60],[-60,60],[60,60]],"cbt":[[-60,-120],[60,-120],[-60,0],[60,0],[-60,120],[60,120]],"gnd":[[0,-40]]};
-const LINK_PB_TERMS = {"pb_no":[[-40,0],[40,0]],"pb_nc":[[-40,0],[40,0]],"pbm_no":[[-40,0],[40,0]],"pbm_nc":[[-40,0],[40,0]],"estop":[[-40,0],[40,0]],"sel":[[-40,0],[40,0]],"ls_no":[[-40,0],[40,0]],"ls_nc":[[-40,0],[40,0]],"ls_hc":[[-40,0],[40,0]],"ls_ho":[[-40,0],[40,0]],"ts_no":[[-40,0],[40,0]],"ts_nc":[[-40,0],[40,0]],"ts_nol":[[-40,0],[40,0]],"ts_ncl":[[-40,0],[40,0]],"ps_no":[[-40,0],[40,0]],"ps_nc":[[-40,0],[40,0]],"ps_nol":[[-40,0],[40,0]],"ps_ncl":[[-40,0],[40,0]],"fs_no":[[-40,0],[40,0]],"fs_nc":[[-40,0],[40,0]],"fs_nol":[[-40,0],[40,0]],"fs_ncl":[[-40,0],[40,0]],"fls_no":[[-40,0],[40,0]],"fls_nc":[[-40,0],[40,0]],"fls_nol":[[-40,0],[40,0]],"fls_ncl":[[-40,0],[40,0]],"prs_no":[[-64,0],[64,0]],"prs_nc":[[-64,0],[64,0]],"spst":[[-40,0],[40,0]],"spdt":[[-40,0],[40,-40],[40,40]],"dpst":[[-40,-60],[40,-60],[-40,60],[40,60]],"dpdt":[[-40,-80],[40,-120],[40,-40],[-40,80],[40,40],[40,120]],"xover":[[-40,-40],[40,-40],[-40,40],[40,40]],"coil":[[-40,0],[40,0]],"tmr_on":[[-40,0],[40,0]],"tmr_off":[[-40,0],[40,0]],"pl":[[-40,0],[40,0]],"sol":[[-40,0],[40,0]],"htr":[[-40,0],[40,0]],"motor":[[-140,-120],[-140,0],[-140,120]],"con_no":[[-40,0],[40,0]],"con_nc":[[-40,0],[40,0]],"tc_no":[[-40,0],[40,0]],"tc_nc":[[-40,0],[40,0]],"mst3":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"olc":[[-40,0],[40,0]],"dsc3":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"fdsc3":[[-80,-120],[80,-120],[-80,0],[80,0],[-80,120],[80,120]],"fus3":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"fuse":[[-40,0],[40,0]],"cb":[[-40,0],[40,0]],"cb2":[[-40,-60],[40,-60],[-40,60],[40,60]],"cb3":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"ol3":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"ol":[[-40,0],[40,0]],"sup":[[0,0]],"src_l1":[[0,0]],"src_l2":[[0,0]],"xfmr":[[-60,-60],[60,-60],[-60,60],[60,60]],"gnd":[[0,-40]],"cnt_out":[[-40,0]],"cnt_in":[[40,0]],"tpst":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]]};
+const LINK_CB_TERMS = {"btn":[[-40,0],[40,0]],"est":[[-40,0],[40,0]],"sel":[[-60,0],[60,0]],"lsw":[[-60,0],[60,0]],"tsw":[[-80,0],[80,0]],"psw":[[-60,0],[60,0]],"fsw":[[-60,0],[60,0]],"flt":[[-60,0],[60,0]],"coil":[[-60,0],[60,0]],"lamp":[[-60,0],[60,0]],"sol":[[-60,0],[60,0]],"htr":[[-60,0],[60,0]],"mtr":[[-160,-120],[-160,0],[-160,120]],"mt1":[[-120,-60],[-120,60]],"con":[[-40,0],[40,0]],"mst":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"olc":[[-40,0],[40,0]],"olh":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"dsc":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"fus":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"fu1":[[-40,0],[40,0]],"fu1@1":[[0,-40],[0,40]],"fu1@2":[[40,0],[-40,0]],"fu1@3":[[0,40],[0,-40]],"xfm":[[-60,-80],[60,-80],[-60,80],[60,80]],"ph":[[-40,0],[40,0],[0,40]],"ph@1":[[0,-40],[0,40],[-40,0]],"ph@2":[[40,0],[-40,0],[0,-40]],"ph@3":[[0,40],[0,-40],[40,0]],"l1":[[-40,0],[40,0],[0,40]],"l1@1":[[0,-40],[0,40],[-40,0]],"l1@2":[[40,0],[-40,0],[0,-40]],"l1@3":[[0,40],[0,-40],[40,0]],"l2":[[-40,0],[40,0],[0,40]],"l2@1":[[0,-40],[0,40],[-40,0]],"l2@2":[[40,0],[-40,0],[0,-40]],"l2@3":[[0,40],[0,-40],[40,0]],"jmp":[[-40,0],[40,0],[0,40],[0,-40]],"jmp@1":[[0,-40],[0,40],[-40,0],[40,0]],"jmp@2":[[40,0],[-40,0],[0,-40],[0,40]],"jmp@3":[[0,40],[0,-40],[40,0],[-40,0]],"tgl":[[-60,0],[60,0]],"sp2":[[-60,0],[60,-60],[60,60]],"xov":[[-60,-60],[60,-60],[-60,60],[60,60]],"dps":[[-60,-60],[60,-60],[-60,60],[60,60]],"dpd":[[-60,0],[60,-60],[60,60],[-60,180],[60,120],[60,240]],"tps":[[-60,-120],[60,-120],[-60,0],[60,0],[-60,120],[60,120]],"cbk":[[-60,0],[60,0]],"cbd":[[-60,-60],[60,-60],[-60,60],[60,60]],"cbt":[[-60,-120],[60,-120],[-60,0],[60,0],[-60,120],[60,120]],"gnd":[[0,-40]]};
+const LINK_PB_TERMS = {"pb_no":[[-40,0],[40,0]],"pb_nc":[[-40,0],[40,0]],"pbm_no":[[-40,0],[40,0]],"pbm_nc":[[-40,0],[40,0]],"estop":[[-40,0],[40,0]],"sel":[[-40,0],[40,0]],"ls_no":[[-40,0],[40,0]],"ls_nc":[[-40,0],[40,0]],"ls_hc":[[-40,0],[40,0]],"ls_ho":[[-40,0],[40,0]],"ts_no":[[-40,0],[40,0]],"ts_nc":[[-40,0],[40,0]],"ts_nol":[[-40,0],[40,0]],"ts_ncl":[[-40,0],[40,0]],"ps_no":[[-40,0],[40,0]],"ps_nc":[[-40,0],[40,0]],"ps_nol":[[-40,0],[40,0]],"ps_ncl":[[-40,0],[40,0]],"fs_no":[[-40,0],[40,0]],"fs_nc":[[-40,0],[40,0]],"fs_nol":[[-40,0],[40,0]],"fs_ncl":[[-40,0],[40,0]],"fls_no":[[-40,0],[40,0]],"fls_nc":[[-40,0],[40,0]],"fls_nol":[[-40,0],[40,0]],"fls_ncl":[[-40,0],[40,0]],"prs_no":[[-64,0],[64,0]],"prs_nc":[[-64,0],[64,0]],"spst":[[-40,0],[40,0]],"spdt":[[-40,0],[40,-40],[40,40]],"dpst":[[-40,-60],[40,-60],[-40,60],[40,60]],"dpdt":[[-40,-80],[40,-120],[40,-40],[-40,80],[40,40],[40,120]],"xover":[[-40,-40],[40,-40],[-40,40],[40,40]],"coil":[[-40,0],[40,0]],"tmr_on":[[-40,0],[40,0]],"tmr_off":[[-40,0],[40,0]],"pl":[[-40,0],[40,0]],"sol":[[-40,0],[40,0]],"htr":[[-40,0],[40,0]],"motor":[[-140,-120],[-140,0],[-140,120]],"motor1":[[-140,-60],[-140,60]],"con_no":[[-40,0],[40,0]],"con_nc":[[-40,0],[40,0]],"tc_no":[[-40,0],[40,0]],"tc_nc":[[-40,0],[40,0]],"mst3":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"olc":[[-40,0],[40,0]],"dsc3":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"fdsc3":[[-80,-120],[80,-120],[-80,0],[80,0],[-80,120],[80,120]],"fus3":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"fuse":[[-40,0],[40,0]],"cb":[[-40,0],[40,0]],"cb2":[[-40,-60],[40,-60],[-40,60],[40,60]],"cb3":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"ol3":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"ol":[[-40,0],[40,0]],"sup":[[0,0]],"src_l1":[[0,0]],"src_l2":[[0,0]],"xfmr":[[-60,-60],[60,-60],[-60,60],[60,60]],"gnd":[[0,-40]],"cnt_out":[[-40,0]],"cnt_in":[[40,0]],"tpst":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]]};
 // Print Builder's symbol for each of its parts (a stand-in in Circuit Builder draws it), and the symbols Circuit Builder's
 // print-symbols.js lacks (taken from Print Builder's symbols.js and psym.js; a check in Print Builder's tests makes sure they still match)
-const LINK_PB_SYMN = {"pb_no":"NO Pushbutton","pb_nc":"NC Pushbutton","pbm_no":"NO Pushbutton","pbm_nc":"NC Pushbutton","estop":"NC EStop Pushbutton","sel":"Selector Switch Operator","ls_no":"NO Limit Switch","ls_nc":"NC Limit Switch","ls_hc":"NO HC Limit Switch","ls_ho":"NC HO Limit Switch","ts_no":"NO Temperature Switch","ts_nc":"NC Temperature Switch","ts_nol":"NO Temperature Switch","ts_ncl":"NC Temperature Switch","ps_no":"NO Pressure Switch","ps_nc":"NC Pressure Switch","ps_nol":"NO Pressure Switch","ps_ncl":"NC Pressure Switch","fs_no":"NO Float Switch","fs_nc":"NC Float Switch","fs_nol":"NO Float Switch","fs_ncl":"NC Float Switch","fls_no":"NO Flow Switch","fls_nc":"NC Flow Switch","fls_nol":"NO Flow Switch","fls_ncl":"NC Flow Switch","prs_no":"NO Proximity Switch","prs_nc":"NC Proximity Switch","spst":"SPST Switch","spdt":"SPDT Switch","dpst":"DPST Switch","dpdt":"DPDT Switch","xover":"DPDT Crossover Switch","coil":"Relay","tmr_on":"Relay","tmr_off":"Relay","pl":"Pilot Light","sol":"Solenoid","htr":"Heating Element","motor":"Motor Leads","con_no":"NO Contact","con_nc":"NC Contact","tc_no":"NO ND Switch","tc_nc":"NC ND Switch","mst3":"3PH Starter Contacts","olc":"NC Contact","dsc3":"3PH Disconnect","fdsc3":"3PH Fusible Disconnect","fus3":"3PH Fuses","fuse":"Fuse","cb":"Circuit Breaker","cb2":"DPST Circuit Breaker","cb3":"3PST Circuit Breaker","ol3":"3PH Thermal Overload","ol":"Thermal Overload","xfmr":"Control Transformer","gnd":"Ground","cnt_out":"Continuation Out","cnt_in":"Continuation In","tpst":"3PST Switch"};
+const LINK_PB_SYMN = {"pb_no":"NO Pushbutton","pb_nc":"NC Pushbutton","pbm_no":"NO Pushbutton","pbm_nc":"NC Pushbutton","estop":"NC EStop Pushbutton","sel":"Selector Switch Operator","ls_no":"NO Limit Switch","ls_nc":"NC Limit Switch","ls_hc":"NO HC Limit Switch","ls_ho":"NC HO Limit Switch","ts_no":"NO Temperature Switch","ts_nc":"NC Temperature Switch","ts_nol":"NO Temperature Switch","ts_ncl":"NC Temperature Switch","ps_no":"NO Pressure Switch","ps_nc":"NC Pressure Switch","ps_nol":"NO Pressure Switch","ps_ncl":"NC Pressure Switch","fs_no":"NO Float Switch","fs_nc":"NC Float Switch","fs_nol":"NO Float Switch","fs_ncl":"NC Float Switch","fls_no":"NO Flow Switch","fls_nc":"NC Flow Switch","fls_nol":"NO Flow Switch","fls_ncl":"NC Flow Switch","prs_no":"NO Proximity Switch","prs_nc":"NC Proximity Switch","spst":"SPST Switch","spdt":"SPDT Switch","dpst":"DPST Switch","dpdt":"DPDT Switch","xover":"DPDT Crossover Switch","coil":"Relay","tmr_on":"Relay","tmr_off":"Relay","pl":"Pilot Light","sol":"Solenoid","htr":"Heating Element","motor":"Motor Leads","motor1":"Motor Leads 1PH","con_no":"NO Contact","con_nc":"NC Contact","tc_no":"NO ND Switch","tc_nc":"NC ND Switch","mst3":"3PH Starter Contacts","olc":"NC Contact","dsc3":"3PH Disconnect","fdsc3":"3PH Fusible Disconnect","fus3":"3PH Fuses","fuse":"Fuse","cb":"Circuit Breaker","cb2":"DPST Circuit Breaker","cb3":"3PST Circuit Breaker","ol3":"3PH Thermal Overload","ol":"Thermal Overload","xfmr":"Control Transformer","gnd":"Ground","cnt_out":"Continuation Out","cnt_in":"Continuation In","tpst":"3PST Switch"};
 const LINK_PB_PSYM = {"SPDT Switch":{"b":"<path d=\"M-30 0L36 -30\" fill=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,-40],[40,40]],"y0":-50,"y1":50},"DPST Switch":{"b":"<path d=\"M0 45V-73\" fill=\"none\" stroke-dasharray=\"12 12\"/><path d=\"M-30 -60L30 -90\" fill=\"none\"/><circle cx=\"-30\" cy=\"-60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"-60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><path d=\"M-30 60L30 30\" fill=\"none\"/><circle cx=\"-30\" cy=\"60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,-60],[40,-60],[-40,60],[40,60]],"y0":-92,"y1":70},"DPDT Switch":{"b":"<path d=\"M0 66V-94\" fill=\"none\" stroke-dasharray=\"12 12\"/><path d=\"M-30 -80L36 -110\" fill=\"none\"/><circle cx=\"-30\" cy=\"-80\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"-80\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-120\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-120\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><path d=\"M-30 80L36 50\" fill=\"none\"/><circle cx=\"-30\" cy=\"80\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"80\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"120\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"120\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,-80],[40,-120],[40,-40],[-40,80],[40,40],[40,120]],"y0":-130,"y1":130},"DPDT Crossover Switch":{"b":"<path d=\"M-30 -40H30M-30 40H30\" fill=\"none\" stroke-dasharray=\"12 12\"/><path d=\"M-30 -40L30 40M-30 40L30 -40\" fill=\"none\"/><circle cx=\"-30\" cy=\"-40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"-40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"-30\" cy=\"40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"40\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,-40],[40,-40],[-40,40],[40,40]],"y0":-50,"y1":50},"Motor Leads":{"b":"<path d=\"M-140 -120H-120L-56.569 -56.569M-140 0H-80M-140 120H-120L-56.569 56.569\" fill=\"none\"/><circle cx=\"0\" cy=\"0\" r=\"80\" fill=\"#fff\"/>","t":[[-140,-120],[-140,0],[-140,120]],"y0":-124,"y1":124},"Circuit Breaker":{"b":"<path d=\"M-29.42 -14.34C-26.62 -22.26 -14.36 -27.98 -0.08 -28C14.18 -28.02 26.5 -22.36 29.38 -14.44\" fill=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"0\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"0\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,0],[40,0]],"y0":-30,"y1":10},"DPST Circuit Breaker":{"b":"<path d=\"M0 32V-86\" fill=\"none\" stroke-dasharray=\"12 12\"/><path d=\"M-29.42 -74.34C-26.62 -82.26 -14.36 -87.98 -0.08 -88C14.18 -88.02 26.5 -82.36 29.38 -74.44\" fill=\"none\"/><circle cx=\"-30\" cy=\"-60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"-60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><path d=\"M-29.42 45.66C-26.62 37.74 -14.36 32.02 -0.08 32C14.18 31.98 26.5 37.64 29.38 45.56\" fill=\"none\"/><circle cx=\"-30\" cy=\"60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"60\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"60\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,-60],[40,-60],[-40,60],[40,60]],"y0":-90,"y1":70},"3PST Circuit Breaker":{"b":"<path d=\"M0 92V-146\" fill=\"none\" stroke-dasharray=\"12 12\"/><path d=\"M-29.42 -134.34C-26.62 -142.26 -14.36 -147.98 -0.08 -148C14.18 -148.02 26.5 -142.36 29.38 -134.44\" fill=\"none\"/><circle cx=\"-30\" cy=\"-120\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"-120\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-120\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-120\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><path d=\"M-29.42 -14.34C-26.62 -22.26 -14.36 -27.98 -0.08 -28C14.18 -28.02 26.5 -22.36 29.38 -14.44\" fill=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"0\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"0\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><path d=\"M-29.42 105.66C-26.62 97.74 -14.36 92.02 -0.08 92C14.18 91.98 26.5 97.64 29.38 105.56\" fill=\"none\"/><circle cx=\"-30\" cy=\"120\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"120\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"120\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"120\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"y0":-150,"y1":130},"Ground":{"b":"<path d=\"M0 -40V-8M-30 -8H30M-20 8H20M-10 24H10\" fill=\"none\"/>","t":[[0,-40]],"y0":-40,"y1":28},"Continuation Out":{"b":"<path d=\"M-40 0H-26\" fill=\"none\"/><path d=\"M-26 -22H14L36 0L14 22H-26Z\" fill=\"#fff\"/>","t":[[-40,0]],"y0":-22,"y1":22},"Continuation In":{"b":"<path d=\"M26 0H40\" fill=\"none\"/><path d=\"M-36 -22H4L26 0L4 22H-36Z\" fill=\"#fff\"/>","t":[[40,0]],"y0":-22,"y1":22},"3PST Switch":{"b":"<path d=\"M0 105V-133\" fill=\"none\" stroke-dasharray=\"12 12\"/><path d=\"M-30 -120L30 -150\" fill=\"none\"/><circle cx=\"-30\" cy=\"-120\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"-120\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"-120\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"-120\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><path d=\"M-30 0L30 -30\" fill=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"0\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"0\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"0\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><path d=\"M-30 120L30 90\" fill=\"none\"/><circle cx=\"-30\" cy=\"120\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"-30\" cy=\"120\" r=\"6\" fill=\"#fff\" stroke=\"none\"/><circle cx=\"30\" cy=\"120\" r=\"10\" fill=\"#000\" stroke=\"none\"/><circle cx=\"30\" cy=\"120\" r=\"6\" fill=\"#fff\" stroke=\"none\"/>","t":[[-40,-120],[40,-120],[-40,0],[40,0],[-40,120],[40,120]],"y0":-152,"y1":130}};
 
 /* ---- shared/o3link.js ---- */
@@ -1322,8 +1322,8 @@ function linkBuild(doc, back) {
           if (w > p.x - l[0]) cons.push([l[0], p.x, w]); if (w > r[0] - p.x) cons.push([p.x, r[0], w]);
           row(k, p.y).push({ a: l[0], b: r[0], ea: 0, eb: 0, part: 1 }); continue; }
         const one = ts.length && ts.every(q => q[0] === ts[0][0]) ? ts[0][0] : null;
-        const [ea, eb] = p.t === 'motor' ? [0, 300] : p.t === 'xfmr' ? [105, 105] : one != null && ts.length === 1 ? [80, 80] : [40, 40];
-        const anchor = p.t === 'motor' && one != null ? one : p.x; keySet.add(anchor);
+        const [ea, eb] = p.t === 'motor' ? [0, 300] : p.t === 'motor1' ? [0, 230] : p.t === 'xfmr' ? [105, 105] : one != null && ts.length === 1 ? [80, 80] : [40, 40];
+        const anchor = (p.t === 'motor' || p.t === 'motor1') && one != null ? one : p.x; keySet.add(anchor);
         for (const y of new Set(ts.map(q => q[1]).concat(ts.length ? [] : [p.y]))) row(k, y).push({ a: anchor, b: anchor, ea, eb, part: 1 }); }
       for (const n of s.nodes || []) keySet.add(n.x);
       for (const w of s.wires) { const ps = [linkPbPos(s, w.a), ...(w.pts || []), linkPbPos(s, w.b)].filter(Boolean);
@@ -1449,7 +1449,8 @@ function linkBuild(doc, back) {
     else if (p.t === 'pl' || p.t === 'sol' || p.t === 'htr') {
       if (p.t === 'pl') { const w0 = LINK_LAMP_COL[(p.desc || '').toUpperCase().split(/\s+/)[0]], c = w0 || '00B050'; if (w0) ownCol.add(parts.length); const pbL = p.inPB ? [...opL.entries()].find(([k]) => k === 'PB:' + p.inPB) : null; two('lamp', ['lamp', x, y, pbL ? pbL[1] : '', 0, 1, c]); }
       else two(p.t, [p.t, x, y, linkDigits(p.tag, '1'), 0, 1, p.t === 'sol' ? '00D2BE' : 'FF0032']);
-    } else if (p.t === 'motor') add(it, ['mtr', x + (pb[1] ? pb[1][0] - x + 160 : 0), y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('mtr', x + (pb[1] ? pb[1][0] - x + 160 : 0), y, 0));
+    } else if (p.t === 'motor1') { const X = pb[0] ? pb[0][0] + 120 : x - 20; add(it, ['mt1', X, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('mt1', X, y, 0)); }
+    else if (p.t === 'motor') add(it, ['mtr', x + (pb[1] ? pb[1][0] - x + 160 : 0), y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('mtr', x + (pb[1] ? pb[1][0] - x + 160 : 0), y, 0));
     else if (p.t === 'mst3') { if (!coilL.has(p.tag)) { noCoil.push(p.tag || '?'); coilL.set(p.tag, take()); } add(it, ['mst', x, y, coilL.get(p.tag), 0, 1, ''], linkCbTerms('mst', x, y, 0)); }
     else if (p.t === 'ol3') add(it, ['olh', x, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('olh', x, y, 0));
     else if (p.t === 'dsc3') add(it, ['dsc', x, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('dsc', x, y, 0));
@@ -1705,6 +1706,7 @@ function circuitToPrint(d, env) {
       case 'sol': t = 'sol'; o.tag = 'SOL' + r.L; break;
       case 'htr': t = 'htr'; o.tag = 'HTR' + r.L; break;
       case 'mtr': t = 'motor'; o.tag = 'M' + r.L; o.x = r.x - 20; break;   // (its leads: 140 out on the print, 160 here)
+      case 'mt1': t = 'motor1'; o.tag = 'M' + r.L; o.x = r.x + 20; break;   // (a single-phase motor: its leads 140 out on the print, 120 here)
       case 'mst': t = 'mst3'; o.tag = tagOf.get('C:' + r.L) || r.L; break;
       case 'olc': t = 'olc'; o.tag = 'OL' + r.L; break;
       case 'olh': t = 'ol3'; o.tag = 'OL' + r.L; break;
@@ -1793,7 +1795,7 @@ function circuitToPrint(d, env) {
   // ---- 4. the paper: letter portrait unless asked otherwise, each part its own size with room for its tag, its name and the wire numbers.
   // A long rung that won't fit across portrait that way (Dallas, 17 Nov 2026, his choice each time): letter landscape ('land'),
   // portrait drawn tighter ('tight'), or the rung folded onto a second line with a continuation ('fold')
-  const spanOf = o => { const xs = linkPbTerms(o).map(q => q[0]); const half = o.t === 'motor' ? 60 : 40; return [Math.min(...xs, o.x - half), Math.max(...xs, o.x + half)]; };
+  const spanOf = o => { const xs = linkPbTerms(o).map(q => q[0]); const half = o.t === 'motor' || o.t === 'motor1' ? 60 : 40; return [Math.min(...xs, o.x - half), Math.max(...xs, o.x + half)]; };
   const allX = () => [...E.keys()].map(k => XY(k)[0]).concat(made.flatMap(({ o }) => [o.x, ...linkPbTerms(o).map(q => q[0])]), rails.map(r => r.x));
   const leftM = () => { const xs = allX(), m = Math.min(...xs); return 160 + (rails.length && Math.min(...rails.map(r => r.x)) - m < 120 ? 120 : 0); };   // (in from the left edge; more when the L1 rail is the leftmost thing, for its rung numbers)
   // (room on the right for the coils' cross-references: up to three numbers a line, Print Builder wraps the rest)
@@ -2294,7 +2296,7 @@ const OPEN_LIFT = 15, BLADE_GREY = '#a6a6a6';   // how far an open contact's bar
 // loads: things current passes through to L2 (a relay coil, a pilot light or a solenoid). They take the same room and
 // are passed through the same way; only a coil works contacts. A solenoid works something outside the circuit (a
 // pneumatic or hydraulic valve): it is numbered (SOL1, SOL2 ...) rather than lettered, and solOn says if it has pulled in
-const LOADT = t => t === 'coil' || t === 'lamp' || t === 'sol' || t === 'htr' || t === 'xfm';
+const LOADT = t => t === 'coil' || t === 'lamp' || t === 'sol' || t === 'htr' || t === 'xfm' || t === 'mt1';
 /* A control transformer (T1, T2 ...): its primary (H1, H2, on top) is a load across the supply; while current goes
    through it, its secondary (X1, X2, below) is a supply of its own for a control circuit: X1 like L1, X2 like L2, joined
    to them through two switches inside it that close when the primary is fed (see network.js). The box: XFM_W by XFM_H;
@@ -2307,8 +2309,8 @@ const XFM_W = 210, XFM_H = 148, XFM_TX = 60, XFM_TY = 80, XFM_EDGE = '#9aa7b5';
 const isPwr3 = p => p.t === 'dsc' || p.t === 'fus' || p.t === 'mst' || p.t === 'olh', isPwrT = t => t === 'dsc' || t === 'fus' || t === 'mst' || t === 'olh';
 const DSC_HEAD = 50, DSC_HANDLE = '#E8413C', DSC_DOWN = 120 + 118;   // (a disconnect's handle (Dallas, 22 Nov 2026, option A: below its poles, in its body, as a circuit breaker's; its body
 // reaching DSC_DOWN below its middle))
-const PWR_DY = 120, PWR_H = 2 * PWR_DY + 66, MTR_W = 280, MTR_H = 280, MTR_COL = '#9aa7b5', OL_COL = '#FF6F59', DSC_COL = '#c9d2dd', FUS_COL = '#c8c8c8';
-const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : t === 'tsw' ? TSW_T : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : t === 'psw' ? PSW_UP : t === 'fsw' ? FSW_UP : t === 'lsw' || t === 'tsw' ? LSW_S / 2 : t === 'tgl' ? TGL_BOT : t === 'dpd' ? DPD_BOT : t === 'tps' ? TPS_BOT : t === 'cbd' ? CBD_BOT : t === 'cbt' ? CBT_BOT : t === 'sp2' || t === 'xov' || t === 'dps' ? SP2_BOT : t === 'mtr' ? MTR_H / 2 : t === 'dsc' ? DSC_DOWN : isPwrT(t) ? PWR_H / 2 : 40;   // (the room a part takes)
+const PWR_DY = 120, PWR_H = 2 * PWR_DY + 66, MTR_W = 280, MTR_H = 280, MT1_W = 200, MT1_DY = 60, MTR_COL = '#9aa7b5', OL_COL = '#FF6F59', DSC_COL = '#c9d2dd', FUS_COL = '#c8c8c8';
+const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : t === 'mt1' ? MT1_W / 2 + 20 : t === 'tsw' ? TSW_T : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : t === 'psw' ? PSW_UP : t === 'fsw' ? FSW_UP : t === 'lsw' || t === 'tsw' ? LSW_S / 2 : t === 'tgl' ? TGL_BOT : t === 'dpd' ? DPD_BOT : t === 'tps' ? TPS_BOT : t === 'cbd' ? CBD_BOT : t === 'cbt' ? CBT_BOT : t === 'sp2' || t === 'xov' || t === 'dps' ? SP2_BOT : t === 'mtr' ? MTR_H / 2 : t === 'mt1' ? MT1_W / 2 : t === 'dsc' ? DSC_DOWN : isPwrT(t) ? PWR_H / 2 : 40;   // (the room a part takes)
 const SOL_COL = '#00D2BE';
 /* a solenoid (as on Dallas's drawing): a diamond (a rounded square on its corner) as tall and wide as a coil, with a
    dot at each end where the rung comes in, joined by the lightning bolt: along the rung, up to a peak, straight down and
@@ -2334,8 +2336,8 @@ const SOL_LEN = 2 * (SOL_DOT + SOL_DR - SOL_X) + 2 * Math.hypot(SOL_X, SOL_P) + 
 // a selector switch: a square body a little larger than a pushbutton's (room for its position numbers round the top)
 const SEL_BOX = 80;
 const WIDE = t => LOADT(t) || t === 'sel' || t === 'lsw' || t === 'psw' || t === 'fsw' || t === 'flt' || t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'tps' || t === 'dpd' || t === 'cbk' || t === 'cbd' || t === 'cbt';                // parts whose ends sit 60 either side of their centre
-const BODYH = t => t === 'lsw' || t === 'tsw' || t === 'psw' || t === 'fsw' || t === 'flt' || t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'tps' || t === 'dpd' || t === 'cbk' || t === 'cbd' || t === 'cbt' ? LSW_S : t === 'xfm' ? XFM_H : t === 'mtr' ? MTR_H : isPwrT(t) ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
-const TERM = p => p.t === 'stand' ? Math.max(40, ...(p.st || []).map(q => Math.abs(q[0]))) : p.t === 'mtr' ? MTR_W / 2 + 20 : p.t === 'tsw' ? TSW_T : WIDE(p.t) ? 60 : 40;
+const BODYH = t => t === 'lsw' || t === 'tsw' || t === 'psw' || t === 'fsw' || t === 'flt' || t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'tps' || t === 'dpd' || t === 'cbk' || t === 'cbd' || t === 'cbt' ? LSW_S : t === 'xfm' ? XFM_H : t === 'mtr' ? MTR_H : t === 'mt1' ? MT1_W : isPwrT(t) ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
+const TERM = p => p.t === 'stand' ? Math.max(40, ...(p.st || []).map(q => Math.abs(q[0]))) : p.t === 'mtr' ? MTR_W / 2 + 20 : p.t === 'mt1' ? MT1_W / 2 + 20 : p.t === 'tsw' ? TSW_T : WIDE(p.t) ? 60 : 40;
 // how far a part's short leads reach in from its ends: to its body's edge (a wide part's body, as limit and toggle switches
 // and the circuit breaker have, is 110 across, inside its ends 60 out; never past its ends, or the current would come
 // out late, painted out over the wire (Dallas, 22 Nov 2026))
@@ -2406,9 +2408,12 @@ const XFM_PR = ['480', '240', '208', '120'];
    277 or 480 V (p.rv; none: 120). A coil or solenoid pulls in at 85% of it and, once in, holds in down to 60%; well over
    it (more than 110%) it burns out after a few seconds (open, until Reset or Replace Part). A tag under the part shows it
    when it isn't 120 V. A transformer's secondary can also be 24 V (p.s24). */
-const LOAD_RV = [24, 120, 208, 240, 277, 480], RATED = t => t === 'coil' || t === 'lamp' || t === 'sol' || t === 'htr';
+const LOAD_RV = [24, 120, 208, 240, 277, 480], RATED = t => t === 'coil' || t === 'lamp' || t === 'sol' || t === 'htr' || t === 'mt1';
+// (a motor's nameplate voltages (Dallas, 24 Nov 2026): three-phase 208, 230 or 460 V; single-phase 115 or 230 V)
+const MTR_RV = [208, 230, 460], MT1_RV = [115, 230], rvList = t => t === 'mtr' ? MTR_RV : t === 'mt1' ? MT1_RV : LOAD_RV, HAS_RV = t => RATED(t) || t === 'mtr';
+const MTR_LOW = .85, MTR_HIGH = 1.1, MTR_HOT = 10;   // (a motor stalls under 85% of its voltage and overheats over 110%: its overload trips, after HUM_TRIP or MTR_HOT seconds)
 const DROP_OUT = .6, BURN_OVER = 1.1, BURN_TIME = 3;
-const twoEnded = p => !isBox(p) && !isPwr3(p) && p.t !== 'xfm' && p.t !== 'mtr' && p.t !== 'stand' && p.t !== 'gnd' && !isMulti(p);
+const twoEnded = p => !isBox(p) && !isPwr3(p) && p.t !== 'xfm' && p.t !== 'mtr' && p.t !== 'mt1' && p.t !== 'stand' && p.t !== 'gnd' && !isMulti(p);
 const flips = p => p.t === 'tgl' || isTglN(p);
 const isBrk = p => p.t === 'cbk' || p.t === 'cbd' || p.t === 'cbt';   // (a circuit breaker: single, DPST or 3PST)
 const isMulti = p => isTglN(p) || p.t === 'cbd' || p.t === 'cbt';   // (the parts with more than two ends that switch: the toggle switches below, and a DPST or 3PST circuit breaker; each run as its poles)
@@ -2468,9 +2473,10 @@ const isCon = p => p.t === 'con' || p.t === 'xsw' || p.t === 'pp' || p.t === 'ol
    middle) or shorted to L2 (at its middle). p.fault / w.fault: 'open', 'short' or 'l2' (wires). WORK_ORDER: the
    symptom the instructor writes for the student (saved with the circuit). */
 let FAULTS_ON = true, FAULT_BADGES = true, WORK_ORDER = '';
-const FAULT_LOADS = ['coil', 'lamp', 'sol', 'htr'];
-const canFault = p => !!p && (FAULT_LOADS.includes(p.t) || ['btn', 'con', 'sel', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'cbk', 'olc', 'fu1'].includes(p.t));
-const PART_FAULTS = { open: 'Open', short: 'Shorted' }, WIRE_FAULTS = { open: 'Open (Broken)', l2: 'Shorted to L2' };
+const FAULT_LOADS = ['coil', 'lamp', 'sol', 'htr', 'mt1'];
+const canFault = p => !!p && (FAULT_LOADS.includes(p.t) || ['mtr', 'btn', 'con', 'sel', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'cbk', 'olc', 'fu1'].includes(p.t));
+const PART_FAULTS = { open: 'Open', short: 'Shorted', w1: 'Open Winding (T1)', w2: 'Open Winding (T2)', w3: 'Open Winding (T3)' },   // (the windings: a three-phase motor's only (Dallas, 24 Nov 2026))
+  MTR_FAULTS = ['w1', 'w2', 'w3'], WIRE_FAULTS = { open: 'Open (Broken)', l2: 'Shorted to L2' };
 /* Scenarios (Dallas, 16 Nov 2026): one circuit, several sets of faults, each with its own work order; one is in force at
    a time (SCEN, from 0). The faults in force are the parts' and wires' own .fault; each one's faults in every scenario
    are kept in its .fz ({ scenario: fault }), brought up to date from .fault by scenSync (faults.js). FF_OFFER: what the
@@ -2605,7 +2611,7 @@ const key = (x, y) => x + ',' + y;
 // (a continuation can be turned, p.rot quarter turns clockwise: its connection points turn with it)
 const rotQ = (p, dx, dy) => { for (let k = 0; k < (p.rot || 0); k++) [dx, dy] = [-dy, dx]; return [p.x + dx, p.y + dy]; };
 // (a supply box: left, right and bottom; a continuation its top too)
-const terms = p => p.t === 'tps' || p.t === 'cbt' ? [[-60, -120], [60, -120], [-60, 0], [60, 0], [-60, 120], [60, 120]].map(([u, v]) => [p.x + (p.fx ? -u : u), p.y + v]) : p.t === 'dpd' ? [[-60, 0], [60, -SP2_DY], [60, SP2_DY], [-60, DPD_DY], [60, DPD_DY - SP2_DY], [60, DPD_DY + SP2_DY]].map(([u, v]) => [p.x + (p.fx ? -u : u), p.y + v]) : p.t === 'xov' || p.t === 'dps' || p.t === 'cbd' ? [[-60, -SP2_DY], [60, -SP2_DY], [-60, SP2_DY], [60, SP2_DY]].map(([u, v]) => [p.x + (p.fx ? -u : u), p.y + v]) : p.t === 'sp2' ? [[-60, 0], [60, -SP2_DY], [60, SP2_DY]].map(([u, v]) => [p.x + (p.fx ? -u : u), p.y + v]) : p.t === 'stand' ? (p.st || []).map(([u, v]) => [p.x + u, p.y + v]) : isPwr3(p) ? [-PWR_DY, 0, PWR_DY].flatMap(dy => [[p.x - 40, p.y + dy], [p.x + 40, p.y + dy]]) : p.t === 'mtr' ? [-PWR_DY, 0, PWR_DY].map(dy => [p.x - TERM(p), p.y + dy]) : p.t === 'xfm' ? [[-XFM_TX, -XFM_TY], [XFM_TX, -XFM_TY], [-XFM_TX, XFM_TY], [XFM_TX, XFM_TY], ...(p.ct ? [[0, XFM_TY]] : [])].map(([dx, dy]) => [p.x + dx, p.y + dy]) : p.t === 'gnd' ? [[0, -TERM(p)]].map(([dx, dy]) => rotQ(p, dx, dy)) : p.t === 'fu1' ? [[-TERM(p), 0], [TERM(p), 0]].map(([dx, dy]) => rotQ(p, dx, dy)) : isBox(p) ? [[-TERM(p), 0], [TERM(p), 0], [0, TERM(p)], ...(isJmp(p) ? [[0, -TERM(p)]] : [])].map(([dx, dy]) => rotQ(p, dx, dy)) : [[-TERM(p), 0], [TERM(p), 0]].map(([dx, dy]) => rotQ(p, dx, dy));   // (a supply box: left, right and bottom; a two-ended part, turned)
+const terms = p => p.t === 'tps' || p.t === 'cbt' ? [[-60, -120], [60, -120], [-60, 0], [60, 0], [-60, 120], [60, 120]].map(([u, v]) => [p.x + (p.fx ? -u : u), p.y + v]) : p.t === 'dpd' ? [[-60, 0], [60, -SP2_DY], [60, SP2_DY], [-60, DPD_DY], [60, DPD_DY - SP2_DY], [60, DPD_DY + SP2_DY]].map(([u, v]) => [p.x + (p.fx ? -u : u), p.y + v]) : p.t === 'xov' || p.t === 'dps' || p.t === 'cbd' ? [[-60, -SP2_DY], [60, -SP2_DY], [-60, SP2_DY], [60, SP2_DY]].map(([u, v]) => [p.x + (p.fx ? -u : u), p.y + v]) : p.t === 'sp2' ? [[-60, 0], [60, -SP2_DY], [60, SP2_DY]].map(([u, v]) => [p.x + (p.fx ? -u : u), p.y + v]) : p.t === 'stand' ? (p.st || []).map(([u, v]) => [p.x + u, p.y + v]) : isPwr3(p) ? [-PWR_DY, 0, PWR_DY].flatMap(dy => [[p.x - 40, p.y + dy], [p.x + 40, p.y + dy]]) : p.t === 'mtr' ? [-PWR_DY, 0, PWR_DY].map(dy => [p.x - TERM(p), p.y + dy]) : p.t === 'mt1' ? [-MT1_DY, MT1_DY].map(dy => [p.x - TERM(p), p.y + dy]) : p.t === 'xfm' ? [[-XFM_TX, -XFM_TY], [XFM_TX, -XFM_TY], [-XFM_TX, XFM_TY], [XFM_TX, XFM_TY], ...(p.ct ? [[0, XFM_TY]] : [])].map(([dx, dy]) => [p.x + dx, p.y + dy]) : p.t === 'gnd' ? [[0, -TERM(p)]].map(([dx, dy]) => rotQ(p, dx, dy)) : p.t === 'fu1' ? [[-TERM(p), 0], [TERM(p), 0]].map(([dx, dy]) => rotQ(p, dx, dy)) : isBox(p) ? [[-TERM(p), 0], [TERM(p), 0], [0, TERM(p)], ...(isJmp(p) ? [[0, -TERM(p)]] : [])].map(([dx, dy]) => rotQ(p, dx, dy)) : [[-TERM(p), 0], [TERM(p), 0]].map(([dx, dy]) => rotQ(p, dx, dy));   // (a supply box: left, right and bottom; a two-ended part, turned)
 /* The sheet is as wide as it needs to be to fill the panel with the whole circuit in view: on a wide screen, or for a
    tall circuit, the L2 bar moves out to the right edge and the wires fastened to it stretch to meet it. (It is never
    narrower than W_MIN, nor so narrow that a part would end up past L2.) Once the L1 or L2 bar has been moved by hand,
@@ -2829,7 +2835,7 @@ function components(net, ok) {
 // build-mode check: with every button passing current, is each coil wired from L1 to L2? (A load in series with
 // others is fine, with a note of the voltage it gets: { note }.)
 // a load not on the voltage it's made for (Dallas, 23 Nov 2026): what it gets, what it's made for, and whether it'll burn out
-const voltNote = (p, v, R) => `On ${Math.round(v * 10) / 10} V, made for ${R} V` + (v > BURN_OVER * R + 1e-6 ? ': it will burn out' : '');
+const voltNote = (p, v, R) => `On ${Math.round(v * 10) / 10} V, made for ${R} V` + (v > BURN_OVER * R + 1e-6 ? ': it will burn out' : p.t === 'mt1' && v < PULL_IN * R - 1e-6 ? ': it will stall' : '');
 // the control circuit's voltage while building: 120 V, or what its transformer gives as wired (its primary across the phases
 // it's on, against its rating)
 function ctrlVolts(net, f0) {
@@ -2864,6 +2870,8 @@ function wiringIssues(net) {
     if (p.t === 'mtr') {
       if (!p._t.some(i => net.adj[i].length > 0)) out.set(p.id, 'Not wired to anything');
       else if (!V.some(fv => new Set(p._t.map(i => phaseAt(net, fv, i)).filter(k => k > 0 && k < 4)).size === 3)) out.set(p.id, 'Not fed all three phases');
+      else if (p.rv) { const fv = V.find(fv => new Set(p._t.map(i => phaseAt(net, fv, i)).filter(k => k > 0 && k < 4)).size === 3), v = phAcross(phaseAt(net, fv, p._t[0]), phaseAt(net, fv, p._t[1]));   // (on the wrong voltage for its nameplate)
+        if (Math.abs(v - p.rv) > 2) out.set(p.id, { note: `On ${Math.round(v * 10) / 10} V, made for ${p.rv} V` + (v < MTR_LOW * p.rv ? ': it will stall' : v > MTR_HIGH * p.rv ? ': it will overheat' : '') }); }
       continue;
     }
     if (isPh(p)) {
@@ -3220,7 +3228,7 @@ const SUPPLY_V = 120, PULL_IN = 0.85;
      solenoid (valve)                    1.2 kΩ   0.1 A, 12 W          heating element 9.6 Ω   12.5 A, 1500 W
      control transformer: primary 12 Ω, secondary 0.5 Ω; a motor: 2 Ω a winding (ts-meter.js) */
 const LOAD_OHMS = p => p.t === 'coil' ? (isTimer(p) ? 3000 : parts.some(q => q.t === 'mst' && q.L === p.L) ? 240 : 2500)
-  : p.t === 'lamp' ? 2400 : p.t === 'sol' ? 1200 : p.t === 'htr' ? 9.6 : p.t === 'xfm' ? 12 : 1000;
+  : p.t === 'lamp' ? 2400 : p.t === 'sol' ? 1200 : p.t === 'htr' ? 9.6 : p.t === 'mt1' ? 12 : p.t === 'xfm' ? 12 : 1000;
 const loadR = p => LOAD_OHMS(p);                         // (each load's resistance)
 const ratedShare = p => p.rv ? p.rv / SUPPLY_V : p._ms ?? 1;   // (the voltage it's made for, as a share of the supply)
 // V: junction group -> voltage (L1 1, L2 0); share: load id -> the share of the supply across it (0: no current)
@@ -3876,12 +3884,14 @@ function phasesNow(t) {
 const HUM_TRIP = 3;
 function motorsNow(t) {
   for (const p of parts) if (p.t === 'mtr' && p._t) {
-    const ks = p._t.map(n => phaseOfAt(n, t)), got = new Set(ks.filter(k => k > 0 && k < 4));   // (the neutral is no phase)
-    const st = got.size === 3 ? 'run' : got.size === 2 ? 'hum' : 'off', dir = st !== 'run' ? 0 : ['123', '231', '312'].includes(ks.join('')) ? 1 : -1;
+    const ks = p._t.map((n, i) => faultOf(p) === 'w' + (i + 1) ? 0 : phaseOfAt(n, t)), got = new Set(ks.filter(k => k > 0 && k < 4));   // (an open winding: nothing through it)   // (the neutral is no phase)
+    // (all three: on its nameplate voltage it runs; under 85% of it, it stalls; over 110%, it runs and overheats (Dallas, 24 Nov 2026))
+    const r = got.size === 3 && p.rv ? phAcross(ks[0], ks[1]) / p.rv : 1;
+    const st = got.size === 3 ? (r < MTR_LOW ? 'stall' : r > MTR_HIGH ? 'hot' : 'run') : got.size === 2 ? 'hum' : 'off', dir = st !== 'run' && st !== 'hot' ? 0 : ['123', '231', '312'].includes(ks.join('')) ? 1 : -1;
     const m = MOT[p.id];
     if (m && m.st === st && m.dir === dir) continue;
     const now = MOT[p.id] = { st, dir, t0: t }; needPaint = true;
-    if (st === 'hum') schedule(t + HUM_TRIP, () => { if (MOT[p.id] === now) tripFeeding(p, evT); });
+    if (st === 'hum' || st === 'stall' || st === 'hot') schedule(t + (st === 'hot' ? MTR_HOT : HUM_TRIP), () => { if (MOT[p.id] === now) tripFeeding(p, evT); });
   }
 }
 // trip (or reset) overload L: its contacts in the control circuit open (or close again)
@@ -4118,7 +4128,7 @@ function drawEstop(p, v, x, y, g) {
     el('path', { d: `M ${P1[0] + tx * L} ${P1[1] + ty * L} L ${P1[0] + nx * w} ${P1[1] + ny * w} L ${P1[0] - nx * w} ${P1[1] - ny * w} Z`, fill: ESTOP_PLATE }, v.twist);
   }
 }
-const captionOf = p => p.t === 'gnd' ? 'Ground' : p.t === 'stand' ? `${p.L ? p.L + ' ' : ''}${LINK_PB_SYMN[p.sym] || p.sym} (stand-in)` : p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} ${p.low ? 'Low' : 'High'} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} ${p.low ? 'Low' : 'High'} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'flt' ? `FS${p.L} ${p.low ? 'Low' : 'High'} Level Float Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tgl' ? `SW${p.L} Toggle Switch (SPST)` : p.t === 'sp2' ? `SW${p.L} Toggle Switch (SPDT)` : p.t === 'xov' ? `SW${p.L} Crossover Switch (DPDT)` : p.t === 'dps' ? `SW${p.L} Toggle Switch (DPST)` : p.t === 'tps' ? `SW${p.L} Toggle Switch (3PST)` : p.t === 'cbk' ? `CB${p.L} Circuit Breaker` : p.t === 'cbd' ? `CB${p.L} Circuit Breaker (DPST)` : p.t === 'cbt' ? `CB${p.L} Circuit Breaker (3PST)` : p.t === 'dpd' ? `SW${p.L} Toggle Switch (DPDT)` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'gnd' ? 'Ground' : p.t === 'stand' ? `${p.L ? p.L + ' ' : ''}${LINK_PB_SYMN[p.sym] || p.sym} (stand-in)` : p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} ${p.low ? 'Low' : 'High'} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} ${p.low ? 'Low' : 'High'} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'flt' ? `FS${p.L} ${p.low ? 'Low' : 'High'} Level Float Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tgl' ? `SW${p.L} Toggle Switch (SPST)` : p.t === 'sp2' ? `SW${p.L} Toggle Switch (SPDT)` : p.t === 'xov' ? `SW${p.L} Crossover Switch (DPDT)` : p.t === 'dps' ? `SW${p.L} Toggle Switch (DPST)` : p.t === 'tps' ? `SW${p.L} Toggle Switch (3PST)` : p.t === 'cbk' ? `CB${p.L} Circuit Breaker` : p.t === 'cbd' ? `CB${p.L} Circuit Breaker (DPST)` : p.t === 'cbt' ? `CB${p.L} Circuit Breaker (3PST)` : p.t === 'dpd' ? `SW${p.L} Toggle Switch (DPDT)` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'mt1' ? `MTR${p.L} Single-Phase Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -4323,6 +4333,8 @@ function drawPart(p, g, x, y, chan, onStation) {
     drawPwr(p, g, x, y, v, chan);
   } else if (p.t === 'mtr') {
     drawMtr(p, g, x, y, v, chan);
+  } else if (p.t === 'mt1') {
+    drawMt1(p, g, x, y, v, chan);
   } else if (isJmp(p)) {
     // a continuation: the supply boxes' double chevron in a silver-edged box. While running, the current lights the
     // leads that are wired and fills the chevrons (see run.js)
@@ -4419,7 +4431,7 @@ function drawPart(p, g, x, y, chan, onStation) {
   }
   // a load's rated voltage, when it isn't 120 V: a tag under it (beside it, turned upright); and, burned out by too much
   // voltage, its middle dark and a red badge on its top right, as a blown fuse's (Dallas, 23 Nov 2026)
-  if (RATED(p.t) && !onStation) {
+  if (RATED(p.t) && p.t !== 'mt1' && !onStation) {
     if (p.rv) { const up = (p.rot || 0) % 2, tx = up ? x + COIL / 2 + 22 : x, ty = up ? y : y + COIL / 2 + 15;
       el('rect', { x: tx - 18, y: ty - 9, width: 36, height: 18, rx: 5, fill: '#1f1f1f', stroke: p.color || '#c8c8c8', 'stroke-width': 1.2 }, g);
       el('text', { x: tx, y: ty + 3.6, 'text-anchor': 'middle', 'font-size': 9.5, 'font-weight': 800, fill: '#fff', 'pointer-events': 'none' }, g).textContent = p.rv + ' V'; }
@@ -4723,37 +4735,102 @@ function drawPwr(p, g, x, y, v, chan) {
    (a third of it each), round a fan that turns while it runs (an arrow beside it shows which way: clockwise forward)
    and shakes while it hums */
 function drawMtr(p, g, x, y, v, chan) {
+  // (Dallas, 24 Nov 2026, option R: each lead runs in to a lug on the ring, T1 along the top and down, T2 straight in, T3
+  // along the bottom and up, meeting the ring square on; the ring is the windings, a third for each phase, lit outward
+  // both ways from its lug as the current arrives, the three meeting at the star point (the dots between them))
   v.lead = null; v.src = [];
-  const H = MTR_H, x0 = x - MTR_W / 2, cx = x + 22, R = 92;
+  const H = MTR_H, x0 = x - MTR_W / 2, cx = x + 22, R = 92, A = [300, 180, 60], tys = [-PWR_DY, 0, PWR_DY];
+  const P = (a, r = R) => [cx + r * Math.cos(a * Math.PI / 180), y + r * Math.sin(a * Math.PI / 180)];
   terms(p).forEach(([tx, ty], i) => {
     el('line', { x1: tx, y1: ty, x2: x0, y2: ty, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
     if (!editing && p._t) v.src.push({ n: p._t[i], ln: el('line', { x1: tx, y1: ty, x2: x0, y2: ty, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g) });
   });
   framed('rect', { x: x0, y: y - H / 2, width: MTR_W, height: H, rx: 22, fill: 'url(#gWell)', stroke: MTR_COL, 'stroke-width': 2.2 }, g);
-  [-1, 0, 1].forEach((k, i) => { const ty = y + k * PWR_DY, tx = x0 + 24;
+  el('circle', { cx, cy: y, r: R + 5, fill: '#111', filter: 'url(#fShadow)' }, g);
+  // each winding: from its lug, half of it each way (so it can be lit outward from the lug)
+  const half = (a0, a1) => { const [sx, sy] = P(a0), [ex, ey] = P(a1); return `M${sx} ${sy}A${R} ${R} 0 0 ${a1 > a0 ? 1 : 0} ${ex} ${ey}`; };
+  v.wd = A.map(a => [half(a, a + 60), half(a, a - 60)].map(d => { el('path', { d, fill: 'none', stroke: GREY, 'stroke-width': 9 }, g); return el('path', { d, fill: 'none', stroke: 'transparent', 'stroke-width': 9 }, g); }));
+  v.wLen = R * Math.PI / 3;
+  A.forEach(a => { const [sx, sy] = P(a + 60); el('circle', { cx: sx, cy: sy, r: 3.2, fill: '#111' }, g); });   // (the star point)
+  // the leads inside, from the terminal's tag to its lug, with a rounded bend
+  v.ld = tys.map((dy, i) => { const [jx, jy] = P(A[i], R + 4.5), ty = y + dy, sx = x0 + 37, r = 14;
+    const d = i === 1 ? `M${sx} ${ty}L${jx} ${jy}` : `M${sx} ${ty}L${jx - r} ${ty}Q${jx} ${ty} ${jx} ${ty + (dy < 0 ? r : -r)}L${jx} ${jy}`;
+    el('path', { d, fill: 'none', stroke: '#111', 'stroke-width': 10, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+    el('path', { d, fill: 'none', stroke: GREY, 'stroke-width': 5.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+    return el('path', { d, fill: 'none', stroke: 'transparent', 'stroke-width': 5.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g); });
+  v.ldLen = tys.map((dy, i) => { const [jx, jy] = P(A[i], R + 4.5), sx = x0 + 37, r = 14; return i === 1 ? Math.hypot(jx - sx, jy - y) : (jx - r - sx) + Math.PI * r / 2 * .9 + Math.abs(y + dy + (dy < 0 ? r : -r) - jy); });
+  tys.forEach((dy, i) => { const tx = x0 + 24, ty = y + dy;
     el('rect', { x: tx - 13, y: ty - 12, width: 26, height: 24, rx: 6, fill: '#1f1f1f', stroke: '#e2cc85', 'stroke-width': 1.2 }, g);
     el('text', { x: tx, y: ty + 4.3, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 700, fill: '#f2e6b8' }, g).textContent = 'T' + (i + 1); });
-  el('circle', { cx, cy: y, r: R + 5, fill: '#111', filter: 'url(#fShadow)' }, g);
-  v.arcs = [0, 1, 2].map(i => { const a0 = (i * 120 - 150) * Math.PI / 180, a1 = ((i + 1) * 120 - 150) * Math.PI / 180;
-    return el('path', { d: `M${cx + R * Math.cos(a0)} ${y + R * Math.sin(a0)}A${R} ${R} 0 0 1 ${cx + R * Math.cos(a1)} ${y + R * Math.sin(a1)}`, fill: 'none', stroke: GREY, 'stroke-width': 9 }, g); });
   el('circle', { cx, cy: y, r: R - 7, fill: '#262626', stroke: '#111', 'stroke-width': 1.5 }, g);
+  // the lugs, over the fan's disc so none of their edge is hidden (Dallas, 24 Nov 2026)
+  v.lug = A.map(a => { const [lx, ly] = P(a); return el('circle', { cx: lx, cy: ly, r: 7.5, fill: '#1c1c1c', stroke: GREY, 'stroke-width': 3 }, g); });
   const at = el('g', { transform: `translate(${cx} ${y})` }, g);
   v.rotor = el('g', {}, at);   // (it turns about its hub, see paintMtr)
   const fan = el('g', { transform: `scale(${(R / 70).toFixed(3)})` }, v.rotor);
   for (let i = 0; i < 6; i++) el('path', { d: 'M0 -12C22 -30 30 -48 12 -56L-6 -48C8 -38 6 -26 0 -12Z', transform: `rotate(${i * 60})`, fill: '#6a7077', stroke: '#1c1c1c', 'stroke-width': 1.2 }, fan);
   rdot(fan, 0, 0, 13).setAttribute('fill', '#7a8087');
   el('text', { x: 0, y: 6, 'text-anchor': 'middle', 'font-size': 17, 'font-weight': 800, fill: '#1c1c1c' }, at).textContent = 'M';
-  // which way it turns (shown while it runs): an arc just outside the ring at its lower right, its head the way the fan
-  // goes (clockwise, so down that side, forward; turned over, up it, backward)
-  const ra = R + 13, pt = a => [cx + ra * Math.cos(a * Math.PI / 180), y + ra * Math.sin(a * Math.PI / 180)];
-  const [sx, sy] = pt(8), [tx, ty] = pt(52), tg = [-Math.sin(52 * Math.PI / 180), Math.cos(52 * Math.PI / 180)], bk = [-tg[0], -tg[1]], pp = [-bk[1], bk[0]];
+  // which way it turns (shown while it runs): an arc just outside the ring on its right, its head the way the fan goes
+  // (clockwise, so down it, forward; turned over, up it, backward); FORWARD or REVERSE under the body
+  const ra = R + 13, [sx, sy] = P(-22, ra), [tx, ty] = P(22, ra), a = 22 * Math.PI / 180, tg = [-Math.sin(a), Math.cos(a)], bk = [-tg[0], -tg[1]], pp = [-bk[1], bk[0]];
   v.arrow = el('g', { display: 'none' }, g);
   v.arrowPath = el('g', {}, v.arrow);
   el('path', { d: `M${sx} ${sy}A${ra} ${ra} 0 0 1 ${tx} ${ty}`, fill: 'none', stroke: '#9be03a', 'stroke-width': 3, 'stroke-linecap': 'round' }, v.arrowPath);
   el('path', { d: `M${tx + 9 * bk[0] + 5.5 * pp[0]} ${ty + 9 * bk[1] + 5.5 * pp[1]}L${tx} ${ty}L${tx + 9 * bk[0] - 5.5 * pp[0]} ${ty + 9 * bk[1] - 5.5 * pp[1]}`, fill: 'none', stroke: '#9be03a', 'stroke-width': 3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, v.arrowPath);
-  v.dir = el('text', { x: x + MTR_W / 2 - 14, y: y + H / 2 - 12, 'text-anchor': 'end', 'font-size': 12, 'font-weight': 800, fill: '#9be03a' }, v.arrow);
-  v.hum = el('text', { x: cx, y: y + H / 2 - 14, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: '#ff8a7a', display: 'none' }, g); v.hum.textContent = 'Humming: a phase is missing';
+  v.dir = el('text', { x: x + MTR_W / 2 - 4, y: y + H / 2 + 17, 'text-anchor': 'end', 'font-size': 12, 'font-weight': 800, fill: '#9be03a' }, v.arrow);
+  v.hum = el('text', { x: x + MTR_W / 2 - 4, y: y + H / 2 + 17, 'text-anchor': 'end', 'font-size': 12, 'font-weight': 700, fill: '#ff8a7a', display: 'none' }, g); v.hum.textContent = 'Humming: a phase is missing';
+  if (p.rv) { const ty = y + H / 2 + 17;   // (a voltage picked: its tag, under the body at its left)
+    el('rect', { x: x0 + 4, y: ty - 12, width: 44, height: 18, rx: 5, fill: '#1c1c1c', stroke: MTR_COL, 'stroke-width': 1.3 }, g);
+    el('text', { x: x0 + 26, y: ty + 1.5, 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = p.rv + ' V'; }
   v.cx = cx; v.cy = y;
+}
+
+/* a single-phase motor (Dallas, 24 Nov 2026): the motor's body, smaller (200), T1 and T2 on its left 120 apart; one
+   winding, the ring, its leads in to lugs at its top left and bottom left (along and down, along and up), lit from T1's
+   end round to T2's as the current goes through, and turning while it runs */
+const MT1_COL = '#c9a0ff';
+function drawMt1(p, g, x, y, v, chan) {
+  v.lead = null; v.src = [];
+  const H = MT1_W, x0 = x - MT1_W / 2, cx = x + 24, R = 58, A = [225, 135];
+  const P = (a, r = R) => [cx + r * Math.cos(a * Math.PI / 180), y + r * Math.sin(a * Math.PI / 180)];
+  terms(p).forEach(([tx, ty], i) => {
+    el('line', { x1: tx, y1: ty, x2: x0, y2: ty, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
+    if (!editing && p._t) v.src.push({ n: i ? p._b : p._a, ln: el('line', { x1: tx, y1: ty, x2: x0, y2: ty, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g) });
+  });
+  framed('rect', { x: x0, y: y - H / 2, width: MT1_W, height: H, rx: 20, fill: 'url(#gWell)', stroke: MTR_COL, 'stroke-width': 2.2 }, g);
+  el('circle', { cx, cy: y, r: R + 5, fill: '#111', filter: 'url(#fShadow)' }, g);
+  // the winding: from T1's lug, the long way round (over the top and down the right) to T2's
+  const [ax, ay] = P(A[0]), [bx, by] = P(A[1]);
+  v.wd = `M${ax} ${ay}A${R} ${R} 0 1 1 ${bx} ${by}`; v.wLen = R * Math.PI * 1.5;
+  el('path', { d: v.wd, fill: 'none', stroke: GREY, 'stroke-width': 8 }, g);
+  v.w = el('path', { d: v.wd, fill: 'none', stroke: 'transparent', 'stroke-width': 8 }, g);
+  v.ld = [-MT1_DY, MT1_DY].map((dy, i) => { const [jx, jy] = P(A[i], R + 4), ty = y + dy, sx = x0 + 35, r = 12;
+    const d = `M${sx} ${ty}L${jx - r} ${ty}Q${jx} ${ty} ${jx} ${ty + (dy < 0 ? r : -r)}L${jx} ${jy}`;
+    el('path', { d, fill: 'none', stroke: '#111', 'stroke-width': 10, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+    el('path', { d, fill: 'none', stroke: GREY, 'stroke-width': 5.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+    return el('path', { d, fill: 'none', stroke: 'transparent', 'stroke-width': 5.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g); });
+  v.ldLen = v.ld.map(e => { try { return e.getTotalLength(); } catch (_) { return 60; } });
+  [-MT1_DY, MT1_DY].forEach((dy, i) => { const tx = x0 + 22, ty = y + dy;
+    el('rect', { x: tx - 13, y: ty - 12, width: 26, height: 24, rx: 6, fill: '#1f1f1f', stroke: '#e2cc85', 'stroke-width': 1.2 }, g);
+    el('text', { x: tx, y: ty + 4.3, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 700, fill: '#f2e6b8' }, g).textContent = 'T' + (i + 1); });
+  el('circle', { cx, cy: y, r: R - 6, fill: '#262626', stroke: '#111', 'stroke-width': 1.5 }, g);
+  v.lug = A.map(a => { const [lx, ly] = P(a); return el('circle', { cx: lx, cy: ly, r: 6.5, fill: '#1c1c1c', stroke: GREY, 'stroke-width': 2.6 }, g); });
+  const at = el('g', { transform: `translate(${cx} ${y})` }, g);
+  v.rotor = el('g', {}, at);
+  const fan = el('g', { transform: `scale(${(R / 70).toFixed(3)})` }, v.rotor);
+  for (let i = 0; i < 6; i++) el('path', { d: 'M0 -12C22 -30 30 -48 12 -56L-6 -48C8 -38 6 -26 0 -12Z', transform: `rotate(${i * 60})`, fill: '#6a7077', stroke: '#1c1c1c', 'stroke-width': 1.2 }, fan);
+  rdot(fan, 0, 0, 13).setAttribute('fill', '#7a8087');
+  el('text', { x: 0, y: 4.5, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 800, fill: '#1c1c1c' }, at).textContent = 'M';
+  v.dir = el('text', { x: x + MT1_W / 2 - 4, y: y + H / 2 + 17, 'text-anchor': 'end', 'font-size': 12, 'font-weight': 800, fill: '#9be03a', display: 'none' }, g); v.dir.textContent = 'RUNNING';
+  v.hum = el('text', { x: x + MT1_W / 2 - 4, y: y + H / 2 + 17, 'text-anchor': 'end', 'font-size': 12, 'font-weight': 700, fill: '#ff8a7a', display: 'none' }, g); v.hum.textContent = 'Stalled: too little voltage';
+  v.burn = el('g', { display: 'none' }, g);   // (burned out: dark, with the red badge)
+  el('circle', { cx, cy: y, r: R - 6, fill: '#2a2522', opacity: .92 }, v.burn);
+  const bx0 = x0 + MT1_W - 16, by0 = y - H / 2 + 16; el('circle', { cx: bx0, cy: by0, r: 10, fill: '#d93025', stroke: '#1c1c1c', 'stroke-width': 1.5 }, v.burn);
+  el('path', { d: `M${bx0 - 4} ${by0 - 4}L${bx0 + 4} ${by0 + 4}M${bx0 + 4} ${by0 - 4}L${bx0 - 4} ${by0 + 4}`, stroke: '#fff', 'stroke-width': 2.2, 'stroke-linecap': 'round' }, v.burn);
+  if (p.rv) { const tx = x0 + MT1_W / 2, ty = y + H / 2 + 17;   // (a voltage picked: its tag, under the body at its left)
+    el('rect', { x: x0 + 4, y: ty - 12, width: 44, height: 18, rx: 5, fill: '#1c1c1c', stroke: MT1_COL, 'stroke-width': 1.3 }, g);
+    el('text', { x: x0 + 26, y: ty + 1.5, 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = p.rv + ' V'; }
 }
 
 // a relay contact's two posts (as drawPart draws them): a short stub in from each side, and a round post at its end,
@@ -5633,7 +5710,7 @@ function renderInto(target, V, L) {
   // while running with faults on (Faults tab: Show Fault Badges)
   if (FAULT_BADGES && (editing || FAULTS_ON)) {
     for (const p of parts) if (p.fault && canFault(p)) {   // (on the body's top right corner; on a round or diamond load, at 45° on its edge)
-      const rnd = FAULT_LOADS.includes(p.t), bw = isLim(p) ? LSW_W / 2 : p.t === 'sel' ? SEL_BOX / 2 : rnd ? COIL / 2 * .74 : BOX / 2, bh = isLim(p) ? LSW_TOP : p.t === 'sel' ? SEL_BOX / 2 : rnd ? COIL / 2 * .74 : BOX / 2;
+      const rnd = FAULT_LOADS.includes(p.t) && p.t !== 'mt1', mw = p.t === 'mtr' ? MTR_W / 2 - 4 : p.t === 'mt1' ? MT1_W / 2 - 4 : 0, bw = mw || (isLim(p) ? LSW_W / 2 : p.t === 'sel' ? SEL_BOX / 2 : rnd ? COIL / 2 * .74 : BOX / 2), bh = mw || (isLim(p) ? LSW_TOP : p.t === 'sel' ? SEL_BOX / 2 : rnd ? COIL / 2 * .74 : BOX / 2);
       faultBadge(vert(p) ? p.x + bh : p.x + bw, vert(p) ? p.y - bw : p.y - bh, B(p.y).g, `Fault: ${PART_FAULTS[p.fault]}`); }
     for (const w of wires) if (w.fault) faultBadge((w.x1 + w.x2) / 2, (w.y1 + w.y2) / 2, B((w.y1 + w.y2) / 2).g, `Fault: ${WIRE_FAULTS[w.fault]}`);
   }
@@ -5847,7 +5924,7 @@ function insulated(tag, a, parent) {
 }
 // how far from its middle a part's body reaches along its wire (to its dark edge)
 const tsBodyEdge = (p, ux) => p.t === 'coil' || p.t === 'lamp' || isSolT(p.t) ? COIL / 2 + BEZEL : p.t === 'sel' ? SEL_BOX / 2 + BEZEL : p.t === 'tsw' ? TSW_HALF + 3 : isLim(p) ? LSW_W / 2 + BEZEL : BOX / 2 + BEZEL;
-const tsBlocked = p => !isBox(p) && !isPwr3(p) && p.t !== 'xfm' && p.t !== 'mtr' && !isGnd(p) && !isMulti(p);
+const tsBlocked = p => !isBox(p) && !isPwr3(p) && p.t !== 'xfm' && p.t !== 'mtr' && p.t !== 'mt1' && !isGnd(p) && !isMulti(p);
 let TS_POINTS = [];   // (where the meter's leads can go: { x, y, n: the junction, label }, in panel units)
 function tsTerminals(V, B, net) {
   const pts = [], at = new Map(net.nodes.map((n, i) => [n.k, i])), ys = rungYs(net);
@@ -5868,7 +5945,7 @@ function tsTerminals(V, B, net) {
       continue;
     }
     if (isJmp(p) || !p._t) continue;
-    const name = (i, side) => p.t === 'gnd' ? 'its terminal' : p.t === 'xfm' ? ['H1', 'H2', 'X1', 'X2', 'X0'][i] : isPwr3(p) ? `${['L1', 'L2', 'L3'][i >> 1]} ${i & 1 ? 'load' : 'line'} side` : p.t === 'mtr' ? `T${i + 1}` : p.t === 'sp2' ? ['common', 'throw 1', 'throw 2'][i] : p.t === 'dpd' ? ['top common', 'top throw 1', 'top throw 2', 'bottom common', 'bottom throw 1', 'bottom throw 2'][i] : p.t === 'tps' || p.t === 'cbt' ? ['pole 1 left', 'pole 1 right', 'pole 2 left', 'pole 2 right', 'pole 3 left', 'pole 3 right'][i] : p.t === 'xov' || p.t === 'dps' || p.t === 'cbd' ? ['top left', 'top right', 'bottom left', 'bottom right'][i] : side;
+    const name = (i, side) => p.t === 'gnd' ? 'its terminal' : p.t === 'xfm' ? ['H1', 'H2', 'X1', 'X2', 'X0'][i] : isPwr3(p) ? `${['L1', 'L2', 'L3'][i >> 1]} ${i & 1 ? 'load' : 'line'} side` : p.t === 'mtr' || p.t === 'mt1' ? `T${i + 1}` : p.t === 'sp2' ? ['common', 'throw 1', 'throw 2'][i] : p.t === 'dpd' ? ['top common', 'top throw 1', 'top throw 2', 'bottom common', 'bottom throw 1', 'bottom throw 2'][i] : p.t === 'tps' || p.t === 'cbt' ? ['pole 1 left', 'pole 1 right', 'pole 2 left', 'pole 2 right', 'pole 3 left', 'pole 3 right'][i] : p.t === 'xov' || p.t === 'dps' || p.t === 'cbd' ? ['top left', 'top right', 'bottom left', 'bottom right'][i] : side;
     T.forEach(([tx, ty], i) => { const n = at.get(key(tx, ty)); if (n !== undefined) pts.push({ x: tx, y: ty, n, label: `${captionOf(p)}, ${name(i, ['left', 'right', 'bottom', 'top'][i] || '')}` }); });
   }
   const seen = new Set();
@@ -5946,6 +6023,7 @@ function paintView(V) {
     if (p.t === 'xfm') { paintXfm(p, v); continue; }
     if (isPwr3(p)) { paintPwr(p, v); continue; }
     if (p.t === 'mtr') { paintMtr(p, v); continue; }
+    if (p.t === 'mt1') { paintMt1(p, v); continue; }
     if (p.t === 'cbd' || p.t === 'cbt') { for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
       setBreaker(v, p, lswPos(p), !!BLOWN[p.id], (p._poles || []).map(cbkPole), lswClosed(p)); continue; }   // (a DPST or 3PST circuit breaker: each pole as a single one's, below)
     if (isTglN(p)) { for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } if (p.t === 'xov') setXover(v, p, lswPos(p)); else if (p.t === 'dps' || p.t === 'tps') setDpst(v, p, lswPos(p)); else if (p.t === 'dpd') setDpdt(v, p, lswPos(p)); else setSpdt(v, p, lswPos(p)); continue; }
@@ -6225,14 +6303,46 @@ function paintPwr(p, v) {
 // a motor: each third of its ring in the phase at its terminal; its fan turning, or shaking, as it runs or hums
 function paintMtr(p, v) {
   for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
-  const cols = (p._t || []).map(n => showCol(n, simT) || GREY), m = MOT[p.id] || { st: 'off', dir: 0 };
-  const key = cols.join('|') + m.st + m.dir; if (key === v.k) return; v.k = key;
-  cols.forEach((c, i) => v.arcs[i].setAttribute('stroke', c));
-  spinFan(v, m.st === 'run' ? (m.dir < 0 ? 'rev' : 'fwd') : m.st === 'hum' ? 'hum' : '');
-  v.arrow.setAttribute('display', m.st === 'run' ? '' : 'none');
+  let m = MOT[p.id] || { st: 'off', dir: 0 };
+  // (each phase runs on in along its lead and out both ways round its winding from the lug, at the current's speed; and
+  // drains the same way when it goes)
+  const fr = (p._t || []).map(n => { const on = PARR.get(n), off = PDARK.get(n), e = on && on.t <= simT + 1e-9 ? on : off && off.t <= simT + 1e-9 ? off : null;
+    if (!e) return null; const lit = (simT - e.t) * V, dark = e.off != null && e.off <= simT ? (simT - e.off) * V : 0; return { c: phColK(e.k), lit, dark }; });
+  if (m.st !== 'off' && !fr.every((f, i) => !f || f.lit >= v.ldLen[i] || f.dark > 0)) m = { st: 'off', dir: 0 };   // (it starts once the current has reached its windings)
+  const key = fr.map(f => f ? f.c + Math.min(f.lit, 999).toFixed(0) + ':' + Math.min(f.dark, 999).toFixed(0) : '-').join('|') + m.st + m.dir; if (key === v.k) return; v.k = key;
+  const span = (el_, L, a, b, c) => { a = Math.max(0, Math.min(L, a)); b = Math.max(0, Math.min(L, b)); el_.setAttribute('stroke', c && b > a ? c : 'transparent'); el_.setAttribute('stroke-dasharray', `0 ${a.toFixed(1)} ${(b - a).toFixed(1)} ${L + 2}`); };
+  fr.forEach((f, i) => { const Ll = v.ldLen[i];
+    span(v.ld[i], Ll + 1, f ? f.dark : 0, f ? f.lit : 0, f && f.c);
+    const open = faultOf(p) === 'w' + (i + 1); for (const w of v.wd[i]) span(w, v.wLen + 1, f ? f.dark - Ll : 0, f && !open ? f.lit - Ll : 0, f && f.c);
+    const full = f && f.lit >= Ll && f.dark < Ll; v.lug[i].setAttribute('stroke', full ? f.c : GREY); });
+  spinFan(v, m.st === 'run' || m.st === 'hot' ? (m.dir < 0 ? 'rev' : 'fwd') : m.st === 'hum' || m.st === 'stall' ? 'hum' : '');
+  v.arrow.setAttribute('display', m.st === 'run' || m.st === 'hot' ? '' : 'none');
   v.arrowPath.setAttribute('transform', m.dir < 0 ? `translate(0 ${2 * v.cy}) scale(1 -1)` : '');   // (backward: turned over, pointing up the right side)
-  v.dir.textContent = m.dir < 0 ? 'REVERSE' : 'FORWARD';
-  v.hum.setAttribute('display', m.st === 'hum' ? '' : 'none');
+  v.dir.textContent = m.st === 'hot' ? (m.dir < 0 ? 'REVERSE' : 'FORWARD') + ': Overheating' : m.dir < 0 ? 'REVERSE' : 'FORWARD';
+  v.dir.setAttribute('fill', m.st === 'hot' ? '#ffb347' : '#9be03a');
+  v.hum.setAttribute('display', m.st === 'hum' || m.st === 'stall' ? '' : 'none');
+  v.hum.textContent = m.st === 'stall' ? 'Stalled: too little voltage' : 'Humming: a phase is missing';
+}
+// a single-phase motor: the current runs in along the lead at the end it comes in at, round the winding and out along
+// the other lead (in the motor's own colour, as a solenoid fills), and drains the same way; it turns once it's through,
+// shakes while it hasn't the voltage to start, and shows burned out
+function paintMt1(p, v) {
+  for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
+  const on = !!coilOn[p.id], t0 = p._chg, D = t0 == null ? (on ? 1e6 : 0) : Math.max(0, (simT - t0) * V), burnt = !!BLOWN[p.id];
+  const a = p._inS === 'B' ? 1 : 0, b = 1 - a, La = v.ldLen[a], Lw = v.wLen, Lb = v.ldLen[b], T = La + Lw + Lb;
+  const lit = on ? D : t0 == null ? 0 : T, dark = on ? 0 : t0 == null ? 0 : D, stall = !on && !!COND[p.id] && !burnt;
+  const key = `${a}|${Math.min(lit, T + 1).toFixed(0)}|${Math.min(dark, T + 1).toFixed(0)}|${stall}|${burnt}`; if (key === v.k) return; v.k = key;
+  // (lit from s to e along a stretch of length L, the stretch run forward or back)
+  const span = (e_, L, s, e, back) => { s = Math.max(0, Math.min(L, s)); e = Math.max(0, Math.min(L, e)); if (back) [s, e] = [L - e, L - s];
+    e_.setAttribute('stroke', e > s ? MT1_COL : 'transparent'); e_.setAttribute('stroke-dasharray', `0 ${s.toFixed(1)} ${(e - s).toFixed(1)} ${L + 2}`); };
+  span(v.ld[a], La, dark, lit, false);
+  span(v.w, Lw, dark - La, lit - La, a === 1);
+  span(v.ld[b], Lb, dark - La - Lw, lit - La - Lw, true);
+  v.lug[a].setAttribute('stroke', lit >= La && dark < La ? MT1_COL : GREY); v.lug[b].setAttribute('stroke', lit >= La + Lw && dark < La + Lw ? MT1_COL : GREY);
+  const run = on && lit >= T && !burnt;
+  spinFan(v, run ? 'fwd' : stall ? 'hum' : '');
+  v.dir.setAttribute('display', run ? '' : 'none'); v.hum.setAttribute('display', stall ? '' : 'none');
+  v.burn.setAttribute('display', burnt ? '' : 'none');
 }
 // a three-phase part clicked while running (see workPower): the pole nearest where it was clicked
 function bindPower(g, p) {
@@ -6449,14 +6559,14 @@ function pvSet(id, x, t = simT) {
    p.pv the value, p.rate how fast while it works (p.per: 's' a second, 'min' a minute), p.dir 'up' (raises it; a
    motor, going forward) or 'down', and once it stops p.off 'hold' (the value stays where it is) or 'back' (back toward
    where it started, at p.cool: a spring return, a leak, an oven cooling). */
-const isDrv = p => p.t === 'sol' || p.t === 'mtr' || p.t === 'htr';
+const isDrv = p => p.t === 'sol' || p.t === 'mtr' || p.t === 'mt1' || p.t === 'htr';
 const drvPer = p => p.per || (p.t === 'htr' ? 'min' : 's');
 const drvOff = p => p.off || (p.t === 'htr' ? 'back' : 'hold');
 const perSec = (p, x) => Math.max(0, +x || 0) / (drvPer(p) === 'min' ? 60 : 1);
 // how fast p is moving its value right now (a second; + up, - down), or 0 while it is not working
 function drvNow(p) {
   const sign = p.dir === 'down' ? -1 : 1;
-  if (p.t === 'mtr') { const m = MOT[p.id]; return m && m.st === 'run' && m.dir ? sign * m.dir * perSec(p, p.rate) : 0; }
+  if (p.t === 'mtr') { const m = MOT[p.id]; return m && (m.st === 'run' || m.st === 'hot') && m.dir ? sign * m.dir * perSec(p, p.rate) : 0; }
   return coilOn[p.id] ? (p.t === 'htr' ? 1 : sign) * perSec(p, p.rate) : 0;
 }
 // while running: every driven value moved on from t0 to t1 (simulation seconds): by all its working outputs together,
@@ -6471,7 +6581,7 @@ function pvTick(t0, t1, real) {
     // (a flow: a pump running either way moves the water, so it builds the flow up (or down, set so) the same; which way
     // it runs sets which way the water goes, forward or reverse (Dallas, 15 Nov 2026))
     const fl = v.kind === 'flow', x = PVV[v.id] ?? v.start, lo = Math.min(v.min, v.max), hi = Math.max(v.min, v.max), work = ds.map(p => fl && p.t === 'mtr' ? Math.abs(drvNow(p)) * (p.dir === 'down' ? -1 : 1) : drvNow(p));
-    if (fl) { const d = ds.filter(p => p.t === 'mtr').reduce((a, p) => { const m = MOT[p.id]; return a + (m && m.st === 'run' && m.dir ? m.dir : 0); }, 0); if (d) PVDIR[v.id] = Math.sign(d); }
+    if (fl) { const d = ds.filter(p => p.t === 'mtr').reduce((a, p) => { const m = MOT[p.id]; return a + (m && (m.st === 'run' || m.st === 'hot') && m.dir ? m.dir : 0); }, 0); if (d) PVDIR[v.id] = Math.sign(d); }
     let nx = x;
     if (work.some(r => r)) nx = Math.max(lo, Math.min(hi, x + work.reduce((a, r) => a + r, 0) * dt));
     else { const bk = ds.filter(p => drvOff(p) === 'back'); if (bk.length) { const c = Math.max(...bk.map(p => perSec(p, p.cool))) * dt, a = v.start; nx = x > a ? Math.max(a, x - c) : Math.min(a, x + c); } }
@@ -7082,6 +7192,9 @@ function printSheet(drawnBy, fit = false) {
         const cy = q.terms[1][1], s = put('Motor', x, cy), bend = x - 130;
         q.terms.forEach(([ax, yy], i) => { const [ex, ey] = s.t[i]; if (i === 1) line(ax, yy, x + ex, cy); else { line(ax, yy, bend, yy); line(bend, yy, x + ex, cy + ey); } });
         text(x, cy + 13, 'M' + q.L, 38); break; }
+      case 'mt1': { // a single-phase motor: the motor's circle, its two leads straight in to it (Dallas, 24 Nov 2026)
+        put('Motor', x, y); q.terms.forEach(([ax, yy]) => line(ax, yy, x - Math.sqrt(Math.max(0, 80 * 80 - (yy - y) ** 2)), yy));
+        text(x, y + 13, 'M' + q.L, 38); text(x, y + 104, p.rv ? `1Ø ${p.rv} V` : '1Ø', 20, 'middle', 600); break; }
       case 'xfm': { const [H1, H2, X1, X2] = q.terms, cx = (H1[0] + H2[0]) / 2, cy = (H1[1] + X1[1]) / 2, s = put('Control Transformer', cx, cy);
         [H1, H2, X1, X2].forEach(([tx, ty], i) => line(tx, ty, cx + s.t[i][0], cy + s.t[i][1]));
         text(H1[0] - 12, H1[1] + 26, 'H1', 20, 'end', 600); text(H2[0] + 12, H2[1] + 26, 'H2', 20, 'start', 600); text(X1[0] - 12, X1[1] - 10, 'X1', 20, 'end', 600); text(X2[0] + 12, X2[1] - 10, 'X2', 20, 'start', 600);
@@ -7111,7 +7224,7 @@ function printSheet(drawnBy, fit = false) {
   }
 
   /* ---------- the sheets ---------- */
-  const allX = Wr.flatMap(w => [w.x1, w.x2]).concat(P.flatMap(q => q.terms.map(t => t[0])), P.map(q => q.x + (q.t === 'mtr' ? 70 : 0))), allY = Wr.flatMap(w => [w.y1, w.y2]).concat(P.flatMap(q => q.terms.map(t => t[1])));
+  const allX = Wr.flatMap(w => [w.x1, w.x2]).concat(P.flatMap(q => q.terms.map(t => t[0])), P.map(q => q.x + (q.t === 'mtr' || q.t === 'mt1' ? 70 : 0))), allY = Wr.flatMap(w => [w.y1, w.y2]).concat(P.flatMap(q => q.terms.map(t => t[1])));
   if (!allX.length) { allX.push(0, 400); allY.push(0, 300); }
   const bx0 = Math.min(...allX, xLeft) - 110, bx1 = Math.max(...allX, xRight + (P.some(q => q.t === 'coil') ? 190 : 0)) + 60, by0 = Math.min(...allY) - 110, by1 = Math.max(...allY) + 70;
   const dw = bx1 - bx0, dh = by1 - by0;
@@ -7129,7 +7242,7 @@ function printSheet(drawnBy, fit = false) {
   const split = dh > Hu + 1, M = split ? PRINT_GAP / s : 0, Hb = Hu - 2 * M;
   // where a sheet may end: in a gap between rows of parts (never through a part, its name, or a wire's number)
   const busy = [];
-  for (const q of P) { const [t, b] = PRINT_POWER.has(q.t) && q.t !== 'xfm' ? (q.t === 'mtr' ? [130, 130] : [190, 150]) : q.t === 'xfm' ? [q.y - q.terms[0][1] + 30, q.terms[2][1] - q.y + 20] : isBox(q.p) ? [40, 40] : [74, 48]; busy.push([q.y - t, q.y + b]); }
+  for (const q of P) { const [t, b] = PRINT_POWER.has(q.t) && q.t !== 'xfm' ? (q.t === 'mtr' ? [130, 130] : [190, 150]) : q.t === 'mt1' ? [110, 120] : q.t === 'xfm' ? [q.y - q.terms[0][1] + 30, q.terms[2][1] - q.y + 20] : isBox(q.p) ? [40, 40] : [74, 48]; busy.push([q.y - t, q.y + b]); }
   for (const w of Wr) if (w.y1 === w.y2) busy.push([w.y1 - 32, w.y1 + 8]);
   busy.sort((a, b) => a[0] - b[0]);
   const free = y => !busy.some(([a, b]) => y > a && y < b);
@@ -7285,7 +7398,8 @@ function newPart(kind, x, y) {
   if (kind.startsWith('tsw')) return P('tsw', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'tsw').map(q => q.L))), nc: kind.startsWith('tsw-nc'), ...(kind.endsWith('l') ? { low: true } : {}), color: TSW_COL });   // (tsw-no, tsw-nc: high temperature; tsw-nol, tsw-ncl: low)
   if (kind.startsWith('lsw')) return P('lsw', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'lsw').map(q => q.L))), nc: kind === 'lsw-nc' || kind === 'lsw-nch', held: kind.endsWith('h'), color: LSW_COL });   // a limit switch: the next number
   if (kind === 'fus' || kind === 'fu1') return P(kind, x, y, { L: nextFuse(kind === 'fus' ? 3 : 1) });   // (fuses: one count, a block taking three numbers)
-  if (kind === 'dsc' || kind === 'olh' || kind === 'mtr') return P(kind, x, y, { L: nextNum(new Set(parts.filter(q => q.t === kind).map(q => q.L))) });   // the next number
+  if (kind === 'dsc' || kind === 'olh' || kind === 'mtr') return P(kind, x, y, { L: nextNum(new Set(parts.filter(q => q.t === kind || kind === 'mtr' && q.t === 'mt1').map(q => q.L))) });
+  if (kind === 'mt1') return P('mt1', x, y, { L: nextNum(new Set(parts.filter(q => q.t === 'mtr' || q.t === 'mt1').map(q => q.L))) });   // (a single-phase motor: numbered with the motors)   // the next number
   if (kind === 'mst') return P('mst', x, y, { L: 'M' });   // a starter: worked by the M coil (change it in its settings)
   if (kind === 'olc') { const ols = parts.filter(q => q.t === 'olh').map(q => q.L), free = ols.find(L => !parts.some(q => q.t === 'olc' && q.L === L)); return P('olc', x, y, { L: free || ols[0] || '1', nc: true }); }   // an overload's contact: one not yet in the control circuit
   if (kind === 'gnd') return P('gnd', x, y, { L: '' });   // ground
@@ -7305,9 +7419,9 @@ function newPart(kind, x, y) {
   if (kind === 'btn-estop') return P('btn', x, y, { L, nc: true, maint: true, estop: true, color: ESTOP_COL });   // (an emergency stop: normally closed, latching)
   return P('btn', x, y, { L, nc: kind.startsWith('btn-nc'), maint: !kind.endsWith('-mom'), color: kind.startsWith('btn-nc') ? '#FF0032' : '#00B050' });   // (normally open green, normally closed red)   // (-mom: momentary; otherwise maintained)
 }
-const kindOf = k => k.startsWith('lsw') ? 'lsw' : k.startsWith('tsw') ? 'tsw' : k.startsWith('psw') ? 'psw' : k.startsWith('fsw') ? 'fsw' : k.startsWith('flt') ? 'flt' : k === 'tgl' || k === 'sp2' || k === 'xov' || k === 'dps' || k === 'dpd' || k === 'tps' || k === 'cbk' || k === 'cbd' || k === 'cbt' ? k : ['dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr'].includes(k) ? k : k.startsWith('ph-') ? 'ph' : k === 'jmp' ? 'jmp' : k === 'gnd' ? 'gnd' : k === 'xfm' ? 'xfm' : k === 'src-l1' || k === 'src-l2' ? k.slice(4) : k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k === 'sol' ? 'sol' : k === 'htr' ? 'htr' : k.startsWith('con') ? 'con' : k === 'sel' ? 'sel' : 'btn';
+const kindOf = k => k.startsWith('lsw') ? 'lsw' : k.startsWith('tsw') ? 'tsw' : k.startsWith('psw') ? 'psw' : k.startsWith('fsw') ? 'fsw' : k.startsWith('flt') ? 'flt' : k === 'tgl' || k === 'sp2' || k === 'xov' || k === 'dps' || k === 'dpd' || k === 'tps' || k === 'cbk' || k === 'cbd' || k === 'cbt' ? k : ['dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'mt1'].includes(k) ? k : k.startsWith('ph-') ? 'ph' : k === 'jmp' ? 'jmp' : k === 'gnd' ? 'gnd' : k === 'xfm' ? 'xfm' : k === 'src-l1' || k === 'src-l2' ? k.slice(4) : k === 'coil' || k.startsWith('timer') ? 'coil' : k === 'lamp' ? 'lamp' : k === 'sol' ? 'sol' : k === 'htr' ? 'htr' : k.startsWith('con') ? 'con' : k === 'sel' ? 'sel' : 'btn';
 // a horizontal wire running right through where a part's ends will be: the part goes into it
-function spliceTarget(x, y, t) { if (t === 'xfm' || t === 'ph' || isPwrT(t) || t === 'mtr') return null; const h = t === 'tsw' ? TSW_T : WIDE(t) ? 60 : 40; return wires.find(w => w.y1 === y && w.y2 === y && Math.min(w.x1, w.x2) <= x - h && Math.max(w.x1, w.x2) >= x + h); }
+function spliceTarget(x, y, t) { if (t === 'xfm' || t === 'ph' || isPwrT(t) || t === 'mtr' || t === 'mt1') return null; const h = t === 'tsw' ? TSW_T : WIDE(t) ? 60 : 40; return wires.find(w => w.y1 === y && w.y2 === y && Math.min(w.x1, w.x2) <= x - h && Math.max(w.x1, w.x2) >= x + h); }
 function placePart(kind, x, y) {
   [x, y] = clampPart(x, y, kindOf(kind));
   if (overlaps(null, x, y, kindOf(kind))) { say('There is already a part there.'); return; }
@@ -8125,7 +8239,7 @@ function drawOverview() {
     const h = BODYH(p.t), on = !editing && LOADT(p.t) && coilOn[p.id];
     c.fillStyle = p.t === 'con' ? (!editing && CON[p.id] && CON[p.id].shut ? coilColour(p.L) : '#2a2a2a') : p.t === 'lamp' ? (on ? lampColour(p) : '#2a2a2a') : p.t === 'coil' || p.t === 'sol' ? (on ? p.color : '#2a2a2a') : (!editing && p.t === 'btn' && down[p.L] ? GREY : p.color);
     c.strokeStyle = p.t === 'con' ? coilColour(p.L) : p.t === 'lamp' ? lampColour(p) : p.color; c.lineWidth = Math.max(3, 1 / s * dpr);
-    if (isPwr3(p) || p.t === 'mtr') { const w = p.t === 'mtr' ? MTR_W : BOX; c.fillStyle = '#2a2a2a'; c.strokeStyle = p.t === 'mtr' ? MTR_COL : pwrEdge(p); c.fillRect(p.x - w / 2, p.y - h / 2, w, h); c.strokeRect(p.x - w / 2, p.y - h / 2, w, h); }
+    if (isPwr3(p) || p.t === 'mtr' || p.t === 'mt1') { const w = p.t === 'mtr' ? MTR_W : p.t === 'mt1' ? MT1_W : BOX; c.fillStyle = '#2a2a2a'; c.strokeStyle = p.t === 'mtr' || p.t === 'mt1' ? MTR_COL : pwrEdge(p); c.fillRect(p.x - w / 2, p.y - h / 2, w, h); c.strokeRect(p.x - w / 2, p.y - h / 2, w, h); }
     else if (p.t === 'xfm') { c.fillRect(p.x - XFM_W / 2, p.y - XFM_H / 2, XFM_W, XFM_H); c.strokeRect(p.x - XFM_W / 2, p.y - XFM_H / 2, XFM_W, XFM_H); }
     else if (LOADT(p.t) && !isSolT(p.t)) { c.beginPath(); c.arc(p.x, p.y, h / 2, 0, 2 * Math.PI); c.fill(); c.stroke(); }
     else { c.fillRect(p.x - h / 2, p.y - h / 2, h, h); c.strokeRect(p.x - h / 2, p.y - h / 2, h, h); }
@@ -8166,7 +8280,7 @@ document.querySelectorAll('.tool[data-part]').forEach(b => {
     if (e.button !== 0 || !editing) return;
     e.preventDefault();
     const sx = e.clientX, sy = e.clientY; let moved = false, ghost = null;
-    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('timer') ? { t: 'coil', L: '?', color: '#FFDC00', delay: 5, tof: kind === 'timer-off' } : kind === 'lamp' ? { t: 'lamp', L: '', color: '#00B050' } : kind === 'sol' ? { t: 'sol', L: '?', color: SOL_COL } : kind === 'htr' ? { t: 'htr', L: '?', color: HTR_COL } : kind === 'jmp' ? { t: 'jmp', L: '?' } : kind === 'xfm' ? { t: 'xfm', L: '?' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind.startsWith('con-nc') } : kind === 'sel' ? { t: 'sel', L: '?', n: 3, closedIn: [0], pos: 1, color: '#0070C0' } : kind.startsWith('src-') ? { t: kind.slice(4), L: '' } : kind.startsWith('psw') ? { t: 'psw', L: '?', nc: kind === 'psw-nc', color: PSW_COL } : kind.startsWith('fsw') ? { t: 'fsw', L: '?', nc: kind === 'fsw-nc', color: FSW_COL } : kind.startsWith('tsw') ? { t: 'tsw', L: '?', nc: kind.startsWith('tsw-nc'), low: kind.endsWith('l'), color: TSW_COL } : kind.startsWith('lsw') ? { t: 'lsw', L: '?', nc: kind === 'lsw-nc' || kind === 'lsw-nch', held: kind.endsWith('h'), color: LSW_COL } : kind.startsWith('ph-') ? { t: 'ph', L: kind.slice(3) } : ['dsc', 'fus', 'fu1', 'mst', 'olh', 'mtr'].includes(kind) ? { t: kind, L: kind === 'mst' ? 'M' : '?' } : kind === 'olc' ? { t: 'olc', L: '?', nc: true } : kind === 'btn-estop' ? { t: 'btn', L: '?', nc: true, maint: true, estop: true, color: ESTOP_COL } : { t: 'btn', L: '?', nc: kind.startsWith('btn-nc'), color: '#9a9a9a' };
+    const sample = kind === 'coil' ? { t: 'coil', L: '?', color: '#FFDC00' } : kind.startsWith('timer') ? { t: 'coil', L: '?', color: '#FFDC00', delay: 5, tof: kind === 'timer-off' } : kind === 'lamp' ? { t: 'lamp', L: '', color: '#00B050' } : kind === 'sol' ? { t: 'sol', L: '?', color: SOL_COL } : kind === 'htr' ? { t: 'htr', L: '?', color: HTR_COL } : kind === 'jmp' ? { t: 'jmp', L: '?' } : kind === 'xfm' ? { t: 'xfm', L: '?' } : kind.startsWith('con') ? { t: 'con', L: '?', nc: kind.startsWith('con-nc') } : kind === 'sel' ? { t: 'sel', L: '?', n: 3, closedIn: [0], pos: 1, color: '#0070C0' } : kind.startsWith('src-') ? { t: kind.slice(4), L: '' } : kind.startsWith('psw') ? { t: 'psw', L: '?', nc: kind === 'psw-nc', color: PSW_COL } : kind.startsWith('fsw') ? { t: 'fsw', L: '?', nc: kind === 'fsw-nc', color: FSW_COL } : kind.startsWith('tsw') ? { t: 'tsw', L: '?', nc: kind.startsWith('tsw-nc'), low: kind.endsWith('l'), color: TSW_COL } : kind.startsWith('lsw') ? { t: 'lsw', L: '?', nc: kind === 'lsw-nc' || kind === 'lsw-nch', held: kind.endsWith('h'), color: LSW_COL } : kind.startsWith('ph-') ? { t: 'ph', L: kind.slice(3) } : ['dsc', 'fus', 'fu1', 'mst', 'olh', 'mtr', 'mt1'].includes(kind) ? { t: kind, L: kind === 'mst' ? 'M' : '?' } : kind === 'olc' ? { t: 'olc', L: '?', nc: true } : kind === 'btn-estop' ? { t: 'btn', L: '?', nc: true, maint: true, estop: true, color: ESTOP_COL } : { t: 'btn', L: '?', nc: kind.startsWith('btn-nc'), color: '#9a9a9a' };
     const mv = ev => {
       if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 5) { moved = true; closeMenus(); ghost = document.createElement('div'); ghost.className = 'ghost'; ghost.innerHTML = b.innerHTML; document.body.append(ghost); document.body.classList.add('dragging'); }
       if (!moved) return;
@@ -8452,7 +8566,7 @@ function pasteClip() {
     if (p.t === 'jmp') { if (!jm[p.L]) jm[p.L] = nextNum(new Set([...parts.filter(isJmp).map(q => q.L), ...Object.values(jm)])); q.L = jm[p.L]; }   // (pasted continuations pair among themselves)
     // (numbered parts get the next number of their own; fuses, single or three-pole, count together, so a pasted fuse is never FU2 twice)
     if (p.t === 'fus' || p.t === 'fu1') { const k = p.t === 'fus' ? 3 : 1; q.L = nextFuse(k, fuseNums(null, xf.filter(([t]) => t === 'fuse').map(([, L]) => L))); for (let i = 0; i < k; i++) xf.push(['fuse', String(+q.L + i)]); }
-    else if (['dsc', 'olh', 'mtr', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'sp2', 'xov', 'dps', 'dpd', 'tps', 'cbk', 'cbd', 'cbt'].includes(p.t)) { const grp = t => t === 'fu1' ? 'fus' : t === 'cbd' || t === 'cbt' ? 'cbk' : t, g = grp(p.t);
+    else if (['dsc', 'olh', 'mtr', 'mt1', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'sp2', 'xov', 'dps', 'dpd', 'tps', 'cbk', 'cbd', 'cbt'].includes(p.t)) { const grp = t => t === 'fu1' ? 'fus' : t === 'cbd' || t === 'cbt' ? 'cbk' : t === 'mt1' ? 'mtr' : t, g = grp(p.t);
       q.L = nextNum(new Set([...parts.filter(z => grp(z.t) === g).map(z => z.L), ...xf.filter(([t]) => t === g).map(([, L]) => L)])); xf.push([g, q.L]); }
     if (p.t === 'xfm') { q.L = nextNum(new Set([...parts.filter(z => z.t === 'xfm').map(z => z.L), ...xf.filter(([t]) => t === 'xfm').map(([, L]) => L)])); xf.push(['xfm', q.L]); }   // (a pasted transformer gets a number of its own)
     if (p.t === 'htr') { q.L = nextNum(new Set([...parts.filter(z => z.t === 'htr').map(z => z.L), ...xf.filter(([t]) => t === 'htr').map(([, L]) => L)])); xf.push(['htr', q.L]); }
@@ -8531,7 +8645,8 @@ function renderProps() {
   // (an emergency stop is always normally closed, maintained, red: none of those to choose)
   for (const e of document.querySelectorAll('#props-btn .notestop')) e.hidden = !!(p && p.estop);
   document.getElementById('props-coil').hidden = !(p && p.t === 'coil');
-  document.getElementById('props-rv').hidden = !(p && RATED(p.t)); if (p && RATED(p.t)) document.getElementById('rv-sel').value = String(p.rv || '');   // (its rated voltage)
+  document.getElementById('props-rv').hidden = !(p && HAS_RV(p.t)); if (p && HAS_RV(p.t)) { const s = document.getElementById('rv-sel'), want = ['', ...rvList(p.t)].join();   // (a motor: its nameplate voltages)
+    if (s.dataset.list !== want) { s.innerHTML = ['<option value="">Match Supply</option>', ...rvList(p.t).map(v => `<option value="${v}">${v} V</option>`)].join(''); s.dataset.list = want; } s.value = String(p.rv || ''); }   // (its rated voltage)
   document.getElementById('props-lamp').hidden = !(p && p.t === 'lamp');
   if (p && p.t === 'lamp') {
     // a light of its own, or built into one of the pushbuttons (it then lights that button up, in the button's colour)
@@ -8602,7 +8717,7 @@ function renderProps() {
       for (const u of document.querySelectorAll('.ls-unit')) u.textContent = v.unit;
     }
   }
-  const pw = p && (isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'fu1');
+  const pw = p && (isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'mt1' || p.t === 'fu1');
   document.getElementById('props-pwr').hidden = !pw;
   if (pw) {
     // a number of its own (a disconnect, fuses, an overload, a motor); the overload an OL contact belongs to; the coil
@@ -8619,7 +8734,7 @@ function renderProps() {
       for (let n = 1; n <= Math.max(5, ...[...ols].map(Number)); n++) ns.add(new Option('OL' + n + (ols.has(String(n)) ? '' : ' (not placed)'), String(n), false, String(n) === p.L));
     } else {
       lab.textContent = 'Number';
-      const pre = { dsc: 'DS', fus: 'FU', fu1: 'FU', olh: 'OL', mtr: 'MTR' }[p.t], fuse = q => q.t === 'fus' || q.t === 'fu1', taken = new Set(parts.filter(q => (q.t === p.t || fuse(p) && fuse(q)) && q !== p).map(q => q.L));   // (fuses, single or three-pole, number from one count)
+      const pre = { dsc: 'DS', fus: 'FU', fu1: 'FU', olh: 'OL', mtr: 'MTR', mt1: 'MTR' }[p.t], fuse = q => q.t === 'fus' || q.t === 'fu1', mot = q => q.t === 'mtr' || q.t === 'mt1', taken = new Set(parts.filter(q => (q.t === p.t || fuse(p) && fuse(q) || mot(p) && mot(q)) && q !== p).map(q => q.L));   // (fuses, single or three-pole, number from one count)
       if (fuse(p)) {   // (fuses: a block takes three numbers, FU1-FU3; each number once)
         const k = p.t === 'fus' ? 3 : 1, tk = fuseNums(p);
         for (let n = 1; n <= Math.max(12, ...[...tk].map(Number)) + 3; n++) { const ok = fuseFits(n, k, tk); if (ok || String(n) === p.L) ns.add(new Option(pre + n + (k > 1 ? '–' + pre + (n + 2) : '') + (ok ? '' : ' (used twice)'), String(n), false, String(n) === p.L)); }
@@ -8673,7 +8788,7 @@ function renderProps() {
     if (v) {
       const dir = document.getElementById('d-dir'); const fl = p.t === 'mtr' && v.kind === 'flow';   // (a pump on a flow: either way it runs moves the water, reverse sending it back)
       dir.options[0].text = fl ? 'Raises it (Reverse Sends It Back)' : p.t === 'mtr' ? 'Forward raises it' : 'Raises it'; dir.options[1].text = fl ? 'Lowers it' : p.t === 'mtr' ? 'Forward lowers it' : 'Lowers it'; dir.value = p.dir === 'down' ? 'down' : 'up';
-      document.getElementById('d-rate-label').textContent = p.t === 'htr' ? 'Heats at' : p.t === 'mtr' ? 'While It Runs, at' : 'While Energized, at';
+      document.getElementById('d-rate-label').textContent = p.t === 'htr' ? 'Heats at' : p.t === 'mtr' || p.t === 'mt1' ? 'While It Runs, at' : 'While Energized, at';
       document.getElementById('d-rate').value = pvFmt(v, +p.rate || 0); document.getElementById('d-cool').value = pvFmt(v, +p.cool || 0);
       document.getElementById('d-per').value = drvPer(p); document.getElementById('d-off').value = drvOff(p);
       for (const u of document.querySelectorAll('.d-unit')) u.textContent = (v.unit || '') + (u.classList.contains('d-unit-per') ? (drvPer(p) === 'min' ? ' a minute' : ' a second') : '');
@@ -8861,7 +8976,7 @@ document.getElementById('j-num').addEventListener('change', e => { if (selGroup(
 // turn a continuation a quarter turn clockwise (the R key, or Rotate on its tab)
 function rotateJmp(p) { snapshot(); p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; normalize(); draw(); }
 document.getElementById('j-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(isJmp)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
-document.getElementById('rv-sel').addEventListener('change', e => { const ps = selGroup().filter(q => RATED(q.t)); if (!ps.length) return; snapshot(); const v = +e.target.value; for (const q of ps) { if (!v) { delete q.rv; delete q._ms; } else q.rv = v; } draw(); });
+document.getElementById('rv-sel').addEventListener('change', e => { const ps = selGroup().filter(q => HAS_RV(q.t) && (!+e.target.value || rvList(q.t).includes(+e.target.value))); if (!ps.length) return; snapshot(); const v = +e.target.value; for (const q of ps) { if (!v) { delete q.rv; delete q._ms; } else q.rv = v; } draw(); });
 document.getElementById('x-pr').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'xfm') return; snapshot(); if (e.target.value) p.pr = e.target.value; else delete p.pr; draw(); });
 document.getElementById('x-sec').addEventListener('change', e => { const p = selPart(); if (!p || p.t !== 'xfm') return; snapshot(); delete p.ct; delete p.s24; if (e.target.value === 'ct') p.ct = true; else if (e.target.value === '24') p.s24 = true; delete p._sw; normalize(); draw(); });
 document.getElementById('x-gnd').addEventListener('click', () => { const p = selPart(); if (!p || p.t !== 'xfm' || !editing) return; snapshot(); if (p.ug) delete p.ug; else p.ug = true; draw(); });
@@ -8873,7 +8988,7 @@ document.getElementById('ph-custom').addEventListener('change', e => { const p =
 document.getElementById('ls-start').addEventListener('change', e => { const on = e.target.value === '1'; if (selGroup().every(q => flips(q) || isBrk(q))) each(p => { if (on) p.held = true; else delete p.held; }); });
 document.getElementById('box-flip').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(flips)) each(p => { if (p.fx) delete p.fx; else p.fx = true; }); });
 document.getElementById('box-rot').addEventListener('click', () => { const G = selGroup(); if (G.length && G.every(turns)) each(p => { p.rot = ((p.rot || 0) + 1) % 4; if (!p.rot) delete p.rot; }); });
-document.getElementById('pw-num').addEventListener('change', e => { const G = selGroup(); if (G.length && G.every(p => isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'fu1')) each(p => p.L = e.target.value); });
+document.getElementById('pw-num').addEventListener('change', e => { const G = selGroup(); if (G.length && G.every(p => isPwr3(p) || p.t === 'olc' || p.t === 'mtr' || p.t === 'mt1' || p.t === 'fu1')) each(p => p.L = e.target.value); });
 document.getElementById('ls-num').addEventListener('change', e => { const G = selGroup(); if (!G.every(p => p.t === G[0].t && isLim(p))) return;
   // (a number another switch has: this becomes another contact of it, taking its settings)
   each(p => { const to = parts.find(q => q !== p && !G.includes(q) && q.t === p.t && q.L === e.target.value); p.L = e.target.value; if (to) syncLim(p, to); }); });
@@ -8934,7 +9049,7 @@ function faultWhere(x, isW) {
    - a fuse shorted: it would still pass current and read 0 Ω like a good one, so nothing could ever find it */
 function faultWhy(x, isW, f) {
   if (!f) return '';
-  if (!isW) return f === 'short' && x.t === 'fu1' ? 'A shorted fuse works like a good one: there would be nothing to find' : '';
+  if (!isW) return (x.t === 'mtr') !== MTR_FAULTS.includes(f) ? '!' : f === 'short' && x.t === 'fu1' ? 'A shorted fuse works like a good one: there would be nothing to find' : '';   // ('!': not a fault this kind of part can have: not offered)
   if (f !== 'l2') return '';
   const was = FAULTS_ON; FAULTS_ON = false; let net; try { net = network(); } finally { FAULTS_ON = was; }
   const idx = new Map(net.nodes.map((n, i) => [n.k, i])), k = key(x.x1, x.y1), n = idx.get(k) ?? idx.get(k + '#' + x.id);
@@ -8965,7 +9080,7 @@ function showFaults() {
   what.textContent = t ? faultWhere(...t) : sel && selCount() ? 'Pick one part or wire (this one cannot have a fault)' : 'Pick a part or wire on the panel';
   what.classList.toggle('none', !t);
   const opts = t ? { '': 'None', ...(t[1] ? WIRE_FAULTS : PART_FAULTS) } : { '': 'None', ...PART_FAULTS };
-  kinds.innerHTML = Object.entries(opts).map(([k, n]) => { const why = t && k ? faultWhy(t[0], t[1], k) : '';
+  kinds.innerHTML = Object.entries(opts).filter(([k]) => !(t ? t && k && faultWhy(t[0], t[1], k) === '!' : MTR_FAULTS.includes(k))).map(([k, n]) => { const why = t && k ? faultWhy(t[0], t[1], k) : '';
     return `<button type="button" data-fz="${k}" aria-pressed="${t ? String((t[0].fault || '') === k) : 'false'}"${!t || why ? ' disabled' : ''}${why ? ` data-tip="${why.replace(/"/g, '&quot;')}"` : ''}>${n}</button>`; }).join('');
   const L = faulted(), list = document.getElementById('fz-list');
   list.innerHTML = L.length ? L.map(([x, w], i) => `<div class="fz-row" data-i="${i}">${i + 1}. ${String(faultWhere(x, w)).replace(/&/g, '&amp;').replace(/</g, '&lt;')}<b>${faultName(x, w)}</b><button type="button" data-x="${i}" aria-label="Take this fault off">✕</button></div>`).join('') : '<div class="none">None yet: pick a part or wire, then a fault</div>';
@@ -8985,7 +9100,7 @@ function showPartFault(G) {
   const g = document.getElementById('p-fault-group'), s = document.getElementById('p-fault'), ok = G.length && G.every(canFault);
   g.hidden = !ok; if (!ok) return;
   const same = G.every(p => (p.fault || '') === (G[0].fault || ''));
-  s.innerHTML = (same ? '' : '<option value="__">(several)</option>') + Object.entries({ '': 'None', ...PART_FAULTS }).map(([k, n]) => { const why = k && G.some(p => faultWhy(p, false, k)); return `<option value="${k}"${why ? ' disabled' : ''}>${n}${why ? ' (not on a fuse)' : ''}</option>`; }).join('');
+  s.innerHTML = (same ? '' : '<option value="__">(several)</option>') + Object.entries({ '': 'None', ...PART_FAULTS }).filter(([k]) => !k || !G.some(p => faultWhy(p, false, k) === '!')).map(([k, n]) => { const why = k && G.some(p => faultWhy(p, false, k)); return `<option value="${k}"${why ? ' disabled' : ''}>${n}${why ? ' (not on a fuse)' : ''}</option>`; }).join('');
   s.value = same ? G[0].fault || '' : '__';
 }
 document.getElementById('p-fault').addEventListener('change', e => { const f = e.target.value; if (f === '__') return; const G = selGroup().filter(canFault); if (!G.length) return;
@@ -9095,9 +9210,9 @@ function readCircuit(d) {
     // (a stand-in for a Print Builder part Circuit Builder has none of: its symbol in a box, its terminals as the print had them)
     if (a[0] === 'stand') { const q = a[10] || {}, st = Array.isArray(q.o) ? q.o.slice(0, 12).filter(o => Array.isArray(o) && o.every(n => Number.isFinite(+n) && Math.abs(+n) <= 400)).map(o => [snap(+o[0]), snap(+o[1])]) : [];
       if (typeof q.t === 'string' && st.length) { const p = P('stand', snap(num(a[1])), snap(num(a[2])), { L: String(a[3] ?? '').slice(0, 12) }); p.sym = q.t.slice(0, 16); p.srot = [0, 90, 180, 270].includes(+q.r) ? +q.r : 0; p.st = st; p.desc = typeof a[9] === 'string' ? a[9].slice(0, 40) : ''; delete p.color; return p; } }
-    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'htr' ? 'htr' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'gnd', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'sp2', 'xov', 'dps', 'dpd', 'tps', 'cbk', 'cbd', 'cbt'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
+    const t = a[0] === 'coil' ? 'coil' : a[0] === 'con' ? 'con' : a[0] === 'lamp' ? 'lamp' : a[0] === 'sol' ? 'sol' : a[0] === 'htr' ? 'htr' : a[0] === 'mt1' ? 'mt1' : a[0] === 'jmp' ? 'jmp' : a[0] === 'xfm' ? 'xfm' : a[0] === 'sel' ? 'sel' : ['l1', 'l2', 'ph', 'gnd', 'dsc', 'fus', 'fu1', 'mst', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'sp2', 'xov', 'dps', 'dpd', 'tps', 'cbk', 'cbd', 'cbt'].includes(a[0]) ? a[0] : 'btn', L = String(a[3] || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A')).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || (t === 'lamp' || t === 'l1' || t === 'l2' ? '' : 'A');
     const p = P(t, snap(num(a[1])), snap(num(a[2])), {   // (on the grid: a part saved off it, by an older version, could never be wired)
-      L: ['dsc', 'fus', 'fu1', 'olh', 'olc', 'mtr', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'sp2', 'xov', 'dps', 'dpd', 'tps', 'cbk', 'cbd', 'cbt'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? (a[3] === 'N' ? 'N' : String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1)))) : t === 'sol' || t === 'htr' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'htr' ? HTR_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : t === 'lsw' ? LSW_COL : t === 'tsw' ? TSW_COL : t === 'psw' ? PSW_COL : t === 'fsw' ? FSW_COL : BTN_COL[L] || '#FF0032') });
+      L: ['dsc', 'fus', 'fu1', 'olh', 'olc', 'mtr', 'mt1', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'sp2', 'xov', 'dps', 'dpd', 'tps', 'cbk', 'cbd', 'cbt'].includes(t) ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : t === 'ph' ? (a[3] === 'N' ? 'N' : String(Math.max(1, Math.min(3, Math.round(Number(a[3])) || 1)))) : t === 'sol' || t === 'htr' || t === 'jmp' || t === 'xfm' ? String(Math.max(1, Math.min(999, Math.round(Number(a[3])) || 1))) : L, color: hex(a[6]) || (t === 'sol' ? SOL_COL : t === 'htr' ? HTR_COL : t === 'lamp' ? '#00B050' : t === 'coil' ? COIL_COL[L] || '#FFDC00' : t === 'sel' ? '#0070C0' : t === 'lsw' ? LSW_COL : t === 'tsw' ? TSW_COL : t === 'psw' ? PSW_COL : t === 'fsw' ? FSW_COL : BTN_COL[L] || '#FF0032') });
     if (t === 'lsw') { p.nc = !!a[4]; if (a[7] === 1) p.held = true; }
     if (flips(p) || isBrk(p)) { p.maint = true; p.nc = false; if (a[7] === 1) p.held = true; }   // (held: it starts on (an SPST) or at throw 1 (an SPDT))   // (a toggle switch: always maintained, an SPST's one NO contact)
     if (t === 'psw' || t === 'fsw' || t === 'flt') { p.nc = !!a[4]; if (a[7] === 1) p.low = true; }   // (a pressure or flow switch: NO or NC)
@@ -9117,7 +9232,7 @@ function readCircuit(d) {
     if (a[15] && typeof a[15] === 'object' && [1, 2, 3].includes(+a[15].r) && twoEnded(p)) p.rot = +a[15].r;   // (a two-ended part turned)
     if (a[15] && typeof a[15] === 'object' && a[15].f && flips(p)) p.fx = true;
     if (t === 'xfm' && a[15] && typeof a[15] === 'object') { if (XFM_PR.includes(String(a[15].pr))) p.pr = String(a[15].pr); if (a[15].ct) p.ct = true; else if (a[15].s24) p.s24 = true; if (a[15].ug) p.ug = true; }
-    if (a[15] && typeof a[15] === 'object' && LOAD_RV.includes(+a[15].rv) && RATED(t)) p.rv = +a[15].rv;   // (a load's rated voltage)   // (a toggle switch flipped left to right)
+    if (a[15] && typeof a[15] === 'object' && HAS_RV(t) && rvList(t).includes(+a[15].rv)) p.rv = +a[15].rv;   // (a load's rated voltage)   // (a toggle switch flipped left to right)
     if (t === 'con') { p.nc = !!a[4]; delete p.color; if (a[7] === 1) p.inst = true; }   // (a timer's instantaneous contact)
     if (t === 'coil' && a[7] !== undefined) { const n = Math.round(Number(a[7])); if (n >= 1) { p.delay = Math.min(999, n); if (a[8] === 1) p.tof = true; } }   // a timer (a[8] = 1: off-delay)
     if ((t === 'btn' || t === 'coil') && typeof a[9] === 'string' && a[9].trim()) p.label = a[9].replace(/\s+/g, ' ').trim().slice(0, 8);   // (a label written on it)
@@ -9870,7 +9985,7 @@ function tsNetwork() {
   }
   for (const p of parts) {
     if (p.t === 'xfm' && p._t) loads.push([p._t[2], p._t[3], 1 / TS_XFM_SEC]);   // (its secondary winding, X1 to X2)
-    if (p.t === 'mtr' && p._t) { const c = extra++; for (const t of p._t) loads.push([t, c, 1 / TS_MOTOR]); }   // (its windings, joined at the star point)
+    if (p.t === 'mtr' && p._t) { const c = extra++; p._t.forEach((t, i) => { if (faultOf(p) !== 'w' + (i + 1)) loads.push([t, c, 1 / TS_MOTOR]); }); }   // (an open winding: none)   // (its windings, joined at the star point)
   }
   const M = extra, sn = new Int32Array(M); for (let i = 0; i < M; i++) sn[i] = f(i);
   // the pieces linked by anything (wire, contact or load): the leads on two that are not read nothing

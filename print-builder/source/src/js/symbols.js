@@ -59,6 +59,7 @@ const LIB = {
   sol:     { cat: 'Outputs', name: 'Solenoid', sym: 'Solenoid', pre: 'SOL', kind: 'load' },
   htr:     { cat: 'Outputs', name: 'Heating Element', sym: 'Heating Element', pre: 'HTR', kind: 'load' },
   motor:   { cat: 'Outputs', name: 'Motor', sym: 'Motor Leads', pre: 'M', kind: 'motor' },
+  motor1:  { cat: 'Outputs', name: 'Single-Phase Motor', sym: 'Motor Leads 1PH', pre: 'M', kind: 'motor' },
   con_no:  { cat: 'Contacts', name: 'NO Contact', sym: 'NO Contact', kind: 'contact', flip: 'con_nc' },
   con_nc:  { cat: 'Contacts', name: 'NC Contact', sym: 'NC Contact', kind: 'contact', flip: 'con_no' },
   tc_no:   { cat: 'Contacts', name: 'NO Timed Contact', sym: 'NO ND Switch', kind: 'contact', flip: 'tc_nc' },
@@ -128,6 +129,8 @@ PSYM['Pilot Light'] = { b: '<circle cx="0" cy="0" r="40" fill="#000" stroke="non
 // Dallas's motor (Symbol Design, 15 Nov 2026): a circle as big as the leads are apart (his 40 at twice size: 80), the middle
 // lead straight in and the outer two bending in to it at 45°; the leads a line (120) apart like the other 3-phase parts
 PSYM['Motor Leads'] = { b: '<path d="M-140 -120H-120L-56.569 -56.569M-140 0H-80M-140 120H-120L-56.569 56.569" fill="none"/>' + PSYM.Motor.b, t: [[-140, -120], [-140, 0], [-140, 120]], y0: -124, y1: 124 };
+// a single-phase motor (24 Nov 2026): Dallas's motor circle, its two leads (120 apart) straight in to it
+PSYM['Motor Leads 1PH'] = { b: '<path d="M-140 -60H-52.915M-140 60H-52.915" fill="none"/>' + PSYM.Motor.b, t: [[-140, -60], [-140, 60]], y0: -84, y1: 84 };
 // Dallas's ground (Symbol Design, 15 Nov 2026), at twice size: its wire coming down to three bars, each shorter than the
 // last; its one terminal at the top of its lead, on the grid
 PSYM.Ground = { b: '<path d="M0 -40V-8M-30 -8H30M-20 8H20M-10 24H10" fill="none"/>', t: [[0, -40]], y0: -40, y1: 28 };
@@ -146,7 +149,7 @@ function extentOf(t) {
   if (isArrowIn(t)) return { x0: -96, x1: 4, y0: -24, y1: 24 };
   const s = PSYM[LIB[t].sym], xs = s.t.map(p => p[0]);
   let x0 = Math.min(...xs), x1 = Math.max(...xs);
-  if (t === 'motor') { x0 = -140; x1 = 86; }
+  if (t === 'motor' || t === 'motor1') { x0 = -140; x1 = 86; }
   if (t === 'gnd') { x0 = -30; x1 = 30; }
   if (t === 'xfmr') { x0 = -64; x1 = 64; }
   if (t === 'cnt_out') { x0 = -40; x1 = 36; } if (t === 'cnt_in') { x0 = -36; x1 = 40; }   // (one terminal: the arrow's own width)

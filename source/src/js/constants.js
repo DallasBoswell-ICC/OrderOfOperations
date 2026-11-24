@@ -43,7 +43,7 @@ const OPEN_LIFT = 15, BLADE_GREY = '#a6a6a6';   // how far an open contact's bar
 // loads: things current passes through to L2 (a relay coil, a pilot light or a solenoid). They take the same room and
 // are passed through the same way; only a coil works contacts. A solenoid works something outside the circuit (a
 // pneumatic or hydraulic valve): it is numbered (SOL1, SOL2 ...) rather than lettered, and solOn says if it has pulled in
-const LOADT = t => t === 'coil' || t === 'lamp' || t === 'sol' || t === 'htr' || t === 'xfm';
+const LOADT = t => t === 'coil' || t === 'lamp' || t === 'sol' || t === 'htr' || t === 'xfm' || t === 'mt1';
 /* A control transformer (T1, T2 ...): its primary (H1, H2, on top) is a load across the supply; while current goes
    through it, its secondary (X1, X2, below) is a supply of its own for a control circuit: X1 like L1, X2 like L2, joined
    to them through two switches inside it that close when the primary is fed (see network.js). The box: XFM_W by XFM_H;
@@ -56,8 +56,8 @@ const XFM_W = 210, XFM_H = 148, XFM_TX = 60, XFM_TY = 80, XFM_EDGE = '#9aa7b5';
 const isPwr3 = p => p.t === 'dsc' || p.t === 'fus' || p.t === 'mst' || p.t === 'olh', isPwrT = t => t === 'dsc' || t === 'fus' || t === 'mst' || t === 'olh';
 const DSC_HEAD = 50, DSC_HANDLE = '#E8413C', DSC_DOWN = 120 + 118;   // (a disconnect's handle (Dallas, 22 Nov 2026, option A: below its poles, in its body, as a circuit breaker's; its body
 // reaching DSC_DOWN below its middle))
-const PWR_DY = 120, PWR_H = 2 * PWR_DY + 66, MTR_W = 280, MTR_H = 280, MTR_COL = '#9aa7b5', OL_COL = '#FF6F59', DSC_COL = '#c9d2dd', FUS_COL = '#c8c8c8';
-const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : t === 'tsw' ? TSW_T : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : t === 'psw' ? PSW_UP : t === 'fsw' ? FSW_UP : t === 'lsw' || t === 'tsw' ? LSW_S / 2 : t === 'tgl' ? TGL_BOT : t === 'dpd' ? DPD_BOT : t === 'tps' ? TPS_BOT : t === 'cbd' ? CBD_BOT : t === 'cbt' ? CBT_BOT : t === 'sp2' || t === 'xov' || t === 'dps' ? SP2_BOT : t === 'mtr' ? MTR_H / 2 : t === 'dsc' ? DSC_DOWN : isPwrT(t) ? PWR_H / 2 : 40;   // (the room a part takes)
+const PWR_DY = 120, PWR_H = 2 * PWR_DY + 66, MTR_W = 280, MTR_H = 280, MT1_W = 200, MT1_DY = 60, MTR_COL = '#9aa7b5', OL_COL = '#FF6F59', DSC_COL = '#c9d2dd', FUS_COL = '#c8c8c8';
+const halfW = t => t === 'xfm' ? XFM_W / 2 : t === 'mtr' ? MTR_W / 2 + 20 : t === 'mt1' ? MT1_W / 2 + 20 : t === 'tsw' ? TSW_T : WIDE(t) ? 60 : 40, halfH = t => t === 'xfm' ? XFM_H / 2 : t === 'psw' ? PSW_UP : t === 'fsw' ? FSW_UP : t === 'lsw' || t === 'tsw' ? LSW_S / 2 : t === 'tgl' ? TGL_BOT : t === 'dpd' ? DPD_BOT : t === 'tps' ? TPS_BOT : t === 'cbd' ? CBD_BOT : t === 'cbt' ? CBT_BOT : t === 'sp2' || t === 'xov' || t === 'dps' ? SP2_BOT : t === 'mtr' ? MTR_H / 2 : t === 'mt1' ? MT1_W / 2 : t === 'dsc' ? DSC_DOWN : isPwrT(t) ? PWR_H / 2 : 40;   // (the room a part takes)
 const SOL_COL = '#00D2BE';
 /* a solenoid (as on Dallas's drawing): a diamond (a rounded square on its corner) as tall and wide as a coil, with a
    dot at each end where the rung comes in, joined by the lightning bolt: along the rung, up to a peak, straight down and
@@ -83,8 +83,8 @@ const SOL_LEN = 2 * (SOL_DOT + SOL_DR - SOL_X) + 2 * Math.hypot(SOL_X, SOL_P) + 
 // a selector switch: a square body a little larger than a pushbutton's (room for its position numbers round the top)
 const SEL_BOX = 80;
 const WIDE = t => LOADT(t) || t === 'sel' || t === 'lsw' || t === 'psw' || t === 'fsw' || t === 'flt' || t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'tps' || t === 'dpd' || t === 'cbk' || t === 'cbd' || t === 'cbt';                // parts whose ends sit 60 either side of their centre
-const BODYH = t => t === 'lsw' || t === 'tsw' || t === 'psw' || t === 'fsw' || t === 'flt' || t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'tps' || t === 'dpd' || t === 'cbk' || t === 'cbd' || t === 'cbt' ? LSW_S : t === 'xfm' ? XFM_H : t === 'mtr' ? MTR_H : isPwrT(t) ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
-const TERM = p => p.t === 'stand' ? Math.max(40, ...(p.st || []).map(q => Math.abs(q[0]))) : p.t === 'mtr' ? MTR_W / 2 + 20 : p.t === 'tsw' ? TSW_T : WIDE(p.t) ? 60 : 40;
+const BODYH = t => t === 'lsw' || t === 'tsw' || t === 'psw' || t === 'fsw' || t === 'flt' || t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'tps' || t === 'dpd' || t === 'cbk' || t === 'cbd' || t === 'cbt' ? LSW_S : t === 'xfm' ? XFM_H : t === 'mtr' ? MTR_H : t === 'mt1' ? MT1_W : isPwrT(t) ? PWR_H : LOADT(t) ? COIL : t === 'sel' ? SEL_BOX : BOX;         // how tall a part's body is
+const TERM = p => p.t === 'stand' ? Math.max(40, ...(p.st || []).map(q => Math.abs(q[0]))) : p.t === 'mtr' ? MTR_W / 2 + 20 : p.t === 'mt1' ? MT1_W / 2 + 20 : p.t === 'tsw' ? TSW_T : WIDE(p.t) ? 60 : 40;
 // how far a part's short leads reach in from its ends: to its body's edge (a wide part's body, as limit and toggle switches
 // and the circuit breaker have, is 110 across, inside its ends 60 out; never past its ends, or the current would come
 // out late, painted out over the wire (Dallas, 22 Nov 2026))
@@ -155,9 +155,12 @@ const XFM_PR = ['480', '240', '208', '120'];
    277 or 480 V (p.rv; none: 120). A coil or solenoid pulls in at 85% of it and, once in, holds in down to 60%; well over
    it (more than 110%) it burns out after a few seconds (open, until Reset or Replace Part). A tag under the part shows it
    when it isn't 120 V. A transformer's secondary can also be 24 V (p.s24). */
-const LOAD_RV = [24, 120, 208, 240, 277, 480], RATED = t => t === 'coil' || t === 'lamp' || t === 'sol' || t === 'htr';
+const LOAD_RV = [24, 120, 208, 240, 277, 480], RATED = t => t === 'coil' || t === 'lamp' || t === 'sol' || t === 'htr' || t === 'mt1';
+// (a motor's nameplate voltages (Dallas, 24 Nov 2026): three-phase 208, 230 or 460 V; single-phase 115 or 230 V)
+const MTR_RV = [208, 230, 460], MT1_RV = [115, 230], rvList = t => t === 'mtr' ? MTR_RV : t === 'mt1' ? MT1_RV : LOAD_RV, HAS_RV = t => RATED(t) || t === 'mtr';
+const MTR_LOW = .85, MTR_HIGH = 1.1, MTR_HOT = 10;   // (a motor stalls under 85% of its voltage and overheats over 110%: its overload trips, after HUM_TRIP or MTR_HOT seconds)
 const DROP_OUT = .6, BURN_OVER = 1.1, BURN_TIME = 3;
-const twoEnded = p => !isBox(p) && !isPwr3(p) && p.t !== 'xfm' && p.t !== 'mtr' && p.t !== 'stand' && p.t !== 'gnd' && !isMulti(p);
+const twoEnded = p => !isBox(p) && !isPwr3(p) && p.t !== 'xfm' && p.t !== 'mtr' && p.t !== 'mt1' && p.t !== 'stand' && p.t !== 'gnd' && !isMulti(p);
 const flips = p => p.t === 'tgl' || isTglN(p);
 const isBrk = p => p.t === 'cbk' || p.t === 'cbd' || p.t === 'cbt';   // (a circuit breaker: single, DPST or 3PST)
 const isMulti = p => isTglN(p) || p.t === 'cbd' || p.t === 'cbt';   // (the parts with more than two ends that switch: the toggle switches below, and a DPST or 3PST circuit breaker; each run as its poles)
@@ -217,9 +220,10 @@ const isCon = p => p.t === 'con' || p.t === 'xsw' || p.t === 'pp' || p.t === 'ol
    middle) or shorted to L2 (at its middle). p.fault / w.fault: 'open', 'short' or 'l2' (wires). WORK_ORDER: the
    symptom the instructor writes for the student (saved with the circuit). */
 let FAULTS_ON = true, FAULT_BADGES = true, WORK_ORDER = '';
-const FAULT_LOADS = ['coil', 'lamp', 'sol', 'htr'];
-const canFault = p => !!p && (FAULT_LOADS.includes(p.t) || ['btn', 'con', 'sel', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'cbk', 'olc', 'fu1'].includes(p.t));
-const PART_FAULTS = { open: 'Open', short: 'Shorted' }, WIRE_FAULTS = { open: 'Open (Broken)', l2: 'Shorted to L2' };
+const FAULT_LOADS = ['coil', 'lamp', 'sol', 'htr', 'mt1'];
+const canFault = p => !!p && (FAULT_LOADS.includes(p.t) || ['mtr', 'btn', 'con', 'sel', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'cbk', 'olc', 'fu1'].includes(p.t));
+const PART_FAULTS = { open: 'Open', short: 'Shorted', w1: 'Open Winding (T1)', w2: 'Open Winding (T2)', w3: 'Open Winding (T3)' },   // (the windings: a three-phase motor's only (Dallas, 24 Nov 2026))
+  MTR_FAULTS = ['w1', 'w2', 'w3'], WIRE_FAULTS = { open: 'Open (Broken)', l2: 'Shorted to L2' };
 /* Scenarios (Dallas, 16 Nov 2026): one circuit, several sets of faults, each with its own work order; one is in force at
    a time (SCEN, from 0). The faults in force are the parts' and wires' own .fault; each one's faults in every scenario
    are kept in its .fz ({ scenario: fault }), brought up to date from .fault by scenSync (faults.js). FF_OFFER: what the

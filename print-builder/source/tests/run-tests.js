@@ -502,7 +502,7 @@ let passed = 0, failed = 0;
   await check('Every long part menu is split by kind; SPDT and DPDT switches flip left to right (F, or Flip on the Part tab), their wires following', async p => {
     await p.evaluate(() => { loadDoc(template('blank')); refresh(true); });
     const kinds = await p.evaluate(() => Object.fromEntries(CATS.map(c => [c, [...document.querySelector(`[data-menu="${c}"]`).nextElementSibling.querySelectorAll(':scope > button, :scope > .subwrap > .sub-row')].map(b => b.dataset.t ? LIB[b.dataset.t].name : [...b.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim()).join(';')])));
-    const want = { Buttons: 'Pushbuttons;Maintained Pushbuttons;Emergency Stop', Outputs: 'Relay Coil;Timers;Pilot Light;Solenoid;Heating Element;Motor', Contacts: 'Relay Contacts;Timed Contacts;Starter;OL Contact',
+    const want = { Buttons: 'Pushbuttons;Maintained Pushbuttons;Emergency Stop', Outputs: 'Relay Coil;Timers;Pilot Light;Solenoid;Heating Element;Motor;Single-Phase Motor', Contacts: 'Relay Contacts;Timed Contacts;Starter;OL Contact',
       Protection: 'Disconnects;Fuses;Circuit Breakers;Overloads', Power: 'Phase (L1, L2, L3);Control Source and Return;Transformer;Ground' };
     const out = []; for (const [c, w] of Object.entries(want)) if (kinds[c] !== w) out.push(c + ': ' + kinds[c]);
         // an SPDT with a wire on each end, flipped: its common moves to the right, its wires stay on the same ends; undo puts it back

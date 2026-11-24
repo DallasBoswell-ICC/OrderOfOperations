@@ -198,8 +198,8 @@ function linkBuild(doc, back) {
           if (w > p.x - l[0]) cons.push([l[0], p.x, w]); if (w > r[0] - p.x) cons.push([p.x, r[0], w]);
           row(k, p.y).push({ a: l[0], b: r[0], ea: 0, eb: 0, part: 1 }); continue; }
         const one = ts.length && ts.every(q => q[0] === ts[0][0]) ? ts[0][0] : null;
-        const [ea, eb] = p.t === 'motor' ? [0, 300] : p.t === 'xfmr' ? [105, 105] : one != null && ts.length === 1 ? [80, 80] : [40, 40];
-        const anchor = p.t === 'motor' && one != null ? one : p.x; keySet.add(anchor);
+        const [ea, eb] = p.t === 'motor' ? [0, 300] : p.t === 'motor1' ? [0, 230] : p.t === 'xfmr' ? [105, 105] : one != null && ts.length === 1 ? [80, 80] : [40, 40];
+        const anchor = (p.t === 'motor' || p.t === 'motor1') && one != null ? one : p.x; keySet.add(anchor);
         for (const y of new Set(ts.map(q => q[1]).concat(ts.length ? [] : [p.y]))) row(k, y).push({ a: anchor, b: anchor, ea, eb, part: 1 }); }
       for (const n of s.nodes || []) keySet.add(n.x);
       for (const w of s.wires) { const ps = [linkPbPos(s, w.a), ...(w.pts || []), linkPbPos(s, w.b)].filter(Boolean);
@@ -325,7 +325,8 @@ function linkBuild(doc, back) {
     else if (p.t === 'pl' || p.t === 'sol' || p.t === 'htr') {
       if (p.t === 'pl') { const w0 = LINK_LAMP_COL[(p.desc || '').toUpperCase().split(/\s+/)[0]], c = w0 || '00B050'; if (w0) ownCol.add(parts.length); const pbL = p.inPB ? [...opL.entries()].find(([k]) => k === 'PB:' + p.inPB) : null; two('lamp', ['lamp', x, y, pbL ? pbL[1] : '', 0, 1, c]); }
       else two(p.t, [p.t, x, y, linkDigits(p.tag, '1'), 0, 1, p.t === 'sol' ? '00D2BE' : 'FF0032']);
-    } else if (p.t === 'motor') add(it, ['mtr', x + (pb[1] ? pb[1][0] - x + 160 : 0), y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('mtr', x + (pb[1] ? pb[1][0] - x + 160 : 0), y, 0));
+    } else if (p.t === 'motor1') { const X = pb[0] ? pb[0][0] + 120 : x - 20; add(it, ['mt1', X, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('mt1', X, y, 0)); }
+    else if (p.t === 'motor') add(it, ['mtr', x + (pb[1] ? pb[1][0] - x + 160 : 0), y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('mtr', x + (pb[1] ? pb[1][0] - x + 160 : 0), y, 0));
     else if (p.t === 'mst3') { if (!coilL.has(p.tag)) { noCoil.push(p.tag || '?'); coilL.set(p.tag, take()); } add(it, ['mst', x, y, coilL.get(p.tag), 0, 1, ''], linkCbTerms('mst', x, y, 0)); }
     else if (p.t === 'ol3') add(it, ['olh', x, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('olh', x, y, 0));
     else if (p.t === 'dsc3') add(it, ['dsc', x, y, linkDigits(p.tag, '1'), 0, 1, ''], linkCbTerms('dsc', x, y, 0));
@@ -581,6 +582,7 @@ function circuitToPrint(d, env) {
       case 'sol': t = 'sol'; o.tag = 'SOL' + r.L; break;
       case 'htr': t = 'htr'; o.tag = 'HTR' + r.L; break;
       case 'mtr': t = 'motor'; o.tag = 'M' + r.L; o.x = r.x - 20; break;   // (its leads: 140 out on the print, 160 here)
+      case 'mt1': t = 'motor1'; o.tag = 'M' + r.L; o.x = r.x + 20; break;   // (a single-phase motor: its leads 140 out on the print, 120 here)
       case 'mst': t = 'mst3'; o.tag = tagOf.get('C:' + r.L) || r.L; break;
       case 'olc': t = 'olc'; o.tag = 'OL' + r.L; break;
       case 'olh': t = 'ol3'; o.tag = 'OL' + r.L; break;
@@ -669,7 +671,7 @@ function circuitToPrint(d, env) {
   // ---- 4. the paper: letter portrait unless asked otherwise, each part its own size with room for its tag, its name and the wire numbers.
   // A long rung that won't fit across portrait that way (Dallas, 17 Nov 2026, his choice each time): letter landscape ('land'),
   // portrait drawn tighter ('tight'), or the rung folded onto a second line with a continuation ('fold')
-  const spanOf = o => { const xs = linkPbTerms(o).map(q => q[0]); const half = o.t === 'motor' ? 60 : 40; return [Math.min(...xs, o.x - half), Math.max(...xs, o.x + half)]; };
+  const spanOf = o => { const xs = linkPbTerms(o).map(q => q[0]); const half = o.t === 'motor' || o.t === 'motor1' ? 60 : 40; return [Math.min(...xs, o.x - half), Math.max(...xs, o.x + half)]; };
   const allX = () => [...E.keys()].map(k => XY(k)[0]).concat(made.flatMap(({ o }) => [o.x, ...linkPbTerms(o).map(q => q[0])]), rails.map(r => r.x));
   const leftM = () => { const xs = allX(), m = Math.min(...xs); return 160 + (rails.length && Math.min(...rails.map(r => r.x)) - m < 120 ? 120 : 0); };   // (in from the left edge; more when the L1 rail is the leftmost thing, for its rung numbers)
   // (room on the right for the coils' cross-references: up to three numbers a line, Print Builder wraps the rest)

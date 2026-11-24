@@ -81,7 +81,7 @@ function analyse(D = doc) {
     }
   }
   // power, the load side: each motor's leads, back from it to its starter
-  const motors = parts.filter(x => kindOf(x.p) === 'motor').sort(reading);
+  const motors = parts.filter(x => x.p.t === 'motor').sort(reading);   // (three-phase motors: a single-phase one's leads are numbered as any load's)
   let tN = 0;
   motors.forEach(({ s, p }, mk_) => {
     const leads = [0, 1, 2].map(i => ({ i, y: termPos(p, i)[1] })).sort((a, b) => a.y - b.y);

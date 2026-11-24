@@ -30,7 +30,7 @@ function faultWhere(x, isW) {
    - a fuse shorted: it would still pass current and read 0 Ω like a good one, so nothing could ever find it */
 function faultWhy(x, isW, f) {
   if (!f) return '';
-  if (!isW) return f === 'short' && x.t === 'fu1' ? 'A shorted fuse works like a good one: there would be nothing to find' : '';
+  if (!isW) return (x.t === 'mtr') !== MTR_FAULTS.includes(f) ? '!' : f === 'short' && x.t === 'fu1' ? 'A shorted fuse works like a good one: there would be nothing to find' : '';   // ('!': not a fault this kind of part can have: not offered)
   if (f !== 'l2') return '';
   const was = FAULTS_ON; FAULTS_ON = false; let net; try { net = network(); } finally { FAULTS_ON = was; }
   const idx = new Map(net.nodes.map((n, i) => [n.k, i])), k = key(x.x1, x.y1), n = idx.get(k) ?? idx.get(k + '#' + x.id);
@@ -61,7 +61,7 @@ function showFaults() {
   what.textContent = t ? faultWhere(...t) : sel && selCount() ? 'Pick one part or wire (this one cannot have a fault)' : 'Pick a part or wire on the panel';
   what.classList.toggle('none', !t);
   const opts = t ? { '': 'None', ...(t[1] ? WIRE_FAULTS : PART_FAULTS) } : { '': 'None', ...PART_FAULTS };
-  kinds.innerHTML = Object.entries(opts).map(([k, n]) => { const why = t && k ? faultWhy(t[0], t[1], k) : '';
+  kinds.innerHTML = Object.entries(opts).filter(([k]) => !(t ? t && k && faultWhy(t[0], t[1], k) === '!' : MTR_FAULTS.includes(k))).map(([k, n]) => { const why = t && k ? faultWhy(t[0], t[1], k) : '';
     return `<button type="button" data-fz="${k}" aria-pressed="${t ? String((t[0].fault || '') === k) : 'false'}"${!t || why ? ' disabled' : ''}${why ? ` data-tip="${why.replace(/"/g, '&quot;')}"` : ''}>${n}</button>`; }).join('');
   const L = faulted(), list = document.getElementById('fz-list');
   list.innerHTML = L.length ? L.map(([x, w], i) => `<div class="fz-row" data-i="${i}">${i + 1}. ${String(faultWhere(x, w)).replace(/&/g, '&amp;').replace(/</g, '&lt;')}<b>${faultName(x, w)}</b><button type="button" data-x="${i}" aria-label="Take this fault off">✕</button></div>`).join('') : '<div class="none">None yet: pick a part or wire, then a fault</div>';
@@ -81,7 +81,7 @@ function showPartFault(G) {
   const g = document.getElementById('p-fault-group'), s = document.getElementById('p-fault'), ok = G.length && G.every(canFault);
   g.hidden = !ok; if (!ok) return;
   const same = G.every(p => (p.fault || '') === (G[0].fault || ''));
-  s.innerHTML = (same ? '' : '<option value="__">(several)</option>') + Object.entries({ '': 'None', ...PART_FAULTS }).map(([k, n]) => { const why = k && G.some(p => faultWhy(p, false, k)); return `<option value="${k}"${why ? ' disabled' : ''}>${n}${why ? ' (not on a fuse)' : ''}</option>`; }).join('');
+  s.innerHTML = (same ? '' : '<option value="__">(several)</option>') + Object.entries({ '': 'None', ...PART_FAULTS }).filter(([k]) => !k || !G.some(p => faultWhy(p, false, k) === '!')).map(([k, n]) => { const why = k && G.some(p => faultWhy(p, false, k)); return `<option value="${k}"${why ? ' disabled' : ''}>${n}${why ? ' (not on a fuse)' : ''}</option>`; }).join('');
   s.value = same ? G[0].fault || '' : '__';
 }
 document.getElementById('p-fault').addEventListener('change', e => { const f = e.target.value; if (f === '__') return; const G = selGroup().filter(canFault); if (!G.length) return;

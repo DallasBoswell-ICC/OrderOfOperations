@@ -625,12 +625,14 @@ function phasesNow(t) {
 const HUM_TRIP = 3;
 function motorsNow(t) {
   for (const p of parts) if (p.t === 'mtr' && p._t) {
-    const ks = p._t.map(n => phaseOfAt(n, t)), got = new Set(ks.filter(k => k > 0 && k < 4));   // (the neutral is no phase)
-    const st = got.size === 3 ? 'run' : got.size === 2 ? 'hum' : 'off', dir = st !== 'run' ? 0 : ['123', '231', '312'].includes(ks.join('')) ? 1 : -1;
+    const ks = p._t.map((n, i) => faultOf(p) === 'w' + (i + 1) ? 0 : phaseOfAt(n, t)), got = new Set(ks.filter(k => k > 0 && k < 4));   // (an open winding: nothing through it)   // (the neutral is no phase)
+    // (all three: on its nameplate voltage it runs; under 85% of it, it stalls; over 110%, it runs and overheats (Dallas, 24 Nov 2026))
+    const r = got.size === 3 && p.rv ? phAcross(ks[0], ks[1]) / p.rv : 1;
+    const st = got.size === 3 ? (r < MTR_LOW ? 'stall' : r > MTR_HIGH ? 'hot' : 'run') : got.size === 2 ? 'hum' : 'off', dir = st !== 'run' && st !== 'hot' ? 0 : ['123', '231', '312'].includes(ks.join('')) ? 1 : -1;
     const m = MOT[p.id];
     if (m && m.st === st && m.dir === dir) continue;
     const now = MOT[p.id] = { st, dir, t0: t }; needPaint = true;
-    if (st === 'hum') schedule(t + HUM_TRIP, () => { if (MOT[p.id] === now) tripFeeding(p, evT); });
+    if (st === 'hum' || st === 'stall' || st === 'hot') schedule(t + (st === 'hot' ? MTR_HOT : HUM_TRIP), () => { if (MOT[p.id] === now) tripFeeding(p, evT); });
   }
 }
 // trip (or reset) overload L: its contacts in the control circuit open (or close again)

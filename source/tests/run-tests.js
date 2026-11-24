@@ -3917,6 +3917,43 @@ const DEF_CIRCUIT = `
     }
     return out;
   });
+  await check('Stage 4, motors (Dallas, 24 Nov 2026): a motor has a nameplate voltage (Match Supply, or 208, 230 or 460 V), saved, and stalls under 85% of it (a Build note says so); a single-phase motor (T1, T2) runs on the bars or from a phase, stalls short of its voltage and burns out well over it, and crosses to Print Builder and back; an open winding is a fault only a motor can have, and it hums on two phases', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    const run = async (setup, ms = 1500) => { const iss = await page.evaluate(b => { eval('(' + b + ')')(); draw(); return [...wiringIssues(NET).entries()].map(([k, v]) => (parts.find(p => p.id === k) || { t: k }).t + ': ' + (typeof v === 'string' ? v : v.note)).join(); }, String(setup));
+      await page.click('#tab-run'); await page.evaluate(() => setSpeed(4)); await page.waitForTimeout(ms);
+      const st = await page.evaluate(() => parts.filter(p => p.t === 'mt1' || p.t === 'mtr').map(p => p.t + ' ' + (p.t === 'mtr' ? (MOT[p.id] || {}).st : (coilOn[p.id] ? 'on' : 'off') + (BLOWN[p.id] ? ' burned' : ''))).join());
+      await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit'); return iss + ' / ' + st; };
+    const bars = () => { sel = null; loadPreset('blank'); W = 900; parts.push(P('mt1', 500, 300, { L: '1' })); wires.push(Wr(0, 240, 380, 240), Wr(380, 360, 380, 420), Wr(380, 420, W, 420)); normalize(); };
+    let r = await run(bars); if (r !== ' / mt1 on') out.push('single-phase on the bars: ' + r);
+    r = await run(() => { parts.find(p => p.t === 'mt1').rv = 230; normalize(); }); if (r !== 'mt1: On 120 V, made for 230 V: it will stall / mt1 off') out.push('230 V on the bars: ' + r);
+    r = await run(() => { sel = null; loadPreset('blank'); VSYS = '240'; PH_COL = [...VSYS_LIST['240'].col]; POWER = 'boxes'; W = 900; parts.push(newPart('ph-1', 100, 240), newPart('ph-2', 100, 420), P('mt1', 500, 300, { L: '1', rv: 115 })); wires.push(Wr(140, 240, 380, 240), Wr(140, 420, 380, 420), Wr(380, 420, 380, 360)); normalize(); }, 4500);
+    if (r !== 'mt1: On 240 V, made for 115 V: it will burn out / mt1 off burned') out.push('115 V across 240 V: ' + r);
+    const three = rv => `() => { sel = null; loadPreset('blank'); VSYS = '208'; PH_COL = [...VSYS_LIST['208'].col]; POWER = 'boxes'; W = 1300; parts.push(newPart('ph-1', 120, 200), newPart('ph-2', 120, 320), newPart('ph-3', 120, 440), P('mtr', 800, 320, { L: '1'${rv ? ', rv: ' + rv : ''} })); wires.push(Wr(160, 200, 640, 200), Wr(160, 320, 640, 320), Wr(160, 440, 640, 440)); normalize(); }`;
+    for (const [rv, want] of [[0, ' / mtr run'], [230, 'mtr: On 207.8 V, made for 230 V / mtr run'], [460, 'mtr: On 207.8 V, made for 460 V: it will stall / mtr stall']]) {
+      r = await run(three(rv)); if (r !== want) out.push('three-phase ' + (rv || 'matched') + ': ' + r); }
+    // the Part tab: a motor's nameplate voltages; saved
+    const at = await page.evaluate(() => { const q = parts.find(p => p.t === 'mtr'), m = WORLD.getScreenCTM(); return { x: m.a * (q.x + 40) + m.e, y: m.d * q.y + m.f }; });
+    await page.mouse.click(at.x, at.y); await page.waitForTimeout(120);
+    const opts = await page.evaluate(() => [...document.querySelectorAll('#rv-sel option')].map(o => o.value || 'M').join());
+    if (opts !== 'M,208,230,460') out.push('motor ratings offered: ' + opts);
+    const sv = await page.evaluate(() => { parts.push(P('mt1', 500, 800, { L: '2', rv: 115 })); return readCircuit(JSON.parse(JSON.stringify(circuitData()))).parts.filter(p => p.t === 'mtr' || p.t === 'mt1').map(p => p.t + p.L + ':' + p.rv).join(); });
+    if (sv !== 'mtr1:460,mt12:115') out.push('saved: ' + sv);
+    // to Print Builder and back
+    const d = await page.evaluate(() => circuitData());
+    const pbr = await withPB(page, pb => pb.evaluate(d => { const r = circuitToPrint(d, { uid, defaultTB, long: 'tight' }); const ps = r.doc.sheets.flatMap(s => s.parts); return [ps.filter(p => p.t === 'motor1' || p.t === 'motor').map(p => p.t + ' ' + p.tag).join(), JSON.parse(JSON.stringify(r.doc))]; }, d));
+    if (pbr[0] !== 'motor M1,motor1 M2') out.push('in Print Builder: ' + pbr[0]);
+    pbr[1].link.fp = 'changed';
+    const back = await page.evaluate(doc => { openFromPrint(doc, 'x'); document.getElementById('link-dlg').close(); return parts.filter(p => p.t === 'mtr' || p.t === 'mt1' || p.t === 'stand').map(p => p.t + p.L).join(); }, pbr[1]);
+    if (back !== 'mtr1,mt12') out.push('back from Print Builder: ' + back);
+    // an open winding: offered on a motor only; the motor hums
+    const f = await page.evaluate(() => { const m = parts.find(p => p.t === 'mtr'), c = P('coil', 0, 0, { L: 'X' }); return [faultsFor(m, false).join(), faultsFor(c, false).join()].join(' / '); });
+    if (f !== 'w1,w2,w3 / open,short') out.push('faults offered: ' + f);
+    r = await run(new Function('(' + three(0) + ')(); parts.find(p => p.t === "mtr").fault = "w2"; FAULTS_ON = true;'));
+    if (!/mtr hum$/.test(r)) out.push('open winding: ' + r);
+    await page.evaluate(() => { FAULTS_ON = false; });
+    return out;
+  });
   await check('Match Supply, power default and All Phases (Dallas, 24 Nov 2026): a load with no rating set is made for what its supply gives (277 V from a phase to N and 480 V across two phases on 480Y/277: no note, no burn-out), and one rated 120 V shows its tag; Set As Default makes new circuits start with Bars or Boxes; All Phases places L1, L2, L3 and N in a column, selected', async page => {
     const out = [];
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);

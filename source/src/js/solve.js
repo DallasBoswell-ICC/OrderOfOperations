@@ -139,7 +139,7 @@ const SUPPLY_V = 120, PULL_IN = 0.85;
      solenoid (valve)                    1.2 kΩ   0.1 A, 12 W          heating element 9.6 Ω   12.5 A, 1500 W
      control transformer: primary 12 Ω, secondary 0.5 Ω; a motor: 2 Ω a winding (ts-meter.js) */
 const LOAD_OHMS = p => p.t === 'coil' ? (isTimer(p) ? 3000 : parts.some(q => q.t === 'mst' && q.L === p.L) ? 240 : 2500)
-  : p.t === 'lamp' ? 2400 : p.t === 'sol' ? 1200 : p.t === 'htr' ? 9.6 : p.t === 'xfm' ? 12 : 1000;
+  : p.t === 'lamp' ? 2400 : p.t === 'sol' ? 1200 : p.t === 'htr' ? 9.6 : p.t === 'mt1' ? 12 : p.t === 'xfm' ? 12 : 1000;
 const loadR = p => LOAD_OHMS(p);                         // (each load's resistance)
 const ratedShare = p => p.rv ? p.rv / SUPPLY_V : p._ms ?? 1;   // (the voltage it's made for, as a share of the supply)
 // V: junction group -> voltage (L1 1, L2 0); share: load id -> the share of the supply across it (0: no current)

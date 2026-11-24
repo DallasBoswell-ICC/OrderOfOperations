@@ -92,7 +92,7 @@ function drawEstop(p, v, x, y, g) {
     el('path', { d: `M ${P1[0] + tx * L} ${P1[1] + ty * L} L ${P1[0] + nx * w} ${P1[1] + ny * w} L ${P1[0] - nx * w} ${P1[1] - ny * w} Z`, fill: ESTOP_PLATE }, v.twist);
   }
 }
-const captionOf = p => p.t === 'gnd' ? 'Ground' : p.t === 'stand' ? `${p.L ? p.L + ' ' : ''}${LINK_PB_SYMN[p.sym] || p.sym} (stand-in)` : p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} ${p.low ? 'Low' : 'High'} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} ${p.low ? 'Low' : 'High'} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'flt' ? `FS${p.L} ${p.low ? 'Low' : 'High'} Level Float Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tgl' ? `SW${p.L} Toggle Switch (SPST)` : p.t === 'sp2' ? `SW${p.L} Toggle Switch (SPDT)` : p.t === 'xov' ? `SW${p.L} Crossover Switch (DPDT)` : p.t === 'dps' ? `SW${p.L} Toggle Switch (DPST)` : p.t === 'tps' ? `SW${p.L} Toggle Switch (3PST)` : p.t === 'cbk' ? `CB${p.L} Circuit Breaker` : p.t === 'cbd' ? `CB${p.L} Circuit Breaker (DPST)` : p.t === 'cbt' ? `CB${p.L} Circuit Breaker (3PST)` : p.t === 'dpd' ? `SW${p.L} Toggle Switch (DPDT)` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
+const captionOf = p => p.t === 'gnd' ? 'Ground' : p.t === 'stand' ? `${p.L ? p.L + ' ' : ''}${LINK_PB_SYMN[p.sym] || p.sym} (stand-in)` : p.t === 'xfm' ? `T${p.L} Control Transformer` : p.t === 'jmp' ? `Continuation ${p.L}` : p.t === 'sol' ? `SOL${p.L} Solenoid` : p.t === 'htr' ? `HTR${p.L} Heating Element` : p.t === 'l1' ? 'L1 Supply' : p.t === 'l2' ? 'L2 Return' : p.t === 'ph' ? `L${p.L} Phase` : p.t === 'dsc' ? `DS${p.L} Disconnect` : p.t === 'fus' ? `FU${p.L}–FU${+p.L + 2} Fuses` : p.t === 'fu1' ? `FU${p.L} Fuse` : p.t === 'mst' ? `${p.L} Starter` : p.t === 'olh' ? `OL${p.L} Overload` : p.t === 'olc' ? `OL${p.L} Contact (NC)` : p.t === 'psw' ? `PS${p.L} ${p.low ? 'Low' : 'High'} Pressure Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'fsw' ? `FLS${p.L} ${p.low ? 'Low' : 'High'} Flow Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'flt' ? `FS${p.L} ${p.low ? 'Low' : 'High'} Level Float Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'tgl' ? `SW${p.L} Toggle Switch (SPST)` : p.t === 'sp2' ? `SW${p.L} Toggle Switch (SPDT)` : p.t === 'xov' ? `SW${p.L} Crossover Switch (DPDT)` : p.t === 'dps' ? `SW${p.L} Toggle Switch (DPST)` : p.t === 'tps' ? `SW${p.L} Toggle Switch (3PST)` : p.t === 'cbk' ? `CB${p.L} Circuit Breaker` : p.t === 'cbd' ? `CB${p.L} Circuit Breaker (DPST)` : p.t === 'cbt' ? `CB${p.L} Circuit Breaker (3PST)` : p.t === 'dpd' ? `SW${p.L} Toggle Switch (DPDT)` : p.t === 'tsw' ? `TS${p.L} ${p.low ? 'Low' : 'High'} Temp. Switch (${p.nc ? 'NC' : 'NO'})` : p.t === 'lsw' ? `LS${p.L} Limit Switch (${p.nc ? 'NC' : 'NO'}${p.held ? (p.nc ? ' held open' : ' held closed') : ''})` : p.t === 'mtr' ? `MTR${p.L} Motor` : p.t === 'mt1' ? `MTR${p.L} Single-Phase Motor` : p.t === 'sel' ? `${p.L} Selector` : p.t === 'coil' ? (isTimer(p) ? `${idOf(p)} ${p.tof ? 'Off' : 'On'}-Delay Timer` : `${idOf(p)} Coil`) : p.t === 'lamp' ? (p.L ? `${idOf(p)} Button Light` : 'Pilot Light') : p.t === 'con' ? `${idOf(p)} ${parts.some(q => isTimer(q) && q.L === p.L) ? (p.inst ? 'Instant ' : 'Timed ') : ''}Contact (${p.nc ? 'NC' : 'NO'})` : p.estop ? `${idOf(p)} E-Stop (NC)` : `${idOf(p)} Button (${p.nc ? 'NC' : 'NO'})`;
 /* Pilot lights. A light can be built into a pushbutton (an illuminated pushbutton): it is still wired as a light of
    its own, wherever it sits in the circuit, but it shows on the button too. The button's cap lights up with it, and a
    small lamp badge on the button's corner marks it as having a light. A light built into a button takes the button's
@@ -297,6 +297,8 @@ function drawPart(p, g, x, y, chan, onStation) {
     drawPwr(p, g, x, y, v, chan);
   } else if (p.t === 'mtr') {
     drawMtr(p, g, x, y, v, chan);
+  } else if (p.t === 'mt1') {
+    drawMt1(p, g, x, y, v, chan);
   } else if (isJmp(p)) {
     // a continuation: the supply boxes' double chevron in a silver-edged box. While running, the current lights the
     // leads that are wired and fills the chevrons (see run.js)
@@ -393,7 +395,7 @@ function drawPart(p, g, x, y, chan, onStation) {
   }
   // a load's rated voltage, when it isn't 120 V: a tag under it (beside it, turned upright); and, burned out by too much
   // voltage, its middle dark and a red badge on its top right, as a blown fuse's (Dallas, 23 Nov 2026)
-  if (RATED(p.t) && !onStation) {
+  if (RATED(p.t) && p.t !== 'mt1' && !onStation) {
     if (p.rv) { const up = (p.rot || 0) % 2, tx = up ? x + COIL / 2 + 22 : x, ty = up ? y : y + COIL / 2 + 15;
       el('rect', { x: tx - 18, y: ty - 9, width: 36, height: 18, rx: 5, fill: '#1f1f1f', stroke: p.color || '#c8c8c8', 'stroke-width': 1.2 }, g);
       el('text', { x: tx, y: ty + 3.6, 'text-anchor': 'middle', 'font-size': 9.5, 'font-weight': 800, fill: '#fff', 'pointer-events': 'none' }, g).textContent = p.rv + ' V'; }
@@ -697,37 +699,102 @@ function drawPwr(p, g, x, y, v, chan) {
    (a third of it each), round a fan that turns while it runs (an arrow beside it shows which way: clockwise forward)
    and shakes while it hums */
 function drawMtr(p, g, x, y, v, chan) {
+  // (Dallas, 24 Nov 2026, option R: each lead runs in to a lug on the ring, T1 along the top and down, T2 straight in, T3
+  // along the bottom and up, meeting the ring square on; the ring is the windings, a third for each phase, lit outward
+  // both ways from its lug as the current arrives, the three meeting at the star point (the dots between them))
   v.lead = null; v.src = [];
-  const H = MTR_H, x0 = x - MTR_W / 2, cx = x + 22, R = 92;
+  const H = MTR_H, x0 = x - MTR_W / 2, cx = x + 22, R = 92, A = [300, 180, 60], tys = [-PWR_DY, 0, PWR_DY];
+  const P = (a, r = R) => [cx + r * Math.cos(a * Math.PI / 180), y + r * Math.sin(a * Math.PI / 180)];
   terms(p).forEach(([tx, ty], i) => {
     el('line', { x1: tx, y1: ty, x2: x0, y2: ty, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
     if (!editing && p._t) v.src.push({ n: p._t[i], ln: el('line', { x1: tx, y1: ty, x2: x0, y2: ty, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g) });
   });
   framed('rect', { x: x0, y: y - H / 2, width: MTR_W, height: H, rx: 22, fill: 'url(#gWell)', stroke: MTR_COL, 'stroke-width': 2.2 }, g);
-  [-1, 0, 1].forEach((k, i) => { const ty = y + k * PWR_DY, tx = x0 + 24;
+  el('circle', { cx, cy: y, r: R + 5, fill: '#111', filter: 'url(#fShadow)' }, g);
+  // each winding: from its lug, half of it each way (so it can be lit outward from the lug)
+  const half = (a0, a1) => { const [sx, sy] = P(a0), [ex, ey] = P(a1); return `M${sx} ${sy}A${R} ${R} 0 0 ${a1 > a0 ? 1 : 0} ${ex} ${ey}`; };
+  v.wd = A.map(a => [half(a, a + 60), half(a, a - 60)].map(d => { el('path', { d, fill: 'none', stroke: GREY, 'stroke-width': 9 }, g); return el('path', { d, fill: 'none', stroke: 'transparent', 'stroke-width': 9 }, g); }));
+  v.wLen = R * Math.PI / 3;
+  A.forEach(a => { const [sx, sy] = P(a + 60); el('circle', { cx: sx, cy: sy, r: 3.2, fill: '#111' }, g); });   // (the star point)
+  // the leads inside, from the terminal's tag to its lug, with a rounded bend
+  v.ld = tys.map((dy, i) => { const [jx, jy] = P(A[i], R + 4.5), ty = y + dy, sx = x0 + 37, r = 14;
+    const d = i === 1 ? `M${sx} ${ty}L${jx} ${jy}` : `M${sx} ${ty}L${jx - r} ${ty}Q${jx} ${ty} ${jx} ${ty + (dy < 0 ? r : -r)}L${jx} ${jy}`;
+    el('path', { d, fill: 'none', stroke: '#111', 'stroke-width': 10, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+    el('path', { d, fill: 'none', stroke: GREY, 'stroke-width': 5.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+    return el('path', { d, fill: 'none', stroke: 'transparent', 'stroke-width': 5.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g); });
+  v.ldLen = tys.map((dy, i) => { const [jx, jy] = P(A[i], R + 4.5), sx = x0 + 37, r = 14; return i === 1 ? Math.hypot(jx - sx, jy - y) : (jx - r - sx) + Math.PI * r / 2 * .9 + Math.abs(y + dy + (dy < 0 ? r : -r) - jy); });
+  tys.forEach((dy, i) => { const tx = x0 + 24, ty = y + dy;
     el('rect', { x: tx - 13, y: ty - 12, width: 26, height: 24, rx: 6, fill: '#1f1f1f', stroke: '#e2cc85', 'stroke-width': 1.2 }, g);
     el('text', { x: tx, y: ty + 4.3, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 700, fill: '#f2e6b8' }, g).textContent = 'T' + (i + 1); });
-  el('circle', { cx, cy: y, r: R + 5, fill: '#111', filter: 'url(#fShadow)' }, g);
-  v.arcs = [0, 1, 2].map(i => { const a0 = (i * 120 - 150) * Math.PI / 180, a1 = ((i + 1) * 120 - 150) * Math.PI / 180;
-    return el('path', { d: `M${cx + R * Math.cos(a0)} ${y + R * Math.sin(a0)}A${R} ${R} 0 0 1 ${cx + R * Math.cos(a1)} ${y + R * Math.sin(a1)}`, fill: 'none', stroke: GREY, 'stroke-width': 9 }, g); });
   el('circle', { cx, cy: y, r: R - 7, fill: '#262626', stroke: '#111', 'stroke-width': 1.5 }, g);
+  // the lugs, over the fan's disc so none of their edge is hidden (Dallas, 24 Nov 2026)
+  v.lug = A.map(a => { const [lx, ly] = P(a); return el('circle', { cx: lx, cy: ly, r: 7.5, fill: '#1c1c1c', stroke: GREY, 'stroke-width': 3 }, g); });
   const at = el('g', { transform: `translate(${cx} ${y})` }, g);
   v.rotor = el('g', {}, at);   // (it turns about its hub, see paintMtr)
   const fan = el('g', { transform: `scale(${(R / 70).toFixed(3)})` }, v.rotor);
   for (let i = 0; i < 6; i++) el('path', { d: 'M0 -12C22 -30 30 -48 12 -56L-6 -48C8 -38 6 -26 0 -12Z', transform: `rotate(${i * 60})`, fill: '#6a7077', stroke: '#1c1c1c', 'stroke-width': 1.2 }, fan);
   rdot(fan, 0, 0, 13).setAttribute('fill', '#7a8087');
   el('text', { x: 0, y: 6, 'text-anchor': 'middle', 'font-size': 17, 'font-weight': 800, fill: '#1c1c1c' }, at).textContent = 'M';
-  // which way it turns (shown while it runs): an arc just outside the ring at its lower right, its head the way the fan
-  // goes (clockwise, so down that side, forward; turned over, up it, backward)
-  const ra = R + 13, pt = a => [cx + ra * Math.cos(a * Math.PI / 180), y + ra * Math.sin(a * Math.PI / 180)];
-  const [sx, sy] = pt(8), [tx, ty] = pt(52), tg = [-Math.sin(52 * Math.PI / 180), Math.cos(52 * Math.PI / 180)], bk = [-tg[0], -tg[1]], pp = [-bk[1], bk[0]];
+  // which way it turns (shown while it runs): an arc just outside the ring on its right, its head the way the fan goes
+  // (clockwise, so down it, forward; turned over, up it, backward); FORWARD or REVERSE under the body
+  const ra = R + 13, [sx, sy] = P(-22, ra), [tx, ty] = P(22, ra), a = 22 * Math.PI / 180, tg = [-Math.sin(a), Math.cos(a)], bk = [-tg[0], -tg[1]], pp = [-bk[1], bk[0]];
   v.arrow = el('g', { display: 'none' }, g);
   v.arrowPath = el('g', {}, v.arrow);
   el('path', { d: `M${sx} ${sy}A${ra} ${ra} 0 0 1 ${tx} ${ty}`, fill: 'none', stroke: '#9be03a', 'stroke-width': 3, 'stroke-linecap': 'round' }, v.arrowPath);
   el('path', { d: `M${tx + 9 * bk[0] + 5.5 * pp[0]} ${ty + 9 * bk[1] + 5.5 * pp[1]}L${tx} ${ty}L${tx + 9 * bk[0] - 5.5 * pp[0]} ${ty + 9 * bk[1] - 5.5 * pp[1]}`, fill: 'none', stroke: '#9be03a', 'stroke-width': 3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, v.arrowPath);
-  v.dir = el('text', { x: x + MTR_W / 2 - 14, y: y + H / 2 - 12, 'text-anchor': 'end', 'font-size': 12, 'font-weight': 800, fill: '#9be03a' }, v.arrow);
-  v.hum = el('text', { x: cx, y: y + H / 2 - 14, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: '#ff8a7a', display: 'none' }, g); v.hum.textContent = 'Humming: a phase is missing';
+  v.dir = el('text', { x: x + MTR_W / 2 - 4, y: y + H / 2 + 17, 'text-anchor': 'end', 'font-size': 12, 'font-weight': 800, fill: '#9be03a' }, v.arrow);
+  v.hum = el('text', { x: x + MTR_W / 2 - 4, y: y + H / 2 + 17, 'text-anchor': 'end', 'font-size': 12, 'font-weight': 700, fill: '#ff8a7a', display: 'none' }, g); v.hum.textContent = 'Humming: a phase is missing';
+  if (p.rv) { const ty = y + H / 2 + 17;   // (a voltage picked: its tag, under the body at its left)
+    el('rect', { x: x0 + 4, y: ty - 12, width: 44, height: 18, rx: 5, fill: '#1c1c1c', stroke: MTR_COL, 'stroke-width': 1.3 }, g);
+    el('text', { x: x0 + 26, y: ty + 1.5, 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = p.rv + ' V'; }
   v.cx = cx; v.cy = y;
+}
+
+/* a single-phase motor (Dallas, 24 Nov 2026): the motor's body, smaller (200), T1 and T2 on its left 120 apart; one
+   winding, the ring, its leads in to lugs at its top left and bottom left (along and down, along and up), lit from T1's
+   end round to T2's as the current goes through, and turning while it runs */
+const MT1_COL = '#c9a0ff';
+function drawMt1(p, g, x, y, v, chan) {
+  v.lead = null; v.src = [];
+  const H = MT1_W, x0 = x - MT1_W / 2, cx = x + 24, R = 58, A = [225, 135];
+  const P = (a, r = R) => [cx + r * Math.cos(a * Math.PI / 180), y + r * Math.sin(a * Math.PI / 180)];
+  terms(p).forEach(([tx, ty], i) => {
+    el('line', { x1: tx, y1: ty, x2: x0, y2: ty, stroke: '#262626', 'stroke-width': 22, 'stroke-linecap': 'round' }, chan || g);
+    if (!editing && p._t) v.src.push({ n: i ? p._b : p._a, ln: el('line', { x1: tx, y1: ty, x2: x0, y2: ty, stroke: 'transparent', 'stroke-width': 8.9, 'stroke-linecap': 'round' }, g) });
+  });
+  framed('rect', { x: x0, y: y - H / 2, width: MT1_W, height: H, rx: 20, fill: 'url(#gWell)', stroke: MTR_COL, 'stroke-width': 2.2 }, g);
+  el('circle', { cx, cy: y, r: R + 5, fill: '#111', filter: 'url(#fShadow)' }, g);
+  // the winding: from T1's lug, the long way round (over the top and down the right) to T2's
+  const [ax, ay] = P(A[0]), [bx, by] = P(A[1]);
+  v.wd = `M${ax} ${ay}A${R} ${R} 0 1 1 ${bx} ${by}`; v.wLen = R * Math.PI * 1.5;
+  el('path', { d: v.wd, fill: 'none', stroke: GREY, 'stroke-width': 8 }, g);
+  v.w = el('path', { d: v.wd, fill: 'none', stroke: 'transparent', 'stroke-width': 8 }, g);
+  v.ld = [-MT1_DY, MT1_DY].map((dy, i) => { const [jx, jy] = P(A[i], R + 4), ty = y + dy, sx = x0 + 35, r = 12;
+    const d = `M${sx} ${ty}L${jx - r} ${ty}Q${jx} ${ty} ${jx} ${ty + (dy < 0 ? r : -r)}L${jx} ${jy}`;
+    el('path', { d, fill: 'none', stroke: '#111', 'stroke-width': 10, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+    el('path', { d, fill: 'none', stroke: GREY, 'stroke-width': 5.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g);
+    return el('path', { d, fill: 'none', stroke: 'transparent', 'stroke-width': 5.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g); });
+  v.ldLen = v.ld.map(e => { try { return e.getTotalLength(); } catch (_) { return 60; } });
+  [-MT1_DY, MT1_DY].forEach((dy, i) => { const tx = x0 + 22, ty = y + dy;
+    el('rect', { x: tx - 13, y: ty - 12, width: 26, height: 24, rx: 6, fill: '#1f1f1f', stroke: '#e2cc85', 'stroke-width': 1.2 }, g);
+    el('text', { x: tx, y: ty + 4.3, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 700, fill: '#f2e6b8' }, g).textContent = 'T' + (i + 1); });
+  el('circle', { cx, cy: y, r: R - 6, fill: '#262626', stroke: '#111', 'stroke-width': 1.5 }, g);
+  v.lug = A.map(a => { const [lx, ly] = P(a); return el('circle', { cx: lx, cy: ly, r: 6.5, fill: '#1c1c1c', stroke: GREY, 'stroke-width': 2.6 }, g); });
+  const at = el('g', { transform: `translate(${cx} ${y})` }, g);
+  v.rotor = el('g', {}, at);
+  const fan = el('g', { transform: `scale(${(R / 70).toFixed(3)})` }, v.rotor);
+  for (let i = 0; i < 6; i++) el('path', { d: 'M0 -12C22 -30 30 -48 12 -56L-6 -48C8 -38 6 -26 0 -12Z', transform: `rotate(${i * 60})`, fill: '#6a7077', stroke: '#1c1c1c', 'stroke-width': 1.2 }, fan);
+  rdot(fan, 0, 0, 13).setAttribute('fill', '#7a8087');
+  el('text', { x: 0, y: 4.5, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 800, fill: '#1c1c1c' }, at).textContent = 'M';
+  v.dir = el('text', { x: x + MT1_W / 2 - 4, y: y + H / 2 + 17, 'text-anchor': 'end', 'font-size': 12, 'font-weight': 800, fill: '#9be03a', display: 'none' }, g); v.dir.textContent = 'RUNNING';
+  v.hum = el('text', { x: x + MT1_W / 2 - 4, y: y + H / 2 + 17, 'text-anchor': 'end', 'font-size': 12, 'font-weight': 700, fill: '#ff8a7a', display: 'none' }, g); v.hum.textContent = 'Stalled: too little voltage';
+  v.burn = el('g', { display: 'none' }, g);   // (burned out: dark, with the red badge)
+  el('circle', { cx, cy: y, r: R - 6, fill: '#2a2522', opacity: .92 }, v.burn);
+  const bx0 = x0 + MT1_W - 16, by0 = y - H / 2 + 16; el('circle', { cx: bx0, cy: by0, r: 10, fill: '#d93025', stroke: '#1c1c1c', 'stroke-width': 1.5 }, v.burn);
+  el('path', { d: `M${bx0 - 4} ${by0 - 4}L${bx0 + 4} ${by0 + 4}M${bx0 + 4} ${by0 - 4}L${bx0 - 4} ${by0 + 4}`, stroke: '#fff', 'stroke-width': 2.2, 'stroke-linecap': 'round' }, v.burn);
+  if (p.rv) { const tx = x0 + MT1_W / 2, ty = y + H / 2 + 17;   // (a voltage picked: its tag, under the body at its left)
+    el('rect', { x: x0 + 4, y: ty - 12, width: 44, height: 18, rx: 5, fill: '#1c1c1c', stroke: MT1_COL, 'stroke-width': 1.3 }, g);
+    el('text', { x: x0 + 26, y: ty + 1.5, 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 800, fill: '#e8e8e8' }, g).textContent = p.rv + ' V'; }
 }
 
 // a relay contact's two posts (as drawPart draws them): a short stub in from each side, and a round post at its end,

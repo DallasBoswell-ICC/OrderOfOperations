@@ -215,6 +215,9 @@ function printSheet(drawnBy, fit = false) {
         const cy = q.terms[1][1], s = put('Motor', x, cy), bend = x - 130;
         q.terms.forEach(([ax, yy], i) => { const [ex, ey] = s.t[i]; if (i === 1) line(ax, yy, x + ex, cy); else { line(ax, yy, bend, yy); line(bend, yy, x + ex, cy + ey); } });
         text(x, cy + 13, 'M' + q.L, 38); break; }
+      case 'mt1': { // a single-phase motor: the motor's circle, its two leads straight in to it (Dallas, 24 Nov 2026)
+        put('Motor', x, y); q.terms.forEach(([ax, yy]) => line(ax, yy, x - Math.sqrt(Math.max(0, 80 * 80 - (yy - y) ** 2)), yy));
+        text(x, y + 13, 'M' + q.L, 38); text(x, y + 104, p.rv ? `1Ø ${p.rv} V` : '1Ø', 20, 'middle', 600); break; }
       case 'xfm': { const [H1, H2, X1, X2] = q.terms, cx = (H1[0] + H2[0]) / 2, cy = (H1[1] + X1[1]) / 2, s = put('Control Transformer', cx, cy);
         [H1, H2, X1, X2].forEach(([tx, ty], i) => line(tx, ty, cx + s.t[i][0], cy + s.t[i][1]));
         text(H1[0] - 12, H1[1] + 26, 'H1', 20, 'end', 600); text(H2[0] + 12, H2[1] + 26, 'H2', 20, 'start', 600); text(X1[0] - 12, X1[1] - 10, 'X1', 20, 'end', 600); text(X2[0] + 12, X2[1] - 10, 'X2', 20, 'start', 600);
@@ -244,7 +247,7 @@ function printSheet(drawnBy, fit = false) {
   }
 
   /* ---------- the sheets ---------- */
-  const allX = Wr.flatMap(w => [w.x1, w.x2]).concat(P.flatMap(q => q.terms.map(t => t[0])), P.map(q => q.x + (q.t === 'mtr' ? 70 : 0))), allY = Wr.flatMap(w => [w.y1, w.y2]).concat(P.flatMap(q => q.terms.map(t => t[1])));
+  const allX = Wr.flatMap(w => [w.x1, w.x2]).concat(P.flatMap(q => q.terms.map(t => t[0])), P.map(q => q.x + (q.t === 'mtr' || q.t === 'mt1' ? 70 : 0))), allY = Wr.flatMap(w => [w.y1, w.y2]).concat(P.flatMap(q => q.terms.map(t => t[1])));
   if (!allX.length) { allX.push(0, 400); allY.push(0, 300); }
   const bx0 = Math.min(...allX, xLeft) - 110, bx1 = Math.max(...allX, xRight + (P.some(q => q.t === 'coil') ? 190 : 0)) + 60, by0 = Math.min(...allY) - 110, by1 = Math.max(...allY) + 70;
   const dw = bx1 - bx0, dh = by1 - by0;
@@ -262,7 +265,7 @@ function printSheet(drawnBy, fit = false) {
   const split = dh > Hu + 1, M = split ? PRINT_GAP / s : 0, Hb = Hu - 2 * M;
   // where a sheet may end: in a gap between rows of parts (never through a part, its name, or a wire's number)
   const busy = [];
-  for (const q of P) { const [t, b] = PRINT_POWER.has(q.t) && q.t !== 'xfm' ? (q.t === 'mtr' ? [130, 130] : [190, 150]) : q.t === 'xfm' ? [q.y - q.terms[0][1] + 30, q.terms[2][1] - q.y + 20] : isBox(q.p) ? [40, 40] : [74, 48]; busy.push([q.y - t, q.y + b]); }
+  for (const q of P) { const [t, b] = PRINT_POWER.has(q.t) && q.t !== 'xfm' ? (q.t === 'mtr' ? [130, 130] : [190, 150]) : q.t === 'mt1' ? [110, 120] : q.t === 'xfm' ? [q.y - q.terms[0][1] + 30, q.terms[2][1] - q.y + 20] : isBox(q.p) ? [40, 40] : [74, 48]; busy.push([q.y - t, q.y + b]); }
   for (const w of Wr) if (w.y1 === w.y2) busy.push([w.y1 - 32, w.y1 + 8]);
   busy.sort((a, b) => a[0] - b[0]);
   const free = y => !busy.some(([a, b]) => y > a && y < b);

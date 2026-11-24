@@ -454,6 +454,23 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     await page.evaluate(() => { localStorage.clear(); });
     return out;
   });
+  await check('Stage 4 (Dallas, 24 Nov 2026): on 480Y/277 the meter reads 480 V between a motor\'s leads and 277 V from a lead to N, 4 Ω across two windings and a single-phase motor\'s 12 Ω; an open winding reads open, and the motor hums', async page => {
+    const out = [];
+    await page.evaluate(() => { localStorage.clear(); }); await page.reload(); await page.waitForTimeout(900);
+    await page.evaluate(() => { loadPreset('blank'); VSYS = '480'; PH_COL = [...VSYS_LIST['480'].col]; POWER = 'boxes'; W = 1400;
+      parts = [newPart('ph-1', 120, 200), newPart('ph-2', 120, 320), newPart('ph-3', 120, 440), newPart('ph-N', 120, 700), P('mtr', 800, 320, { L: '1' }), P('mt1', 800, 800, { L: '2' })];
+      wires = [Wr(160, 200, 640, 200), Wr(160, 320, 640, 320), Wr(160, 440, 640, 440), Wr(200, 200, 200, 740), Wr(200, 740, 680, 740), Wr(160, 700, 240, 700), Wr(240, 700, 240, 860), Wr(240, 860, 680, 860)]; normalize();
+      tsUse(readCircuit(JSON.parse(JSON.stringify(circuitData()))), '', true); NET = network(); draw(); startRun(); });
+    await page.waitForTimeout(3500);
+    const rd = () => page.evaluate(() => { const m = parts.find(p => p.t === 'mtr'), s = parts.find(p => p.t === 'mt1'), N = NET.PH['N'], f = x => Number.isFinite(x) ? Math.round(x * 10) / 10 : 'OL';
+      return [f(tsVolts(m._t[0], m._t[1])), f(tsVolts(m._t[0], N)), f(tsVolts(s._a, s._b)), f(tsOhms(m._t[0], m._t[1])), f(tsOhms(m._t[1], m._t[2])), f(tsOhms(s._a, s._b)), (MOT[m.id] || {}).st, !!coilOn[s.id]].join(); });
+    let r = await rd(); if (r !== '480,277.1,277.1,4,4,12,run,true') out.push('running: ' + r);
+    await page.evaluate(() => { parts.find(p => p.t === 'mtr').fault = 'w1'; NET = network(); startRun(); });
+    await page.waitForTimeout(3500);
+    r = await rd(); if (r !== '480,277.1,277.1,OL,4,12,hum,true') out.push('T1 winding open: ' + r);
+    await page.evaluate(() => { localStorage.clear(); });
+    return out;
+  });
   await check('A whole machine (the drill station, 375 parts): the meter reads volts and ohms at once', async page => {
     const out = [], json = require('fs').readFileSync(require('path').join(__dirname, 'fixtures', 'drill-station.json'), 'utf8');
     await page.evaluate(j => useCircuit(readCircuit(JSON.parse(j)), ''), json);

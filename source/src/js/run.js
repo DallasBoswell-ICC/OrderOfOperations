@@ -63,6 +63,7 @@ function paintView(V) {
     if (p.t === 'xfm') { paintXfm(p, v); continue; }
     if (isPwr3(p)) { paintPwr(p, v); continue; }
     if (p.t === 'mtr') { paintMtr(p, v); continue; }
+    if (p.t === 'mt1') { paintMt1(p, v); continue; }
     if (p.t === 'cbd' || p.t === 'cbt') { for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
       setBreaker(v, p, lswPos(p), !!BLOWN[p.id], (p._poles || []).map(cbkPole), lswClosed(p)); continue; }   // (a DPST or 3PST circuit breaker: each pole as a single one's, below)
     if (isTglN(p)) { for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } if (p.t === 'xov') setXover(v, p, lswPos(p)); else if (p.t === 'dps' || p.t === 'tps') setDpst(v, p, lswPos(p)); else if (p.t === 'dpd') setDpdt(v, p, lswPos(p)); else setSpdt(v, p, lswPos(p)); continue; }
@@ -342,14 +343,46 @@ function paintPwr(p, v) {
 // a motor: each third of its ring in the phase at its terminal; its fan turning, or shaking, as it runs or hums
 function paintMtr(p, v) {
   for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
-  const cols = (p._t || []).map(n => showCol(n, simT) || GREY), m = MOT[p.id] || { st: 'off', dir: 0 };
-  const key = cols.join('|') + m.st + m.dir; if (key === v.k) return; v.k = key;
-  cols.forEach((c, i) => v.arcs[i].setAttribute('stroke', c));
-  spinFan(v, m.st === 'run' ? (m.dir < 0 ? 'rev' : 'fwd') : m.st === 'hum' ? 'hum' : '');
-  v.arrow.setAttribute('display', m.st === 'run' ? '' : 'none');
+  let m = MOT[p.id] || { st: 'off', dir: 0 };
+  // (each phase runs on in along its lead and out both ways round its winding from the lug, at the current's speed; and
+  // drains the same way when it goes)
+  const fr = (p._t || []).map(n => { const on = PARR.get(n), off = PDARK.get(n), e = on && on.t <= simT + 1e-9 ? on : off && off.t <= simT + 1e-9 ? off : null;
+    if (!e) return null; const lit = (simT - e.t) * V, dark = e.off != null && e.off <= simT ? (simT - e.off) * V : 0; return { c: phColK(e.k), lit, dark }; });
+  if (m.st !== 'off' && !fr.every((f, i) => !f || f.lit >= v.ldLen[i] || f.dark > 0)) m = { st: 'off', dir: 0 };   // (it starts once the current has reached its windings)
+  const key = fr.map(f => f ? f.c + Math.min(f.lit, 999).toFixed(0) + ':' + Math.min(f.dark, 999).toFixed(0) : '-').join('|') + m.st + m.dir; if (key === v.k) return; v.k = key;
+  const span = (el_, L, a, b, c) => { a = Math.max(0, Math.min(L, a)); b = Math.max(0, Math.min(L, b)); el_.setAttribute('stroke', c && b > a ? c : 'transparent'); el_.setAttribute('stroke-dasharray', `0 ${a.toFixed(1)} ${(b - a).toFixed(1)} ${L + 2}`); };
+  fr.forEach((f, i) => { const Ll = v.ldLen[i];
+    span(v.ld[i], Ll + 1, f ? f.dark : 0, f ? f.lit : 0, f && f.c);
+    const open = faultOf(p) === 'w' + (i + 1); for (const w of v.wd[i]) span(w, v.wLen + 1, f ? f.dark - Ll : 0, f && !open ? f.lit - Ll : 0, f && f.c);
+    const full = f && f.lit >= Ll && f.dark < Ll; v.lug[i].setAttribute('stroke', full ? f.c : GREY); });
+  spinFan(v, m.st === 'run' || m.st === 'hot' ? (m.dir < 0 ? 'rev' : 'fwd') : m.st === 'hum' || m.st === 'stall' ? 'hum' : '');
+  v.arrow.setAttribute('display', m.st === 'run' || m.st === 'hot' ? '' : 'none');
   v.arrowPath.setAttribute('transform', m.dir < 0 ? `translate(0 ${2 * v.cy}) scale(1 -1)` : '');   // (backward: turned over, pointing up the right side)
-  v.dir.textContent = m.dir < 0 ? 'REVERSE' : 'FORWARD';
-  v.hum.setAttribute('display', m.st === 'hum' ? '' : 'none');
+  v.dir.textContent = m.st === 'hot' ? (m.dir < 0 ? 'REVERSE' : 'FORWARD') + ': Overheating' : m.dir < 0 ? 'REVERSE' : 'FORWARD';
+  v.dir.setAttribute('fill', m.st === 'hot' ? '#ffb347' : '#9be03a');
+  v.hum.setAttribute('display', m.st === 'hum' || m.st === 'stall' ? '' : 'none');
+  v.hum.textContent = m.st === 'stall' ? 'Stalled: too little voltage' : 'Humming: a phase is missing';
+}
+// a single-phase motor: the current runs in along the lead at the end it comes in at, round the winding and out along
+// the other lead (in the motor's own colour, as a solenoid fills), and drains the same way; it turns once it's through,
+// shakes while it hasn't the voltage to start, and shows burned out
+function paintMt1(p, v) {
+  for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); }
+  const on = !!coilOn[p.id], t0 = p._chg, D = t0 == null ? (on ? 1e6 : 0) : Math.max(0, (simT - t0) * V), burnt = !!BLOWN[p.id];
+  const a = p._inS === 'B' ? 1 : 0, b = 1 - a, La = v.ldLen[a], Lw = v.wLen, Lb = v.ldLen[b], T = La + Lw + Lb;
+  const lit = on ? D : t0 == null ? 0 : T, dark = on ? 0 : t0 == null ? 0 : D, stall = !on && !!COND[p.id] && !burnt;
+  const key = `${a}|${Math.min(lit, T + 1).toFixed(0)}|${Math.min(dark, T + 1).toFixed(0)}|${stall}|${burnt}`; if (key === v.k) return; v.k = key;
+  // (lit from s to e along a stretch of length L, the stretch run forward or back)
+  const span = (e_, L, s, e, back) => { s = Math.max(0, Math.min(L, s)); e = Math.max(0, Math.min(L, e)); if (back) [s, e] = [L - e, L - s];
+    e_.setAttribute('stroke', e > s ? MT1_COL : 'transparent'); e_.setAttribute('stroke-dasharray', `0 ${s.toFixed(1)} ${(e - s).toFixed(1)} ${L + 2}`); };
+  span(v.ld[a], La, dark, lit, false);
+  span(v.w, Lw, dark - La, lit - La, a === 1);
+  span(v.ld[b], Lb, dark - La - Lw, lit - La - Lw, true);
+  v.lug[a].setAttribute('stroke', lit >= La && dark < La ? MT1_COL : GREY); v.lug[b].setAttribute('stroke', lit >= La + Lw && dark < La + Lw ? MT1_COL : GREY);
+  const run = on && lit >= T && !burnt;
+  spinFan(v, run ? 'fwd' : stall ? 'hum' : '');
+  v.dir.setAttribute('display', run ? '' : 'none'); v.hum.setAttribute('display', stall ? '' : 'none');
+  v.burn.setAttribute('display', burnt ? '' : 'none');
 }
 // a three-phase part clicked while running (see workPower): the pole nearest where it was clicked
 function bindPower(g, p) {
