@@ -3880,16 +3880,18 @@ function phasesNow(t) {
   for (const L in PH) { const c = f(PH[L]); if (phLive(phK(L)) && cph.get(c) === -1) { const o = Object.keys(PH).find(k => k !== L && phLive(phK(k)) && f(PH[k]) === c); phFault = o ? `Short circuit! ${phName(L)} is connected straight to ${phName(o)}.` : `Short circuit! ${phName(L)} is connected straight to the control circuit.`; break; } }
   // where each phase goes: out from its box, along the ways that lead on to a load, through closed poles from their
   // line side (so never back into another starter's load side)
-  // (and its colour: the phase's, or, past a pushbutton, selector or switch with Buttons Color the Current on, that part's
-  // colour, as in the control circuit (Dallas, 24 Nov 2026))
-  const reach = new Map(), rcol = new Map();
+  const reach = new Map(), dist = new Map();
   for (const L in PH) if (phLive(phK(L)) && cph.get(f(PH[L])) === phK(L)) {
-    reach.set(PH[L], phK(L)); rcol.set(PH[L], phColK(phK(L))); const st = [PH[L]];
-    while (st.length) { const u = st.pop(); for (const i of NET.adj[u]) { const e = NET.edges[i], w = e.a === u ? e.b : e.a; if (!reach.has(w) && phStep(e, u)) { reach.set(w, phK(L)); rcol.set(w, e.kind === 'part' && tints(e.part) ? flowOf(btnColour(opKey(e.part))) : rcol.get(u)); st.push(w); } } }
+    reach.set(PH[L], phK(L)); dist.set(PH[L], 0); const h = heap(); h.push(0, PH[L]);
+    while (h.size()) { const [du, u] = h.pop(); if (du > dist.get(u) + 1e-9) continue;
+      for (const i of NET.adj[u]) { const e = NET.edges[i], w = e.a === u ? e.b : e.a; if (!phStep(e, u)) continue; const dw = du + (e.w || 0) + 1e-6;
+        if (!dist.has(w) || dw < dist.get(w) - 1e-9) { dist.set(w, dw); reach.set(w, phK(L)); h.push(dw, w); } } }
   }
+  const rcol = phColours(reach, dist);
   const want = n => reach.get(n) || 0;
-  const N = NET.nodes.length, lost = [], gain = new Set();
-  for (let n = 0; n < N; n++) { const o = PARR.get(n), k = want(n), c = rcol.get(n); if (o && (o.k !== k || o.c !== c)) lost.push(n); if (k && (!o || o.k !== k || o.c !== c)) gain.add(n); }
+  // (a junction that keeps its phase but takes a new colour is not put out: the new colour runs along from where it changed)
+  const N = NET.nodes.length, lost = [], gain = new Set(), recol = new Set();
+  for (let n = 0; n < N; n++) { const o = PARR.get(n), k = want(n), c = rcol.get(n); if (o && o.k !== k) lost.push(n); if (k && (!o || o.k !== k)) gain.add(n); else if (k && o.c !== c) { gain.add(n); recol.add(n); } }
   const put = (n, at, c) => { let a = PTL.get(n); if (!a) PTL.set(n, a = [[-1e9, null]]); while (a.length > 1 && a[a.length - 1][0] >= at - 1e-9) a.pop(); a.push([at, c]); if (at > busyUntil) busyUntil = at; };
   // what has been cut off goes dark from where it was cut, outwards
   if (lost.length) {
@@ -3904,10 +3906,10 @@ function phasesNow(t) {
   if (gain.size) {
     const d = new Map(), h = heap();
     for (const L in PH) if (phLive(phK(L)) && cph.get(f(PH[L])) === phK(L)) { const s = PARR.get(PH[L]); if (s) { d.set(PH[L], Math.max(s.t, t)); h.push(Math.max(s.t, t), PH[L]); } }
-    for (const [n, s] of PARR) if (!d.has(n)) { d.set(n, Math.max(s.t, t)); h.push(Math.max(s.t, t), n); }
+    for (const [n, s] of PARR) if (!d.has(n) && !recol.has(n)) { d.set(n, Math.max(s.t, t)); h.push(Math.max(s.t, t), n); }
     for (const n of gain) if (n === PH[(NET.nodes[n].k || '').slice(2)]) { d.set(n, t); h.push(t, n); }
     walk(h, d, n => gain.has(n), phStep);
-    for (const n of gain) if (d.has(n)) { const k = want(n), at = d.get(n), c = rcol.get(n) || phColK(k); PARR.set(n, { k, c, t: at }); put(n, at, c); }
+    for (const n of gain) if (d.has(n)) { const k = want(n), at = d.get(n), c = rcol.get(n) || phColK(k), o = recol.has(n) && PARR.get(n); PARR.set(n, { k, c, t: o ? o.t : at }); put(n, at, c); }   // (a new colour only: the phase has been there all along)
   }
   // a transformer fed from the phases: look at it again as each phase reaches its primary
   // (and as it goes dark there)
@@ -4024,6 +4026,55 @@ function heap() {
   return { size: () => a.length, push: (t, n) => { a.push([t, n]); up(a.length - 1); }, pop: () => { const top = a[0], last = a.pop(); if (a.length) { a[0] = last; down(0); } return top; } };
 }
 
+/* A phase's colour along its way (Dallas, 24 Nov 2026), as the control circuit's: the phase's own, or past a pushbutton,
+   selector or switch (with Buttons Color the Current on) that part's colour; through a contact, what comes in; where ways
+   come together, what each brings, blended. Which way it goes along each stretch: from the box to the loads it feeds, as a
+   current would (the wiring as a network of resistances, the box at the top, those loads at the bottom: each stretch from
+   its higher end to its lower; a stretch with nothing flowing along it, as a wire up to an open contact, from its end
+   nearer the box). Returns the colour at each junction reached. */
+function phColours(reach, dist) {
+  const out = new Map(), J = NET.jedges, pe = new Map(NET.edges.filter(e => e.part).map(e => [e.part, e]));
+  const T = new Set(); for (const p of parts) { if (p.t === 'mtr' && p._t) p._t.forEach(n => T.add(n)); if (LOADT(p.t) && p._a !== undefined) { T.add(p._a); T.add(p._b); } }
+  const on = e => e.kind === 'seg' || (e.part && !LOADT(e.part.t) && pe.has(e.part) && conducts(pe.get(e.part)));
+  const ks = new Set(reach.values());
+  for (const k of ks) {
+    const live = n => reach.get(n) === k, es = J.filter(e => on(e) && live(e.a) && live(e.b)), js = [...new Set(es.flatMap(e => [e.a, e.b]))];
+    const src = new Set(js.filter(n => dist.get(n) < 1e-3 || (NET.PH && Object.values(NET.PH).includes(n)))), boxT = new Set(); for (const p of parts) if (isPh(p) && p._t && phK(p.L) === k) p._t.forEach(n => boxT.add(n));
+    const top = new Set(js.filter(n => boxT.has(n) || src.has(n))), bot = new Set(js.filter(n => T.has(n)));
+    // (the potential at each junction: the box 1, the loads 0)
+    const pot = new Map(); for (const n of top) pot.set(n, 1); for (const n of bot) if (!top.has(n)) pot.set(n, 0);
+    const unk = js.filter(n => !pot.has(n)), ix = new Map(unk.map((n, i) => [n, i])), m = unk.length;
+    if (m && bot.size) { const links = [], diag = new Float64Array(m), rhs = new Float64Array(m);
+      for (const e of es) { const c = 1 / Math.max(1, e.len || 1), x = ix.get(e.a), y = ix.get(e.b);
+        if (x !== undefined && y !== undefined) links.push([x, y, c]);
+        else for (const [u, w] of [[x, e.b], [y, e.a]]) if (u !== undefined && pot.has(w)) { diag[u] += c; rhs[u] += c * pot.get(w); } }
+      for (let i = 0; i < m; i++) diag[i] += 1e-9;   // (a piece with no way to the box or a load: held, not left to float)
+      const [v] = netSolve(m, links, diag, [rhs]); unk.forEach((n, i) => pot.set(n, v[i])); }
+    else for (const n of unk) pot.set(n, 1);
+    const up = e => { const pa = pot.get(e.a), pb = pot.get(e.b); return Math.abs(pa - pb) > 1e-7 ? (pa > pb ? e.a : e.b) : (dist.get(e.a) <= dist.get(e.b) ? e.a : e.b); };
+    // (each junction: what comes in to it, taken in order from the top; the colour it shows fading in over RAMP from what it
+    // was, past a part that colours it or where ways with different colours come together, as the control circuit's does)
+    const inn = new Map(); for (const e of es) { const u = up(e), w = u === e.a ? e.b : e.a; (inn.get(w) || inn.set(w, []).get(w)).push([e, u]); }
+    const col = ks2 => !ks2.length ? phColK(k) : ks2.length === 1 ? flowOf(btnColour(ks2[0])) : blend(ks2.map(x => flowOf(btnColour(x))));
+    const shown = r => r.rd < RAMP ? mixOk(r.from, col(r.set), r.rd / RAMP) : col(r.set);
+    const st = new Map();   // (junction -> { set, from, rd: how far past the change })
+    const stOf = n => { if (st.has(n)) return st.get(n); st.set(n, { set: [], from: phColK(k), rd: RAMP });
+      const ins = (inn.get(n) || []).map(([e, u]) => { const r = stOf(u), L = e.len || 0;
+        return e.kind === 'part' && tints(e.part) ? { set: [opKey(e.part)], from: shown(r), rd: 0 } : { set: r.set, from: r.from, rd: r.rd + L }; });
+      let r;
+      if (!ins.length) r = { set: [], from: phColK(k), rd: RAMP };
+      else { const s = [...new Set(ins.flatMap(q => q.set))].sort(), same = ins.every(q => q.set.join() === s.join());
+        r = same ? ins.reduce((a, q) => q.rd < a.rd ? q : a) : { set: s, from: blend(ins.map(shown)), rd: 0 }; }
+      st.set(n, r); return r; };
+    for (const n of js) out.set(n, shown(stOf(n)));
+    // (along each stretch of wire, from its upper end, fading on)
+    for (const e of es) if (e.kind === 'seg') { const u = up(e), r = stOf(u), m = e.chain.length - 1, fw = u === e.a;
+      e.chain.forEach((n, i) => { if (n === e.a || n === e.b) return; const d = (e.len || 0) * (fw ? i : m - i) / Math.max(1, m); out.set(n, shown({ set: r.set, from: r.from, rd: r.rd + d })); }); }
+  }
+  // (anything else a phase reaches (a box's own junction): its phase's colour)
+  for (const [n, k] of reach) if (!out.has(n)) out.set(n, phColK(k));
+  return out;
+}
 /* Which way three-phase power goes. Each pole of a disconnect, fuse block or starter passes it only from its line side
    (PLINE: the end a phase box reaches through fewer other poles, then by the shorter way), as current would. And like
    the current in the control circuit, a phase only goes along a way that leads on to a load (a motor's terminal, a

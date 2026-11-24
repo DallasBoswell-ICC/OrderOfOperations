@@ -3896,6 +3896,19 @@ const DEF_CIRCUIT = `
       if (r !== 'true,true') out.push(`from a phase, ${tint ? 'on' : 'off'}: ` + r);
       await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
     }
+    // (Dallas, 24 Nov 2026: a start/stop with a seal-in, from a phase: B's green never on its line side; where B's way and the
+    // seal-in's meet, the two blended; the seal-in lit and holding once B is let go)
+    await page.evaluate(() => { sel = null; loadPreset('blank'); TINT_OPS = true; VSYS = '208'; PH_COL = [...VSYS_LIST['208'].col]; POWER = 'boxes'; W = 1400;
+      parts.push(newPart('ph-1', 100, 200), newPart('ph-N', 1300, 80), P('btn', 300, 200, { L: 'A', color: '#E8413C', nc: true, maint: true, estop: true }), P('btn', 580, 200, { L: 'B', color: '#00B050' }), P('con', 580, 340, { L: 'X' }), P('coil', 900, 200, { L: 'X', color: '#FFDC00' }));
+      wires.push(Wr(140, 200, 260, 200), Wr(340, 200, 540, 200), Wr(620, 200, 840, 200), Wr(960, 200, 1300, 200), Wr(1300, 200, 1300, 120), Wr(480, 200, 480, 340), Wr(480, 340, 540, 340), Wr(620, 340, 700, 340), Wr(700, 340, 700, 200)); normalize(); draw(); });
+    await page.click('#tab-run'); await page.evaluate(() => { setSpeed(4); press('B', true); }); await page.waitForTimeout(1200);
+    const sl = await page.evaluate(() => { const b = parts.find(p => p.L === 'B' && p.t === 'btn'), c = parts.find(p => p.t === 'coil'), g = flowOf(btnColour('B')), r = flowOf(btnColour('A'));
+      return [showCol(b._a, simT) === r, showCol(c._a, simT) !== g && showCol(c._a, simT) !== r, !!coilOn[c.id]].join(); });
+    if (sl !== 'true,true,true') out.push('seal-in from a phase (line side red, coil lead blended, coil in): ' + sl);
+    await page.evaluate(() => press('B', false)); await page.waitForTimeout(1200);
+    const held = await page.evaluate(() => { const c = parts.find(p => p.t === 'coil'); return [!!coilOn[c.id], showCol(c._a, simT) === flowOf(btnColour('A'))].join(); });
+    if (held !== 'true,true') out.push('seal-in from a phase, B let go (coil held, its lead red): ' + held);
+    await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
     await page.evaluate(() => { TINT_OPS = true; });
     return out;
   });
