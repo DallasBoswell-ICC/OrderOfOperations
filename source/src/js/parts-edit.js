@@ -70,7 +70,7 @@ function placePart(kind, x, y) {
    never wired in by accident). It is selected, ready to be dragged where it is wanted. With no such spot in view, it
    goes below the circuit, and the view moves down to it. */
 /* All Phases (Dallas, 24 Nov 2026): L1, L2, L3 (on a three-phase system) and N, in a column, selected together */
-const PH_ALL_DY = 120, phAllGroup = () => [...[...Array(VSYS_LIST[VSYS].ph).keys()].map(i => 'ph-' + (i + 1)), 'ph-N'].map((k, i) => [k, i * PH_ALL_DY]);
+const PH_ALL_DY = 120, phAllGroup = () => [...[...Array(VSYS_LIST[VSYS].ph).keys()].map(i => 'ph-' + (i + 1)), ...(vsNeu() ? ['ph-N'] : [])].map((k, i) => [k, i * PH_ALL_DY]);
 function placeGroup(group, x, y) {
   const at = group.map(([k, dy]) => [k, ...clampPart(x, y + dy, kindOf(k))]);
   if (at.some(([k, px, py]) => overlaps(null, px, py, kindOf(k)) || wireInTheWay({ t: kindOf(k), x: px, y: py }))) { say('There is something in the way there.'); return false; }

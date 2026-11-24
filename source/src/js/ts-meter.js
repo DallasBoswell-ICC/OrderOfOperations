@@ -26,6 +26,12 @@ function tsNetwork() {
     else if (e.part && isSw(e.part)) { if (closed(e.part)) join(e.a, e.b); }
     else if (e.part && TS_OHMS(e.part) < Infinity) loads.push([e.a, e.b, 1 / TS_OHMS(e.part)]);
   }
+  // (an ungrounded system (Dallas, 24 Nov 2026): the earth is one body, held to the supply's middle only as weakly as a
+  // real system's stray capacitance holds it, so each phase reads its share to ground until something ties it down: a
+  // ground fault on a phase pulls the earth to that phase)
+  let STAR;
+  const ung = !vsGnd() && Object.keys(net.PH).some(L => !/^S[120]:/.test(L)), G = net.GND || [];
+  if (ung) { for (const n of G) join(n, G[0]); if (G.length) { STAR = extra++; loads.push([G[0], STAR, 1e-7]); } }
   for (const p of parts) {
     if (p.t === 'xfm' && p._t) loads.push([p._t[2], p._t[3], 1 / TS_XFM_SEC]);   // (its secondary winding, X1 to X2)
     if (p.t === 'mtr' && p._t) { const c = extra++; p._t.forEach((t, i) => { if (faultOf(p) !== 'w' + (i + 1)) loads.push([t, c, 1 / TS_MOTOR]); }); }   // (an open winding: none)   // (its windings, joined at the star point)
@@ -49,7 +55,7 @@ function tsNetwork() {
   if (!xs.some(p => !p.ct) || xs.some(p => !p.ct && !p.ug)) earth(net.L2);
   for (const p of xs) { if (p.ct) { tie(p._t[2], p._t[4]); tie(p._t[2], net.PH['S0:' + p.id]); tie(p._t[2], net.PH['S1:' + p.id]); tie(p._t[2], net.PH['S2:' + p.id]); }   // (a secondary's terminals: one winding)
     if (!p.ug) { earth(p._t[p.ct ? 4 : 3]); if (p.ct) earth(net.PH['S0:' + p.id]); } }
-  return { sn, M, loads: loads.map(([a, b, c]) => [sn[a], sn[b], c]), comp: i => g(sn[i]), grp: i => h(g(sn[i])) };
+  return { sn, M, loads: loads.map(([a, b, c]) => [sn[a], sn[b], c]), comp: i => g(sn[i]), grp: i => h(g(sn[i])), STAR, ung };
 }
 // the supplies that are on: piece -> [re, im] volts
 function tsSources(T) {
@@ -68,7 +74,8 @@ function tsSources(T) {
       const v = phVolt(phK(L)); if (v) set(NET.PH[L], v);   // (each phase from the voltage system; the neutral at 0 V)
     }
   }
-  for (const n of NET.GND || []) set(n, [0, 0]);   // (the ground: 0 V)
+  if (T.ung) { if (T.STAR !== undefined) fix.set(T.sn[T.STAR], [0, 0]); }   // (ungrounded: the supply's middle at 0 V, the earth free)
+  else for (const n of NET.GND || []) set(n, [0, 0]);   // (the ground: 0 V)
   return fix;
 }
 // node voltages (complex): Laplace's equation over the pieces, with the supplies held; pieces with no way to a supply: 0

@@ -3125,7 +3125,7 @@ const DEF_CIRCUIT = `
     await page.click('#rt-faults');
     await page.evaluate(() => { sel = selOne('w', wires.find(q => q.x1 === 760 && q.y1 === 200).id); draw(); showFaults(); });
     const dis = await page.evaluate(() => [...document.querySelectorAll('#fz-kinds [data-fz]')].map(b => b.dataset.fz + ':' + b.disabled).join());
-    if (dis !== ':false,open:false,l2:true') out.push('buttons: ' + dis);
+    if (dis !== ':false,open:false,l2:true,gnd:true') out.push('buttons: ' + dis);
     await page.evaluate(() => setFault(wires.find(q => q.x1 === 760 && q.y1 === 200), true, 'l2'));
     if (await page.evaluate(() => wires.some(q => q.fault))) out.push('planted a short to L2 on L2 anyway');
     await page.selectOption('#preset', 'fwdrev'); await page.waitForTimeout(80);
@@ -3818,7 +3818,7 @@ const DEF_CIRCUIT = `
     const out = [];
     await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
     let r = await page.evaluate(() => ({ vs: VSYS, col: PH_COL.join(), menu: [...document.querySelectorAll('[data-vs]')].map(b => b.dataset.vs + (b.getAttribute('aria-pressed') === 'true' ? '*' : '')).join() }));
-    if (r.vs !== '208' || r.menu !== '480,208*,240' || r.col !== '#6E6E6E,#E8413C,#3F7FFF') out.push('new circuit: ' + JSON.stringify(r));
+    if (r.vs !== '208' || r.menu !== '480,208*,240,hl,d240u,d240c,d480u,d480c' || r.col !== '#6E6E6E,#E8413C,#3F7FFF') out.push('new circuit: ' + JSON.stringify(r));
     const old = await page.evaluate(() => { const d = circuitData(); delete d.vs; delete d.pc; const c = readCircuit(d); return c.vs + ' ' + c.ph.join(); });
     if (old !== '480 #B5793F,#FF8A1F,#F2D21B') out.push('older file: ' + old);
     await page.evaluate(() => document.querySelector('[data-vs="240"]').click()); await page.waitForTimeout(60);
@@ -3914,6 +3914,38 @@ const DEF_CIRCUIT = `
       const r = await page.evaluate(() => parts.filter(p => LOADT(p.t) && p.t !== 'xfm').map(p => p.t + (coilOn[p.id] ? ' on' : ' off') + (p.t === 'coil' ? '' : ' ' + (p._sh || 0).toFixed(2))).join(', '));
       if (r !== want) out.push(JSON.stringify(opt) + ': ' + r);
       await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
+    }
+    return out;
+  });
+  await check('Delta systems (Dallas, 24 Nov 2026): 240/120 V high-leg (orange high leg, 208 V to N), 240 and 480 V ungrounded and corner-grounded (grey grounded L2, no neutral: an N box is flagged); saved; Shorted to Ground is offered on a phase wire but not on the grounded one; on a grounded system it blows the fuse, on an ungrounded delta it does not, until a second phase faults', async page => {
+    const out = [];
+    await page.selectOption('#preset', 'blank'); await page.waitForTimeout(60);
+    const sys = await page.evaluate(() => ['hl', 'd480u', 'd480c'].map(vs => { VSYS = vs; return [vs, PH_COL = [...VSYS_LIST[vs].col], [1, 2, 3].map(k => Math.round(phVolt(k) ? Math.hypot(...phVolt(k)) : -1)).join('/'), vsNeu(), vsGnd(), Math.round(phAcross(1, 2)), Math.round(phAcross(1, 3))].join(' '); }).join(' | '));
+    if (sys !== 'hl #6E6E6E,#FF8A1F,#3F7FFF 120/208/120 true N 240 240 | d480u #B5793F,#FF8A1F,#F2D21B 277/277/277 false  480 480 | d480c #B5793F,#BDBDBD,#F2D21B 480/0/480 false 2 480 480') out.push('systems: ' + sys);
+    const build = (vs, f1, f2) => page.evaluate(([vs, f1, f2]) => { sel = null; loadPreset('blank'); VSYS = vs; PH_COL = [...VSYS_LIST[vs].col]; POWER = 'boxes'; W = 1400;
+      parts.push(newPart('ph-1', 120, 200), newPart('ph-2', 120, 360), newPart('ph-3', 120, 520), P('fu1', 400, 200, { L: '1' }), P('fu1', 400, 360, { L: '2' }), P('fu1', 400, 520, { L: '3' }), newPart('ph-N', 120, 680));
+      wires.push(Wr(160, 200, 360, 200), Wr(160, 360, 360, 360), Wr(160, 520, 360, 520), Wr(440, 200, 900, 200), Wr(440, 360, 900, 360), Wr(440, 520, 900, 520));
+      if (f1) wires[2 + f1].fault = 'gnd'; if (f2) wires[2 + f2].fault = 'gnd'; normalize(); draw();
+      return [wiringIssues(NET).get(parts.find(p => p.t === 'ph' && p.L === 'N').id) || '', readCircuit(JSON.parse(JSON.stringify(circuitData()))).vs].join(' / '); }, [vs, f1 || 0, f2 || 0]);
+    const blown = async () => { await page.click('#tab-run'); await page.evaluate(() => { FAULTS_ON = true; setSpeed(4); startRun(); }); await page.waitForTimeout(1200);
+      const r = await page.evaluate(() => parts.filter(p => p.t === 'fu1' && BLOWN[p.id]).map(p => p.L).join() || '-'); await page.evaluate(() => { FAULTS_ON = false; setSpeed(1); }); await page.click('#tab-edit'); return r; };
+    let b = await build('d480u'); if (b !== 'No N in a 480 V Ungrounded Delta system / d480u') out.push('N box on a delta, and saving: ' + b);
+    const offer = await page.evaluate(() => { VSYS = 'd480c'; const w = y => wires.find(q => q.x1 === 440 && q.y1 === y); return [faultWhy(w(200), true, 'gnd'), faultWhy(w(360), true, 'gnd')].map(x => x ? 'no' : 'yes').join(); });
+    if (offer !== 'yes,no') out.push('Shorted to Ground offered on L1, L2 of corner-grounded: ' + offer);
+    for (const [vs, f1, f2, want] of [['208', 1, 0, '1'], ['hl', 2, 0, '2'], ['d480c', 1, 0, '1'], ['d480u', 1, 0, '-'], ['d480u', 1, 2, '1,2']]) {
+      await build(vs, f1, f2); const r = await blown(); if (r !== want) out.push(`${vs} grounded at L${f1}${f2 ? ' and L' + f2 : ''}: fuses blown ${r} (want ${want})`); }
+    // ground-detector lights: three lights from the phases to ground on a 480 V ungrounded delta (Match Supply: made for 480 V);
+    // dim, each on 277 V; L1 shorted to ground: its light out, the other two full on 480 V
+    for (const [f, want] of [[0, '277,277,277'], [1, '0,480,480']]) {
+      await page.evaluate(f => { sel = null; loadPreset('blank'); VSYS = 'd480u'; PH_COL = [...VSYS_LIST['d480u'].col]; POWER = 'boxes'; W = 1100;
+        parts.push(newPart('ph-1', 120, 200), newPart('ph-2', 120, 360), newPart('ph-3', 120, 520), P('lamp', 600, 200, { L: '', color: '#FFDC00' }), P('lamp', 600, 360, { L: '', color: '#FFDC00' }), P('lamp', 600, 520, { L: '', color: '#FFDC00' }), newPart('gnd', 800, 680));
+        wires.push(Wr(160, 200, 540, 200), Wr(160, 360, 540, 360), Wr(160, 520, 540, 520), Wr(660, 200, 800, 200), Wr(660, 360, 800, 360), Wr(660, 520, 800, 520), Wr(800, 200, 800, 640));
+        if (f) wires[0].fault = 'gnd'; normalize(); draw(); }, f);
+      if (await page.evaluate(() => wiringIssues(NET).size)) out.push('ground-detector lights: Build notes ' + await page.evaluate(() => JSON.stringify([...wiringIssues(NET).values()])));
+      await page.click('#tab-run'); await page.evaluate(f => { FAULTS_ON = !!f; startRun(); setSpeed(4); }, f); await page.waitForTimeout(1200);
+      const r = await page.evaluate(() => parts.filter(p => p.t === 'lamp').map(p => coilOn[p.id] ? Math.round(p._sh * 120) : 0).join());
+      if (r !== want) out.push(`ground-detector lights${f ? ', L1 to ground' : ''}: ${r} (want ${want})`);
+      await page.evaluate(() => { setSpeed(1); FAULTS_ON = false; }); await page.click('#tab-edit');
     }
     return out;
   });

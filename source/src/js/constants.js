@@ -190,17 +190,27 @@ let PH_COL = [...PH_DEFAULT];
 const VSYS_LIST = {
   '480': { name: '480Y/277 V', short: '480Y/277', ph: 3, vpn: 480 / Math.sqrt(3), ang: [0, -120, 120], col: ['#B5793F', '#FF8A1F', '#F2D21B'] },
   '208': { name: '208Y/120 V', short: '208Y/120', ph: 3, vpn: 120, ang: [0, -120, 120], col: ['#6E6E6E', '#E8413C', '#3F7FFF'] },
-  '240': { name: '120/240 V Split-Phase', short: '120/240', ph: 2, vpn: 120, ang: [0, 180], col: ['#6E6E6E', '#E8413C', '#3F7FFF'] }
+  '240': { name: '120/240 V Split-Phase', short: '120/240', ph: 2, vpn: 120, ang: [0, 180], col: ['#6E6E6E', '#E8413C', '#3F7FFF'] },
+  /* deltas (Dallas, 24 Nov 2026): each phase's voltage given (mag) where they are not all alike; neu: false, no neutral;
+     gnd: what is bonded to the earth ('N', a phase's number, or null: an ungrounded system). US colours: the high leg
+     orange (as the NEC asks), a grounded phase grey (as a grounded conductor must be white or grey) */
+  'hl': { name: '240/120 V High-Leg Delta', short: '240/120 HL', ph: 3, mag: [120, 120 * Math.sqrt(3), 120], ang: [0, -90, 180], col: ['#6E6E6E', '#FF8A1F', '#3F7FFF'], delta: true },
+  'd240u': { name: '240 V Ungrounded Delta', short: '240 Δ', ph: 3, vpn: 240 / Math.sqrt(3), ang: [0, -120, 120], col: ['#6E6E6E', '#E8413C', '#3F7FFF'], neu: false, gnd: null, delta: true },
+  'd240c': { name: '240 V Corner-Grounded Delta', short: '240 Δ CG', ph: 3, mag: [240, 0, 240], ang: [0, 0, -60], col: ['#6E6E6E', '#BDBDBD', '#3F7FFF'], neu: false, gnd: '2', delta: true },
+  'd480u': { name: '480 V Ungrounded Delta', short: '480 Δ', ph: 3, vpn: 480 / Math.sqrt(3), ang: [0, -120, 120], col: ['#B5793F', '#FF8A1F', '#F2D21B'], neu: false, gnd: null, delta: true },
+  'd480c': { name: '480 V Corner-Grounded Delta', short: '480 Δ CG', ph: 3, mag: [480, 0, 480], ang: [0, 0, -60], col: ['#B5793F', '#BDBDBD', '#F2D21B'], neu: false, gnd: '2', delta: true }
 };
+// (what the voltage system has bonded to the earth: its neutral, unless it says otherwise; and whether it has a neutral)
+const vsGnd = () => { const s = VSYS_LIST[VSYS]; return 'gnd' in s ? s.gnd : 'N'; }, vsNeu = () => VSYS_LIST[VSYS].neu !== false;
 let VSYS = '208';
 const NEU_COL = '#E8E8E8';
 const phK = L => L === 'N' ? 4 : /^S[120]:/.test(L) ? { S1: 5, S2: 6, S0: 7 }[L.slice(0, 2)] : +L;   // (a phase box's phase as a number: L1-L3 1-3, the neutral 4; a centre-tapped transformer's X1, X2 and X0 5-7)
 const phName = L => L === 'N' || L === 4 ? 'N' : L === 5 || L === 6 || L === 7 ? ['X1', 'X2', 'X0'][L - 5] : /^S[120]:/.test(L) ? { S1: 'X1', S2: 'X2', S0: 'X0' }[L.slice(0, 2)] : 'L' + L;
-const phLive = k => k === 4 || (k >= 5 && k <= 7) || (k >= 1 && k <= VSYS_LIST[VSYS].ph);   // (a split-phase supply has no L3)
+const phLive = k => (k === 4 && vsNeu()) || (k >= 5 && k <= 7) || (k >= 1 && k <= VSYS_LIST[VSYS].ph);   // (a split-phase supply has no L3)
 const phColK = k => k === 4 || k === 7 ? NEU_COL : k === 5 ? '#6E6E6E' : k === 6 ? '#E8413C' : PH_COL[k - 1];   // (a centre-tapped secondary: black, red and white, as a split-phase supply)
 const phCol = p => phColK(phK(p.L) || 1);
 // a phase's voltage to the neutral, as [re, im] (null: the system has no such phase)
-const phVolt = k => { if (k === 4 || k === 7) return [0, 0]; if (k === 5 || k === 6) { const s = ctSecNow(); return polarV(s.mag / 2, s.ang + (k === 6 ? Math.PI : 0)); } if (!phLive(k)) return null; const s = VSYS_LIST[VSYS], a = s.ang[k - 1] * Math.PI / 180; return [s.vpn * Math.cos(a), s.vpn * Math.sin(a)]; };
+const phVolt = k => { if (k === 4) return vsNeu() ? [0, 0] : null; if (k === 7) return [0, 0]; if (k === 5 || k === 6) { const s = ctSecNow(); return polarV(s.mag / 2, s.ang + (k === 6 ? Math.PI : 0)); } if (!phLive(k)) return null; const s = VSYS_LIST[VSYS], a = s.ang[k - 1] * Math.PI / 180, m = s.mag ? s.mag[k - 1] : s.vpn; return [m * Math.cos(a), m * Math.sin(a)]; };
 const polarV = (m, a) => [m * Math.cos(a), m * Math.sin(a)];
 const phAcross = (ka, kb) => { const a = phVolt(ka), b = phVolt(kb); return a && b ? Math.hypot(a[0] - b[0], a[1] - b[1]) : 0; };
 const lighten = (c, f) => { const n = parseInt(c.slice(1), 16), m = k => Math.round(((n >> k) & 255) + (255 - ((n >> k) & 255)) * f); return '#' + ((1 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)).toString(16).slice(1).toUpperCase(); };
@@ -223,7 +233,7 @@ let FAULTS_ON = true, FAULT_BADGES = true, WORK_ORDER = '';
 const FAULT_LOADS = ['coil', 'lamp', 'sol', 'htr', 'mt1'];
 const canFault = p => !!p && (FAULT_LOADS.includes(p.t) || ['mtr', 'btn', 'con', 'sel', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'cbk', 'olc', 'fu1'].includes(p.t));
 const PART_FAULTS = { open: 'Open', short: 'Shorted', w1: 'Open Winding (T1)', w2: 'Open Winding (T2)', w3: 'Open Winding (T3)' },   // (the windings: a three-phase motor's only (Dallas, 24 Nov 2026))
-  MTR_FAULTS = ['w1', 'w2', 'w3'], WIRE_FAULTS = { open: 'Open (Broken)', l2: 'Shorted to L2' };
+  MTR_FAULTS = ['w1', 'w2', 'w3'], WIRE_FAULTS = { open: 'Open (Broken)', l2: 'Shorted to L2', gnd: 'Shorted to Ground' };
 /* Scenarios (Dallas, 16 Nov 2026): one circuit, several sets of faults, each with its own work order; one is in force at
    a time (SCEN, from 0). The faults in force are the parts' and wires' own .fault; each one's faults in every scenario
    are kept in its .fz ({ scenario: fault }), brought up to date from .fault by scenSync (faults.js). FF_OFFER: what the

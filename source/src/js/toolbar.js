@@ -131,8 +131,8 @@ function showPower() {
   // the voltage system: the one chosen ticked; a split-phase supply has no L3, and its phase list says so
   document.querySelectorAll('[data-vs]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vs === VSYS)));
   document.getElementById('bt-tint').setAttribute('aria-pressed', String(TINT_OPS));
-  { const sp = VSYS_LIST[VSYS].ph === 2, b3 = document.querySelector('[data-part="ph-3"]'); if (b3) b3.hidden = sp;
-    const it = b3 && b3.closest('.tl-sub'); if (it) { it.querySelector('.tl-n').textContent = sp ? 'Split-Phase' : 'Three Phase'; it.querySelector('.tl-c').textContent = sp ? 4 : 5; } }
+  { const sp = VSYS_LIST[VSYS].ph === 2, b3 = document.querySelector('[data-part="ph-3"]'), bn = document.querySelector('[data-part="ph-N"]'); if (b3) b3.hidden = sp; if (bn) bn.hidden = !vsNeu();   // (a three-wire delta: no neutral)
+    const it = b3 && b3.closest('.tl-sub'); if (it) { it.querySelector('.tl-n').textContent = sp ? 'Split-Phase' : 'Three Phase'; it.querySelector('.tl-c').textContent = VSYS_LIST[VSYS].ph + (vsNeu() ? 1 : 0) + 1; } }
   PH_COL.forEach((c, i) => { document.documentElement.style.setProperty(`--ph${i + 1}`, c); document.documentElement.style.setProperty(`--ph${i + 1}l`, lighten(c, .45)); });
 }
 // the source's colour: a swatch for each (see SRC_PAL)

@@ -31,13 +31,14 @@ function faultWhere(x, isW) {
 function faultWhy(x, isW, f) {
   if (!f) return '';
   if (!isW) return (x.t === 'mtr') !== MTR_FAULTS.includes(f) ? '!' : f === 'short' && x.t === 'fu1' ? 'A shorted fuse works like a good one: there would be nothing to find' : '';   // ('!': not a fault this kind of part can have: not offered)
-  if (f !== 'l2') return '';
+  if (f !== 'l2' && f !== 'gnd') return '';
   const was = FAULTS_ON; FAULTS_ON = false; let net; try { net = network(); } finally { FAULTS_ON = was; }
   const idx = new Map(net.nodes.map((n, i) => [n.k, i])), k = key(x.x1, x.y1), n = idx.get(k) ?? idx.get(k + '#' + x.id);
   if (n === undefined) return '';
   const fw = components(net, e => e.kind === 'w');
-  if (fw(n) === fw(net.L2)) return 'This wire is already L2: shorting it to L2 would change nothing';
+  if (fw(n) === fw(net.L2)) return f === 'gnd' ? 'This wire is L2, which is grounded already' : 'This wire is already L2: shorting it to L2 would change nothing';
   const fp = components(net, e => e.kind === 'w' || (e.part && e.part.t === 'pp'));
+  if (f === 'gnd') { const g = vsGnd(), h = g && net.PH[g]; const fg = components(net, e => e.kind === 'w' || (e.part && (e.part.t === 'pp' || e.part.t === 'fu1'))); return h != null && fg(n) === fg(h) ? `This wire is ${g === 'N' ? 'the neutral' : phName(g) + ', the grounded phase'}: it is grounded already` : ''; }   // (a ground fault: anywhere but what is grounded already)
   if (Object.values(net.PH).some(h => fp(h) === fp(n))) return 'This wire is in the three-phase power circuit, apart from the control circuit\u2019s L2';
   return '';
 }

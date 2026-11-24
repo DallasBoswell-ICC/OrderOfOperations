@@ -425,7 +425,13 @@ function updateCoils(t) {
     // (across two phases, or a phase and the neutral: its share of the voltage it's made for, from the voltage system)
     const pf = phFedAt(p, t); if (pf) p._pf = true; else if (p._pf && !coilOn[p.id]) delete p._pf;
     if (pf) { cond = true; sh = p.t === 'xfm' ? 1 : phAcross(phaseOfAt(p._a, t), phaseOfAt(p._b, t)) / SUPPLY_V; p._sh = sh; p._lv = [1, 0]; }
-    if (RATED(p.t) && !p.rv) p._ms = pf ? sh : ctrlNomK();   // (Match Supply (Dallas, 24 Nov 2026): made for what its supply gives, at its nominal voltage)
+    // (from a phase to ground (Dallas, 24 Nov 2026): what the meter would read across it, so ground-detector lights on an
+    // ungrounded delta share the voltage, and one goes out and the others brighten when its phase faults to ground)
+    let gf = 0;
+    if (!pf && RATED(p.t) && NET.GND && NET.GND.length) { const fc = compNow(), gs = new Set(NET.GND.map(fc)), ka = phaseOfAt(p._a, t), kb = phaseOfAt(p._b, t), ga = gs.has(fc(p._a)), gb = gs.has(fc(p._b));
+      if ((ga && kb >= 1 && kb <= 3) || (gb && ka >= 1 && ka <= 3)) { const k = ga ? kb : ka, v = tsVolts(p._a, p._b), g = vsGnd(); gf = (g ? phAcross(k, phK(g)) : phAcross(1, 2)) / SUPPLY_V;   // (ungrounded, Match Supply: made for the line voltage, as ground-detector lights are)
+        cond = v > 1; sh = v / SUPPLY_V; p._sh = sh; p._lv = [1, 0]; p._pf = true; } }
+    if (RATED(p.t) && !p.rv) p._ms = pf ? sh : gf || ctrlNomK();   // (Match Supply (Dallas, 24 Nov 2026): made for what its supply gives, at its nominal voltage)
     if (faultOf(p) === 'open' || (RATED(p.t) && BLOWN[p.id])) cond = false;   // (an open coil or light, or one burned out: no current through it, whatever reaches it)
     // (a coil or solenoid pulls in at 85% of the voltage it's made for, and once in holds in down to 60% (Dallas, 23 Nov 2026))
     const pull = p.t === 'lamp' || p.t === 'xfm' || p.t === 'htr' || sh >= (coilOn[p.id] ? DROP_OUT : PULL_IN) * ratedShare(p) - 1e-9;   // (a light lights, a heater heats, and a transformer works, on whatever it gets)

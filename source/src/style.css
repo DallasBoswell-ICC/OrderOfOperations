@@ -638,3 +638,4 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
 .spd-def button { padding: 4px 9px; white-space: nowrap; }
 #pw-menu .tool.pw-def { margin: 2px 0 6px 26px; padding: 2px 9px; font-size: 11.5px; border: 1px dashed #5a5f68; border-radius: 6px; width: auto; align-self: flex-start; justify-content: flex-start; }
 #pw-menu .tool.pw-def:disabled { border-style: solid; border-color: transparent; color: #8a8f98; cursor: default; opacity: 1; }
+.vs-h2 { margin-top: 4px; }

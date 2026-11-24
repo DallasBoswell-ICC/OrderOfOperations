@@ -12,7 +12,7 @@ function network() {
   const edges = [], subs = [];
   // jedges: the same wiring seen as junctions (wire ends, part ends, T-points) joined by runs of wire and by parts
   const jedges = [];
-  const toL2 = [];   // (wires shorted to L2: the points where they are)
+  const toL2 = [], toGnd = [];   // (wires shorted to L2, or to ground: the points where they are)
   for (const w of wires) {
     const len = Math.abs(w.x2 - w.x1) + Math.abs(w.y2 - w.y1), n = Math.max(1, Math.round(len / SUB));
     // (a fault planted on the wire, while running: open, broken at its middle; or shorted to L2 there)
@@ -33,9 +33,9 @@ function network() {
       }
       if (prev) { edges.push({ a: prev.id, b: id, w: len / n, kind: 'w' }); subs.push({ a: prev.id, b: id, x1: prev.x, y1: prev.y, x2: x, y2: y, wire: w }); }
       chain.push(id);
-      const sh = i === brk && wf === 'l2';
+      const sh = i === brk && (wf === 'l2' || wf === 'gnd');
       if ((shared.has(k0) || sh) && chain.length > 1) { jedges.push({ kind: 'seg', a: chain[0], b: id, len: (chain.length - 1) * len / n, chain }); chain = [id]; }
-      if (sh) toL2.push(id);
+      if (sh) (wf === 'gnd' ? toGnd : toL2).push(id);
       prev = { id, x, y };
     }
   }
@@ -140,6 +140,24 @@ function network() {
   // ground: each Ground part's end is earth (the meter holds it at 0 V; the circuit itself sends no current into it)
   const GND = [];
   for (const p of parts) if (isGnd(p)) { p._t = terms(p).map(([x, y]) => node(x, y, key(x, y))); GND.push(p._t[0]); }
+  // a wire shorted to ground (Dallas, 24 Nov 2026): in the control circuit, as shorted to L2 (its L2 is grounded) unless
+  // every transformer feeding it has its secondary ungrounded; in the power circuit, joined to the earth (EARTH), which
+  // the voltage system bonds to its neutral or its grounded phase (a short, so the fuse blows), or, ungrounded, to nothing
+  // (one fault: nothing trips; the meter shows it)
+  let EARTH;
+  if (toGnd.length) {
+    const par = nodes.map((_, i) => i), f = i => { while (par[i] !== i) { par[i] = par[par[i]]; i = par[i]; } return i; };
+    for (const e of edges) { const a = f(e.a), b = f(e.b); if (a !== b) par[a] = b; }
+    const phs = new Set(Object.values(PH).map(f)), ctl = new Set([f(L1), f(L2)]);
+    const xs = parts.filter(p => p.t === 'xfm' && !p.ct), ctlGnd = !xs.length || xs.some(p => !p.ug);
+    for (const i of toGnd) {
+      if (!phs.has(f(i)) && ctl.has(f(i))) { if (ctlGnd) { edges.push({ a: L2, b: i, w: 0, kind: 'w' }); feedV.set(i, 0); } continue; }
+      if (EARTH === undefined) { EARTH = node(-40, 0, 'EARTH'); GND.push(EARTH); }
+      edges.push({ a: EARTH, b: i, w: 0, kind: 'w' });
+    }
+    const g = vsGnd();
+    if (EARTH !== undefined && g) { const h = PH[g] ?? (PH[g] = node(-10 - phK(g), 0, 'PH' + g)); edges.push({ a: EARTH, b: h, w: 0, kind: 'w' }); }   // (bonded at the supply, whether or not its box is on the panel)
+  }
   const adj = nodes.map(() => []);
   edges.forEach((e, i) => { e.i = i; adj[e.a].push(i); adj[e.b].push(i); });
   // wires that cross without joining: the horizontal one hops over the vertical one
@@ -148,7 +166,7 @@ function network() {
     const x = v.x1, y = h.y1;
     if (x > Math.min(h.x1, h.x2) && x < Math.max(h.x1, h.x2) && y > Math.min(v.y1, v.y2) && y < Math.max(v.y1, v.y2) && !shared.has(key(x, y))) hops.push([x, y]);
   }
-  return { nodes, edges, adj, subs, L1, L2, feeds, hops, jedges, jadj, feedV, PH, GND };
+  return { nodes, edges, adj, subs, L1, L2, feeds, hops, jedges, jadj, feedV, PH, GND, EARTH };
 }
 function components(net, ok) {
   const par = net.nodes.map((_, i) => i);
@@ -206,13 +224,17 @@ function wiringIssues(net) {
       else if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything');
       continue;
     }
-    if (isGnd(p)) { const k = phaseAt(net, f0, p._t[0]); if (!net.adj[p._t[0]].length) out.set(p.id, 'Not wired to anything'); else if (k > 0 && k < 4) out.set(p.id, `${phName(k)} is joined straight to ground`); else if (f0(p._t[0]) === k1) out.set(p.id, 'L1 is joined straight to ground'); continue; }
+    if (isGnd(p)) { const k = phaseAt(net, f0, p._t[0]); if (!net.adj[p._t[0]].length) out.set(p.id, 'Not wired to anything'); else if (k > 0 && k < 4 && String(k) !== vsGnd()) out.set(p.id, `${phName(k)} is joined straight to ground`); else if (f0(p._t[0]) === k1) out.set(p.id, 'L1 is joined straight to ground'); continue; }
     if (isJmp(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); else if (!parts.some(q => q !== p && isJmp(q) && q.L === p.L)) out.set(p.id, `No other continuation ${p.L}`); continue; }
     const a = f(p._a), b = f(p._b);
     // (a transformer's primary, or a light, coil, solenoid or heater, across two phases or a phase and the neutral (Dallas, 22
     // Nov 2026): fine; one not on the voltage it's made for gets a note)
     if (LOADT(p.t)) { const fv = V.find(fv => phaseFed(net, fv, p)); if (fv) { const v = phAcross(phaseAt(net, fv, p._a), phaseAt(net, fv, p._b));
       if (p.t !== 'xfm' && p.rv && Math.abs(v - p.rv) > 2) out.set(p.id, { note: voltNote(p, v, p.rv) }); continue; } }
+    // (a light, coil, solenoid or heater from a phase to ground (Dallas, 24 Nov 2026: ground-detector lights): fine; on a grounded
+    // system, a note when it isn't made for the voltage from that phase to ground)
+    if (RATED(p.t)) { const gs = new Set((net.GND || []).map(f0)), ka = phaseAt(net, f0, p._a), kb = phaseAt(net, f0, p._b), ga = gs.has(f0(p._a)), gb = gs.has(f0(p._b));
+      if ((ga && kb > 0 && kb < 4) || (gb && ka > 0 && ka < 4)) { const g = vsGnd(); if (g && p.rv) { const v = phAcross(ga ? kb : ka, phK(g)); if (Math.abs(v - p.rv) > 2) out.set(p.id, { note: voltNote(p, v, p.rv) }); } continue; } }
     if (LOADT(p.t)) {
       const sh = S ? S.share.get(p.id) || 0 : 1;
       if (sh < 1e-9) out.set(p.id, p.t === 'xfm' && (phaseAt(net, f0, p._a) || phaseAt(net, f0, p._b)) ? 'Not wired across two phases' : phaseAt(net, f0, p._a) > 0 || phaseAt(net, f0, p._b) > 0 ? 'Not wired across a phase and the neutral or another phase' : 'Not wired from L1 to L2');

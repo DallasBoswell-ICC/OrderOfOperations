@@ -661,6 +661,7 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
 .spd-def button { padding: 4px 9px; white-space: nowrap; }
 #pw-menu .tool.pw-def { margin: 2px 0 6px 26px; padding: 2px 9px; font-size: 11.5px; border: 1px dashed #5a5f68; border-radius: 6px; width: auto; align-self: flex-start; justify-content: flex-start; }
 #pw-menu .tool.pw-def:disabled { border-style: solid; border-color: transparent; color: #8a8f98; cursor: default; opacity: 1; }
+.vs-h2 { margin-top: 4px; }
 
 .demo-badge { font-style: normal; font-size: .7rem; font-weight: 800; letter-spacing: .08em; color: #1c1d1f; background: #9be03a; border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }
 </style>
@@ -1077,7 +1078,7 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
           <button type="button" class="tool small pw-def" id="pw-def" data-tip="Start every new circuit on this computer powered this way (bars or boxes)">Set As Default</button>
           <div class="srcrow" data-tip="Source color: the color of the current straight from L1. Each coil or pilot light it goes through takes away its share of it, down to the neutral's off-white at L2."><span>Source</span><span id="src-swatches" role="group" aria-label="Source color"></span></div>
           <button type="button" class="tool small vs-b" id="bt-tint" aria-pressed="true" data-tip="When ticked, current coming through a pushbutton, selector or switch takes on that part's color. Untick it to keep the current in the color it had (the source's, or the phase's), as it goes through a relay contact."><span class="vs-box" aria-hidden="true"></span><span>Buttons Color the Current</span></button>
-          <div class="vsrow" role="group" aria-label="Voltage System"><span class="vs-h">Voltage System</span><button type="button" class="tool small vs-b" data-vs="480" aria-pressed="false" data-tip="Three-phase wye: 277 V from each phase to the neutral, 480 V between phases"><span class="vs-box" aria-hidden="true"></span><span>480Y/277 V</span></button><button type="button" class="tool small vs-b" data-vs="208" aria-pressed="false" data-tip="Three-phase wye: 120 V from each phase to the neutral, 208 V between phases"><span class="vs-box" aria-hidden="true"></span><span>208Y/120 V</span></button><button type="button" class="tool small vs-b" data-vs="240" aria-pressed="false" data-tip="Split-phase, as in American homes: 120 V from L1 or L2 to the neutral, 240 V from L1 to L2"><span class="vs-box" aria-hidden="true"></span><span>120/240 V Split-Phase</span></button></div>
+          <div class="vsrow" role="group" aria-label="Voltage System"><span class="vs-h">Voltage System</span><button type="button" class="tool small vs-b" data-vs="480" aria-pressed="false" data-tip="Three-phase wye: 277 V from each phase to the neutral, 480 V between phases"><span class="vs-box" aria-hidden="true"></span><span>480Y/277 V</span></button><button type="button" class="tool small vs-b" data-vs="208" aria-pressed="false" data-tip="Three-phase wye: 120 V from each phase to the neutral, 208 V between phases"><span class="vs-box" aria-hidden="true"></span><span>208Y/120 V</span></button><button type="button" class="tool small vs-b" data-vs="240" aria-pressed="false" data-tip="Split-phase, as in American homes: 120 V from L1 or L2 to the neutral, 240 V from L1 to L2"><span class="vs-box" aria-hidden="true"></span><span>120/240 V Split-Phase</span></button><span class="vs-h vs-h2">Delta</span><button type="button" class="tool small vs-b" data-vs="hl" aria-pressed="false" data-tip="Four-wire delta: 240 V between phases; the neutral taps the middle of the L1-L3 winding, so L1 or L3 to N is 120 V and L2 (the high leg, orange) to N is 208 V"><span class="vs-box" aria-hidden="true"></span><span>240/120 V High-Leg</span></button><button type="button" class="tool small vs-b" data-vs="d240u" aria-pressed="false" data-tip="Three-wire delta, 240 V between phases, nothing bonded to ground: one phase shorted to ground trips nothing"><span class="vs-box" aria-hidden="true"></span><span>240 V Ungrounded</span></button><button type="button" class="tool small vs-b" data-vs="d240c" aria-pressed="false" data-tip="Three-wire delta, 240 V between phases, L2 bonded to ground (grey): L1 and L3 are 240 V to ground, L2 0 V"><span class="vs-box" aria-hidden="true"></span><span>240 V Corner-Grounded</span></button><button type="button" class="tool small vs-b" data-vs="d480u" aria-pressed="false" data-tip="Three-wire delta, 480 V between phases, nothing bonded to ground: one phase shorted to ground trips nothing"><span class="vs-box" aria-hidden="true"></span><span>480 V Ungrounded</span></button><button type="button" class="tool small vs-b" data-vs="d480c" aria-pressed="false" data-tip="Three-wire delta, 480 V between phases, L2 bonded to ground (grey): L1 and L3 are 480 V to ground, L2 0 V"><span class="vs-box" aria-hidden="true"></span><span>480 V Corner-Grounded</span></button></div>
         </div></div><div class="gname">Power</div></div>
   <div class="rgrp" id="supply-grp"><div class="gbody"><button type="button" class="tool big src-tool" data-part="src-l1" hidden data-tip="L1 Supply: where the circuit gets its power. Wire to its left, right or bottom; use as many as you like."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#e2cc85" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="#f2e6b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L1<br>Supply</span></button><button type="button" class="tool big src-tool" data-part="src-l2" hidden data-tip="L2 Return: where the current goes back. Wire to its left, right or bottom; use as many as you like."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#e2cc85" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="#f2e6b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L2<br>Return</span></button></div><div class="gname">Supply Boxes</div></div>
   <div class="rgrp"><div class="gbody"><button type="button" class="tool big" data-part="ph-1" data-tip="L1 phase of a three-phase supply: wire to its left, right or bottom (turn it with R to face other ways). Its phase, in its own color, reaches everything wired to it."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" style="stroke:var(--ph1)" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" style="stroke:var(--ph1l)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L1<br>Phase</span></button><button type="button" class="tool big" data-part="ph-2" data-tip="L2 phase of a three-phase supply: wire to its left, right or bottom (turn it with R to face other ways). Its phase, in its own color, reaches everything wired to it."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" style="stroke:var(--ph2)" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" style="stroke:var(--ph2l)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L2<br>Phase</span></button><button type="button" class="tool big" data-part="ph-3" data-tip="L3 phase of a three-phase supply: wire to its left, right or bottom (turn it with R to face other ways). Its phase, in its own color, reaches everything wired to it."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" style="stroke:var(--ph3)" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" style="stroke:var(--ph3l)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>L3<br>Phase</span></button><button type="button" class="tool big" data-part="ph-N" data-name="Neutral" data-tip="Neutral: 0 V, the white wire of a wye or split-phase supply. A light, coil, solenoid or heater wired from a phase to it gets that phase's voltage to the neutral."><svg viewBox="0 0 30 26"><rect x="4" y="2" width="22" height="22" rx="4" fill="#222" stroke="#E8E8E8" stroke-width="1.6"/><path d="M9.5 7.5l5.5 5 5.5-5M9.5 13.5l5.5 5 5.5-5" fill="none" stroke="#F4F4F4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Neutral</span></button><button type="button" class="tool big" data-part="ph-all" data-name="All Phases" data-tip="Every phase of the voltage system and the neutral at once, in a column, selected together"><svg viewBox="0 0 30 26" aria-hidden="true"><rect x="3" y="1" width="12" height="5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="3" y="7.5" width="12" height="5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="3" y="14" width="12" height="5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="3" y="20.5" width="12" height="5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M15 3.5h10M15 10h10M15 16.5h10M15 23h10" stroke="currentColor" stroke-width="1.4"/></svg><span>All Phases</span></button></div><div class="gname" id="ph-gname">Three Phase</div></div>
@@ -2443,17 +2444,27 @@ let PH_COL = [...PH_DEFAULT];
 const VSYS_LIST = {
   '480': { name: '480Y/277 V', short: '480Y/277', ph: 3, vpn: 480 / Math.sqrt(3), ang: [0, -120, 120], col: ['#B5793F', '#FF8A1F', '#F2D21B'] },
   '208': { name: '208Y/120 V', short: '208Y/120', ph: 3, vpn: 120, ang: [0, -120, 120], col: ['#6E6E6E', '#E8413C', '#3F7FFF'] },
-  '240': { name: '120/240 V Split-Phase', short: '120/240', ph: 2, vpn: 120, ang: [0, 180], col: ['#6E6E6E', '#E8413C', '#3F7FFF'] }
+  '240': { name: '120/240 V Split-Phase', short: '120/240', ph: 2, vpn: 120, ang: [0, 180], col: ['#6E6E6E', '#E8413C', '#3F7FFF'] },
+  /* deltas (Dallas, 24 Nov 2026): each phase's voltage given (mag) where they are not all alike; neu: false, no neutral;
+     gnd: what is bonded to the earth ('N', a phase's number, or null: an ungrounded system). US colours: the high leg
+     orange (as the NEC asks), a grounded phase grey (as a grounded conductor must be white or grey) */
+  'hl': { name: '240/120 V High-Leg Delta', short: '240/120 HL', ph: 3, mag: [120, 120 * Math.sqrt(3), 120], ang: [0, -90, 180], col: ['#6E6E6E', '#FF8A1F', '#3F7FFF'], delta: true },
+  'd240u': { name: '240 V Ungrounded Delta', short: '240 Δ', ph: 3, vpn: 240 / Math.sqrt(3), ang: [0, -120, 120], col: ['#6E6E6E', '#E8413C', '#3F7FFF'], neu: false, gnd: null, delta: true },
+  'd240c': { name: '240 V Corner-Grounded Delta', short: '240 Δ CG', ph: 3, mag: [240, 0, 240], ang: [0, 0, -60], col: ['#6E6E6E', '#BDBDBD', '#3F7FFF'], neu: false, gnd: '2', delta: true },
+  'd480u': { name: '480 V Ungrounded Delta', short: '480 Δ', ph: 3, vpn: 480 / Math.sqrt(3), ang: [0, -120, 120], col: ['#B5793F', '#FF8A1F', '#F2D21B'], neu: false, gnd: null, delta: true },
+  'd480c': { name: '480 V Corner-Grounded Delta', short: '480 Δ CG', ph: 3, mag: [480, 0, 480], ang: [0, 0, -60], col: ['#B5793F', '#BDBDBD', '#F2D21B'], neu: false, gnd: '2', delta: true }
 };
+// (what the voltage system has bonded to the earth: its neutral, unless it says otherwise; and whether it has a neutral)
+const vsGnd = () => { const s = VSYS_LIST[VSYS]; return 'gnd' in s ? s.gnd : 'N'; }, vsNeu = () => VSYS_LIST[VSYS].neu !== false;
 let VSYS = '208';
 const NEU_COL = '#E8E8E8';
 const phK = L => L === 'N' ? 4 : /^S[120]:/.test(L) ? { S1: 5, S2: 6, S0: 7 }[L.slice(0, 2)] : +L;   // (a phase box's phase as a number: L1-L3 1-3, the neutral 4; a centre-tapped transformer's X1, X2 and X0 5-7)
 const phName = L => L === 'N' || L === 4 ? 'N' : L === 5 || L === 6 || L === 7 ? ['X1', 'X2', 'X0'][L - 5] : /^S[120]:/.test(L) ? { S1: 'X1', S2: 'X2', S0: 'X0' }[L.slice(0, 2)] : 'L' + L;
-const phLive = k => k === 4 || (k >= 5 && k <= 7) || (k >= 1 && k <= VSYS_LIST[VSYS].ph);   // (a split-phase supply has no L3)
+const phLive = k => (k === 4 && vsNeu()) || (k >= 5 && k <= 7) || (k >= 1 && k <= VSYS_LIST[VSYS].ph);   // (a split-phase supply has no L3)
 const phColK = k => k === 4 || k === 7 ? NEU_COL : k === 5 ? '#6E6E6E' : k === 6 ? '#E8413C' : PH_COL[k - 1];   // (a centre-tapped secondary: black, red and white, as a split-phase supply)
 const phCol = p => phColK(phK(p.L) || 1);
 // a phase's voltage to the neutral, as [re, im] (null: the system has no such phase)
-const phVolt = k => { if (k === 4 || k === 7) return [0, 0]; if (k === 5 || k === 6) { const s = ctSecNow(); return polarV(s.mag / 2, s.ang + (k === 6 ? Math.PI : 0)); } if (!phLive(k)) return null; const s = VSYS_LIST[VSYS], a = s.ang[k - 1] * Math.PI / 180; return [s.vpn * Math.cos(a), s.vpn * Math.sin(a)]; };
+const phVolt = k => { if (k === 4) return vsNeu() ? [0, 0] : null; if (k === 7) return [0, 0]; if (k === 5 || k === 6) { const s = ctSecNow(); return polarV(s.mag / 2, s.ang + (k === 6 ? Math.PI : 0)); } if (!phLive(k)) return null; const s = VSYS_LIST[VSYS], a = s.ang[k - 1] * Math.PI / 180, m = s.mag ? s.mag[k - 1] : s.vpn; return [m * Math.cos(a), m * Math.sin(a)]; };
 const polarV = (m, a) => [m * Math.cos(a), m * Math.sin(a)];
 const phAcross = (ka, kb) => { const a = phVolt(ka), b = phVolt(kb); return a && b ? Math.hypot(a[0] - b[0], a[1] - b[1]) : 0; };
 const lighten = (c, f) => { const n = parseInt(c.slice(1), 16), m = k => Math.round(((n >> k) & 255) + (255 - ((n >> k) & 255)) * f); return '#' + ((1 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)).toString(16).slice(1).toUpperCase(); };
@@ -2476,7 +2487,7 @@ let FAULTS_ON = true, FAULT_BADGES = true, WORK_ORDER = '';
 const FAULT_LOADS = ['coil', 'lamp', 'sol', 'htr', 'mt1'];
 const canFault = p => !!p && (FAULT_LOADS.includes(p.t) || ['mtr', 'btn', 'con', 'sel', 'lsw', 'tsw', 'psw', 'fsw', 'flt', 'tgl', 'cbk', 'olc', 'fu1'].includes(p.t));
 const PART_FAULTS = { open: 'Open', short: 'Shorted', w1: 'Open Winding (T1)', w2: 'Open Winding (T2)', w3: 'Open Winding (T3)' },   // (the windings: a three-phase motor's only (Dallas, 24 Nov 2026))
-  MTR_FAULTS = ['w1', 'w2', 'w3'], WIRE_FAULTS = { open: 'Open (Broken)', l2: 'Shorted to L2' };
+  MTR_FAULTS = ['w1', 'w2', 'w3'], WIRE_FAULTS = { open: 'Open (Broken)', l2: 'Shorted to L2', gnd: 'Shorted to Ground' };
 /* Scenarios (Dallas, 16 Nov 2026): one circuit, several sets of faults, each with its own work order; one is in force at
    a time (SCEN, from 0). The faults in force are the parts' and wires' own .fault; each one's faults in every scenario
    are kept in its .fz ({ scenario: fault }), brought up to date from .fault by scenSync (faults.js). FF_OFFER: what the
@@ -2688,7 +2699,7 @@ function network() {
   const edges = [], subs = [];
   // jedges: the same wiring seen as junctions (wire ends, part ends, T-points) joined by runs of wire and by parts
   const jedges = [];
-  const toL2 = [];   // (wires shorted to L2: the points where they are)
+  const toL2 = [], toGnd = [];   // (wires shorted to L2, or to ground: the points where they are)
   for (const w of wires) {
     const len = Math.abs(w.x2 - w.x1) + Math.abs(w.y2 - w.y1), n = Math.max(1, Math.round(len / SUB));
     // (a fault planted on the wire, while running: open, broken at its middle; or shorted to L2 there)
@@ -2709,9 +2720,9 @@ function network() {
       }
       if (prev) { edges.push({ a: prev.id, b: id, w: len / n, kind: 'w' }); subs.push({ a: prev.id, b: id, x1: prev.x, y1: prev.y, x2: x, y2: y, wire: w }); }
       chain.push(id);
-      const sh = i === brk && wf === 'l2';
+      const sh = i === brk && (wf === 'l2' || wf === 'gnd');
       if ((shared.has(k0) || sh) && chain.length > 1) { jedges.push({ kind: 'seg', a: chain[0], b: id, len: (chain.length - 1) * len / n, chain }); chain = [id]; }
-      if (sh) toL2.push(id);
+      if (sh) (wf === 'gnd' ? toGnd : toL2).push(id);
       prev = { id, x, y };
     }
   }
@@ -2816,6 +2827,24 @@ function network() {
   // ground: each Ground part's end is earth (the meter holds it at 0 V; the circuit itself sends no current into it)
   const GND = [];
   for (const p of parts) if (isGnd(p)) { p._t = terms(p).map(([x, y]) => node(x, y, key(x, y))); GND.push(p._t[0]); }
+  // a wire shorted to ground (Dallas, 24 Nov 2026): in the control circuit, as shorted to L2 (its L2 is grounded) unless
+  // every transformer feeding it has its secondary ungrounded; in the power circuit, joined to the earth (EARTH), which
+  // the voltage system bonds to its neutral or its grounded phase (a short, so the fuse blows), or, ungrounded, to nothing
+  // (one fault: nothing trips; the meter shows it)
+  let EARTH;
+  if (toGnd.length) {
+    const par = nodes.map((_, i) => i), f = i => { while (par[i] !== i) { par[i] = par[par[i]]; i = par[i]; } return i; };
+    for (const e of edges) { const a = f(e.a), b = f(e.b); if (a !== b) par[a] = b; }
+    const phs = new Set(Object.values(PH).map(f)), ctl = new Set([f(L1), f(L2)]);
+    const xs = parts.filter(p => p.t === 'xfm' && !p.ct), ctlGnd = !xs.length || xs.some(p => !p.ug);
+    for (const i of toGnd) {
+      if (!phs.has(f(i)) && ctl.has(f(i))) { if (ctlGnd) { edges.push({ a: L2, b: i, w: 0, kind: 'w' }); feedV.set(i, 0); } continue; }
+      if (EARTH === undefined) { EARTH = node(-40, 0, 'EARTH'); GND.push(EARTH); }
+      edges.push({ a: EARTH, b: i, w: 0, kind: 'w' });
+    }
+    const g = vsGnd();
+    if (EARTH !== undefined && g) { const h = PH[g] ?? (PH[g] = node(-10 - phK(g), 0, 'PH' + g)); edges.push({ a: EARTH, b: h, w: 0, kind: 'w' }); }   // (bonded at the supply, whether or not its box is on the panel)
+  }
   const adj = nodes.map(() => []);
   edges.forEach((e, i) => { e.i = i; adj[e.a].push(i); adj[e.b].push(i); });
   // wires that cross without joining: the horizontal one hops over the vertical one
@@ -2824,7 +2853,7 @@ function network() {
     const x = v.x1, y = h.y1;
     if (x > Math.min(h.x1, h.x2) && x < Math.max(h.x1, h.x2) && y > Math.min(v.y1, v.y2) && y < Math.max(v.y1, v.y2) && !shared.has(key(x, y))) hops.push([x, y]);
   }
-  return { nodes, edges, adj, subs, L1, L2, feeds, hops, jedges, jadj, feedV, PH, GND };
+  return { nodes, edges, adj, subs, L1, L2, feeds, hops, jedges, jadj, feedV, PH, GND, EARTH };
 }
 function components(net, ok) {
   const par = net.nodes.map((_, i) => i);
@@ -2882,13 +2911,17 @@ function wiringIssues(net) {
       else if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything');
       continue;
     }
-    if (isGnd(p)) { const k = phaseAt(net, f0, p._t[0]); if (!net.adj[p._t[0]].length) out.set(p.id, 'Not wired to anything'); else if (k > 0 && k < 4) out.set(p.id, `${phName(k)} is joined straight to ground`); else if (f0(p._t[0]) === k1) out.set(p.id, 'L1 is joined straight to ground'); continue; }
+    if (isGnd(p)) { const k = phaseAt(net, f0, p._t[0]); if (!net.adj[p._t[0]].length) out.set(p.id, 'Not wired to anything'); else if (k > 0 && k < 4 && String(k) !== vsGnd()) out.set(p.id, `${phName(k)} is joined straight to ground`); else if (f0(p._t[0]) === k1) out.set(p.id, 'L1 is joined straight to ground'); continue; }
     if (isJmp(p)) { if (!p._t.some(i => net.adj[i].length > 1)) out.set(p.id, 'Not wired to anything'); else if (!parts.some(q => q !== p && isJmp(q) && q.L === p.L)) out.set(p.id, `No other continuation ${p.L}`); continue; }
     const a = f(p._a), b = f(p._b);
     // (a transformer's primary, or a light, coil, solenoid or heater, across two phases or a phase and the neutral (Dallas, 22
     // Nov 2026): fine; one not on the voltage it's made for gets a note)
     if (LOADT(p.t)) { const fv = V.find(fv => phaseFed(net, fv, p)); if (fv) { const v = phAcross(phaseAt(net, fv, p._a), phaseAt(net, fv, p._b));
       if (p.t !== 'xfm' && p.rv && Math.abs(v - p.rv) > 2) out.set(p.id, { note: voltNote(p, v, p.rv) }); continue; } }
+    // (a light, coil, solenoid or heater from a phase to ground (Dallas, 24 Nov 2026: ground-detector lights): fine; on a grounded
+    // system, a note when it isn't made for the voltage from that phase to ground)
+    if (RATED(p.t)) { const gs = new Set((net.GND || []).map(f0)), ka = phaseAt(net, f0, p._a), kb = phaseAt(net, f0, p._b), ga = gs.has(f0(p._a)), gb = gs.has(f0(p._b));
+      if ((ga && kb > 0 && kb < 4) || (gb && ka > 0 && ka < 4)) { const g = vsGnd(); if (g && p.rv) { const v = phAcross(ga ? kb : ka, phK(g)); if (Math.abs(v - p.rv) > 2) out.set(p.id, { note: voltNote(p, v, p.rv) }); } continue; } }
     if (LOADT(p.t)) {
       const sh = S ? S.share.get(p.id) || 0 : 1;
       if (sh < 1e-9) out.set(p.id, p.t === 'xfm' && (phaseAt(net, f0, p._a) || phaseAt(net, f0, p._b)) ? 'Not wired across two phases' : phaseAt(net, f0, p._a) > 0 || phaseAt(net, f0, p._b) > 0 ? 'Not wired across a phase and the neutral or another phase' : 'Not wired from L1 to L2');
@@ -3684,7 +3717,13 @@ function updateCoils(t) {
     // (across two phases, or a phase and the neutral: its share of the voltage it's made for, from the voltage system)
     const pf = phFedAt(p, t); if (pf) p._pf = true; else if (p._pf && !coilOn[p.id]) delete p._pf;
     if (pf) { cond = true; sh = p.t === 'xfm' ? 1 : phAcross(phaseOfAt(p._a, t), phaseOfAt(p._b, t)) / SUPPLY_V; p._sh = sh; p._lv = [1, 0]; }
-    if (RATED(p.t) && !p.rv) p._ms = pf ? sh : ctrlNomK();   // (Match Supply (Dallas, 24 Nov 2026): made for what its supply gives, at its nominal voltage)
+    // (from a phase to ground (Dallas, 24 Nov 2026): what the meter would read across it, so ground-detector lights on an
+    // ungrounded delta share the voltage, and one goes out and the others brighten when its phase faults to ground)
+    let gf = 0;
+    if (!pf && RATED(p.t) && NET.GND && NET.GND.length) { const fc = compNow(), gs = new Set(NET.GND.map(fc)), ka = phaseOfAt(p._a, t), kb = phaseOfAt(p._b, t), ga = gs.has(fc(p._a)), gb = gs.has(fc(p._b));
+      if ((ga && kb >= 1 && kb <= 3) || (gb && ka >= 1 && ka <= 3)) { const k = ga ? kb : ka, v = tsVolts(p._a, p._b), g = vsGnd(); gf = (g ? phAcross(k, phK(g)) : phAcross(1, 2)) / SUPPLY_V;   // (ungrounded, Match Supply: made for the line voltage, as ground-detector lights are)
+        cond = v > 1; sh = v / SUPPLY_V; p._sh = sh; p._lv = [1, 0]; p._pf = true; } }
+    if (RATED(p.t) && !p.rv) p._ms = pf ? sh : gf || ctrlNomK();   // (Match Supply (Dallas, 24 Nov 2026): made for what its supply gives, at its nominal voltage)
     if (faultOf(p) === 'open' || (RATED(p.t) && BLOWN[p.id])) cond = false;   // (an open coil or light, or one burned out: no current through it, whatever reaches it)
     // (a coil or solenoid pulls in at 85% of the voltage it's made for, and once in holds in down to 60% (Dallas, 23 Nov 2026))
     const pull = p.t === 'lamp' || p.t === 'xfm' || p.t === 'htr' || sh >= (coilOn[p.id] ? DROP_OUT : PULL_IN) * ratedShare(p) - 1e-9;   // (a light lights, a heater heats, and a transformer works, on whatever it gets)
@@ -7436,7 +7475,7 @@ function placePart(kind, x, y) {
    never wired in by accident). It is selected, ready to be dragged where it is wanted. With no such spot in view, it
    goes below the circuit, and the view moves down to it. */
 /* All Phases (Dallas, 24 Nov 2026): L1, L2, L3 (on a three-phase system) and N, in a column, selected together */
-const PH_ALL_DY = 120, phAllGroup = () => [...[...Array(VSYS_LIST[VSYS].ph).keys()].map(i => 'ph-' + (i + 1)), 'ph-N'].map((k, i) => [k, i * PH_ALL_DY]);
+const PH_ALL_DY = 120, phAllGroup = () => [...[...Array(VSYS_LIST[VSYS].ph).keys()].map(i => 'ph-' + (i + 1)), ...(vsNeu() ? ['ph-N'] : [])].map((k, i) => [k, i * PH_ALL_DY]);
 function placeGroup(group, x, y) {
   const at = group.map(([k, dy]) => [k, ...clampPart(x, y + dy, kindOf(k))]);
   if (at.some(([k, px, py]) => overlaps(null, px, py, kindOf(k)) || wireInTheWay({ t: kindOf(k), x: px, y: py }))) { say('There is something in the way there.'); return false; }
@@ -8406,8 +8445,8 @@ function showPower() {
   // the voltage system: the one chosen ticked; a split-phase supply has no L3, and its phase list says so
   document.querySelectorAll('[data-vs]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vs === VSYS)));
   document.getElementById('bt-tint').setAttribute('aria-pressed', String(TINT_OPS));
-  { const sp = VSYS_LIST[VSYS].ph === 2, b3 = document.querySelector('[data-part="ph-3"]'); if (b3) b3.hidden = sp;
-    const it = b3 && b3.closest('.tl-sub'); if (it) { it.querySelector('.tl-n').textContent = sp ? 'Split-Phase' : 'Three Phase'; it.querySelector('.tl-c').textContent = sp ? 4 : 5; } }
+  { const sp = VSYS_LIST[VSYS].ph === 2, b3 = document.querySelector('[data-part="ph-3"]'), bn = document.querySelector('[data-part="ph-N"]'); if (b3) b3.hidden = sp; if (bn) bn.hidden = !vsNeu();   // (a three-wire delta: no neutral)
+    const it = b3 && b3.closest('.tl-sub'); if (it) { it.querySelector('.tl-n').textContent = sp ? 'Split-Phase' : 'Three Phase'; it.querySelector('.tl-c').textContent = VSYS_LIST[VSYS].ph + (vsNeu() ? 1 : 0) + 1; } }
   PH_COL.forEach((c, i) => { document.documentElement.style.setProperty(`--ph${i + 1}`, c); document.documentElement.style.setProperty(`--ph${i + 1}l`, lighten(c, .45)); });
 }
 // the source's colour: a swatch for each (see SRC_PAL)
@@ -9050,13 +9089,14 @@ function faultWhere(x, isW) {
 function faultWhy(x, isW, f) {
   if (!f) return '';
   if (!isW) return (x.t === 'mtr') !== MTR_FAULTS.includes(f) ? '!' : f === 'short' && x.t === 'fu1' ? 'A shorted fuse works like a good one: there would be nothing to find' : '';   // ('!': not a fault this kind of part can have: not offered)
-  if (f !== 'l2') return '';
+  if (f !== 'l2' && f !== 'gnd') return '';
   const was = FAULTS_ON; FAULTS_ON = false; let net; try { net = network(); } finally { FAULTS_ON = was; }
   const idx = new Map(net.nodes.map((n, i) => [n.k, i])), k = key(x.x1, x.y1), n = idx.get(k) ?? idx.get(k + '#' + x.id);
   if (n === undefined) return '';
   const fw = components(net, e => e.kind === 'w');
-  if (fw(n) === fw(net.L2)) return 'This wire is already L2: shorting it to L2 would change nothing';
+  if (fw(n) === fw(net.L2)) return f === 'gnd' ? 'This wire is L2, which is grounded already' : 'This wire is already L2: shorting it to L2 would change nothing';
   const fp = components(net, e => e.kind === 'w' || (e.part && e.part.t === 'pp'));
+  if (f === 'gnd') { const g = vsGnd(), h = g && net.PH[g]; const fg = components(net, e => e.kind === 'w' || (e.part && (e.part.t === 'pp' || e.part.t === 'fu1'))); return h != null && fg(n) === fg(h) ? `This wire is ${g === 'N' ? 'the neutral' : phName(g) + ', the grounded phase'}: it is grounded already` : ''; }   // (a ground fault: anywhere but what is grounded already)
   if (Object.values(net.PH).some(h => fp(h) === fp(n))) return 'This wire is in the three-phase power circuit, apart from the control circuit\u2019s L2';
   return '';
 }
@@ -9983,6 +10023,12 @@ function tsNetwork() {
     else if (e.part && isSw(e.part)) { if (closed(e.part)) join(e.a, e.b); }
     else if (e.part && TS_OHMS(e.part) < Infinity) loads.push([e.a, e.b, 1 / TS_OHMS(e.part)]);
   }
+  // (an ungrounded system (Dallas, 24 Nov 2026): the earth is one body, held to the supply's middle only as weakly as a
+  // real system's stray capacitance holds it, so each phase reads its share to ground until something ties it down: a
+  // ground fault on a phase pulls the earth to that phase)
+  let STAR;
+  const ung = !vsGnd() && Object.keys(net.PH).some(L => !/^S[120]:/.test(L)), G = net.GND || [];
+  if (ung) { for (const n of G) join(n, G[0]); if (G.length) { STAR = extra++; loads.push([G[0], STAR, 1e-7]); } }
   for (const p of parts) {
     if (p.t === 'xfm' && p._t) loads.push([p._t[2], p._t[3], 1 / TS_XFM_SEC]);   // (its secondary winding, X1 to X2)
     if (p.t === 'mtr' && p._t) { const c = extra++; p._t.forEach((t, i) => { if (faultOf(p) !== 'w' + (i + 1)) loads.push([t, c, 1 / TS_MOTOR]); }); }   // (an open winding: none)   // (its windings, joined at the star point)
@@ -10006,7 +10052,7 @@ function tsNetwork() {
   if (!xs.some(p => !p.ct) || xs.some(p => !p.ct && !p.ug)) earth(net.L2);
   for (const p of xs) { if (p.ct) { tie(p._t[2], p._t[4]); tie(p._t[2], net.PH['S0:' + p.id]); tie(p._t[2], net.PH['S1:' + p.id]); tie(p._t[2], net.PH['S2:' + p.id]); }   // (a secondary's terminals: one winding)
     if (!p.ug) { earth(p._t[p.ct ? 4 : 3]); if (p.ct) earth(net.PH['S0:' + p.id]); } }
-  return { sn, M, loads: loads.map(([a, b, c]) => [sn[a], sn[b], c]), comp: i => g(sn[i]), grp: i => h(g(sn[i])) };
+  return { sn, M, loads: loads.map(([a, b, c]) => [sn[a], sn[b], c]), comp: i => g(sn[i]), grp: i => h(g(sn[i])), STAR, ung };
 }
 // the supplies that are on: piece -> [re, im] volts
 function tsSources(T) {
@@ -10025,7 +10071,8 @@ function tsSources(T) {
       const v = phVolt(phK(L)); if (v) set(NET.PH[L], v);   // (each phase from the voltage system; the neutral at 0 V)
     }
   }
-  for (const n of NET.GND || []) set(n, [0, 0]);   // (the ground: 0 V)
+  if (T.ung) { if (T.STAR !== undefined) fix.set(T.sn[T.STAR], [0, 0]); }   // (ungrounded: the supply's middle at 0 V, the earth free)
+  else for (const n of NET.GND || []) set(n, [0, 0]);   // (the ground: 0 V)
   return fix;
 }
 // node voltages (complex): Laplace's equation over the pieces, with the supplies held; pieces with no way to a supply: 0

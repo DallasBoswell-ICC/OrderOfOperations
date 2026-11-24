@@ -471,6 +471,22 @@ const C1 = 'X Coil, left (rung 1)', C2 = 'X Coil, right (rung 1)', L1 = 'L1 bar 
     await page.evaluate(() => { localStorage.clear(); });
     return out;
   });
+  await check('Delta systems (Dallas, 24 Nov 2026): the meter reads a high-leg delta (120, 208, 120 V to N), a corner-grounded delta (480, 0, 480 V to ground), and an ungrounded delta (277 V each to ground; shorted to ground on L1: 0, 480, 480 V, and no fuse blows)', async page => {
+    const out = [];
+    await page.evaluate(() => { localStorage.clear(); }); await page.reload(); await page.waitForTimeout(900);
+    const setup = (vs, f1) => page.evaluate(([vs, f1]) => { loadPreset('blank'); VSYS = vs; PH_COL = [...VSYS_LIST[vs].col]; POWER = 'boxes'; W = 1400;
+      parts = [newPart('ph-1', 120, 200), newPart('ph-2', 120, 360), newPart('ph-3', 120, 520), P('fu1', 400, 200, { L: '1' }), P('fu1', 400, 360, { L: '2' }), P('fu1', 400, 520, { L: '3' }), newPart('gnd', 1000, 800)];
+      if (vsNeu()) parts.push(newPart('ph-N', 120, 680));
+      wires = [Wr(160, 200, 360, 200), Wr(160, 360, 360, 360), Wr(160, 520, 360, 520), Wr(440, 200, 900, 200), Wr(440, 360, 900, 360), Wr(440, 520, 900, 520)];
+      if (f1) wires[2 + f1].fault = 'gnd'; normalize();
+      tsUse(readCircuit(JSON.parse(JSON.stringify(circuitData()))), '', true); FAULTS_ON = true; NET = network(); draw(); startRun(); }, [vs, f1 || 0]);
+    const rd = () => page.evaluate(() => { const g = parts.find(p => p.t === 'gnd')._t[0], N = NET.PH['N'], f = x => Math.round(x * 10) / 10, n = y => NET.nodes.findIndex(q => q.x === 800 && q.y === y), to = r => [200, 360, 520].map(y => f(tsVolts(n(y), r))).join('/');
+      return [f(tsVolts(n(200), n(360))), to(g), vsNeu() ? to(N) : '', parts.filter(p => p.t === 'fu1' && BLOWN[p.id]).length].join(' '); });
+    for (const [vs, f1, want] of [['hl', 0, '240 120/207.8/120 120/207.8/120 0'], ['d480c', 0, '480 480/0/480  0'], ['d480u', 0, '480 277.1/277.1/277.1  0'], ['d480u', 1, '480 0/480/480  0']]) {
+      await setup(vs, f1); await page.waitForTimeout(2500); const r = await rd(); if (r !== want) out.push(`${vs}${f1 ? ' L1 to ground' : ''}: ${r}`); }
+    await page.evaluate(() => { FAULTS_ON = false; localStorage.clear(); });
+    return out;
+  });
   await check('A whole machine (the drill station, 375 parts): the meter reads volts and ohms at once', async page => {
     const out = [], json = require('fs').readFileSync(require('path').join(__dirname, 'fixtures', 'drill-station.json'), 'utf8');
     await page.evaluate(j => useCircuit(readCircuit(JSON.parse(j)), ''), json);
