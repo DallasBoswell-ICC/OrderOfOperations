@@ -3183,6 +3183,25 @@ const DEF_CIRCUIT = `
       return out;`));
   });
 
+  await check('Where each source reaches (Dallas, 25 Nov 2026, his residential panel): the main breaker opened, the neutral that had come back through the loads goes as a front, not all at once', async page => {
+    const d = require('fs').readFileSync(path.join(__dirname, 'fixtures', 'residential_panel.json'), 'utf8');
+    await page.evaluate(d => { useCircuit(readCircuit(JSON.parse(d)), ''); }, d);
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + SETTLED + `
+      const out = []; step(15);
+      // (the neutral points it reached only back through a load: not joined by wire to the transformer's X0)
+      const f = compNow(), x0 = Object.keys(NET.PH).filter(L => /^S0:/.test(L)).map(L => f(NET.PH[L]));
+      const neu = NET.nodes.map((_, k) => k).filter(k => colAt(k, simT) === NEU_COL && !x0.includes(f(k))), cb = parts.find(p => p.t === 'cbt');
+      press(opKey(cb), !down[opKey(cb)]); const t0 = simT, dark = new Map();
+      for (let i = 0; i < 2400; i++) { step(1 / 120); for (const k of neu) if (!dark.has(k) && colAt(k, simT) === null) dark.set(k, simT - t0); }
+      const ts = [...dark.values()];
+      if (ts.length < 20) out.push('only ' + ts.length + ' of ' + neu.length + ' neutral points (back through loads) went dark');
+      else { const spread = Math.max(...ts) - Math.min(...ts), kinds = new Set(ts.map(t => t.toFixed(2))).size;
+        if (spread < 0.3 || kinds < 10) out.push('the neutral went all at once: ' + kinds + ' different moments over ' + spread.toFixed(2) + ' s'); }
+      const sb = settledBad(); if (sb) out.push(sb);
+      return out;`));
+  });
+
   await check('Where each source reaches, on bars (Dallas, 25 Nov 2026, the seal-in preset): L2 back through X up to A and the seal-in; past A its colour at once; A back-feeds the open seal-in; D drains, then L2 comes back', async page => {
     await page.selectOption('#preset', 'seal'); await page.click('#tab-run');
     return page.evaluate(new Function(STEP + SETTLED + `

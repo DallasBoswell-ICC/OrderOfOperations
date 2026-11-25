@@ -32,6 +32,7 @@ function vLoads() {
     for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) if (ok[i] && ok[j]) L.push({ a: p._t[i], b: p._t[j], p }); }
   return L;
 }
+const vThrough = e => e.kind === 'part' && LOADT(e.part.t) && faultOf(e.part) !== 'open' && !BLOWN[e.part.id];   // (a load a source can pass through)
 // what every junction is to show now: Map junction -> { lab, c }
 function presenceWant() {
   const f = compNow(), srcs = vSources(), lab = new Map();
@@ -153,6 +154,8 @@ function presenceNow(t, causes = []) {
   const srcN = vSources().map(s => s.n);
   // when what was there goes: from where the change happened, along the wires and through closed switches
   const toff = new Map(), h = heap();
+  // (on through loads too: what had come through one, such as the neutral back through a light, goes the same way when its
+  // source goes (Dallas, 25 Nov 2026), rather than all at once)
   // (a switch that closed: from its end that stays as it was, through it, so what goes and what comes travel together;
   // one that opened: from both its ends)
   const cs = new Set(causes.filter(n => n !== undefined));
@@ -161,7 +164,7 @@ function presenceNow(t, causes = []) {
   // (as walk, stopping once every junction that changes has been reached: on a whole machine most of the wiring doesn't)
   let left = C.length; const fin = new Uint8Array(N);
   while (h.size() && left > 0) { const [tu, u] = h.pop(); if (fin[u] || tu > toff.get(u) + 1e-12) continue; fin[u] = 1; if (inC[u]) left--;
-    for (const i of NET.adj[u]) { const e = NET.edges[i]; if (!conducts(e)) continue; const w = e.a === u ? e.b : e.a, tw = tu + stepTime(e);
+    for (const i of NET.adj[u]) { const e = NET.edges[i]; if (!conducts(e) && !vThrough(e)) continue; const w = e.a === u ? e.b : e.a, tw = tu + stepTime(e);
       if (!toff.has(w) || tw < toff.get(w) - 1e-12) { toff.set(w, tw); h.push(tw, w); } } }
   // when what is to be there comes: from next to it, where it already is, as a front (never before what was there has
   // gone). First the source itself (carrying on in the colour it has where it comes from), then its colour as it settles
