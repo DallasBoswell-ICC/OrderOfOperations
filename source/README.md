@@ -18,7 +18,8 @@ src/js/               the program, one file per job, in the order they run:
   colour.js           colour mixing
   sim-core.js         simulation clock and event queue
   solve.js            which way current goes (circuit solve, one-way buttons)
-  engine.js           the current itself, junction by junction
+  engine.js           the current itself, junction by junction (which loads work, and when)
+  presence.js         what the wiring shows: where each source's voltage reaches (Dallas, 25 Nov 2026)
   render-parts.js     drawing buttons and coils
   editor-state.js     selection and undo
   render.js           drawing the panel

@@ -88,6 +88,7 @@ function startRun() {
   for (const [id, v] of NET.feedV) if (v === 1) setRec(id, SUPPLY_CUT ? null : EGG(), 0);
   phaseWays(); phasesNow(0);
   updateCoils(0);
+  VTL = new Map(); VCUR = new Map(); paintUntil = 0; presenceNow(0);
 }
 /* Long plain stretches of wire (no junctions or parts along them, only corners) carry the current faster in the
    middle. In a real panel a change reaches the far end of any wire almost at once, so the coil whose button was
@@ -436,7 +437,7 @@ function updateCoils(t) {
     // (a coil or solenoid pulls in at 85% of the voltage it's made for, and once in holds in down to 60% (Dallas, 23 Nov 2026))
     const pull = p.t === 'lamp' || p.t === 'xfm' || p.t === 'htr' || sh >= (coilOn[p.id] ? DROP_OUT : PULL_IN) * ratedShare(p) - 1e-9;   // (a light lights, a heater heats, and a transformer works, on whatever it gets)
     // (well over the voltage it's made for, it burns out after a few seconds: open, until Reset or Replace Part)
-    if (RATED(p.t) && cond && sh > BURN_OVER * ratedShare(p) + 1e-9) { if (p._ovT == null) { const t0 = p._ovT = t; schedule(t + BURN_TIME, () => { if (p._ovT === t0 && !BLOWN[p.id]) { BLOWN[p.id] = { t: evT }; delete p._ovT; updateCoils(evT); } }); } }
+    if (RATED(p.t) && cond && sh > BURN_OVER * ratedShare(p) + 1e-9) { if (p._ovT == null) { const t0 = p._ovT = t; schedule(t + BURN_TIME, () => { if (p._ovT === t0 && !BLOWN[p.id]) { BLOWN[p.id] = { t: evT }; delete p._ovT; updateCoils(evT); presenceNow(evT); } }); } }
     else delete p._ovT;
     if (cond && !pf && !COND[p.id] && pull && p.t === 'coil' && wouldCutOff(p, f)) cond = false;
     const want = cond && pull, wasC = !!COND[p.id];
@@ -558,6 +559,7 @@ function switched(sw, t) {
   phasesNow(t);
   updateCoils(t);
   refreshAllow(t);
+  presenceNow(t, sw.flatMap(k => [k._a, k._b]));
 }
 /* which colours each lane may carry, worked out again after a change. Lanes that can now carry a colour they could
    not before pick up what their junction already has. (A lane that loses a colour keeps carrying it until that

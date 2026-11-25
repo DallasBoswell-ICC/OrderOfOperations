@@ -38,6 +38,7 @@ MODULES = [
     "sim-core.js",       # simulation clock, event queue, per-point colour timelines
     "solve.js",          # which way current goes (circuit solve, one-way buttons)
     "engine.js",         # the current itself, junction by junction
+    "presence.js",       # where each source's voltage is: what the wiring shows
     "render-parts.js",   # drawing buttons and coils
     "editor-state.js",   # selection and undo
     "render.js",         # drawing the whole panel

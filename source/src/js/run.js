@@ -21,7 +21,7 @@ function frameBody(now) {
     // (at high speed a whole chain of changes can start and finish within one frame: whatever happened is painted)
     // (and once more as it settles, so whatever was moving is painted where it stopped, even when a fast clock went past
     // the end of the movement within one frame)
-    if (needPaint || eventsRun !== ran || busyQueue() || simT <= busyUntil + 0.6 || was <= busyUntil + 0.6) { paint(); needPaint = false; }
+    if (needPaint || eventsRun !== ran || busyQueue() || simT <= busyUntil + 0.6 || was <= busyUntil + 0.6 || simT <= paintUntil + 0.6 || was <= paintUntil + 0.6) { paint(); needPaint = false; }
     else if (anyTiming()) paintTimers();   // (a timer counting down: only its readout changes)
   }
 }
@@ -74,7 +74,7 @@ function paintView(V) {
     }
     if (isSrc(p) || isPh(p) || isGnd(p)) { if (v.src) for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } continue; }
     // (a load across the phases or a phase and the neutral: each lead the colour of the phase at its end)
-    for (const S of ['A', 'B']) { const n = S === 'A' ? p._a : p._b, k = LOADT(p.t) && PARR.size ? phaseOfAt(n, simT) : 0; paintLead(v.lead[S], k ? [{ t0: -1e9, col: (PARR.get(n) || PDARK.get(n) || {}).c || phColK(k), from: 'term' }] : p._lead && p._lead[S]); }
+    for (const S of ['A', 'B']) { const n = S === 'A' ? p._a : p._b, k = LOADT(p.t) && PARR.size ? phaseOfAt(n, simT) : 0; if (vOn()) { paintLead(v.lead[S], vLead(p, n)); continue; } paintLead(v.lead[S], k ? [{ t0: -1e9, col: (PARR.get(n) || PDARK.get(n) || {}).c || phColK(k), from: 'term' }] : p._lead && p._lead[S]); }
     let k;
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
     else if (p.t === 'lsw') setLimit(v, p, lswPos(p), lswClosed(p));

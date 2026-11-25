@@ -36,6 +36,7 @@ function tlCol(a, t) { for (let i = a.length - 1; i >= 0; i--) if (a[i][0] <= t 
 const mixCache = new Map();
 let PTL = new Map();   // (three-phase power: each junction a phase has reached, with when and in which colour: see phasesNow)
 function colAt(n, t) {
+  if (VTL.size) { const V = VTL.get(n); return V ? tlCol(V, t) : null; }   // (where each source's voltage is: see presence.js)
   if (PTL.size) { const P = PTL.get(n); if (P) { const c = tlCol(P, t); if (c) return c; } }
   const L = ltl.get(n); if (!L) return tlCol(tl[n], t);
   const a = tlCol(L[0], t), b = tlCol(L[1], t);

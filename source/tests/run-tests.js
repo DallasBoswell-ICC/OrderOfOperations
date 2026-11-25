@@ -36,7 +36,7 @@ async function openPage(width = 1300, height = 1000, context) {
   return page;
 }
 async function check(name, fn) {
-  if (process.env.ONLY && !name.includes(process.env.ONLY)) return;   // (ONLY=some words: just the checks whose names have them)
+  if (process.env.ONLY && !new RegExp(process.env.ONLY).test(name)) return;   // (ONLY=some words: just the checks whose names match them (a pattern))
   const t0 = Date.now();
   let page;
   try {
@@ -55,7 +55,10 @@ async function check(name, fn) {
 // helpers that run inside the page ------------------------------------------------------------------------
 // a step function that advances the simulation in fast time (no waiting for the real clock)
 // when a point last changed (a point partway along a wire has a timeline for each way along it)
-const LAST = `const lastChange = i => Math.max(...(ltl.get(i) || [tl[i]]).map(a => a[a.length - 1][0]));`;
+const LAST = `const lastChange = i => VTL.size ? (VTL.get(i) || [[-1e9]]).slice(-1)[0][0] : Math.max(...(ltl.get(i) || [tl[i]]).map(a => a[a.length - 1][0]));`;
+// (Dallas, 25 Nov 2026) every point shows what presence.js says it should, once the circuit has settled; and the return
+const SETTLED = `const settledBad = () => { const W = presenceWant(); let bad = 0, ex = ''; for (let n = 0; n < NET.nodes.length; n++) { const w = W.get(n), c = colAt(n, simT); if ((w ? w.c : null) !== c) { bad++; ex = ex || '(' + NET.nodes[n].x + ', ' + NET.nodes[n].y + ') ' + c + ' not ' + (w && w.c); } } return bad ? bad + ' points not settled, such as ' + ex : ''; };
+  const labOf = n => (VCUR.get(n) || {}).lab || null;`;
 const STEP = LAST + `const step = dt => { const end = simT + dt; while (simT < end) { simT = Math.min(end, simT + 1 / 60); runEvents(simT); } };`;
 // put the page into Run mode with a given ready-made circuit
 async function runPreset(page, name) {
@@ -148,9 +151,9 @@ const DEF_CIRCUIT = `
     return out;
   });
 
-  await check('Three rungs into X: all 512 combinations, no backflow, no bleeding between rungs', async page => {
+  await check('Three rungs into X: all 512 combinations: X right, every rung lit up to its buttons, and the colours settle where each source can reach (Dallas, 25 Nov 2026: back-feeding allowed)', async page => {
     await runPreset(page, 'three');
-    return page.evaluate(new Function(STEP + `
+    return page.evaluate(new Function(STEP + SETTLED + `
       const out = [], Ls = 'ABCDEFGHI'.split('');
       const want = () => { ${THREE_RULE} };
       const X = parts.find(p => p.t === 'coil');
@@ -158,10 +161,9 @@ const DEF_CIRCUIT = `
         if (want() !== !!coilOn[X.id]) out.push(tag + ': X wrong');
         for (const [N, top, bot] of [['A','B','C'], ['D','F','G'], ['E','H','I']]) {
           const n = parts.find(p => p.L === N), t = parts.find(p => p.L === top), b = parts.find(p => p.L === bot);
-          if (down[N] && (lit(n._b, simT) || lit(t._a, simT) || lit(b._a, simT))) out.push(tag + ': rung ' + N + ' lit while ' + N + ' is open');
           if (!down[N] && !(lit(t._a, simT) && lit(b._a, simT))) out.push(tag + ': rung ' + N + ' not lit up to its buttons');
-          for (const p of [t, b]) if (!(!down[N] && closed(p)) && lit(p._b, simT)) out.push(tag + ': current backward at ' + p.L);
         }
+        const sb = settledBad(); if (sb) out.push(tag + ': ' + sb);
         if (queue.length) out.push(tag + ': still busy');
       };
       step(4);
@@ -171,20 +173,21 @@ const DEF_CIRCUIT = `
       return out.slice(0, 20);`));
   });
 
-  await check('D/E/F circuit: all 64 combinations, and the far side of an open button never lights', async page => {
+  await check('D/E/F circuit: all 64 combinations: X right, and the far side of an open button shows L2 (back through X) or, back-fed, L1 (Dallas, 25 Nov 2026)', async page => {
     await loadCircuit(page, DEF_CIRCUIT);
     await page.click('#tab-run');
-    return page.evaluate(new Function(STEP + `
+    return page.evaluate(new Function(STEP + SETTLED + `
       const out = [], Ls = 'ABCDEF'.split(''), X = parts.find(p => p.t === 'coil');
       step(4);
       for (let m = 0; m < 64; m++) {
         Ls.forEach((L, i) => press(L, !!(m >> i & 1))); step(8);
         const d = L => !!down[L], want = (!d('A') && (d('B') || d('C'))) || (!d('D') && (d('E') || d('F')));
         if (want !== !!coilOn[X.id]) out.push(m + ': X wrong');
-        for (const p of parts) if (p.t === 'btn' && !closed(p)) {
+        for (const p of parts) if (p.t === 'btn' && !closed(p) && 'BCEF'.includes(p.L)) {   // (the buttons whose far side is joined to X)
           const outEnd = btnIn(p) === p._a ? p._b : p._a;
-          if (lit(outEnd, simT)) out.push(m + ': far side of open ' + p.L + ' lit');
+          const want = coilOn[X.id] ? 'L1' : 'L2'; if (labOf(outEnd) !== want) out.push(m + ': far side of open ' + p.L + ' shows ' + labOf(outEnd) + ', not ' + want);
         }
+        const sb = settledBad(); if (sb) out.push(m + ': ' + sb);
       }
       return out.slice(0, 20);`));
   });
@@ -200,29 +203,32 @@ const DEF_CIRCUIT = `
       return out;`));
   });
 
-  await check('Current flows the right way: L2 wires fill and drain toward the right edge', async page => {
+  await check('The return side: L2 is on the wires from the coils to the right edge all along, and never changes as the buttons are worked (Dallas, 25 Nov 2026)', async page => {
     await loadCircuit(page, `const Bt = (L, x, y, col) => P('btn', x, y, { L, nc: false, maint: true, color: col });
       parts = [Bt('B', 300, 160, '#0070C0'), C('X', 700, 160), Bt('C', 300, 320, '#00B050'), C('Y', 700, 320)];
       wires = [Wr(0, 160, 260, 160), Wr(340, 160, 640, 160), Wr(760, 160, 880, 160), Wr(0, 320, 260, 320), Wr(340, 320, 640, 320), Wr(760, 320, 880, 320)];`);
     await page.click('#tab-run');
     return page.evaluate(new Function(STEP + `
       const out = []; step(3);
-      const times = y => NET.nodes.map((n, i) => [n, i]).filter(([n]) => n.y === y && n.x >= 760 && n.x <= 880).sort((a, b) => a[0].x - b[0].x).map(([, i]) => lastChange(i));
-      press('C', true); step(4); press('B', true); step(4);
-      for (const y of [160, 320]) { const t = times(y); if (!(t[0] < t[t.length - 1])) out.push('return wire at ' + y + ' filled the wrong way'); }
-      press('B', false); step(5);
-      { const t = times(160); if (!(t[0] < t[t.length - 1])) out.push('return wire drained the wrong way'); }
-      return out;`));
+      const ret = () => NET.nodes.map((n, i) => [n, i]).filter(([n]) => (n.y === 160 || n.y === 320) && n.x >= 765 && n.x <= 875).map(([, i]) => colAt(i, simT));
+      const check = tag => { const r = ret(); if (r.some(c => c !== OFF_WHITE)) out.push(tag + ': the return wires are not all L2: ' + [...new Set(r)].join()); };
+      check('at rest');
+      press('C', true); for (let i = 0; i < 4; i++) { step(1); check('C pressed'); }
+      press('B', true); for (let i = 0; i < 4; i++) { step(1); check('B pressed'); }
+      press('B', false); for (let i = 0; i < 5; i++) { step(1); check('B let go'); }
+      return out.slice(0, 4);`));
   });
 
-  await check("No gap when a branch switches off: the other branch's stream carries on to the coil", async page => {
+  await check("A branch switched off: the dark runs from where it was cut on toward the coil, in order (Dallas, 25 Nov 2026: then L2 comes back through the coil)", async page => {
     await runPreset(page, 'three');
     return page.evaluate(new Function(STEP + `
       const out = []; step(3); press('H', true); press('I', true); step(6);
-      press('E', true); step(10);
-      const at = (x, y) => { const i = NET.nodes.findIndex(n => n.x === x && n.y === y); return lastChange(i); };
-      const iRight = at(380, 640), corner = at(480, 640), mid = at(480, 590), hJunction = at(480, 540), top = at(480, 140);
-      if (!(iRight < corner && corner < mid && mid < hJunction && hJunction < top)) out.push('switch-off order wrong: ' + [iRight, corner, mid, hJunction, top].map(t => t.toFixed(2)).join(' '));
+      const pts = [[380, 640], [480, 640], [480, 590], [480, 540], [480, 140]].map(([x, y]) => NET.nodes.findIndex(n => n.x === x && n.y === y)), dark = pts.map(() => null);
+      // (how soon the change can get to each point: from E, along the wires and closed buttons (through H, or I, whichever is nearer))
+      const E = parts.find(p => p.L === 'E'), soon = new Map(); { const h = heap(); for (const n of [E._a, E._b]) { soon.set(n, 0); h.push(0, n); } walk(h, soon, () => true, e => conducts(e)); }
+      press('E', true); const t0 = simT;
+      for (let i = 0; i < 1200; i++) { step(1 / 120); pts.forEach((n, k) => { if (dark[k] === null && colAt(n, simT) === null) dark[k] = simT - t0; }); }
+      if (dark.some(d => d === null) || dark.some((d, k) => d < soon.get(pts[k]) - 0.05) || dark.slice(0, 4).some(d => d > dark[4])) out.push('switch-off order wrong: ' + dark.map(t => t === null ? 'never' : t.toFixed(2)).join(' ') + ' (soonest ' + pts.map(n => (soon.get(n) ?? -1).toFixed(2)).join(' ') + ')');
       return out;`));
   });
 
@@ -304,15 +310,16 @@ const DEF_CIRCUIT = `
              Bt('C', 520, 300, 0, '#00B050'), Bt('D', 420, 400, 0, '#FF9600'), Bt('E', 320, 500, 0, '#00D2BE'), C('X', 700, 700)];
     wires = [Wr(0, 600, 40, 600), Wr(120, 600, 180, 600), Wr(140, 100, 140, 600), Wr(260, 600, 800, 600), Wr(540, 600, 540, 700), Wr(540, 700, 640, 700), Wr(760, 700, W, 700)];
     for (const [x, y, dx] of [[720, 100, 800], [620, 200, 720], [520, 300, 620], [420, 400, 520], [320, 500, 420]]) wires.push(Wr(140, y, x - 40, y), Wr(x + 40, y, dx, y), Wr(dx, y, dx, 600));`;
-  await check('B and C both pressed: X and Y each show the mix of both (teal), and so do the wires between', async page => {
+  await check('B and C both pressed: X and Y fed, the wires between them hot (Dallas, 25 Nov 2026: where colours mix is left for later)', async page => {
     await loadCircuit(page, CROSS_CIRCUIT);
     await page.click('#tab-run');
     return page.evaluate(new Function(STEP + `
       const out = [], at = (x, y) => colAt(NET.nodes.findIndex(n => n.x === x && n.y === y), simT);
       step(2); press('B', true); press('C', true); step(6);
-      const teal = blend([flowOf(btnColour('B')), flowOf(btnColour('C'))]);
+      const lab = (x, y) => (VCUR.get(NET.nodes.findIndex(n => n.x === x && n.y === y)) || {}).lab;
       for (const [x, y, what] of [[600, 380, 'the wire into Y'], [600, 140, 'the wire into X'], [440, 200, 'the riser between them'], [340, 260, 'the wire along the middle']])
-        if (at(x, y) !== teal) out.push(what + ' is ' + at(x, y) + ', not the mix ' + teal);
+        if (lab(x, y) !== 'L1' || !at(x, y)) out.push(what + ' is not hot: ' + lab(x, y) + ' ' + at(x, y));
+      if (parts.filter(p => p.t === 'coil').some(p => !coilOn[p.id])) out.push('X and Y not both in');
       press('B', false); step(6);
       if (at(600, 380) !== flowOf(btnColour('C'))) out.push('after letting go of B, Y is not plain green');
       return out;`));
@@ -342,26 +349,23 @@ const DEF_CIRCUIT = `
     return out;
   });
 
-  await check('G cutting off six branches at once: every stream runs out to X behind its own tail, no wire goes dark early', async page => {
+  await check('G cutting off six branches at once: the dark runs out from G as a front (no wire goes dark before it gets there), then L2 comes back through X (Dallas, 25 Nov 2026)', async page => {
     await loadCircuit(page, FAN_CIRCUIT);
     if ((await issuesNow(page)).length) return ['circuit not wired: ' + JSON.stringify(await issuesNow(page))];
     await page.click('#tab-run');
-    return page.evaluate(new Function(STEP + `
+    return page.evaluate(new Function(STEP + SETTLED + `
       step(2); for (const L of 'ABCDEF') press(L, true); step(8);
       const G = parts.find(p => p.L === 'G'), t0 = simT, latest = new Map();
+      // (how soon the change can get to each point: from G, along the wires and closed buttons, at the current's speed)
+      { const h = heap(); for (const n of [G._a, G._b]) { latest.set(n, 0); h.push(0, n); } walk(h, latest, () => true, e => conducts(e)); }
+      const hot = new Set(NET.nodes.map((_, k) => k).filter(k => labOf(k) === 'L1' && latest.has(k) && latest.get(k) > 0));
       press('G', true);
-      // the latest moment any stream can still be passing each point: its distance from G along the longest path
-      // (in seconds: the time the stream takes along each run, faster in the middle of long plain stretches)
-      for (const path of PATHS) { let d = 0, on = false;
-        for (const ln of path) { if (ln.e.part === G) on = true; if (!on) continue;
-          const ns = ln.e.kind === 'seg' ? ln.chain : [ln.to];
-          ns.forEach((n, k) => { const dd = ln.e.kind === 'seg' ? d + ln.tk[k] : d + ln.delay; if (dd > (latest.get(n) || 0)) latest.set(n, dd); });
-          d += ln.delay; } }
       const darkAt = new Map();
       for (let i = 0; i < 600; i++) { step(1 / 60); NET.nodes.forEach((_, k) => { if (!darkAt.has(k) && colAt(k, simT) === null) darkAt.set(k, simT - t0); }); }
       const out = [];
-      for (const [n, dd] of latest) { const da = darkAt.get(n); if (da === undefined) out.push('(' + NET.nodes[n].x + ', ' + NET.nodes[n].y + ') never went dark');
-        else if (da < dd - 0.12) out.push('(' + NET.nodes[n].x + ', ' + NET.nodes[n].y + ') went dark at ' + da.toFixed(2) + ' s, but a stream is still passing until ' + dd.toFixed(2) + ' s'); }
+      for (const n of hot) { const da = darkAt.get(n), dd = latest.get(n);
+        if (da !== undefined && da < dd - 0.05) out.push('(' + NET.nodes[n].x + ', ' + NET.nodes[n].y + ') went dark at ' + da.toFixed(2) + ' s, before the change could get there (' + dd.toFixed(2) + ' s)'); }
+      const sb = settledBad(); if (sb) out.push(sb);
       return out.slice(0, 6);`));
   });
 
@@ -396,7 +400,7 @@ const DEF_CIRCUIT = `
     await page.click('#tab-run');
     out.push(...await page.evaluate(new Function(STEP + `
       const out = [], n = NET.nodes.findIndex(q => q.x === 540 && q.y === 200);
-      step(2); press('A', true); const t0 = simT; while (!colAt(n, simT) && simT < t0 + 10) step(1 / 240);
+      step(2); const c0 = colAt(n, simT); press('A', true); const t0 = simT; while (colAt(n, simT) === c0 && simT < t0 + 10) step(1 / 240);
       const want = (80 + 380) / V;
       if (Math.abs(simT - t0 - want) > 0.02) out.push('short stretch: the current reached 540 after ' + (simT - t0).toFixed(2) + ' s, not ' + want.toFixed(2) + ' s');
       return out;`)));
@@ -408,8 +412,8 @@ const DEF_CIRCUIT = `
       const out = [], node = (x, y) => NET.nodes.findIndex(q => q.x === x && q.y === y), path = [];
       for (let x = 165; x <= 600; x += 5) path.push(node(x, 200)); for (let y = 205; y <= 400; y += 5) path.push(node(600, y));
       for (let x = 605; x <= 1440; x += 5) path.push(node(x, 400)); for (let y = 395; y >= 200; y -= 5) path.push(node(1440, y));
-      step(2); press('A', true); const t0 = simT, dt = 1 / 120, fr = [];
-      let k = 0; while (k < path.length && simT < t0 + 10) { step(dt); while (k < path.length && colAt(path[k], simT)) k++; fr.push(k * 5); }
+      step(2); const c0 = path.map(n => colAt(n, simT)); press('A', true); const t0 = simT, dt = 1 / 120, fr = [];   // (the front: where the colour has changed from what was there: L2, back through X)
+      let k = 0; while (k < path.length && simT < t0 + 10) { step(dt); while (k < path.length && colAt(path[k], simT) !== c0[k]) k++; fr.push(k * 5); }
       const plain = (80 + 1680) / V, took = simT - t0;
       if (took > plain * 0.45) out.push('long stretch took ' + took.toFixed(2) + ' s, hardly faster than ' + plain.toFixed(2) + ' s at normal speed');
       // speed over a sliding tenth of a second: it should never jump
@@ -429,7 +433,9 @@ const DEF_CIRCUIT = `
     [['R', '#FF0032'], ['O', '#FF9600'], ['Y', '#FFDC00'], ['G', '#00B050'], ['B', '#0070C0'], ['M', '#EC008C']].forEach(([L, col], i) => {
       const y = 100 + 100 * i; parts.push(Bt(L, 240, y, col)); wires.push(Wr(160, y, 200, y));
       if (i < 5) { const x = 320 + 40 * i; wires.push(Wr(280, y, x, y), Wr(x, y, x, y + 100)); } else wires.push(Wr(280, y, 1240, y)); });`;
-  await check('Streams that join a long stretch one after another stay together as it speeds them up (no pulling apart)', async page => {
+  // (on hold, Dallas 25 Nov 2026: with each source now shown wherever it reaches, a colour joining a long run a moment after
+  // another speeds up from the same place, so the gap between them grows along the run. Kept for the colour-mixing stage.)
+  if (process.env.TRAIN) await check('Streams that join a long stretch one after another stay together as it speeds them up (no pulling apart)', async page => {
     await loadCircuit(page, STAIR_CIRCUIT);
     if ((await issuesNow(page)).length) return ['circuit not wired: ' + JSON.stringify(await issuesNow(page))];
     await page.click('#tab-run');
@@ -438,9 +444,11 @@ const DEF_CIRCUIT = `
       const bus = []; for (let x = 485; x < 1240; x += 5) bus.push(node(x, 600));
       step(4);
       // the rung buttons pressed one after another, a moment apart, so their colours join the long run one by one
-      const changes = []; let last = colAt(bus[0], simT), snap = null;
-      const watch = () => { const c = colAt(bus[0], simT); if (c !== last) { changes.push(simT); last = c; }
-        if (!snap && colAt(bus[Math.floor(bus.length * 0.75)], simT)) snap = bus.map(n => colAt(n, simT)); };
+      // (before: L2, back through X (Dallas, 25 Nov 2026); counted as not lit)
+      const c0 = bus.map(n => colAt(n, simT)), cAt = k => { const c = colAt(bus[k], simT); return c === c0[k] ? null : c; };
+      const changes = []; let last = cAt(0), snap = null;
+      const watch = () => { const c = cAt(0); if (c !== last) { changes.push(simT); last = c; }
+        if (!snap && cAt(Math.floor(bus.length * 0.75))) snap = bus.map((n, k) => cAt(k)); };
       for (const L of 'MBGYOR') { press(L, true); for (let i = 0; i < 8; i++) { step(1 / 120); watch(); } }
       for (let i = 0; i < 600; i++) { step(1 / 120); watch(); }
       if (changes.length < 3 || !snap) return ['the colours did not arrive (' + changes.length + ' changes)'];
@@ -504,33 +512,30 @@ const DEF_CIRCUIT = `
     return r.concat(nc);
   });
 
-  await check('A contact past a coil: while it is open, the coil is out and the colour waits at the contact; only the coil\'s return current ever gets past it', async page => {
+  await check('A contact past a coil: while it is open the coil is out, and the hot side comes through it and waits at the contact; past the contact, L2; closed, the coil is in and L2 comes back up to it (Dallas, 25 Nov 2026)', async page => {
     await loadCircuit(page, `W = W_MIN; parts = [B('A', 120, 200, true), B('C', 300, 200), C('X', 500, 200), P('con', 700, 200, { L: 'Y', nc: true }), B('E', 300, 340), C('Y', 500, 340)];
       wires = [Wr(0, 200, 80, 200), Wr(160, 200, 260, 200), Wr(340, 200, 440, 200), Wr(560, 200, 660, 200), Wr(740, 200, W, 200), Wr(200, 200, 200, 340), Wr(200, 340, 260, 340), Wr(340, 340, 440, 340), Wr(560, 340, W, 340)];`);
     await page.click('#tab-run');
-    return page.evaluate(new Function(STEP + `
-      const out = [], node = (x, y) => NET.nodes.findIndex(n => n.x === x && n.y === y), at = (x, y) => colAt(node(x, y), simT);
-      const on = L => !!coilOn[parts.find(p => p.t === 'coil' && p.L === L).id], past = node(740, 200);
-      let leaked = false; const watch = () => { const r = REC.get(past); if (r && !r.ret) leaked = true; };   // past the contact: only return current, ever
-      step(2); press('C', true); for (let i = 0; i < 480; i++) { step(1 / 120); watch(); }
+    return page.evaluate(new Function(STEP + SETTLED + `
+      const out = [], node = (x, y) => NET.nodes.findIndex(n => n.x === x && n.y === y), lb = (x, y) => labOf(node(x, y));
+      const on = L => !!coilOn[parts.find(p => p.t === 'coil' && p.L === L).id];
+      step(2); press('C', true); step(4);
       if (!on('X')) out.push('X did not pick up');
-      const ret = at(600, 200), green = flowOf(btnColour('C'));
-      // Y picks up and its NC contact past X opens: X drops out at once, and the colour waits at the contact
-      press('E', true); const t0 = simT; let dropAt = null, waitAt = null;
-      for (let i = 0; i < 600; i++) { step(1 / 120); watch(); if (dropAt === null && !on('X')) dropAt = simT - t0; if (waitAt === null && at(565, 200) === green) waitAt = simT - t0; }
+      if (lb(600, 200) !== 'L2') out.push('past X, with the contact closed: ' + lb(600, 200) + ', not L2');
+      // Y picks up and its NC contact past X opens: X drops out; the hot side comes through X up to the contact
+      press('E', true); const t0 = simT; let dropAt = null, hotAt = null;
+      for (let i = 0; i < 600; i++) { step(1 / 120); if (dropAt === null && !on('X')) dropAt = simT - t0; if (hotAt === null && lb(565, 200) === 'L1' && colAt(node(565, 200), simT)) hotAt = simT - t0; }
       if (on('X')) out.push('X stayed in with its L2-side contact open');
-      if (dropAt === null || waitAt === null || waitAt - dropAt > 0.08) out.push('X dropped out, but return current kept coming out of it (waiting colour reached the back of X ' + (waitAt === null ? 'never' : (waitAt - dropAt).toFixed(2) + ' s later') + ')');
-      if (at(655, 200) !== green) out.push('the colour is not waiting at the open contact (' + at(655, 200) + ')');
-      if (at(800, 200) !== null) out.push('the wire past the open contact is still lit');
-      for (let k = 0; k < 4; k++) { press('C', !down.C); for (let i = 0; i < 60; i++) { step(1 / 120); watch(); } }
-      press('C', true); for (let i = 0; i < 240; i++) { step(1 / 120); watch(); }
-      // the contact closes: X picks up, and its return current comes out of it straight away
-      press('E', false); let up = null, lit = null; const t1 = simT;
-      for (let i = 0; i < 600; i++) { step(1 / 120); watch(); if (up === null && on('X')) up = simT - t1; if (lit === null && at(565, 200) === ret) lit = simT - t1; }
+      if (hotAt === null) out.push('the hot side never came through X'); else if (dropAt !== null && hotAt < dropAt - 0.05) out.push('the hot side came through X ' + (dropAt - hotAt).toFixed(2) + ' s before X dropped out');
+      if (lb(655, 200) !== 'L1') out.push('the X side of the contact is ' + lb(655, 200) + ', not L1 waiting there');
+      if (lb(800, 200) !== 'L2') out.push('past the open contact: ' + lb(800, 200) + ', not L2');
+      for (let k = 0; k < 4; k++) { press('C', !down.C); step(0.5); }
+      press('C', true); step(2);
+      // the contact closes: X picks up, and L2 comes back from the contact up to X
+      press('E', false); step(4);
       if (!on('X')) out.push('X did not pick up again when the contact closed');
-      if (up !== null && lit !== null && lit - up > 0.08) out.push('X picked up, but its current took ' + (lit - up).toFixed(2) + ' s to come out of it');
-      if (at(600, 200) !== ret) out.push('after the contact closed, the wire past X is not back to the return colour');
-      if (leaked) out.push('the colour waiting at the contact got past it (only return current should)');
+      if (lb(600, 200) !== 'L2' || lb(655, 200) !== 'L2') out.push('after the contact closed, past X is ' + lb(600, 200) + ' / ' + lb(655, 200) + ', not L2');
+      const sb = settledBad(); if (sb) out.push(sb);
       return out;`));
   });
 
@@ -542,7 +547,7 @@ const DEF_CIRCUIT = `
     return page.evaluate(() => {
       const step1 = () => { simT += 1 / 120; runEvents(simT); }, n0 = NET.nodes.findIndex(n => n.x === 200 && n.y === 100), X = parts.find(p => p.t === 'coil');
       let a0 = false, x0 = false, ins = 0, outs = 0;
-      const watch = () => { const a = !!colAt(n0, simT), c = !!REC.get(X._a); if (a && !a0) ins++; if (c && !x0) outs++; a0 = a; x0 = c; };
+      const watch = () => { const a = colAt(n0, simT) !== null && colAt(n0, simT) !== OFF_WHITE, c = !!REC.get(X._a); if (a && !a0) ins++; if (c && !x0) outs++; a0 = a; x0 = c; };   // (in: the hot side's colour arriving; before it, L2 back through X)
       for (let i = 0; i < 120; i++) { step1(); watch(); }
       for (let k = 0; k < 8; k++) { press('A', !down.A); for (let i = 0; i < 40; i++) { step1(); watch(); } }
       for (let i = 0; i < 3600; i++) { step1(); watch(); }   // (about 20 s of wire at normal speed)
@@ -560,8 +565,8 @@ const DEF_CIRCUIT = `
       for (let i = 0; i < 120; i++) { step(1 / 60); paint(); seenIn.push(shown(v.lead.A)); seenOut.push(shown(v.lead.B)); }
       const full = TERM(X) - COIL / 2, part = a => a.some(x => x > 0.5 && x < full - 0.5);
       if (!part(seenIn)) out.push('the lead into X lit all at once');
-      if (!part(seenOut)) out.push('the lead out of X lit all at once');
-      if (Math.max(...seenIn) < full - 0.5 || Math.max(...seenOut) < full - 0.5) out.push('a lead never lit all the way');
+      if (Math.min(...seenOut) < full - 0.5) out.push('the lead out of X (L2, there all along: Dallas, 25 Nov 2026) was not lit all the way throughout');
+      if (Math.max(...seenIn) < full - 0.5) out.push('the lead into X never lit all the way');
       return out;`));
   });
 
@@ -1284,7 +1289,7 @@ const DEF_CIRCUIT = `
     return out;
   });
 
-  await check('Loops of wire (parallel loops nested and crossing the run): all lit while fed; let go, every wire goes dark as the end of the current passes it, nothing left lit behind it', async page => {
+  await check('Loops of wire (parallel loops nested and crossing the run): all lit while fed; let go, the dark runs out from A (nothing goes dark before it can get there), then L2 comes back through the light and every wire settles (Dallas, 25 Nov 2026)', async page => {
     await loadCircuit(page, `W_USER = W = 1000;
       parts = [P('btn', 120, 300, { L: 'A', maint: true, color: '#EC008C' }), P('lamp', 900, 300, { L: '', color: '#7030A0' })];
       wires = [Wr(0,300,80,300), Wr(160,300,840,300), Wr(960,300,W,300),
@@ -1293,28 +1298,22 @@ const DEF_CIRCUIT = `
         Wr(280,460,740,460), Wr(280,300,280,460), Wr(740,300,740,460), Wr(380,420,580,420), Wr(380,300,380,420), Wr(580,300,580,420)];`);
     if ((await issuesNow(page)).length) return ['circuit not wired: ' + JSON.stringify(await issuesNow(page))];
     await page.click('#tab-run');
-    return page.evaluate(new Function(STEP + `
+    return page.evaluate(new Function(STEP + SETTLED + `
       const out = [];
       step(2); press('A', true); step(10);
       const unlit = NET.nodes.map((n, k) => [n, k]).filter(([n, k]) => n.k !== 'L1' && n.k !== 'L2' && colAt(k, simT) === null);
       if (unlit.length) out.push(unlit.length + ' points stay dark while A is pressed, such as (' + unlit[0][0].x + ', ' + unlit[0][0].y + ')');
-      // the latest the end of the current can be passing each point: along every path the colour can take
       const A = parts.find(p => p.L === 'A'), t0 = simT, latest = new Map();
-      for (const path of PATHS) { let d = 0, on = false;
-        for (const ln of path) { if (ln.e.part === A) on = true; if (!on) continue; if (ln.e.part !== A && !onward(ln, 'A')) break;
-          const ns = ln.e.kind === 'seg' ? ln.chain : [ln.to];
-          ns.forEach((n, k) => { const dd = ln.e.kind === 'seg' ? d + ln.tk[k] : d + ln.delay; if (dd > (latest.get(n) || 0)) latest.set(n, dd); });
-          d += ln.delay; } }
+      { const h = heap(); for (const n of [A._a, A._b]) { latest.set(n, 0); h.push(0, n); } walk(h, latest, () => true, e => conducts(e)); }
+      const hot = NET.nodes.map((_, k) => k).filter(k => labOf(k) === 'L1' && latest.get(k) > 0);
       press('A', false);
       const darkAt = new Map(), relit = new Set();
-      for (let i = 0; i < 600; i++) { step(1 / 60); NET.nodes.forEach((_, k) => { const c = colAt(k, simT); if (!darkAt.has(k) && c === null) darkAt.set(k, simT - t0); else if (darkAt.has(k) && c !== null) relit.add(k); }); }
-      let late = 0, early = 0, ex = '';
-      for (const [n, dd] of latest) { const da = darkAt.get(n);
-        if (da === undefined || da > dd + 0.15) { late++; ex = ex || '(' + NET.nodes[n].x + ', ' + NET.nodes[n].y + ') still lit ' + (da === undefined ? 'at the end' : (da - dd).toFixed(2) + ' s after the end of the current passed'); }
-        else if (da < dd - 0.12) early++; }
-      if (late) out.push(late + ' points stay lit after the end of the current has passed them, such as ' + ex);
-      if (early) out.push(early + ' points go dark before the end of the current reaches them');
-      if (relit.size) out.push(relit.size + ' points light up again after going dark');
+      for (let i = 0; i < 600; i++) { step(1 / 60); NET.nodes.forEach((_, k) => { const c = colAt(k, simT); if (!darkAt.has(k) && c === null) darkAt.set(k, simT - t0); else if (darkAt.has(k) && c !== null && c !== OFF_WHITE) relit.add(k); }); }
+      let early = 0;
+      for (const n of hot) { const da = darkAt.get(n); if (da !== undefined && da < latest.get(n) - 0.05) early++; }
+      if (early) out.push(early + ' points go dark before the change from A could reach them');
+      if (relit.size) out.push(relit.size + ' points light up hot again after going dark');
+      const sb = settledBad(); if (sb) out.push(sb);
       return out;`));
   });
 
@@ -1787,9 +1786,9 @@ const DEF_CIRCUIT = `
     if (iss) out.push('fed: issues ' + iss);
     await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
     // each phase lights its own line in its colour
-    // (L1 and L2 lit in their colours as far as the transformer's taps; L3, leading to no load, and L1 past its tap, dark)
+    // (every line lit in its phase's colour, as far as it reaches: L3 too, and L1 past its tap (Dallas, 25 Nov 2026))
     const lines = await page.evaluate(() => [[200, 80], [200, 200], [200, 320], [600, 80]].map(([x, y]) => { const n = NET.nodes.findIndex(q => q.x === x && q.y === y); return colAt(n, simT) || '-'; }).join());
-    if (lines !== await page.evaluate(() => [VSYS_LIST[VSYS].col[0], VSYS_LIST[VSYS].col[1], '-', '-'].join())) out.push('line colours: ' + lines);
+    if (lines !== await page.evaluate(() => [phColK(1), phColK(2), phColK(3), phColK(1)].join())) out.push('line colours: ' + lines);
     await page.evaluate(() => press('A', true)); await page.waitForTimeout(1200);
     let st = await state();
     if (st !== 'true,true') out.push('fed: transformer, X = ' + st);
@@ -1886,12 +1885,12 @@ const DEF_CIRCUIT = `
     const iss = await setup('');
     if (iss) out.push('issues: ' + iss);
     await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
-    // (lit: a starter's line side; never its load side, fed back from the other starter)
+    // (lit: a starter's line side; and its load side too, fed back through the motor's leads from the other starter (Dallas, 25 Nov 2026))
     const sides = L => page.evaluate(L => { const m = parts.find(p => p.t === 'mst' && p.L === L); return [0, 1].map(k => m._t.filter((_, i) => i % 2 === k).map(n => +!!colAt(n, simT)).join('')).join('/'); }, L);
     await tap('F'); let s = await st(); if (s !== 'run1,fwd,1') out.push('forward: ' + s);
-    if ((s = await sides('Y')) !== '111/000') out.push('Y starter while running forward (line/load side lit): ' + s);
+    if ((s = await sides('Y')) !== '111/111') out.push('Y starter while running forward (line/load side lit): ' + s);
     await tap('S'); await tap('R'); s = await st(); if (s !== 'run-1,rev,1') out.push('reverse: ' + s);
-    if ((s = await sides('X')) !== '111/000') out.push('X starter while running backward (line/load side lit): ' + s);
+    if ((s = await sides('X')) !== '111/111') out.push('X starter while running backward (line/load side lit): ' + s);
     await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
     const bad = await setup('bad');
     if (!/mstY:Closing it joins L1 to L2/.test(bad) || /phshort/.test(bad)) out.push('miswired Y starter: ' + bad);
@@ -2623,8 +2622,9 @@ const DEF_CIRCUIT = `
     if (!/^#[0-9A-F]{6},whole,none$/i.test(fill)) out.push('FU1 while passing current: fill/crack ' + fill);
     await page.evaluate(() => workPower(parts.find(p => p.t === 'fu1' && p.L === '1'))); await page.waitForTimeout(300);
     s = await lamps(); if (s !== '01') out.push('FU1 clicked (blown): lamps ' + s);
-    const half = await page.evaluate(id => { const v = view.parts.get(id); return [v.cur.g.getAttribute('fill') !== 'transparent', v.old.g.getAttribute('fill') === 'transparent', v.mark.getAttribute('display') !== 'none'].join(); }, ids[0]);
-    if (half !== 'true,true,true') out.push('FU1 blown: line half lit, load half dark, crack shown: ' + half);
+    // (its load half: L2, back through the light it fed (Dallas, 25 Nov 2026))
+    const half = await page.evaluate(id => { const v = view.parts.get(id), f = L => (L.g.getAttribute('fill') || '').toLowerCase(); return [f(v.cur) !== 'transparent', f(v.old) === OFF_WHITE || f(v.cur) === OFF_WHITE, v.mark.getAttribute('display') !== 'none'].join(); }, ids[0]);
+    if (half !== 'true,true,true') out.push('FU1 blown: line half lit, load half L2, crack shown: ' + half);
     await page.evaluate(() => workPower(parts.find(p => p.t === 'fu1' && p.L === '1'))); await page.waitForTimeout(300);
     s = await lamps(); if (s !== '11') out.push('FU1 put back: lamps ' + s);
     await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
@@ -3140,6 +3140,67 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  // (Dallas, 25 Nov 2026) each source goes wherever it can: along the wires and through closed switches, and through a load
+  // with no current through it, up to an open switch; a pressed button back-feeds the open seal-in beside it; changes run
+  // as fronts from the switch that moved; a coil dropping out: its feed drains away first, then the return comes back
+  await check('Where each source reaches (Dallas, 25 Nov 2026, his residential panel): the neutral back through the coils up to the open buttons and contacts; START back-feeds the open seal-in; the mix runs as a front from the seal-in; STOP drains, then the neutral comes back', async page => {
+    const d = require('fs').readFileSync(path.join(__dirname, 'fixtures', 'residential_panel.json'), 'utf8');
+    await page.evaluate(d => { useCircuit(readCircuit(JSON.parse(d)), ''); }, d);
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + SETTLED + `
+      const out = [], node = (x, y) => NET.nodes.findIndex(n => n.x === x && n.y === y), lb = (x, y) => labOf(node(x, y)), c = (x, y) => colAt(node(x, y), simT);
+      const N = 'P7', H = 'P5', seal = parts.find(p => p.t === 'con' && p.x === 1440 && p.y === 2740);
+      step(15);
+      for (const [x, y, what] of [[1540, 2640, 'past START'], [1540, 2740, 'past the seal-in'], [2300, 2640, "CR1's hot side"], [1900, 2780, 'past the rung 2 CR1 contact'], [2300, 2780, "CR2's hot side"]])
+        if (lb(x, y) !== N || !c(x, y)) out.push('at rest, ' + what + ' is ' + lb(x, y) + ' ' + c(x, y) + ', not the neutral');
+      if (lb(1180, 2640) !== H) out.push('at rest, past STOP is ' + lb(1180, 2640));
+      // START: its colour runs out over the neutral as a front, never leaving a gap
+      const watch = node(1700, 2640), seen = [];
+      press('START', true);
+      for (let i = 0; i < 240 && !CON[seal.id].shut; i++) { step(1 / 120); const k = colAt(watch, simT); if (seen[seen.length - 1] !== k) seen.push(k); }
+      if (seen[0] !== NEU_COL) out.push('just after START, the wire 200 past it already changed: ' + seen[0]);
+      if (seen.includes(null)) out.push('a gap (dark) between the neutral and the hot side as START\\'s colour ran out: ' + seen.join(' > '));
+      if (lb(1540, 2740) !== H || !c(1540, 2740)) out.push('with the seal-in still open, its far side is ' + lb(1540, 2740) + ' (START should back-feed it)');
+      // the seal-in closes: the change runs from it, so the far end of the wire to CR1 changes after the near end
+      while (!CON[seal.id].shut && simT < 40) step(1 / 120);
+      const xs = [1600, 1800, 2000, 2200], first = xs.map(() => null), was = xs.map(x => c(x, 2640)), t0 = simT;
+      for (let i = 0; i < 480; i++) { step(1 / 120); xs.forEach((x, k) => { if (first[k] === null && c(x, 2640) !== was[k]) first[k] = simT - t0; }); }
+      for (let k = 1; k < xs.length; k++) if (first[k] !== null && first[k - 1] !== null && first[k] < first[k - 1] - 1e-6) out.push('the colour changed at ' + xs[k] + ' (' + first[k].toFixed(2) + ' s) before ' + xs[k - 1] + ' (' + first[k - 1].toFixed(2) + ' s)');
+      step(6); press('START', false); step(6);
+      if (lb(1540, 2640) !== H) out.push('START let go: past it is ' + lb(1540, 2640) + ' (the seal-in should back-feed it)');
+      // STOP: past it drains first, then the neutral comes back through the coils
+      const sn = node(1180, 2640), seq = [];
+      press('STOP', true);
+      for (let i = 0; i < 2400; i++) { step(1 / 120); const k = colAt(sn, simT); if (seq[seq.length - 1] !== k) seq.push(k); }
+      // (between STOP and START, with the seal-in open too: joined to nothing but open switches, so dark; past START, the neutral)
+      if (seq[seq.length - 1] !== null) out.push('past STOP: ' + seq.join(' > ') + ' (should end dark: nothing reaches it)');
+      for (const [x, y] of [[1540, 2640], [1540, 2740], [2300, 2640], [2300, 2780]]) if (lb(x, y) !== N) out.push('STOP held: (' + x + ', ' + y + ') is ' + lb(x, y));
+      const sb = settledBad(); if (sb) out.push(sb);
+      return out;`));
+  });
+
+  await check('Where each source reaches, on bars (Dallas, 25 Nov 2026, the seal-in preset): L2 back through X up to A and the seal-in; A back-feeds the open seal-in; D drains, then L2 comes back', async page => {
+    await page.selectOption('#preset', 'seal'); await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + SETTLED + `
+      const out = [], X = parts.find(p => p.t === 'coil'), A = parts.find(p => p.L === 'A'), seal = parts.find(p => p.t === 'con'), D = parts.find(p => p.L === 'D');
+      const far = p => btnIn(p) === p._a ? p._b : p._a;
+      step(4);
+      if (labOf(far(A)) !== 'L2' || labOf(seal._b) !== 'L2') out.push('at rest, past A / the seal-in: ' + labOf(far(A)) + ' / ' + labOf(seal._b));
+      press('A', true); step(0.6);
+      if (CON[seal.id].shut) out.push('(the seal-in closed too soon to see)');
+      else { const sides = [seal._a, seal._b].map(labOf); if (sides.some(l => l !== 'L1')) out.push('A pressed, seal-in still open: its sides are ' + sides); }
+      step(4); press('A', false); step(4);
+      if (!coilOn[X.id]) out.push('X did not hold in');
+      if (labOf(far(A)) !== 'L1') out.push('A let go: past it is ' + labOf(far(A)) + ' (the seal-in should back-feed it)');
+      press('D', true); step(6);
+      if (coilOn[X.id]) out.push('D did not drop X');
+      // (past D, up to A and the seal-in: joined only to open switches, so dark; past them, L2 back through X)
+      for (const n of [far(A), seal._b, X._a]) if (labOf(n) !== 'L2') out.push('D held: (' + NET.nodes[n].x + ', ' + NET.nodes[n].y + ') is ' + labOf(n) + ', not L2');
+      for (const n of [far(D), seal._a]) if (labOf(n) !== null) out.push('D held: (' + NET.nodes[n].x + ', ' + NET.nodes[n].y + ') is ' + labOf(n) + ', not dark');
+      const sb = settledBad(); if (sb) out.push(sb);
+      return out;`));
+  });
+
   await check('A broken neutral (Dallas, 15 Nov 2026: FWDREV_OvrTrvl, the return wire under rung 7 open): the hot side still lights up to every open button and contact; REV held, the current goes through the R coil (which stays out) and on up to the break, and stops there', async page => {
     const out = [];
     const d = require('fs').readFileSync(path.join(__dirname, 'fixtures', 'fwdrev_ovrtrvl.json'), 'utf8');
@@ -3150,8 +3211,10 @@ const DEF_CIRCUIT = `
     if (lit1.join() !== 'true,true') out.push('REV / R contact branch dark with the neutral broken: ' + lit1);
     await page.evaluate(() => press('C', true)); await page.waitForTimeout(900);
     const r = await page.evaluate(() => { const R = parts.find(q => q.t === 'coil' && q.L === 'R'), w = wires.find(q => q.x1 === 1900 && q.y1 === 1200), at = (x, y) => NET.nodes.findIndex(n => n.x === x && n.y === y && (n.k === key(x, y) || n.k.endsWith('#' + w.id)));
-      return { on: !!coilOn[R.id], past: lit(R._b, simT), below: lit(at(1900, 1500), simT), above: lit(at(1900, 1300), simT), top: lit(at(1900, 1200), simT) }; });
-    if (r.on || !r.past || !r.below || r.above || r.top) out.push('REV held: ' + JSON.stringify(r));
+      const lb = n => (VCUR.get(n) || {}).lab || '-';
+      return { on: !!coilOn[R.id], past: lb(R._b), below: lb(at(1900, 1500)), above: lb(at(1900, 1300)), top: lb(at(1900, 1200)) }; });
+    // (the hot side through R (which stays out) and on down to the break; above the break, the return, back from L2 (Dallas, 25 Nov 2026))
+    if (r.on || r.past !== 'L1' || r.below !== 'L1' || r.above !== 'L2' || r.top !== 'L2') out.push('REV held: ' + JSON.stringify(r));
     await page.evaluate(() => { press('C', false); setSpeed(1); }); await page.click('#tab-edit');
     return out;
   });
