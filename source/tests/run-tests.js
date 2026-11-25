@@ -3183,7 +3183,7 @@ const DEF_CIRCUIT = `
       return out;`));
   });
 
-  await check('Where each source reaches, on bars (Dallas, 25 Nov 2026, the seal-in preset): L2 back through X up to A and the seal-in; A back-feeds the open seal-in; D drains, then L2 comes back', async page => {
+  await check('Where each source reaches, on bars (Dallas, 25 Nov 2026, the seal-in preset): L2 back through X up to A and the seal-in; past A its colour at once; A back-feeds the open seal-in; D drains, then L2 comes back', async page => {
     await page.selectOption('#preset', 'seal'); await page.click('#tab-run');
     return page.evaluate(new Function(STEP + SETTLED + `
       const out = [], X = parts.find(p => p.t === 'coil'), A = parts.find(p => p.L === 'A'), seal = parts.find(p => p.t === 'con'), D = parts.find(p => p.L === 'D');
@@ -3191,6 +3191,9 @@ const DEF_CIRCUIT = `
       step(4);
       if (labOf(far(A)) !== 'L2' || labOf(seal._b) !== 'L2') out.push('at rest, past A / the seal-in: ' + labOf(far(A)) + ' / ' + labOf(seal._b));
       press('A', true); step(0.6);
+      // (past a button its colour at once, not shading in from what came in (Dallas, 25 Nov 2026))
+      { const a = NET.nodes[far(A)], nx = a.x + (a.x > A.x ? 10 : -10), k = NET.nodes.findIndex(n => n.x === nx && n.y === a.y), want = flowOf(btnColour('A'));
+        for (const n of [far(A), k]) if (colAt(n, simT) !== want) out.push('just past A: ' + colAt(n, simT) + ', not its colour ' + want); }
       if (CON[seal.id].shut) out.push('(the seal-in closed too soon to see)');
       else { const sides = [seal._a, seal._b].map(labOf); if (sides.some(l => l !== 'L1')) out.push('A pressed, seal-in still open: its sides are ' + sides); }
       step(4); press('A', false); step(4);

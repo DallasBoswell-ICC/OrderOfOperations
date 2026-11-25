@@ -115,7 +115,7 @@ function vColours(c, f, base, bot, dist, JE) {
   const st = new Map();
   const stOf = n => { if (st.has(n)) return st.get(n); st.set(n, { set: [], from: base, rd: RAMP });
     const ins = (inn.get(n) || []).map(([e, u]) => { const r = stOf(u), L = e.len || 0;
-      return e.kind === 'part' && tints(e.part) ? { set: [opKey(e.part)], from: shown(r), rd: 0 } : { set: r.set, from: r.from, rd: r.rd + L }; });
+      return e.kind === 'part' && tints(e.part) ? { set: [opKey(e.part)], from: shown(r), rd: RAMP } : { set: r.set, from: r.from, rd: r.rd + L }; });   // (past a pushbutton, selector or switch: its colour at once (Dallas, 25 Nov 2026), not shading in)
     let r;
     if (!ins.length) r = { set: [], from: base, rd: RAMP };
     else { const s = [...new Set(ins.flatMap(q => q.set))].sort(), same = ins.every(q => q.set.join() === s.join());
