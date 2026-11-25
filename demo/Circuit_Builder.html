@@ -3908,7 +3908,7 @@ function phasesNow(t) {
     for (const L in PH) if (phLive(phK(L)) && cph.get(f(PH[L])) === phK(L)) { const s = PARR.get(PH[L]); if (s) { d.set(PH[L], Math.max(s.t, t)); h.push(Math.max(s.t, t), PH[L]); } }
     for (const [n, s] of PARR) if (!d.has(n) && !recol.has(n)) { d.set(n, Math.max(s.t, t)); h.push(Math.max(s.t, t), n); }
     for (const n of gain) if (n === PH[(NET.nodes[n].k || '').slice(2)]) { d.set(n, t); h.push(t, n); }
-    walk(h, d, n => gain.has(n), phStep);
+    walk(h, d, n => gain.has(n), (e, u) => phStep(e, u) && !(e.kind === 'part' && LOADT(e.part.t)));   // (never across a load: what is on its far side is another phase, or the neutral)
     for (const n of gain) if (d.has(n)) { const k = want(n), at = d.get(n), c = rcol.get(n) || phColK(k), o = recol.has(n) && PARR.get(n); PARR.set(n, { k, c, t: o ? o.t : at }); put(n, at, c); }   // (a new colour only: the phase has been there all along)
   }
   // a transformer fed from the phases: look at it again as each phase reaches its primary
