@@ -219,15 +219,15 @@ const DEF_CIRCUIT = `
       return out.slice(0, 4);`));
   });
 
-  await check("A branch switched off: the dark runs from where it was cut on toward the coil, in order (Dallas, 25 Nov 2026: then L2 comes back through the coil)", async page => {
+  await check("A branch switched off: the hot side drains from where it was cut on toward the coil, in order, L2 showing from underneath behind it (Dallas, 25 Nov 2026)", async page => {
     await runPreset(page, 'three');
     return page.evaluate(new Function(STEP + `
       const out = []; step(3); press('H', true); press('I', true); step(6);
       const pts = [[380, 640], [480, 640], [480, 590], [480, 540], [480, 140]].map(([x, y]) => NET.nodes.findIndex(n => n.x === x && n.y === y)), dark = pts.map(() => null);
       // (how soon the change can get to each point: from E, along the wires and closed buttons (through H, or I, whichever is nearer))
       const E = parts.find(p => p.L === 'E'), soon = new Map(); { const h = heap(); for (const n of [E._a, E._b]) { soon.set(n, 0); h.push(0, n); } walk(h, soon, () => true, e => conducts(e)); }
-      press('E', true); const t0 = simT;
-      for (let i = 0; i < 1200; i++) { step(1 / 120); pts.forEach((n, k) => { if (dark[k] === null && colAt(n, simT) === null) dark[k] = simT - t0; }); }
+      press('E', true); const t0 = simT, was = pts.map(n => colAt(n, simT));   // (the hot side going: dark, or L2 showing from underneath (Dallas, 25 Nov 2026))
+      for (let i = 0; i < 1200; i++) { step(1 / 120); pts.forEach((n, k) => { if (dark[k] === null && colAt(n, simT) !== was[k]) dark[k] = simT - t0; }); }
       if (dark.some(d => d === null) || dark.some((d, k) => d < soon.get(pts[k]) - 0.05) || dark.slice(0, 4).some(d => d > dark[4])) out.push('switch-off order wrong: ' + dark.map(t => t === null ? 'never' : t.toFixed(2)).join(' ') + ' (soonest ' + pts.map(n => (soon.get(n) ?? -1).toFixed(2)).join(' ') + ')');
       return out;`));
   });
@@ -349,7 +349,7 @@ const DEF_CIRCUIT = `
     return out;
   });
 
-  await check('G cutting off six branches at once: the dark runs out from G as a front (no wire goes dark before it gets there), then L2 comes back through X (Dallas, 25 Nov 2026)', async page => {
+  await check('G cutting off six branches at once: the hot side drains from G as a front (no wire changes before it gets there), L2 showing from underneath behind it (Dallas, 25 Nov 2026)', async page => {
     await loadCircuit(page, FAN_CIRCUIT);
     if ((await issuesNow(page)).length) return ['circuit not wired: ' + JSON.stringify(await issuesNow(page))];
     await page.click('#tab-run');
@@ -359,9 +359,10 @@ const DEF_CIRCUIT = `
       // (how soon the change can get to each point: from G, along the wires and closed buttons, at the current's speed)
       { const h = heap(); for (const n of [G._a, G._b]) { latest.set(n, 0); h.push(0, n); } walk(h, latest, () => true, e => conducts(e)); }
       const hot = new Set(NET.nodes.map((_, k) => k).filter(k => labOf(k) === 'L1' && latest.has(k) && latest.get(k) > 0));
+      const was = NET.nodes.map((_, k) => colAt(k, simT));
       press('G', true);
-      const darkAt = new Map();
-      for (let i = 0; i < 600; i++) { step(1 / 60); NET.nodes.forEach((_, k) => { if (!darkAt.has(k) && colAt(k, simT) === null) darkAt.set(k, simT - t0); }); }
+      const darkAt = new Map();   // (when the hot side went: dark, or L2 showing from underneath)
+      for (let i = 0; i < 600; i++) { step(1 / 60); NET.nodes.forEach((_, k) => { if (!darkAt.has(k) && colAt(k, simT) !== was[k]) darkAt.set(k, simT - t0); }); }
       const out = [];
       for (const n of hot) { const da = darkAt.get(n), dd = latest.get(n);
         if (da !== undefined && da < dd - 0.05) out.push('(' + NET.nodes[n].x + ', ' + NET.nodes[n].y + ') went dark at ' + da.toFixed(2) + ' s, before the change could get there (' + dd.toFixed(2) + ' s)'); }
@@ -1306,12 +1307,13 @@ const DEF_CIRCUIT = `
       const A = parts.find(p => p.L === 'A'), t0 = simT, latest = new Map();
       { const h = heap(); for (const n of [A._a, A._b]) { latest.set(n, 0); h.push(0, n); } walk(h, latest, () => true, e => conducts(e)); }
       const hot = NET.nodes.map((_, k) => k).filter(k => labOf(k) === 'L1' && latest.get(k) > 0);
+      const was = NET.nodes.map((_, k) => colAt(k, simT));
       press('A', false);
-      const darkAt = new Map(), relit = new Set();
-      for (let i = 0; i < 600; i++) { step(1 / 60); NET.nodes.forEach((_, k) => { const c = colAt(k, simT); if (!darkAt.has(k) && c === null) darkAt.set(k, simT - t0); else if (darkAt.has(k) && c !== null && c !== OFF_WHITE) relit.add(k); }); }
+      const darkAt = new Map(), relit = new Set();   // (when the hot side went: dark, or L2 showing from underneath)
+      for (let i = 0; i < 600; i++) { step(1 / 60); NET.nodes.forEach((_, k) => { const c = colAt(k, simT); if (!darkAt.has(k) && c !== was[k]) darkAt.set(k, simT - t0); else if (darkAt.has(k) && c !== null && c !== OFF_WHITE) relit.add(k); }); }
       let early = 0;
       for (const n of hot) { const da = darkAt.get(n); if (da !== undefined && da < latest.get(n) - 0.05) early++; }
-      if (early) out.push(early + ' points go dark before the change from A could reach them');
+      if (early) out.push(early + ' points change before the change from A could reach them');
       if (relit.size) out.push(relit.size + ' points light up hot again after going dark');
       const sb = settledBad(); if (sb) out.push(sb);
       return out;`));
@@ -3169,9 +3171,11 @@ const DEF_CIRCUIT = `
       step(6); press('START', false); step(6);
       if (lb(1540, 2640) !== H) out.push('START let go: past it is ' + lb(1540, 2640) + ' (the seal-in should back-feed it)');
       // STOP: past it drains first, then the neutral comes back through the coils
-      const sn = node(1180, 2640), seq = [];
+      const sn = node(1180, 2640), seq = [], pn = node(1700, 2640), pseq = [];
       press('STOP', true);
-      for (let i = 0; i < 2400; i++) { step(1 / 120); const k = colAt(sn, simT); if (seq[seq.length - 1] !== k) seq.push(k); }
+      for (let i = 0; i < 2400; i++) { step(1 / 120); const k = colAt(sn, simT); if (seq[seq.length - 1] !== k) seq.push(k); const q = colAt(pn, simT); if (pseq[pseq.length - 1] !== q) pseq.push(q); }
+      // (past START the neutral was underneath the hot side all along: it shows as the hot side drains, never a dark gap)
+      if (pseq.includes(null) || pseq[pseq.length - 1] !== NEU_COL) out.push('past START as STOP drained it: ' + pseq.join(' > ') + ' (should go straight to the neutral)');
       // (between STOP and START, with the seal-in open too: joined to nothing but open switches, so dark; past START, the neutral)
       if (seq[seq.length - 1] !== null) out.push('past STOP: ' + seq.join(' > ') + ' (should end dark: nothing reaches it)');
       for (const [x, y] of [[1540, 2640], [1540, 2740], [2300, 2640], [2300, 2780]]) if (lb(x, y) !== N) out.push('STOP held: (' + x + ', ' + y + ') is ' + lb(x, y));

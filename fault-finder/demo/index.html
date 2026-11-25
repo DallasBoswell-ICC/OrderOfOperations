@@ -4139,14 +4139,15 @@ function phStep(e, u) {
    (the hot side pushes the neutral back to the load's far side). Between loads in series the colour fades from the hot
    side toward the return. A piece joined to two sources (a short) shows nothing.
    This is what is drawn; which loads work (coils picking up and so on) is still worked out in engine.js.
-   Changes travel as fronts at the current's speed: from the switch that moved, outward. Where a source goes from
-   one side of a load to the other (a coil dropping out: its feed cut, then the neutral comes back through it) the
-   old one drains away from the switch first, and the new one follows it back from the load.
+   Changes travel as fronts at the current's speed: from the switch that moved, outward. Where the hot side drains away
+   from wiring the return would reach without it (a coil dropping out), the return is underneath: it shows as the hot
+   side goes, behind the draining front.
    VTL: each junction's timeline of [time, colour, the part it came in through]; VCUR: what each junction is to show
    ({ lab: which source, c: colour, t: from when }).
    ===================================================================== */
 let VTL = new Map(), VCUR = new Map(), paintUntil = 0;   // (paintUntil: the last front still on its way: the panel is painted till then)
 const vOn = () => VTL.size > 0;
+const vHot = lab => lab === 'L1' || /^P[12356]$/.test(lab);   // (L1, a phase, or a centre-tapped secondary's X1 or X2: not L2, the neutral or X0)
 // the live sources: { n: its junction, lab, col, hot }
 function vSources() {
   const out = [];
@@ -4316,7 +4317,12 @@ function presenceNow(t, causes = []) {
   for (const n of C) { const W = want.get(n), O = VCUR.get(n), tf = toff.get(n), tc = cf.at.get(n), tl0 = lab.at.get(n);
     if (!W) { vPut(n, tf ?? t, null, null); VCUR.delete(n); continue; }
     const at = tc ?? tl0 ?? tf ?? t, first = (!O || O.lab !== W.lab) && tl0 !== undefined && tl0 < at - 1e-6 ? tl0 : at;
-    if (O && O.lab !== W.lab && tf !== undefined && first > tf + 1e-6) vPut(n, tf, null, null);   // (drained first, then the other source comes back)
+    if (O && O.lab !== W.lab && tf !== undefined && first > tf + 1e-6) {
+      // (a hot side draining away from a junction where the return would be without it (Dallas, 25 Nov 2026): the return was
+      // there underneath all along, and shows as the hot side goes; anything else: dark, till the other source comes back)
+      if (vHot(O.lab) && !vHot(W.lab)) { vPut(n, tf, W.c, null); VCUR.set(n, { lab: W.lab, c: W.c, t: tf, tc: tf }); continue; }
+      vPut(n, tf, null, null);
+    }
     if (first < at) vPut(n, first, lab.col.get(n), lab.by.get(n) || null);   // (the source there already, in the colour it comes with)
     vPut(n, at, W.c, (tc !== undefined ? cf.by.get(n) : lab.by.get(n)) || null); VCUR.set(n, { lab: W.lab, c: W.c, t: O && O.lab === W.lab ? Math.min(O.t, first) : first, tc: at });
   }
