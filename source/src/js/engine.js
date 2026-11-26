@@ -88,7 +88,7 @@ function startRun() {
   for (const [id, v] of NET.feedV) if (v === 1) setRec(id, SUPPLY_CUT ? null : EGG(), 0);
   phaseWays(); phasesNow(0);
   updateCoils(0);
-  VTL = new Map(); VCUR = new Map(); paintUntil = 0; presenceNow(0);
+  VTL = new Map(); VCUR = new Map(); paintUntil = 0; RUN_ID++; presenceNow(0);
 }
 /* Long plain stretches of wire (no junctions or parts along them, only corners) carry the current faster in the
    middle. In a real panel a change reaches the far end of any wire almost at once, so the coil whose button was

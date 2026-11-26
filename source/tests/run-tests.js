@@ -203,19 +203,23 @@ const DEF_CIRCUIT = `
       return out;`));
   });
 
-  await check('The return side: L2 is on the wires from the coils to the right edge all along, and never changes as the buttons are worked (Dallas, 25 Nov 2026)', async page => {
+  await check('The return side (Dallas, 26 Nov 2026): L2 on the wires from the coils to the right edge all along, a little dimmer while no current goes through them; past a coil with current through it, that coil\'s colour fading toward L2', async page => {
     await loadCircuit(page, `const Bt = (L, x, y, col) => P('btn', x, y, { L, nc: false, maint: true, color: col });
       parts = [Bt('B', 300, 160, '#0070C0'), C('X', 700, 160), Bt('C', 300, 320, '#00B050'), C('Y', 700, 320)];
       wires = [Wr(0, 160, 260, 160), Wr(340, 160, 640, 160), Wr(760, 160, 880, 160), Wr(0, 320, 260, 320), Wr(340, 320, 640, 320), Wr(760, 320, 880, 320)];`);
     await page.click('#tab-run');
     return page.evaluate(new Function(STEP + `
       const out = []; step(3);
-      const ret = () => NET.nodes.map((n, i) => [n, i]).filter(([n]) => (n.y === 160 || n.y === 320) && n.x >= 765 && n.x <= 875).map(([, i]) => colAt(i, simT));
-      const check = tag => { const r = ret(); if (r.some(c => c !== OFF_WHITE)) out.push(tag + ': the return wires are not all L2: ' + [...new Set(r)].join()); };
+      const ret = y => NET.nodes.map((n, i) => [n, i]).filter(([n]) => n.y === y && n.x >= 765 && n.x <= 875).sort((a, b) => a[0].x - b[0].x).map(([, i]) => colAt(i, simT));
+      const idle = vDim(OFF_WHITE), on = L => !!coilOn[parts.find(p => p.t === 'coil' && p.L === L).id];
+      const check = tag => { for (const [y, L] of [[160, 'X'], [320, 'Y']]) { const r = ret(y), X = parts.find(p => p.t === 'coil' && p.L === L);
+        if (!on(L)) { if (r.some(c => c !== idle)) out.push(tag + ': past ' + L + ' (out) is not all L2, dimmer: ' + [...new Set(r)].join()); }
+        else { if (r[0] !== vFade(flowOf(X.color), OFF_WHITE, 5 / V_FADE) && r[0] !== vFade(flowOf(X.color), OFF_WHITE, 0)) out.push(tag + ': just past ' + L + ' (in): ' + r[0] + ', not its colour');
+          if (r.some(c => c === idle || c === null)) out.push(tag + ': past ' + L + ' (in) some of the return dim or dark'); } } };
       check('at rest');
-      press('C', true); for (let i = 0; i < 4; i++) { step(1); check('C pressed'); }
-      press('B', true); for (let i = 0; i < 4; i++) { step(1); check('B pressed'); }
-      press('B', false); for (let i = 0; i < 5; i++) { step(1); check('B let go'); }
+      press('C', true); step(4); check('C pressed');
+      press('B', true); step(4); check('B pressed');
+      press('B', false); step(5); check('B let go');
       return out.slice(0, 4);`));
   });
 
@@ -282,7 +286,7 @@ const DEF_CIRCUIT = `
         for (let i = 0; i < 120; i++) step1();
         let settled = true;
         for (let n = 0; n < 120; n++) {
-          const L = Ls[Math.floor(rnd() * Ls.length)], quick = rnd() < 0.25, judge = settled && !quick && busyUntil <= simT;
+          const L = Ls[Math.floor(rnd() * Ls.length)], quick = rnd() < 0.25, judge = settled && !quick && busyUntil <= simT && paintUntil <= simT;   // (paintUntil: what is drawn still on its way)
           const t0 = simT, before = NET.nodes.map((_, i) => colAt(i, t0));
           press(L, !down[L]);
           const D = reach(parts.filter(p => p.L === L).flatMap(p => [p._a, p._b])), seen = new Set(), prev = coils.map(c => !!coilOn[c.id]), flips = {};
@@ -548,7 +552,7 @@ const DEF_CIRCUIT = `
     return page.evaluate(() => {
       const step1 = () => { simT += 1 / 120; runEvents(simT); }, n0 = NET.nodes.findIndex(n => n.x === 200 && n.y === 100), X = parts.find(p => p.t === 'coil');
       let a0 = false, x0 = false, ins = 0, outs = 0;
-      const watch = () => { const a = colAt(n0, simT) !== null && colAt(n0, simT) !== OFF_WHITE, c = !!REC.get(X._a); if (a && !a0) ins++; if (c && !x0) outs++; a0 = a; x0 = c; };   // (in: the hot side's colour arriving; before it, L2 back through X)
+      const watch = () => { const a = colAt(n0, simT) !== null && colAt(n0, simT) !== OFF_WHITE && colAt(n0, simT) !== vDim(OFF_WHITE), c = !!REC.get(X._a); if (a && !a0) ins++; if (c && !x0) outs++; a0 = a; x0 = c; };   // (in: the hot side's colour arriving; before it, L2 back through X)
       for (let i = 0; i < 120; i++) { step1(); watch(); }
       for (let k = 0; k < 8; k++) { press('A', !down.A); for (let i = 0; i < 40; i++) { step1(); watch(); } }
       for (let i = 0; i < 3600; i++) { step1(); watch(); }   // (about 20 s of wire at normal speed)
@@ -561,9 +565,10 @@ const DEF_CIRCUIT = `
     return page.evaluate(new Function(STEP + `
       const out = [], X = parts.find(p => p.t === 'coil'), v = view.parts.get(X.id);
       const shown = L => L.cur.getAttribute('stroke') === 'transparent' ? 0 : Math.abs(L.cur.getAttribute('x2') - L.cur.getAttribute('x1'));
+      const lit = L => shown(L) + (L.old.getAttribute('stroke') === 'transparent' ? 0 : Math.abs(L.old.getAttribute('x2') - L.old.getAttribute('x1')));   // (the lead out: the return there all along, its colour changing as the current starts)
       step(2); press('A', true);
       const seenIn = [], seenOut = [];
-      for (let i = 0; i < 120; i++) { step(1 / 60); paint(); seenIn.push(shown(v.lead.A)); seenOut.push(shown(v.lead.B)); }
+      for (let i = 0; i < 120; i++) { step(1 / 60); paint(); seenIn.push(shown(v.lead.A)); seenOut.push(lit(v.lead.B)); }
       const full = TERM(X) - COIL / 2, part = a => a.some(x => x > 0.5 && x < full - 0.5);
       if (!part(seenIn)) out.push('the lead into X lit all at once');
       if (Math.min(...seenOut) < full - 0.5) out.push('the lead out of X (L2, there all along: Dallas, 25 Nov 2026) was not lit all the way throughout');
@@ -1307,10 +1312,10 @@ const DEF_CIRCUIT = `
       const A = parts.find(p => p.L === 'A'), t0 = simT, latest = new Map();
       { const h = heap(); for (const n of [A._a, A._b]) { latest.set(n, 0); h.push(0, n); } walk(h, latest, () => true, e => conducts(e)); }
       const hot = NET.nodes.map((_, k) => k).filter(k => labOf(k) === 'L1' && latest.get(k) > 0);
-      const was = NET.nodes.map((_, k) => colAt(k, simT));
+      const was = NET.nodes.map((_, k) => colAt(k, simT)), hotCols = new Set(hot.map(k => colAt(k, simT)));
       press('A', false);
-      const darkAt = new Map(), relit = new Set();   // (when the hot side went: dark, or L2 showing from underneath)
-      for (let i = 0; i < 600; i++) { step(1 / 60); NET.nodes.forEach((_, k) => { const c = colAt(k, simT); if (!darkAt.has(k) && c !== was[k]) darkAt.set(k, simT - t0); else if (darkAt.has(k) && c !== null && c !== OFF_WHITE) relit.add(k); }); }
+      const darkAt = new Map(), relit = new Set();   // (when the hot side went: dark, or L2 showing from underneath; relit: a hot colour again)
+      for (let i = 0; i < 600; i++) { step(1 / 60); for (const k of hot) { const c = colAt(k, simT); if (!darkAt.has(k) && c !== was[k]) darkAt.set(k, simT - t0); else if (darkAt.has(k) && c === was[k]) relit.add(k); } }   // (relit: back to the hot colour it had)
       let early = 0;
       for (const n of hot) { const da = darkAt.get(n); if (da !== undefined && da < latest.get(n) - 0.05) early++; }
       if (early) out.push(early + ' points change before the change from A could reach them');
@@ -1790,7 +1795,8 @@ const DEF_CIRCUIT = `
     // each phase lights its own line in its colour
     // (every line lit in its phase's colour, as far as it reaches: L3 too, and L1 past its tap (Dallas, 25 Nov 2026))
     const lines = await page.evaluate(() => [[200, 80], [200, 200], [200, 320], [600, 80]].map(([x, y]) => { const n = NET.nodes.findIndex(q => q.x === x && q.y === y); return colAt(n, simT) || '-'; }).join());
-    if (lines !== await page.evaluate(() => [phColK(1), phColK(2), phColK(3), phColK(1)].join())) out.push('line colours: ' + lines);
+    // (L3 and L1 past its tap carry no current: a little dimmer (Dallas, 26 Nov 2026))
+    if (lines !== await page.evaluate(() => [phColK(1), phColK(2), vDim(phColK(3)), vDim(phColK(1))].join())) out.push('line colours: ' + lines);
     await page.evaluate(() => press('A', true)); await page.waitForTimeout(1200);
     let st = await state();
     if (st !== 'true,true') out.push('fed: transformer, X = ' + st);
@@ -2625,7 +2631,7 @@ const DEF_CIRCUIT = `
     await page.evaluate(() => workPower(parts.find(p => p.t === 'fu1' && p.L === '1'))); await page.waitForTimeout(300);
     s = await lamps(); if (s !== '01') out.push('FU1 clicked (blown): lamps ' + s);
     // (its load half: L2, back through the light it fed (Dallas, 25 Nov 2026))
-    const half = await page.evaluate(id => { const v = view.parts.get(id), f = L => (L.g.getAttribute('fill') || '').toLowerCase(); return [f(v.cur) !== 'transparent', f(v.old) === OFF_WHITE || f(v.cur) === OFF_WHITE, v.mark.getAttribute('display') !== 'none'].join(); }, ids[0]);
+    const half = await page.evaluate(id => { const v = view.parts.get(id), f = L => (L.g.getAttribute('fill') || '').toLowerCase(); return [f(v.cur) !== 'transparent', [OFF_WHITE, vDim(OFF_WHITE)].map(c => c.toLowerCase()).some(c => f(v.old) === c || f(v.cur) === c), v.mark.getAttribute('display') !== 'none'].join(); }, ids[0]);
     if (half !== 'true,true,true') out.push('FU1 blown: line half lit, load half L2, crack shown: ' + half);
     await page.evaluate(() => workPower(parts.find(p => p.t === 'fu1' && p.L === '1'))); await page.waitForTimeout(300);
     s = await lamps(); if (s !== '11') out.push('FU1 put back: lamps ' + s);
@@ -3160,7 +3166,7 @@ const DEF_CIRCUIT = `
       const watch = node(1700, 2640), seen = [];
       press('START', true);
       for (let i = 0; i < 240 && !CON[seal.id].shut; i++) { step(1 / 120); const k = colAt(watch, simT); if (seen[seen.length - 1] !== k) seen.push(k); }
-      if (seen[0] !== NEU_COL) out.push('just after START, the wire 200 past it already changed: ' + seen[0]);
+      if (seen[0] !== vDim(NEU_COL)) out.push('just after START, the wire 200 past it already changed: ' + seen[0]);
       if (seen.includes(null)) out.push('a gap (dark) between the neutral and the hot side as START\\'s colour ran out: ' + seen.join(' > '));
       if (lb(1540, 2740) !== H || !c(1540, 2740)) out.push('with the seal-in still open, its far side is ' + lb(1540, 2740) + ' (START should back-feed it)');
       // the seal-in closes: the change runs from it, so the far end of the wire to CR1 changes after the near end
@@ -3175,7 +3181,7 @@ const DEF_CIRCUIT = `
       press('STOP', true);
       for (let i = 0; i < 2400; i++) { step(1 / 120); const k = colAt(sn, simT); if (seq[seq.length - 1] !== k) seq.push(k); const q = colAt(pn, simT); if (pseq[pseq.length - 1] !== q) pseq.push(q); }
       // (past START the neutral was underneath the hot side all along: it shows as the hot side drains, never a dark gap)
-      if (pseq.includes(null) || pseq[pseq.length - 1] !== NEU_COL) out.push('past START as STOP drained it: ' + pseq.join(' > ') + ' (should go straight to the neutral)');
+      if (pseq.includes(null) || pseq[pseq.length - 1] !== vDim(NEU_COL)) out.push('past START as STOP drained it: ' + pseq.join(' > ') + ' (should go straight to the neutral)');
       // (between STOP and START, with the seal-in open too: joined to nothing but open switches, so dark; past START, the neutral)
       if (seq[seq.length - 1] !== null) out.push('past STOP: ' + seq.join(' > ') + ' (should end dark: nothing reaches it)');
       for (const [x, y] of [[1540, 2640], [1540, 2740], [2300, 2640], [2300, 2780]]) if (lb(x, y) !== N) out.push('STOP held: (' + x + ', ' + y + ') is ' + lb(x, y));
@@ -3191,7 +3197,7 @@ const DEF_CIRCUIT = `
       const out = []; step(15);
       // (the neutral points it reached only back through a load: not joined by wire to the transformer's X0)
       const f = compNow(), x0 = Object.keys(NET.PH).filter(L => /^S0:/.test(L)).map(L => f(NET.PH[L]));
-      const neu = NET.nodes.map((_, k) => k).filter(k => colAt(k, simT) === NEU_COL && !x0.includes(f(k))), cb = parts.find(p => p.t === 'cbt');
+      const neu = NET.nodes.map((_, k) => k).filter(k => labOf(k) === 'P7' && colAt(k, simT) && !x0.includes(f(k))), cb = parts.find(p => p.t === 'cbt');
       press(opKey(cb), !down[opKey(cb)]); const t0 = simT, dark = new Map();
       for (let i = 0; i < 2400; i++) { step(1 / 120); for (const k of neu) if (!dark.has(k) && colAt(k, simT) === null) dark.set(k, simT - t0); }
       const ts = [...dark.values()];
@@ -3210,12 +3216,12 @@ const DEF_CIRCUIT = `
     return page.evaluate(new Function(STEP + SETTLED + `
       const out = [], sw = parts.find(p => p.t === 'tgl'), n = NET.nodes.findIndex(q => q.x === 600 && q.y === 120), K = opKey(sw);
       step(3);
-      if (colAt(n, simT) !== phColK(1)) out.push('switch open: past it is ' + colAt(n, simT) + ', not L1 back through the heater');
+      if (colAt(n, simT) !== vDim(phColK(1))) out.push('switch open: past it is ' + colAt(n, simT) + ', not L1 back through the heater');
       press(K, !down[K]); step(4);
       if ((VCUR.get(n) || {}).lab !== 'P2' || !colAt(n, simT)) out.push('switch closed: past it is ' + colAt(n, simT) + ', not L2 (in the colour of the switch)');
       press(K, !down[K]); const seq = [];
       for (let i = 0; i < 960; i++) { step(1 / 120); const c = colAt(n, simT); if (seq[seq.length - 1] !== c) seq.push(c); }
-      if (seq.includes(null) || seq[seq.length - 1] !== phColK(1)) out.push('switch opened again: ' + seq.join(' > ') + ' (L2 straight to L1, never dark)');
+      if (seq.includes(null) || seq[seq.length - 1] !== vDim(phColK(1))) out.push('switch opened again: ' + seq.join(' > ') + ' (L2 straight to L1, never dark)');
       const sb = settledBad(); if (sb) out.push(sb);
       return out;`));
   });
@@ -3252,6 +3258,8 @@ const DEF_CIRCUIT = `
         for (const n of [far(A), k]) if (colAt(n, simT) !== want) out.push('just past A: ' + colAt(n, simT) + ', not its colour ' + want); }
       if (CON[seal.id].shut) out.push('(the seal-in closed too soon to see)');
       else { const sides = [seal._a, seal._b].map(labOf); if (sides.some(l => l !== 'L1')) out.push('A pressed, seal-in still open: its sides are ' + sides); }
+      // (the open seal-in's back-fed side: voltage but no current, so a little dimmer than the wire through A (Dallas, 26 Nov 2026))
+      if (!CON[seal.id].shut && colAt(seal._b, simT) !== vDim(flowOf(btnColour('A')))) out.push('back-fed seal-in side: ' + colAt(seal._b, simT) + ', not the colour of A a little dimmer ' + vDim(flowOf(btnColour('A'))));
       step(4); press('A', false); step(4);
       if (!coilOn[X.id]) out.push('X did not hold in');
       if (labOf(far(A)) !== 'L1') out.push('A let go: past it is ' + labOf(far(A)) + ' (the seal-in should back-feed it)');
@@ -3966,7 +3974,7 @@ const DEF_CIRCUIT = `
     await page.click('#tab-run'); await page.evaluate(() => setSpeed(300)); await page.waitForTimeout(400);
     let g = await get(); if (g !== 'lamp on 1.00, htr on 2.00') out.push('split-phase running: ' + g);
     const cols = await page.evaluate(() => [NET.PH['1'], NET.PH['N']].map(n => showCol(n, simT)).join());
-    if (cols !== '#6E6E6E,#E8E8E8') out.push('L1 and N wires: ' + cols);
+    if (cols !== await page.evaluate(() => [vDim('#6E6E6E'), vDim('#E8E8E8')].join())) out.push('L1 and N wires: ' + cols);   // (the boxes' own points: no current along them (Dallas, 26 Nov 2026))
     await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
     b = await run('208');
     if (b.l3 !== 'Not wired to anything' || b.htr !== '""') out.push('208Y/120 notes: ' + JSON.stringify(b));
@@ -3991,7 +3999,7 @@ const DEF_CIRCUIT = `
     const b = await page.evaluate(() => { const p = parts.find(q => q.t === 'cbd'); const m = WORLD.getScreenCTM(); return [m.a * (p.x + 10) + m.e, m.d * (p.y + 130) + m.f]; });
     await page.mouse.click(b[0], b[1]); await page.waitForTimeout(500);
     const r = await page.evaluate(() => { const v = view.parts.get(parts.find(q => q.t === 'cbd').id); return v.poles.map(q => q.rings.map(e => e.getAttribute('stroke')).join('/')).join(' '); });
-    const want = await page.evaluate(() => `${PH_COL[0]}/${GREY} ${GREY}/${PH_COL[2]}`);
+    const want = await page.evaluate(() => `${vDim(PH_COL[0])}/${GREY} ${GREY}/${vDim(PH_COL[2])}`);   // (no current through it: a little dimmer (Dallas, 26 Nov 2026))
     if (r !== want) out.push('rings, off: ' + r + ' (want ' + want + ')');
     await page.evaluate(() => setSpeed(1)); await page.click('#tab-edit');
     return out;

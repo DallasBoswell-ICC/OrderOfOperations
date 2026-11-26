@@ -3383,7 +3383,7 @@ function startRun() {
   for (const [id, v] of NET.feedV) if (v === 1) setRec(id, SUPPLY_CUT ? null : EGG(), 0);
   phaseWays(); phasesNow(0);
   updateCoils(0);
-  VTL = new Map(); VCUR = new Map(); paintUntil = 0; presenceNow(0);
+  VTL = new Map(); VCUR = new Map(); paintUntil = 0; RUN_ID++; presenceNow(0);
 }
 /* Long plain stretches of wire (no junctions or parts along them, only corners) carry the current faster in the
    middle. In a real panel a change reaches the far end of any wire almost at once, so the coil whose button was
@@ -4164,6 +4164,10 @@ function vLoads() {
     for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) if (ok[i] && ok[j]) L.push({ a: p._t[i], b: p._t[j], p }); }
   return L;
 }
+// (an edge's travel time, worked out once per run: stepTime looks it up by a text key, too slow for 60,000 junctions)
+const vStep = e => e._st !== undefined && e._stR === RUN_ID ? e._st : (e._stR = RUN_ID, e._st = stepTime(e));
+let RUN_ID = 0;
+const vIsLoad = e => e.kind === 'part' && LOADT(e.part.t);
 const vThrough = e => e.kind === 'part' && LOADT(e.part.t) && faultOf(e.part) !== 'open' && !BLOWN[e.part.id];   // (a load a source can pass through)
 // what every junction is to show now: Map junction -> { lab, c }
 function presenceWant() {
@@ -4199,9 +4203,14 @@ function presenceWant() {
   const out = new Map(), byC = new Map();
   for (let n = 0; n < NET.nodes.length; n++) { const c = f(n); if (lab.has(c) || grp.has(c)) (byC.get(c) || byC.set(c, []).get(c)).push(n); }
   // each source's own piece: a hot one coloured as the current goes (past a pushbutton or switch its colour), a return plain
-  const done = new Set();
-  for (const s of srcs) { const c = f(s.n), S = lab.get(c); if (S !== s || done.has(c)) continue; done.add(c);
-    const cols = s.hot ? vColours(c, f, s.col, bot, dist, JE) : null;
+  const done = new Set(), cur = new Set();
+  for (const s of [...srcs.filter(s => s.hot), ...srcs.filter(s => !s.hot)]) { const c = f(s.n), S = lab.get(c); if (S !== s || done.has(c)) continue; done.add(c);
+    let cols = null;
+    if (s.hot) cols = vColours(c, f, s.col, bot, dist, JE);
+    else { const lc = new Map();   // (each load with current through it into this return: its own colour (or, with none, the current's))
+      for (const l of loads) { if (l.ca === l.cb) continue; for (const [mine, oth, cm] of [[l.a, l.b, l.ca], [l.b, l.a, l.cb]]) if (cm === c && bot.has(oth) && out.has(oth)) lc.set(mine, l.p.color ? flowOf(l.p.color) : out.get(oth).c); }
+      cols = vReturn(c, s.col, lc, dist, JE); }
+    if (cols && cols.cur) for (const n of cols.cur) cur.add(n);
     for (const n of byC.get(c) || []) out.set(n, { lab: s.lab, c: (cols && cols.get(n)) || s.col }); }
   // pieces fed only through loads with no current: the colour at the load's far end; between loads in series, a fade
   for (const g of groups) {
@@ -4218,9 +4227,42 @@ function presenceWant() {
       for (let i = 0; i < m; i++) diag[i] += 1e-9;
       const [v] = netSolve(m, links, diag, [rhs]);
       col = new Map(g.comps.map((c, i) => [c, { lab: 'S' + ls.sort().join(''), c: mixOk(hc, rc, clamp01(1 - v[i])) }]));
+      for (const c of g.comps) for (const n of byC.get(c) || []) cur.add(n);
     }
-    for (const [c, r] of col) for (const n of byC.get(c) || []) out.set(n, r);
+    for (const [c, r] of col) for (const n of byC.get(c) || []) out.set(n, { lab: r.lab, c: r.c });
   }
+  // wiring with a source on it but no current through it (Dallas, 26 Nov 2026, option 1A): a little dimmer, toward the panel's grey
+  for (const [n, r] of out) if (!cur.has(n)) r.c = vDim(r.c);
+  return out;
+}
+const V_DIM = 0.3, V_FADE = 240;
+const V_DC = new Map(), V_FC = new Map();
+const vDim = c => { let d = V_DC.get(c); if (d === undefined) { d = mixOk(c, '#404040', V_DIM); V_DC.set(c, d); } return d; };
+// (a colour faded part way to another, in steps of 1/64: the same few colours over and over on a big panel)
+const vFade = (a, b, f) => { const k = a + b + Math.round(f * 64); let d = V_FC.get(k); if (d === undefined) { d = mixOk(a, b, Math.round(f * 64) / 64); V_FC.set(k, d); } return d; };   // (how much dimmer wiring with no current through it is; how far a load's colour runs on past it)
+/* A return piece c (L2, the neutral, X0): from each load with current through it (Dallas, 26 Nov 2026, option 2C), the
+   load's own colour, fading to the return's over V_FADE as it goes on toward the bar or box; where several meet, the
+   nearest load's. Which stretches carry current: worked out as for the hot side (out.cur). */
+function vReturn(c, base, lc, dist, JE) {
+  const out = new Map(), es = JE.get(c) || [], js = [...new Set(es.flatMap(e => [e.a, e.b]))]; out.cur = new Set();
+  const src = new Set(js.filter(n => (dist.get(n) ?? 1) < 1e-3)), top = new Set(js.filter(n => lc.has(n)));
+  if (!top.size || !src.size) return out;
+  const pot = new Map(); for (const n of top) pot.set(n, 1); for (const n of src) pot.set(n, 0);
+  const unk = js.filter(n => !pot.has(n)), ix = new Map(unk.map((n, i) => [n, i])), m = unk.length;
+  if (m) { const links = [], diag = new Float64Array(m), rhs = new Float64Array(m);
+    for (const e of es) { const k = 1 / Math.max(1, e.len || 1), x = ix.get(e.a), y = ix.get(e.b);
+      if (x !== undefined && y !== undefined) links.push([x, y, k]);
+      else for (const [u, w] of [[x, e.b], [y, e.a]]) if (u !== undefined && pot.has(w)) { diag[u] += k; rhs[u] += k * pot.get(w); } }
+    for (let i = 0; i < m; i++) diag[i] += 1e-9;
+    const [v] = netSolve(m, links, diag, [rhs]); unk.forEach((n, i) => pot.set(n, v[i])); }
+  // (distance from the nearest load, along the way the current goes, and which load's colour)
+  const dl = new Map(), cl = new Map(), h = heap(); for (const n of top) { dl.set(n, 0); cl.set(n, lc.get(n)); h.push(0, n); }
+  const adj = new Map(); for (const e of es) for (const [a, b] of [[e.a, e.b], [e.b, e.a]]) (adj.get(a) || adj.set(a, []).get(a)).push([b, e]);
+  while (h.size()) { const [d, u] = h.pop(); if (d > dl.get(u) + 1e-9) continue; for (const [w, e] of adj.get(u) || []) { const dw = d + (e.len || 0); if (!dl.has(w) || dw < dl.get(w)) { dl.set(w, dw); cl.set(w, cl.get(u)); h.push(dw, w); } } }
+  const colOf = (n, d) => { const lcol = cl.get(n); return lcol ? vFade(lcol, base, clamp01(d / V_FADE)) : base; };
+  for (const e of es) { const pa = pot.get(e.a), pb = pot.get(e.b); if (Math.abs(pa - pb) < 1e-4) continue; out.cur.add(e.a); out.cur.add(e.b);
+    if (e.kind === 'seg') { const mm = e.chain.length - 1; e.chain.forEach((n, i) => { out.cur.add(n); const fr = i / Math.max(1, mm), d = dl.get(e.a) + (dl.get(e.b) - dl.get(e.a)) * fr; out.set(n, colOf(e.chain[0] === e.a ? e.a : e.b, d)); }); } }
+  for (const n of js) if (out.cur.has(n)) out.set(n, colOf(n, dl.get(n) || 0));
   return out;
 }
 /* The colours along a hot source's piece c (as the phases' were, Dallas 24 Nov 2026): its own colour, or past a pushbutton,
@@ -4255,6 +4297,7 @@ function vColours(c, f, base, bot, dist, JE) {
       r = same ? ins.reduce((a, q) => q.rd < a.rd ? q : a) : { set: s, from: blend(ins.map(shown)), rd: 0 }; }
     st.set(n, r); return r; };
   for (const n of js) out.set(n, shown(stOf(n)));
+  out.cur = new Set(); for (const e of es) if (Math.abs(pot.get(e.a) - pot.get(e.b)) > 1e-4) { out.cur.add(e.a); out.cur.add(e.b); if (e.chain) for (const n of e.chain) out.cur.add(n); }
   for (const e of es) if (e.kind === 'seg') { const u = up(e), r = stOf(u), mm = e.chain.length - 1, fw = u === e.a;
     e.chain.forEach((n, i) => { if (n === e.a || n === e.b) return; const d = (e.len || 0) * (fw ? i : mm - i) / Math.max(1, mm); out.set(n, shown({ set: r.set, from: r.from, rd: r.rd + d })); }); }
   return out;
@@ -4280,45 +4323,50 @@ function vPut(n, at, c, via) {
 // work out again what is shown, at time t; causes: the junctions where something changed (a switch that moved)
 function presenceNow(t, causes = []) {
   if (!NET || TS_MODE) return;
-  const want = presenceWant(), N = NET.nodes.length, inC = new Uint8Array(N), C = [];
-  for (let n = 0; n < N; n++) { const o = VCUR.get(n), w = want.get(n); if ((o ? o.lab + o.c : '') !== (w ? w.lab + w.c : '')) { inC[n] = 1; C.push(n); } }
+  const want = presenceWant(), N = NET.nodes.length, inC = new Uint8Array(N), C = [], lc = new Uint8Array(N); let nL = 0;   // (lc: its source changes, not just its colour)
+  for (let n = 0; n < N; n++) { const o = VCUR.get(n), w = want.get(n); if (!o !== !w || (o && (o.lab !== w.lab || o.c !== w.c))) { inC[n] = 1; C.push(n); if (!o || !w || o.lab !== w.lab) { lc[n] = 1; nL++; } } }
   if (!C.length) return;
   const srcN = vSources().map(s => s.n);
   // when what was there goes: from where the change happened, along the wires and through closed switches
-  const toff = new Map(), h = heap();
+  const toff = new Float64Array(N).fill(NaN), h = heap(), has = (a, n) => a[n] === a[n];   // (typed arrays: a whole machine can have 60,000 junctions)
   // (on through loads too: what had come through one, such as the neutral back through a light, goes the same way when its
   // source goes (Dallas, 25 Nov 2026), rather than all at once)
   // (a switch that closed: from its end that stays as it was, through it, so what goes and what comes travel together;
   // one that opened: from both its ends)
   const cs = new Set(causes.filter(n => n !== undefined));
-  const fedThrough = n => NET.adj[n].some(i => { const e = NET.edges[i], o = e.a === n ? e.b : e.a; return conducts(e) && cs.has(o) && !inC[o]; });
-  for (const n of [...cs, ...srcN.filter(n => inC[n])]) if (!toff.has(n) && (!inC[n] || !cs.has(n) || !fedThrough(n))) { toff.set(n, t); h.push(t, n); }
+  const keeps = o => !inC[o] || ((VCUR.get(o) || {}).lab === (want.get(o) || {}).lab && want.get(o));   // (o keeps its source: at most its colour changes)
+  const fedThrough = n => NET.adj[n].some(i => { const e = NET.edges[i], o = e.a === n ? e.b : e.a; return conducts(e) && cs.has(o) && keeps(o); });
+  for (const n of [...cs, ...srcN.filter(n => inC[n])]) if (!has(toff, n) && (keeps(n) || !cs.has(n) || !fedThrough(n))) { toff[n] = t; h.push(t, n); }
   // (as walk, stopping once every junction that changes has been reached: on a whole machine most of the wiring doesn't)
-  let left = C.length; const fin = new Uint8Array(N);
-  while (h.size() && left > 0) { const [tu, u] = h.pop(); if (fin[u] || tu > toff.get(u) + 1e-12) continue; fin[u] = 1; if (inC[u]) left--;
-    for (const i of NET.adj[u]) { const e = NET.edges[i]; if (!conducts(e) && !vThrough(e)) continue; const w = e.a === u ? e.b : e.a, tw = tu + stepTime(e);
-      if (!toff.has(w) || tw < toff.get(w) - 1e-12) { toff.set(w, tw); h.push(tw, w); } } }
+  let left = C.length; const fin = new Uint8Array(N);   // (also when a change of colour alone, as current starts or stops, gets to where no front takes it)
+  while (h.size() && left > 0) { const [tu, u] = h.pop(); if (fin[u] || tu > toff[u] + 1e-12) continue; fin[u] = 1; if (inC[u]) left--;
+    for (const i of NET.adj[u]) { const e = NET.edges[i]; if (!conducts(e) && !vThrough(e)) continue; const w = e.a === u ? e.b : e.a, tw = tu + vStep(e);
+      if (!has(toff, w) || tw < toff[w] - 1e-12) { toff[w] = tw; h.push(tw, w); } } }
   // when what is to be there comes: from next to it, where it already is, as a front (never before what was there has
   // gone). First the source itself (carrying on in the colour it has where it comes from), then its colour as it settles
   // (a mix where ways meet, and so on), each its own front
-  const offAt = n => toff.get(n) ?? -1e9;
-  const front = (match, seedAt) => {
-    const at = new Map(), by = new Map(), col = new Map(), hq = heap();
-    const go = (w, tw, e, c) => { if (!at.has(w) || tw < at.get(w) - 1e-12) { at.set(w, tw); by.set(w, e.part || null); col.set(w, c); hq.push(tw, w); } };
+  const offAt = n => lc[n] && has(toff, n) ? toff[n] : -1e9;
+  const front = (match, seedAt, extra = [], mask = inC) => {
+    const at = new Float64Array(N).fill(NaN), by = new Array(N), col = new Array(N), hq = heap();
+    const go = (w, tw, e, c) => { if (!has(at, w) || tw < at[w] - 1e-12) { at[w] = tw; by[w] = e.part || null; col[w] = c; hq.push(tw, w); } };
     for (const n of srcN) if (inC[n] && want.get(n)) go(n, t, {}, want.get(n).c);
-    for (const w of C) { const W = want.get(w); if (!W) continue;
-      for (const i of NET.adj[w]) { const e = NET.edges[i], u = e.a === w ? e.b : e.a, s = seedAt(u, W, e); if (s) go(w, Math.max(s[0] + stepTime(e), offAt(w)), e, s[1]); } }
-    while (hq.size()) { const [tu, u] = hq.pop(); if (tu > at.get(u) + 1e-12) continue; const U = want.get(u);
-      for (const i of NET.adj[u]) { const e = NET.edges[i], w = e.a === u ? e.b : e.a; if (!inC[w]) continue; const W = want.get(w); if (!W || !match(e, U, W)) continue;
-        go(w, Math.max(tu + stepTime(e), offAt(w)), e, col.get(u)); } }
+    for (const n of extra) if (inC[n] && want.get(n)) go(n, t, {}, want.get(n).c);
+    for (const w of C) { const W = want.get(w); if (!W || !mask[w]) continue;
+      for (const i of NET.adj[w]) { const e = NET.edges[i], u = e.a === w ? e.b : e.a, s = seedAt(u, W, e, w); if (s) go(w, Math.max(s[0] + vStep(e), offAt(w)), e, vIsLoad(e) ? W.c : s[1]); } }
+    while (hq.size()) { const [tu, u] = hq.pop(); if (tu > at[u] + 1e-12) continue; const U = want.get(u);
+      for (const i of NET.adj[u]) { const e = NET.edges[i], w = e.a === u ? e.b : e.a; if (!mask[w]) continue; const W = want.get(w); if (!W || !match(e, U, W, u, w)) continue;
+        go(w, Math.max(tu + vStep(e), offAt(w)), e, vIsLoad(e) ? W.c : col[u]); } }   // (through a load: the colour it is to have, not the far side's)
     return { at, by, col };
   };
   // (the source: from a junction that already has it, in whatever colour, or one that keeps it while its colour changes)
   const lab = front((e, U, W) => vPass(e, U, { lab: W.lab, c: U.c }, true), (u, W, e) => { const O = VCUR.get(u), Wu = want.get(u);
-    if (!O || !Wu || O.lab !== W.lab || Wu.lab !== W.lab || !vPass(e, Wu, { lab: W.lab, c: Wu.c }, true)) return null; const ts = Math.max(t, O.t); return [ts, tlCol(VTL.get(u) || [], ts + 1e-6) || O.c]; });
+    if (!O || !Wu || O.lab !== W.lab || Wu.lab !== W.lab || !vPass(e, Wu, { lab: W.lab, c: Wu.c }, true)) return null; const ts = Math.max(t, O.t); return [ts, tlCol(VTL.get(u) || [], ts + 1e-6) || O.c]; }, [], lc);
   // (the colour it is to have: from a junction that already shows it, or through a closed switch, then on through what changes)
-  const cf = front((e, U, W) => vPass(e, U, W, true), (u, W, e) => { if (inC[u]) return null; const U = want.get(u); if (!U || !vPass(e, U, W, false)) return null; return [Math.max(t, (VCUR.get(u) || {}).tc ?? t), U.c]; });
-  for (const n of C) { const W = want.get(n), O = VCUR.get(n), tf = toff.get(n), tc = cf.at.get(n), tl0 = lab.at.get(n);
+  // (where only the colour changes, current starting or stopping, the change comes only from the switch that moved and on
+  // from there, through a load too (its far side changes as the change reaches it), never from a bar or box (Dallas, 26 Nov 2026))
+  const cf = front((e, U, W, u, w) => vPass(e, U, W, true) || (vIsLoad(e) && !lc[w]), (u, W, e, w) => { if (inC[u] || !lc[w]) return null; const U = want.get(u); if (!U || !vPass(e, U, W, false)) return null; return [Math.max(t, (VCUR.get(u) || {}).tc ?? t), U.c]; }, [...cs].filter(n => keeps(n)));   // (and from the switch that moved, both ways: where only the colour changes there (current starting or stopping through it), the change starts there)
+  const get = (a, n) => has(a, n) ? a[n] : undefined;
+  for (const n of C) { const W = want.get(n), O = VCUR.get(n), tf = get(toff, n), tc = get(cf.at, n), tl0 = get(lab.at, n);
     if (!W) { vPut(n, tf ?? t, null, null); VCUR.delete(n); continue; }
     const at = tc ?? tl0 ?? tf ?? t, first = (!O || O.lab !== W.lab) && tl0 !== undefined && tl0 < at - 1e-6 ? tl0 : at;
     if (O && O.lab !== W.lab && tf !== undefined && first > tf + 1e-6) {
@@ -4326,8 +4374,8 @@ function presenceNow(t, causes = []) {
       // phase, across a load wired phase to phase, 26 Nov): the other was there underneath all along, and shows as the first goes)
       vPut(n, tf, W.c, null); VCUR.set(n, { lab: W.lab, c: W.c, t: tf, tc: tf }); continue;
     }
-    if (first < at) vPut(n, first, lab.col.get(n), lab.by.get(n) || null);   // (the source there already, in the colour it comes with)
-    vPut(n, at, W.c, (tc !== undefined ? cf.by.get(n) : lab.by.get(n)) || null); VCUR.set(n, { lab: W.lab, c: W.c, t: O && O.lab === W.lab ? Math.min(O.t, first) : first, tc: at });
+    if (first < at) vPut(n, first, lab.col[n], lab.by[n] || null);   // (the source there already, in the colour it comes with)
+    vPut(n, at, W.c, (tc !== undefined ? cf.by[n] : lab.by[n]) || null); VCUR.set(n, { lab: W.lab, c: W.c, t: O && O.lab === W.lab ? Math.min(O.t, first) : first, tc: at });
   }
   needPaint = true;
 }
