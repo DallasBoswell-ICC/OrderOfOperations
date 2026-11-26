@@ -639,3 +639,9 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
 #pw-menu .tool.pw-def { margin: 2px 0 6px 26px; padding: 2px 9px; font-size: 11.5px; border: 1px dashed #5a5f68; border-radius: 6px; width: auto; align-self: flex-start; justify-content: flex-start; }
 #pw-menu .tool.pw-def:disabled { border-style: solid; border-color: transparent; color: #8a8f98; cursor: default; opacity: 1; }
 .vs-h2 { margin-top: 4px; }
+/* current moving along a wire (option 1, Dallas 26 Nov 2026: motion means current, colour means voltage); slower when the
+   circuit runs slower than 1× */
+.mv { fill: none; stroke-width: 3.6; stroke-linecap: round; stroke-dasharray: 7 17; pointer-events: none; animation: mvgo var(--mv-dur, .7s) linear infinite; }
+.mv.rev { animation-direction: reverse; }
+@keyframes mvgo { to { stroke-dashoffset: -24; } }
+@media (prefers-reduced-motion: reduce) { .mv { animation-duration: 2.4s; } }

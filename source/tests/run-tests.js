@@ -3263,6 +3263,30 @@ const DEF_CIRCUIT = `
       return out;`));
   });
 
+  await check('Motion means current (Dallas, 26 Nov 2026, option 1, his light sequencer): with the red light on, its feed and return move toward the return; wiring with no current through it does not move; the moving shows with the colour, not ahead of it', async page => {
+    const d = require('fs').readFileSync(path.join(__dirname, 'fixtures', 'light_sequencer.json'), 'utf8');
+    await page.evaluate(d => { useCircuit(readCircuit(JSON.parse(d)), ''); }, d);
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + `
+      const out = []; step(2); press('A', true);
+      const red = parts.find(p => p.t === 'lamp' && p.y === 200), blue = parts.find(p => p.t === 'lamp' && p.y === 500);
+      const at = (x, y) => NET.subs.find(s => s.y1 === y && s.x1 === x);
+      // (its timers run on the page's clock as well: wait for the red light to have been on a moment, then look twice)
+      let T0 = null; for (let t = 3; t < 60 && T0 === null; t += 0.05) { step(t); if (coilOn[red.id] && !V_DS.has(showCol(at(840, 200).b, simT))) T0 = t; }
+      if (T0 === null) return ['the red light never came on with its feed lit'];
+      for (const T of [T0, T0 + 0.05]) { step(T); if (!coilOn[red.id]) continue;
+        const feed = at(840, 200), ret = at(1070, 200), idle = at(840, 500);
+        if (vMove(feed, showCol(feed.b, simT)) !== 1) out.push(T + ' s: the red light’s feed is not moving toward it');
+        if (vMove(ret, showCol(ret.b, simT)) !== 1) out.push(T + ' s: past the red light is not moving toward the return');
+        if (!coilOn[blue.id] && vMove(idle, showCol(idle.b, simT))) out.push(T + ' s: the blue light’s rung moves with the light off'); }
+      // (every moving stretch is one shown as carrying, every still one not)
+      needPaint = true; paint();
+      for (const s of NET.subs) { const c = lit(s.a, simT) && lit(s.b, simT) ? showCol(s.b, simT) : null, m = vMove(s, c);
+        if (m && V_DS.has(c)) { out.push('a dimmed stretch moves at ' + s.x1 + ',' + s.y1); break; } }
+      if (!document.querySelector('.mv')) out.push('no moving dashes drawn');
+      return out;`));
+  });
+
   await check('Where each source reaches, on bars (Dallas, 25 Nov 2026, the seal-in preset): L2 back through X up to A and the seal-in; past A its colour at once; A back-feeds the open seal-in; D drains, then L2 comes back', async page => {
     await page.selectOption('#preset', 'seal'); await page.click('#tab-run');
     return page.evaluate(new Function(STEP + SETTLED + `

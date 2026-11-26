@@ -25,6 +25,17 @@ function frameBody(now) {
     else if (anyTiming()) paintTimers();   // (a timer counting down: only its readout changes)
   }
 }
+/* option 1 (Dallas, 26 Nov 2026): motion means current, colour means voltage. A stretch of wire moves (1 the way it was drawn,
+   -1 the other) only where current goes through it: its colour is not a dimmed one, and the current's way along it is known */
+function vMove(s, c) {
+  if (!c || !vOn() || V_DS.has(c)) return 0;
+  const pa = vDirAt(s.a), pb = vDirAt(s.b); if (pa === undefined || pb === undefined || Math.abs(pa - pb) < 1e-9) return 0;
+  return pa > pb ? 1 : -1;
+}
+function vDirAt(n) { const a = VTL.get(n); if (!a) return undefined; for (let i = a.length - 1; i >= 0; i--) if (a[i][0] <= simT + 1e-9) return a[i][3]; }
+// (the dashes: dark on a light wire, light on a dark one)
+const MV_INK = new Map();
+function mvInk(c) { let k = MV_INK.get(c); if (k === undefined) { const L = oklab(c)[0]; k = L > 0.72 ? 'rgba(0,0,0,.30)' : 'rgba(255,255,255,.42)'; MV_INK.set(c, k); } return k; }
 function paint() {
   for (const V of VIEWS) paintView(V);
   paintStation(); overviewTick();
@@ -42,7 +53,7 @@ function paintView(V) {
   const R = LAYOUT ? null : V === view ? [cam.x, cam.y, viewW(), viewH()] : V === view2 && !pane2.hidden ? [cam2.x, cam2.y, viewW2(), viewH2()] : null, M = 60;
   if (!TS_MODE) for (const it of V.runs) {
     if (R && it.bb && (it.bb[2] < R[0] - M || it.bb[0] > R[0] + R[2] + M || it.bb[3] < R[1] - M || it.bb[1] > R[1] + R[3] + M)) continue;
-    const cols = it.subs.map(s => lit(s.a, simT) && lit(s.b, simT) ? showCol(s.b, simT) : null), k = cols.join('|');
+    const cols = it.subs.map(s => lit(s.a, simT) && lit(s.b, simT) ? showCol(s.b, simT) : null), mv = it.subs.map((s, i) => vMove(s, cols[i])), k = cols.join('|') + mv.join('');
     if (k === it.last) continue; it.last = k;
     // each lit stretch of the wire is one smooth stroke, shaded along its length with a gradient
     it.g.innerHTML = '';
@@ -53,6 +64,16 @@ function paintView(V) {
       const gr = el('linearGradient', { id, gradientUnits: 'userSpaceOnUse', x1: a.x1, y1: a.y1, x2: b.x2, y2: b.y2 }, it.g);
       for (let m = i; m <= j; m++) if (m === i || m === j || cols[m] !== cols[m - 1] || cols[m] !== cols[m + 1]) el('stop', { offset: ((m - i + .5) / n).toFixed(4), 'stop-color': cols[m] }, gr);
       el('path', { d: V.shape(a.x1, a.y1, b.x2, b.y2), fill: 'none', stroke: `url(#${id})`, 'stroke-width': 8.9, 'stroke-linecap': 'round' }, it.g);
+      i = j + 1;
+    }
+    // (where current goes through it: dashes moving the way it goes, over the colour (option 1, Dallas 26 Nov 2026))
+    for (let i = 0; i < mv.length;) {
+      if (!mv[i]) { i++; continue; }
+      let j = i; while (j + 1 < mv.length && mv[j + 1] === mv[i]) j++;
+      const a = it.subs[i], b = it.subs[j], hz = a.y1 === b.y2 && a.x1 !== b.x2;
+      // (a level wire is drawn left to right; an upright one from its first stretch's start)
+      const fwd = hz ? (b.x2 > a.x1) === (mv[i] > 0) : mv[i] > 0;
+      el('path', { d: V.shape(a.x1, a.y1, b.x2, b.y2), class: 'mv' + (fwd ? '' : ' rev'), stroke: mvInk(cols[i]) }, it.g);
       i = j + 1;
     }
   }

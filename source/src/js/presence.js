@@ -14,8 +14,28 @@
    VTL: each junction's timeline of [time, colour, the part it came in through]; VCUR: what each junction is to show
    ({ lab: which source, c: colour, t: from when }).
    ===================================================================== */
-let VTL = new Map(), VCUR = new Map(), paintUntil = 0;   // (paintUntil: the last front still on its way: the panel is painted till then)
+let VTL = new Map(), VCUR = new Map(), VDIR = new Map(), paintUntil = 0;   // (paintUntil: the last front still on its way: the panel is painted till then)
 const vOn = () => VTL.size > 0;
+/* VDIR (Dallas, 26 Nov 2026, option 1: motion means current, colour means voltage): for each junction with current through
+   it, how far along the way the current goes it is, from 1 where it comes in to 0 where it leaves (each piece of wiring
+   measured on its own): along a wire, the current runs from the higher to the lower. */
+function vPot(es, top, bot) {
+  const js = [...new Set(es.flatMap(e => [e.a, e.b]))], pot = new Map(); for (const n of top) pot.set(n, 1); for (const n of bot) if (!top.has(n)) pot.set(n, 0);
+  const unk = js.filter(n => !pot.has(n)), ix = new Map(unk.map((n, i) => [n, i])), m = unk.length;
+  if (m && top.size && bot.size) { const links = [], diag = new Float64Array(m), rhs = new Float64Array(m);
+    for (const e of es) { const k = 1 / Math.max(1, e.len || 1), x = ix.get(e.a), y = ix.get(e.b);
+      if (x !== undefined && y !== undefined) links.push([x, y, k]);
+      else for (const [u, w] of [[x, e.b], [y, e.a]]) if (u !== undefined && pot.has(w)) { diag[u] += k; rhs[u] += k * pot.get(w); } }
+    for (let i = 0; i < m; i++) diag[i] += 1e-9;
+    const [v] = netSolve(m, links, diag, [rhs]); unk.forEach((n, i) => pot.set(n, v[i])); }
+  return pot;
+}
+// (the junctions along each carrying wire between two junctions: in between, in step)
+function vDirs(D, es, pot, cur) {
+  for (const e of es) { const pa = pot.get(e.a), pb = pot.get(e.b); if (pa === undefined || pb === undefined) continue;
+    if (cur.has(e.a)) D.set(e.a, pa); if (cur.has(e.b)) D.set(e.b, pb);
+    if (e.chain) { const mm = e.chain.length - 1, fw = e.chain[0] === e.a; e.chain.forEach((n, i) => { if (cur.has(n)) D.set(n, pa + (pb - pa) * (fw ? i : mm - i) / Math.max(1, mm)); }); } }
+}
 // the live sources: { n: its junction, lab, col, hot }
 function vSources() {
   const out = [];
@@ -91,14 +111,14 @@ function presenceWant() {
   const out = new Map(), byC = new Map();
   for (let n = 0; n < NET.nodes.length; n++) { const c = f(n); if (lab.has(c) || grp.has(c)) (byC.get(c) || byC.set(c, []).get(c)).push(n); }
   // each source's own piece: a hot one coloured as the current goes (past a pushbutton or switch its colour), a return plain
-  const done = new Set(), cur = new Set();
+  const done = new Set(), cur = new Set(), dir = new Map();
   for (const s of [...srcs.filter(s => s.hot), ...srcs.filter(s => !s.hot)]) { const c = f(s.n), S = lab.get(c); if (S !== s || done.has(c)) continue; done.add(c);
     let cols = null;
     if (s.hot) cols = vColours(c, f, s.col, bot, dist, JE);
     else { const lc = new Map();   // (each load with current through it into this return: its own colour (or, with none, the current's))
       for (const l of loads) { if (l.ca === l.cb) continue; for (const [mine, oth, cm] of [[l.a, l.b, l.ca], [l.b, l.a, l.cb]]) if (cm === c && bot.has(oth) && out.has(oth)) lc.set(mine, l.p.color ? flowOf(l.p.color) : out.get(oth).c); }
       cols = vReturn(c, s.col, lc, dist, JE); }
-    if (cols && cols.cur) for (const n of cols.cur) cur.add(n);
+    if (cols && cols.cur) { for (const n of cols.cur) cur.add(n); if (cols.pot) vDirs(dir, cols.es, cols.pot, cols.cur); }
     for (const n of byC.get(c) || []) out.set(n, { lab: s.lab, c: (cols && cols.get(n)) || s.col }); }
   // pieces fed only through loads with no current: the colour at the load's far end; between loads in series, a fade
   for (const g of groups) {
@@ -116,16 +136,23 @@ function presenceWant() {
       const [v] = netSolve(m, links, diag, [rhs]);
       col = new Map(g.comps.map((c, i) => [c, { lab: 'S' + ls.sort().join(''), c: mixOk(hc, rc, clamp01(1 - v[i])) }]));
       for (const c of g.comps) for (const n of byC.get(c) || []) cur.add(n);
+      // (which way along the wiring between loads in series: in at the terminal of a load nearer the hot side, out at the other)
+      for (const c of g.comps) { const vc = v[ix.get(c)], tp = new Set(), bt = new Set();
+        for (const l of loads) { if (l.ca === l.cb) continue; for (const [mine, cm, ow] of [[l.a, l.ca, l.cb], [l.b, l.cb, l.ca]]) { if (cm !== c) continue;
+          const s = lab.get(ow), vo = s ? (s.x ? null : s.lab === hot ? 1 : 0) : ix.has(ow) ? v[ix.get(ow)] : null; if (vo === null) continue; (vo > vc ? tp : bt).add(mine); } }
+        const es = JE.get(c) || []; if (tp.size && bt.size) vDirs(dir, es, vPot(es, tp, bt), new Set(byC.get(c) || [])); }
     }
     for (const [c, r] of col) for (const n of byC.get(c) || []) out.set(n, { lab: r.lab, c: r.c });
   }
   // wiring with a source on it but no current through it (Dallas, 26 Nov 2026, option 1A): a little dimmer, toward the panel's grey
   for (const [n, r] of out) if (!cur.has(n)) r.c = vDim(r.c);
+  VDIR = dir;
   return out;
 }
 const V_DIM = 0.55, V_FADE = 240;
 const V_DC = new Map(), V_FC = new Map();
-const vDim = c => { let d = V_DC.get(c); if (d === undefined) { d = mixOk(c, '#404040', V_DIM); V_DC.set(c, d); } return d; };
+const V_DS = new Set();   // (every colour that means no current: for the motion)
+const vDim = c => { let d = V_DC.get(c); if (d === undefined) { d = mixOk(c, '#404040', V_DIM); V_DC.set(c, d); V_DS.add(d); } return d; };
 // (a colour faded part way to another, in steps of 1/64: the same few colours over and over on a big panel)
 const vFade = (a, b, f) => { const k = a + b + Math.round(f * 64); let d = V_FC.get(k); if (d === undefined) { d = mixOk(a, b, Math.round(f * 64) / 64); V_FC.set(k, d); } return d; };   // (how much dimmer wiring with no current through it is; how far a load's colour runs on past it)
 /* A return piece c (L2, the neutral, X0): from each load with current through it (Dallas, 26 Nov 2026, option 2C), the
@@ -143,7 +170,7 @@ function vReturn(c, base, lc, dist, JE) {
     for (let i = 0; i < m; i++) diag[i] += 1e-9;
     const [v] = netSolve(m, links, diag, [rhs]); unk.forEach((n, i) => pot.set(n, v[i])); }
   // (which stretches carry current: see vCarry)
-  const carry = vCarry(es, top, src), on = e => carry.has(e);
+  const carry = vCarry(es, top, src), on = e => carry.has(e); out.pot = pot; out.es = es;
   // (each load's colour runs on from it, the way the current goes, fading over V_FADE; where currents from several loads
   // come together, their colours blend (each as faded as it is); one faded right out drops out of the blend)
   const inn = new Map(); for (const e of es) if (on(e)) { const [u, w] = pot.get(e.a) > pot.get(e.b) ? [e.a, e.b] : [e.b, e.a]; (inn.get(w) || inn.set(w, []).get(w)).push([e, u]); }
@@ -196,6 +223,7 @@ function vColours(c, f, base, bot, dist, JE) {
   for (const n of js) out.set(n, shown(stOf(n)));
   // (which stretches carry current: see vCarry)
   out.cur = new Set(); for (const e of vCarry(es, top, btm)) { out.cur.add(e.a); out.cur.add(e.b); if (e.chain) for (const n of e.chain) out.cur.add(n); }
+  out.pot = pot; out.es = es;
   for (const e of es) if (e.kind === 'seg') { const u = up(e), r = stOf(u), mm = e.chain.length - 1, fw = u === e.a;
     e.chain.forEach((n, i) => { if (n === e.a || n === e.b) return; const d = (e.len || 0) * (fw ? i : mm - i) / Math.max(1, mm); out.set(n, shown({ set: r.set, from: r.from, rd: r.rd + d })); }); }
   return out;
@@ -213,7 +241,7 @@ function vPass(e, U, W, fromC) {
 function vPut(n, at, c, via) {
   let a = VTL.get(n); if (!a) VTL.set(n, a = [[-1e9, null]]);
   while (a.length > 1 && a[a.length - 1][0] >= at - 1e-9) a.pop();
-  a.push([at, c, via]);
+  a.push([at, c, via, c ? VDIR.get(n) : undefined]);   // (and which way the current goes there, shown with its colour)
   let k = 0; for (let i = 0; i < a.length; i++) if (a[i][0] <= simT) k = i;
   if (k > 0) a.splice(0, k);
   if (at > paintUntil) paintUntil = at;   // (not busyUntil: a clicked button is let go once the relays have settled, as before)
