@@ -3245,6 +3245,24 @@ const DEF_CIRCUIT = `
     return out;
   });
 
+  await check('Ten coils in parallel off one riser (Dallas, 26 Nov 2026, his light sequencer): every one fed shows its wiring carrying current, down to the last; their colours blend on the shared neutral', async page => {
+    const d = require('fs').readFileSync(path.join(__dirname, 'fixtures', 'light_sequencer.json'), 'utf8');
+    await page.evaluate(d => { useCircuit(readCircuit(JSON.parse(d)), ''); }, d);
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + SETTLED + `
+      const out = []; step(2); press('A', true); step(8);
+      const coils = parts.filter(p => p.t === 'coil').sort((a, b) => a.y - b.y);
+      for (const c of coils) { if (!coilOn[c.id]) { out.push(c.L + ' not in'); continue; }
+        const hot = [c._a, c._b].find(n => labOf(n) === 'P1'), col = colAt(hot, simT);
+        if (!col || col === vDim(colAt(hot, simT)) || [...V_DC.values()].includes(col)) out.push(c.L + ': its feed is drawn as carrying no current (' + col + ')'); }
+      // (the neutral riser just past the lowest coils: a blend of their colours, not one coil's alone)
+      const ns = [1520, 1600, 1680].map(y => NET.nodes.findIndex(q => q.x === 1100 && q.y === y)).map(n => colAt(n, simT));
+      const singles = coils.map(c => flowOf(c.color));
+      if (ns.every(c => singles.includes(c))) out.push('the neutral riser shows single coil colours, not blends: ' + ns.join(' '));
+      const sb = settledBad(); if (sb) out.push(sb);
+      return out;`));
+  });
+
   await check('Where each source reaches, on bars (Dallas, 25 Nov 2026, the seal-in preset): L2 back through X up to A and the seal-in; past A its colour at once; A back-feeds the open seal-in; D drains, then L2 comes back', async page => {
     await page.selectOption('#preset', 'seal'); await page.click('#tab-run');
     return page.evaluate(new Function(STEP + SETTLED + `

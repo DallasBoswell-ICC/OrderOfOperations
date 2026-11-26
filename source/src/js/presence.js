@@ -34,6 +34,27 @@ function vLoads() {
 // (an edge's travel time, worked out once per run: stepTime looks it up by a text key, too slow for 60,000 junctions)
 const vStep = e => e._st !== undefined && e._stR === RUN_ID ? e._st : (e._stR = RUN_ID, e._st = stepTime(e));
 let RUN_ID = 0;
+/* Which of the runs es carry current, from the junctions tops to the junctions bots (Dallas, 26 Nov 2026): exactly those on
+   some way from one to the other that never passes the same junction twice: the runs in one biconnected block with an
+   imagined wire from the tops to the bots. Worked out from how the wiring is joined, not from the network's numbers, so a
+   long riser feeding many loads is not taken for idle where its current is small. */
+function vCarry(es, tops, bots) {
+  const out = new Set(); if (!tops.size || !bots.size) return out;
+  const S = -1, T = -2, E = [], adj = new Map(), add = (a, b, e) => { const i = E.length; E.push([a, b, e]); for (const x of [a, b]) (adj.get(x) || adj.set(x, []).get(x)).push(i); };
+  for (const e of es) add(e.a, e.b, e);
+  for (const n of tops) add(S, n, null); for (const n of bots) add(n, T, null);
+  const st = E.length; add(S, T, null);
+  // (Tarjan's blocks, without recursion: a big machine's wiring is deep)
+  const disc = new Map(), low = new Map(), stk = []; let time = 0;
+  const stack = [[S, -1, 0]]; disc.set(S, time); low.set(S, time++);
+  while (stack.length) { const top = stack[stack.length - 1], [u, pe] = top, L = adj.get(u) || [];
+    if (top[2] < L.length) { const i = L[top[2]++]; if (i === pe) continue; const [a, b] = E[i], w = a === u ? b : a;
+      if (!disc.has(w)) { stk.push(i); disc.set(w, time); low.set(w, time++); stack.push([w, i, 0]); }
+      else if (disc.get(w) < disc.get(u)) { stk.push(i); low.set(u, Math.min(low.get(u), disc.get(w))); } }
+    else { stack.pop(); if (!stack.length) break; const p = stack[stack.length - 1][0]; low.set(p, Math.min(low.get(p), low.get(u)));
+      if (low.get(u) >= disc.get(p)) { const blk = []; let i; do { i = stk.pop(); blk.push(i); } while (i !== pe); if (blk.includes(st)) for (const k of blk) if (E[k][2]) out.add(E[k][2]); } } }
+  return out;
+}
 const vIsLoad = e => e.kind === 'part' && LOADT(e.part.t);
 const vThrough = e => e.kind === 'part' && LOADT(e.part.t) && faultOf(e.part) !== 'open' && !BLOWN[e.part.id];   // (a load a source can pass through)
 // what every junction is to show now: Map junction -> { lab, c }
@@ -102,14 +123,13 @@ function presenceWant() {
   for (const [n, r] of out) if (!cur.has(n)) r.c = vDim(r.c);
   return out;
 }
-const V_DIM = 0.3, V_FADE = 240;
+const V_DIM = 0.55, V_FADE = 240;
 const V_DC = new Map(), V_FC = new Map();
 const vDim = c => { let d = V_DC.get(c); if (d === undefined) { d = mixOk(c, '#404040', V_DIM); V_DC.set(c, d); } return d; };
 // (a colour faded part way to another, in steps of 1/64: the same few colours over and over on a big panel)
 const vFade = (a, b, f) => { const k = a + b + Math.round(f * 64); let d = V_FC.get(k); if (d === undefined) { d = mixOk(a, b, Math.round(f * 64) / 64); V_FC.set(k, d); } return d; };   // (how much dimmer wiring with no current through it is; how far a load's colour runs on past it)
 /* A return piece c (L2, the neutral, X0): from each load with current through it (Dallas, 26 Nov 2026, option 2C), the
-   load's own colour, fading to the return's over V_FADE as it goes on toward the bar or box; where several meet, the
-   nearest load's. Which stretches carry current: worked out as for the hot side (out.cur). */
+   load's own colour, fading to the return's over V_FADE as it goes on toward the bar or box; where several meet, blended. Which stretches carry current: worked out as for the hot side (out.cur). */
 function vReturn(c, base, lc, dist, JE) {
   const out = new Map(), es = JE.get(c) || [], js = [...new Set(es.flatMap(e => [e.a, e.b]))]; out.cur = new Set();
   const src = new Set(js.filter(n => (dist.get(n) ?? 1) < 1e-3)), top = new Set(js.filter(n => lc.has(n)));
@@ -122,14 +142,24 @@ function vReturn(c, base, lc, dist, JE) {
       else for (const [u, w] of [[x, e.b], [y, e.a]]) if (u !== undefined && pot.has(w)) { diag[u] += k; rhs[u] += k * pot.get(w); } }
     for (let i = 0; i < m; i++) diag[i] += 1e-9;
     const [v] = netSolve(m, links, diag, [rhs]); unk.forEach((n, i) => pot.set(n, v[i])); }
-  // (distance from the nearest load, along the way the current goes, and which load's colour)
-  const dl = new Map(), cl = new Map(), h = heap(); for (const n of top) { dl.set(n, 0); cl.set(n, lc.get(n)); h.push(0, n); }
-  const adj = new Map(); for (const e of es) for (const [a, b] of [[e.a, e.b], [e.b, e.a]]) (adj.get(a) || adj.set(a, []).get(a)).push([b, e]);
-  while (h.size()) { const [d, u] = h.pop(); if (d > dl.get(u) + 1e-9) continue; for (const [w, e] of adj.get(u) || []) { const dw = d + (e.len || 0); if (!dl.has(w) || dw < dl.get(w)) { dl.set(w, dw); cl.set(w, cl.get(u)); h.push(dw, w); } } }
-  const colOf = (n, d) => { const lcol = cl.get(n); return lcol ? vFade(lcol, base, clamp01(d / V_FADE)) : base; };
-  for (const e of es) { const pa = pot.get(e.a), pb = pot.get(e.b); if (Math.abs(pa - pb) < 1e-4) continue; out.cur.add(e.a); out.cur.add(e.b);
-    if (e.kind === 'seg') { const mm = e.chain.length - 1; e.chain.forEach((n, i) => { out.cur.add(n); const fr = i / Math.max(1, mm), d = dl.get(e.a) + (dl.get(e.b) - dl.get(e.a)) * fr; out.set(n, colOf(e.chain[0] === e.a ? e.a : e.b, d)); }); } }
-  for (const n of js) if (out.cur.has(n)) out.set(n, colOf(n, dl.get(n) || 0));
+  // (which stretches carry current: see vCarry)
+  const carry = vCarry(es, top, src), on = e => carry.has(e);
+  // (each load's colour runs on from it, the way the current goes, fading over V_FADE; where currents from several loads
+  // come together, their colours blend (each as faded as it is); one faded right out drops out of the blend)
+  const inn = new Map(); for (const e of es) if (on(e)) { const [u, w] = pot.get(e.a) > pot.get(e.b) ? [e.a, e.b] : [e.b, e.a]; (inn.get(w) || inn.set(w, []).get(w)).push([e, u]); }
+  const st = new Map();
+  const stOf = n => { if (st.has(n)) return st.get(n); const m = new Map(); st.set(n, m);
+    if (lc.has(n)) m.set(lc.get(n), 0);
+    for (const [e, u] of inn.get(n) || []) for (const [c2, d] of stOf(u)) { const dd = d + (e.len || 0); if (dd < V_FADE && !(m.get(c2) <= dd)) m.set(c2, dd); }
+    return m; };
+  const BC = vReturn.bc || (vReturn.bc = new Map());
+  const colOf = (m, plus = 0) => { const live = [...m].filter(([, d]) => d + plus < V_FADE); if (!live.length) return base;
+    const cs = live.map(([c2, d]) => vFade(c2, base, clamp01((d + plus) / V_FADE))); if (cs.length === 1) return cs[0];
+    const k = cs.sort().join(); let r = BC.get(k); if (r === undefined) { r = blend(cs); BC.set(k, r); } return r; };
+  for (const e of es) { if (!on(e)) continue; out.cur.add(e.a); out.cur.add(e.b);
+    if (e.kind === 'seg') { const [u] = pot.get(e.a) > pot.get(e.b) ? [e.a] : [e.b], m = stOf(u), mm = e.chain.length - 1, fw = e.chain[0] === u;
+      e.chain.forEach((n, i) => { out.cur.add(n); out.set(n, colOf(m, (e.len || 0) * (fw ? i : mm - i) / Math.max(1, mm))); }); } }
+  for (const n of js) if (out.cur.has(n)) out.set(n, colOf(stOf(n)));
   return out;
 }
 /* The colours along a hot source's piece c (as the phases' were, Dallas 24 Nov 2026): its own colour, or past a pushbutton,
@@ -164,7 +194,8 @@ function vColours(c, f, base, bot, dist, JE) {
       r = same ? ins.reduce((a, q) => q.rd < a.rd ? q : a) : { set: s, from: blend(ins.map(shown)), rd: 0 }; }
     st.set(n, r); return r; };
   for (const n of js) out.set(n, shown(stOf(n)));
-  out.cur = new Set(); for (const e of es) if (Math.abs(pot.get(e.a) - pot.get(e.b)) > 1e-4) { out.cur.add(e.a); out.cur.add(e.b); if (e.chain) for (const n of e.chain) out.cur.add(n); }
+  // (which stretches carry current: see vCarry)
+  out.cur = new Set(); for (const e of vCarry(es, top, btm)) { out.cur.add(e.a); out.cur.add(e.b); if (e.chain) for (const n of e.chain) out.cur.add(n); }
   for (const e of es) if (e.kind === 'seg') { const u = up(e), r = stOf(u), mm = e.chain.length - 1, fw = u === e.a;
     e.chain.forEach((n, i) => { if (n === e.a || n === e.b) return; const d = (e.len || 0) * (fw ? i : mm - i) / Math.max(1, mm); out.set(n, shown({ set: r.set, from: r.from, rd: r.rd + d })); }); }
   return out;
