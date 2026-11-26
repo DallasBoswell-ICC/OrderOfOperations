@@ -3202,6 +3202,24 @@ const DEF_CIRCUIT = `
       return out;`));
   });
 
+  await check('Where each source reaches (Dallas, 26 Nov 2026): a heater wired phase to phase, its switch opened: the other phase shows from underneath as the first drains, no dark gap', async page => {
+    const d = { app: 'order-of-operations-circuit-builder', v: 1, name: 'Phase to phase', w: 880, pw: 'boxes', parts: [['ph', 100, 120, '2', 0, 1, '', 3], ['ph', 100, 360, '1', 0, 1, '', 3], ['tgl', 400, 120, '1', 0, 1, '99E600'], ['htr', 700, 240, '1', 0, 1, 'FF0032', null, null, null, null, null, null, null, null, { r: 3 }]],
+      wires: [[140, 120, 340, 120], [460, 120, 700, 120], [700, 120, 700, 180], [700, 300, 700, 360], [140, 360, 700, 360]] };
+    await page.evaluate(d => { useCircuit(readCircuit(d), ''); }, d);
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + SETTLED + `
+      const out = [], sw = parts.find(p => p.t === 'tgl'), n = NET.nodes.findIndex(q => q.x === 600 && q.y === 120), K = opKey(sw);
+      step(3);
+      if (colAt(n, simT) !== phColK(1)) out.push('switch open: past it is ' + colAt(n, simT) + ', not L1 back through the heater');
+      press(K, !down[K]); step(4);
+      if ((VCUR.get(n) || {}).lab !== 'P2' || !colAt(n, simT)) out.push('switch closed: past it is ' + colAt(n, simT) + ', not L2 (in the colour of the switch)');
+      press(K, !down[K]); const seq = [];
+      for (let i = 0; i < 960; i++) { step(1 / 120); const c = colAt(n, simT); if (seq[seq.length - 1] !== c) seq.push(c); }
+      if (seq.includes(null) || seq[seq.length - 1] !== phColK(1)) out.push('switch opened again: ' + seq.join(' > ') + ' (L2 straight to L1, never dark)');
+      const sb = settledBad(); if (sb) out.push(sb);
+      return out;`));
+  });
+
   await check('Where each source reaches, on bars (Dallas, 25 Nov 2026, the seal-in preset): L2 back through X up to A and the seal-in; past A its colour at once; A back-feeds the open seal-in; D drains, then L2 comes back', async page => {
     await page.selectOption('#preset', 'seal'); await page.click('#tab-run');
     return page.evaluate(new Function(STEP + SETTLED + `
