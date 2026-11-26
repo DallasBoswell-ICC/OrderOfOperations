@@ -2786,11 +2786,13 @@ function network() {
     p._poles = p._poles || [0, 1, 2, 3].map(i => ({ t: 'pp', id: p.id + '.' + i, i }));
     p._poles.forEach((k, i) => { const c = i < 2 ? 0 : 3; Object.assign(k, { x: p, _a: p._t[c], _b: p._t[c + 1 + (i % 2)] }); edges.push({ a: k._a, b: k._b, w: 120, kind: 'part', part: k }); jedges.push({ kind: 'part', a: k._a, b: k._b, len: 120, part: k }); });
   }
+  // (a crossover's or DPDT's two crossing ways are longer than its straight ones; a 3PST's third pole is as long as its
+  // other two (Dallas, 26 Nov 2026: L3 had run out behind L1 and L2))
   for (const p of parts) if (p.t === 'xov' || p.t === 'dps' || p.t === 'tps' || isBrk(p) && p.t !== 'cbk') {
     p._t = terms(p).map(([x, y]) => node(x, y, key(x, y)));
     p._poles = p._poles || (p.t === 'dps' || p.t === 'cbd' ? [0, 1] : p.t === 'tps' || p.t === 'cbt' ? [0, 1, 2] : [0, 1, 2, 3]).map(i => ({ t: 'pp', id: p.id + '.' + i, i }));
     const ends = p.t === 'tps' || p.t === 'cbt' ? [[0, 1], [2, 3], [4, 5]] : [[0, 1], [2, 3], [0, 3], [2, 1]].slice(0, p.t === 'dps' || p.t === 'cbd' ? 2 : 4);   // (a DPST: its two poles, top and bottom, across; a 3PST: its three)
-    p._poles.forEach((k, i) => { Object.assign(k, { x: p, _a: p._t[ends[i][0]], _b: p._t[ends[i][1]] }); const w = i < 2 ? 120 : 170; edges.push({ a: k._a, b: k._b, w, kind: 'part', part: k }); jedges.push({ kind: 'part', a: k._a, b: k._b, len: isBrk(p) ? 2 : w, part: k }); });   // (a DPST or 3PST circuit breaker: crossed at once, as a single one is)
+    p._poles.forEach((k, i) => { Object.assign(k, { x: p, _a: p._t[ends[i][0]], _b: p._t[ends[i][1]] }); const w = i < 2 || p.t === 'tps' || p.t === 'cbt' ? 120 : 170; edges.push({ a: k._a, b: k._b, w, kind: 'part', part: k }); jedges.push({ kind: 'part', a: k._a, b: k._b, len: isBrk(p) ? 2 : w, part: k }); });   // (a DPST or 3PST circuit breaker: crossed at once, as a single one is)
   }
   for (const p of parts) if (p.t === 'mtr') p._t = terms(p).map(([x, y]) => node(x, y, key(x, y)));
   const jadj = new Map(), feedV = new Map();

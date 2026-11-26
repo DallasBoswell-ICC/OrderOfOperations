@@ -3220,6 +3220,25 @@ const DEF_CIRCUIT = `
       return out;`));
   });
 
+  await check('A 3PST switch or breaker closed (Dallas, 26 Nov 2026): L1, L2 and L3 run out from it together, none behind the others', async page => {
+    const out = [];
+    for (const t of ['tps', 'cbt']) {
+      const d = { app: 'order-of-operations-circuit-builder', v: 1, name: 'T', w: 1600, pw: 'boxes', parts: [['ph', 100, 120, '1', 0, 1, '', 3], ['ph', 100, 240, '2', 0, 1, '', 3], ['ph', 100, 360, '3', 0, 1, '', 3], [t, 500, 240, '1', 0, 1, '99E600'], ['mtr', 1300, 240, '1', 0, 1, '']],
+        wires: [[140, 120, 440, 120], [140, 240, 440, 240], [140, 360, 440, 360], [560, 120, 1140, 120], [560, 240, 1140, 240], [560, 360, 1140, 360]] };
+      await page.evaluate(d => { useCircuit(readCircuit(d), ''); }, d);
+      await page.click('#tab-edit').catch(() => {}); await page.click('#tab-run');
+      const r = await page.evaluate(new Function(STEP + `
+        const sw = parts.find(p => p.t === '${t}'), K = opKey(sw), at = [120, 240, 360].map(y => NET.nodes.findIndex(q => q.x === 1000 && q.y === y)), was = at.map(n => colAt(n, simT));
+        step(2); const w0 = at.map(n => colAt(n, simT)); if (closed(sw._poles[0])) press(K, !down[K]); step(4); const w1 = at.map(n => colAt(n, simT));
+        press(K, !down[K]); const t0 = simT, got = at.map(() => null);
+        for (let i = 0; i < 1200; i++) { step(1 / 240); at.forEach((n, k) => { if (got[k] === null && colAt(n, simT) && colAt(n, simT) !== w1[k]) got[k] = simT - t0; }); }
+        return got;`));
+      if (r.some(x => x === null)) out.push(t + ': not every line lit: ' + r);
+      else if (Math.max(...r) - Math.min(...r) > 0.02) out.push(t + ': the lines reached the motor at ' + r.map(x => x.toFixed(2)).join(', ') + ' s');
+    }
+    return out;
+  });
+
   await check('Where each source reaches, on bars (Dallas, 25 Nov 2026, the seal-in preset): L2 back through X up to A and the seal-in; past A its colour at once; A back-feeds the open seal-in; D drains, then L2 comes back', async page => {
     await page.selectOption('#preset', 'seal'); await page.click('#tab-run');
     return page.evaluate(new Function(STEP + SETTLED + `
