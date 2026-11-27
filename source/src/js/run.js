@@ -38,8 +38,18 @@ function vMove(s, c) {
 const MV_DASH = 13, MV_P = 30; let MV_DUR = 0.3;
 function mvAttrs(n, fwd, ink, cls = 'mv', back = 0) {   // (back: the drawn line starts this far before n)
   const D = (vDirAt(n) || [0, 0])[1] + (fwd ? -back : back), o = fwd ? D : MV_DASH - D, m = ((o % MV_P) + MV_P) % MV_P;
-  return { class: cls + (fwd ? '' : ' rev'), stroke: ink, style: `--o:${m.toFixed(1)}px;animation-delay:${(-(performance.now() / 1000) % MV_DUR).toFixed(3)}s` };
+  return { class: cls, stroke: ink, 'stroke-dashoffset': m.toFixed(2), 'data-o': m.toFixed(2), 'data-f': fwd ? 1 : 0 };
 }
+/* every stretch's dashes on the page's one clock (all started at its time 0), so stretches drawn at different moments, a wire
+   and the lead it runs into, stay exactly in step (CSS animations start whenever each is first drawn, a few frames apart) */
+const MV_SLOW = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches ? 4 : 1;
+function mvGo(e) {
+  if (!e.animate) return e; const o = +e.getAttribute('data-o');
+  const a = e.animate([{ strokeDashoffset: o + 'px' }, { strokeDashoffset: (o - MV_P) + 'px' }], { duration: MV_DUR * 1000 * MV_SLOW, iterations: Infinity, direction: e.getAttribute('data-f') === '1' ? 'normal' : 'reverse' });
+  try { a.startTime = 0; } catch (_) {}
+  return e;
+}
+function mvSpeed() { if (!document.getAnimations) return; for (const a of document.getAnimations()) { const t = a.effect && a.effect.target; if (t && t.classList && t.classList.contains('mv')) { a.effect.updateTiming({ duration: MV_DUR * 1000 * MV_SLOW }); a.startTime = 0; } } }
 // a part's lead with current through it (in at a load's hot side, out at its return; through a contact from its higher side)
 function paintLeadMv(L, p, n) {
   const c = showCol(n, simT), A = vDirAt(n), full = L.full;
@@ -56,7 +66,7 @@ function paintLeadMv(L, p, n) {
   const cap = 4.45, x1 = L.term + (L.term < L.body ? -cap : cap);
   L.mv = el('line', { x1, x2: L.body, y1: L.y, y2: L.y, ...mvAttrs(n, way > 0, mvInk(c), 'mv', cap) });
   const top = [L.cur, L.old].reduce((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? b : a));
-  top.parentNode.insertBefore(L.mv, top.nextSibling);
+  top.parentNode.insertBefore(L.mv, top.nextSibling); mvGo(L.mv);
 }
 function vDirAt(n) { const a = VTL.get(n); if (!a) return undefined; for (let i = a.length - 1; i >= 0; i--) if (a[i][0] <= simT + 1e-9) return a[i][3]; }
 // (the dashes: dark on a light wire, light on a dark one)
@@ -101,10 +111,10 @@ function paintView(V) {
       const a = it.subs[i], b = it.subs[j], hz = a.y1 === b.y2 && a.x1 !== b.x2;
       // (a level wire is drawn left to right; an upright one from its first stretch's start)
       const fwd = hz ? (b.x2 > a.x1) === (mv[i] > 0) : mv[i] > 0, start = hz && b.x2 < a.x1 ? b.b : a.a, ink = mvInk(cols[i]);   // (where the drawn path starts)
-      if (hz || a.x1 !== b.x2) el('path', { d: V.shape(a.x1, a.y1, b.x2, b.y2), ...mvAttrs(start, fwd, ink) }, it.mg);
+      if (hz || a.x1 !== b.x2) mvGo(el('path', { d: V.shape(a.x1, a.y1, b.x2, b.y2), ...mvAttrs(start, fwd, ink) }, it.mg));
       else {   // (upright: in pieces, leaving a gap where a level wire hops over it)
         const x = a.x1, y0 = a.y1, y1 = b.y2, dn = y1 > y0 ? 1 : -1, cut = NET.hops.filter(([hx, hy]) => hx === x && (hy - y0) * dn > 0 && (y1 - hy) * dn > -20).map(([, hy]) => [hy - 20, hy + 2]).sort((u, w) => (u[0] - w[0]) * dn);
-        let from = y0; const seg = (u, w) => { if ((w - u) * dn <= 0.5) return; el('path', { d: `M${x} ${u}L${x} ${w}`, ...mvAttrs(start, fwd, ink, 'mv', -Math.abs(u - y0)) }, it.mg); };
+        let from = y0; const seg = (u, w) => { if ((w - u) * dn <= 0.5) return; mvGo(el('path', { d: `M${x} ${u}L${x} ${w}`, ...mvAttrs(start, fwd, ink, 'mv', -Math.abs(u - y0)) }, it.mg)); };
         for (const [lo, hi] of cut) { const [p, q] = dn > 0 ? [lo, hi] : [hi, lo]; seg(from, dn > 0 ? Math.min(p, y1) : Math.max(p, y1)); from = q; }
         seg(from, y1);
       }

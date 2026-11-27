@@ -3239,7 +3239,7 @@ const DEF_CIRCUIT = `
       if (way(sub(300, 360)) !== 1) out.push('P1 (feeding) is not shown going toward the heater');
       if (way(sub(600, 120)) !== -1) out.push('P2 (the return) is not shown going back toward its source');
       if (way(sub(200, 120)) !== -1) out.push('P2 before the switch is not shown going back toward its source');
-      const lead = (S, n) => { const v = view.parts.get(H.id), L = v && v.lead && v.lead[S]; return L && L.mv ? (L.mv.classList.contains('rev') ? 'out' : 'in') : 'none'; };
+      const lead = (S, n) => { const v = view.parts.get(H.id), L = v && v.lead && v.lead[S]; return L && L.mv ? (L.mv.getAttribute('data-f') === '1' ? 'in' : 'out') : 'none'; };
       const nP1 = [H._a, H._b].find(n => VCUR.get(n) && VCUR.get(n).lab === 'P1'), S1 = nP1 === H._a ? 'A' : 'B', S2 = S1 === 'A' ? 'B' : 'A';
       if (lead(S1) !== 'in') out.push('the heater lead on P1: ' + lead(S1) + ', not in');
       if (lead(S2) !== 'out') out.push('the heater lead on P2: ' + lead(S2) + ', not out');
@@ -3332,6 +3332,9 @@ const DEF_CIRCUIT = `
       for (const s of NET.subs) { const c = lit(s.a, simT) && lit(s.b, simT) ? showCol(s.b, simT) : null, m = vMove(s, c);
         if (m && V_DS.has(c)) { out.push('a dimmed stretch moves at ' + s.x1 + ',' + s.y1); break; } }
       if (!document.querySelector('.mv')) out.push('no moving dashes drawn');
+      // (every stretch's dashes on the page's one clock, so a wire's and the lead it runs into stay in step (Dallas, 26 Nov 2026))
+      if (document.getAnimations) { const as = document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.classList && a.effect.target.classList.contains('mv'));
+        if (!as.length) out.push('the dashes are not moving'); else if (as.some(a => a.startTime !== 0)) out.push('some dashes keep their own clock'); }
       return out;`));
   });
 
