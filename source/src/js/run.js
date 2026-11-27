@@ -195,6 +195,7 @@ function paintView(V) {
 }
 // a pushbutton's cap (on the circuit, or on the operator station: v is that drawing, centred at x, y)
 function paintBtn(p, v, x, y) {
+  if (v.nb) return paintNewBtn(p, v, x, y);
   // a button with a light built in: its cap is dim while the light is off, and lights up with it
   let k; const pr = !!down[p.L], lit = v.lit ? Math.max(0, ...lampsOf(p.L).map(litOf)) : 0; k = (pr ? 1 : 0) + ':' + lit.toFixed(3);
   if (k === v.k) return; v.k = k;
@@ -216,6 +217,26 @@ function paintBtn(p, v, x, y) {
   }
   if (v.twist) v.twist.style.display = pr ? '' : 'none';
   v.press.setAttribute('transform', pr ? `translate(${x} ${y}) scale(${p.estop ? .86 : .93}) translate(${-x} ${-y})` : '');
+}
+/* a redesigned pushbutton (Dallas, 27 Nov 2026): its leads and rings in the colour at each end (voltage on both sides of
+   an open contact shows), the bar and stem in the current's colour once made, moving down 12 when pressed; the cap darker
+   and sunk; and, with current through it, the dashes running along its leads and across the bar */
+function paintNewBtn(p, v, x, y) {
+  const pr = !!down[p.L], made = p.nc ? !pr : pr, cl = n => { const c = lit(n, simT) ? showCol(n, simT) : null; return c || GREY; }, ca = cl(p._a), cb = cl(p._b);
+  const live = c => c !== GREY && !V_DS.has(c), thr = made ? (live(ca) ? ca : live(cb) ? cb : ca !== GREY ? ca : cb !== GREY ? cb : BLADE_GREY) : BLADE_GREY;
+  const way = made && vOn() && !TS_MODE && live(ca) && live(cb) ? vWay(p._a, p._b) : 0;
+  const k = `${pr}|${ca}|${cb}|${way}|${way ? (vDirAt(p._a) || [0, 0])[1] | 0 : 0}`; if (k === v.k) return; v.k = k;
+  v.sA.setAttribute('fill', ca); v.sB.setAttribute('fill', cb); v.rA.setAttribute('stroke', ca); v.rB.setAttribute('stroke', cb);
+  v.stem.setAttribute('fill', thr); v.blade.setAttribute('fill', thr);
+  v.bar.setAttribute('transform', pr ? 'translate(0 12)' : '');
+  const col = p.color || (p.nc ? '#FF0032' : '#00B050'); v.fill.setAttribute('fill', pr ? mixOk(col, '#000000', .28) : col); v.shine.setAttribute('opacity', pr ? 0 : .28);
+  v.text.style.fill = pr ? LIGHT_TEXT : DARK_TEXT;
+  v.press.setAttribute('transform', pr ? `translate(${x} ${v.nb.ky}) scale(.87) translate(${-x} ${-v.nb.ky})` : '');
+  v.mvg.innerHTML = '';
+  if (way) {   // (along the lead in, across the bar, along the lead out: each set by how far along it starts)
+    const w2 = NB_W / 2, by = v.nb.by + (pr ? 12 : 0), ink = mvInk(thr), fwd = way > 0, segs = [[x - w2 + 4.5, x - 26, y], [x - 25, x + 25, by], [x + 26, x + w2 - 4.5, y]];
+    for (const [a, b, yy] of segs) { const at = mvAttrs(p._a, fwd, ink, 'mv', -(a - (x - TERM(p)))); at.style = 'stroke-width:3'; mvGo(el('line', { x1: a, x2: b, y1: yy, y2: yy, ...at }, v.mvg)); }
+  }
 }
 // a selector switch's handle turning, and its position names
 function paintSel(p, v) {

@@ -778,7 +778,7 @@ const DEF_CIRCUIT = `
     const idle = await count(); if (idle > 0) out.push('a settled circuit was painted ' + idle + ' times in 0.6 s');
     const n = await page.evaluate(() => new Promise(res => { let n = 0; const P = paint; window.paint = function () { n++; P(); }; press('B', true); setTimeout(() => { window.paint = P; res(n); }, 400); }));
     if (n < 5) out.push('pressing B did not wake the painting up (' + n + ' paints)');
-    if (await page.evaluate(() => view.parts.get(parts.find(p => p.t === 'btn' && p.L === 'B').id).fill.getAttribute('fill')) !== '#404040') out.push('the pressed button did not repaint');
+    if (!(await page.evaluate(() => { const p = parts.find(p => p.t === 'btn' && p.L === 'B'), f = view.parts.get(p.id).fill.getAttribute('fill'); return p._nb ? f === mixOk(p.color, '#000000', .28) : f === '#404040'; }))) out.push('the pressed button did not repaint');   // (a redesigned button's cap darkens; today's goes grey)
     return out;
   });
 
@@ -3308,6 +3308,51 @@ const DEF_CIRCUIT = `
       step(0.2); if (L().some(v => v > 0)) out.push('lit before the supply reached both ends: ' + L().map(v => v.toFixed(2)).join(' '));
       step(3); const l = L(); if (!l.every(v => Math.abs(v - 1 / 9) < 0.02)) out.push('not a ninth as bright each: ' + l.map(v => v.toFixed(2)).join(' '));
       return out;`));
+  });
+
+  await check('Pushbutton redesign (Dallas, 27 Nov 2026), plain buttons: a NEMA contact in a body 104 above the wire and 32 below, the cap above it in a rounded square (NO) or an octagon on its base (NC); the rings in the colour at each end (both sides of an open START lit), the bar in the current once made, down 12 when pressed, with dashes across it; a button drawn twice, with a light, an E-stop or turned keeps today’s look; two buttons 160 apart still fit', async page => {
+    const d = require('fs').readFileSync(path.join(__dirname, 'fixtures', 'residential_panel_2.json'), 'utf8');
+    await page.evaluate(d => { useCircuit(readCircuit(JSON.parse(d)), ''); }, d);
+    const out = [];
+    const bld = await page.evaluate(() => { const o = [], S = parts.find(p => p.L === 'STOP'), G = parts.find(p => p.L === 'START');
+      for (const p of [S, G]) { if (!p._nb) o.push(p.L + ' is not drawn in the new design'); if (bodyUp(p) !== NB_UP || bodyDown(p) !== NB_DN) o.push(p.L + ' body not 104 up and 32 down'); }
+      const poly = q => [...document.querySelectorAll('polygon')].some(e => e.getAttribute('points').split(' ').length === 8 && Math.abs(+e.getAttribute('points').split(' ')[0].split(',')[0] - q.x) < 40 && Math.abs(+e.getAttribute('points').split(' ')[0].split(',')[1] - q.y) < 110);
+      if (!poly(S)) o.push('STOP (NC) has no octagon');
+      if (poly(G)) o.push('START (NO) has an octagon');
+      // (two buttons 160 apart still fit; not one 120 below another)
+      if (vClash('btn', 320, 'btn', 160)) o.push('a button 160 below another does not fit');
+      return o; });
+    out.push(...bld);
+    await page.click('#tab-run');
+    const r = await page.evaluate(new Function(STEP + `
+      const out = [], S = parts.find(p => p.L === 'STOP'), G = parts.find(p => p.L === 'START'), vS = view.parts.get(S.id), vG = view.parts.get(G.id);
+      const st = (e, a) => e.getAttribute(a);
+      step(15); needPaint = true; paint();
+      if (st(vG.rA, 'stroke') === GREY || st(vG.rB, 'stroke') === GREY) out.push('at rest, START’s rings are not both lit (hot one side, the neutral back through CR1 the other): ' + st(vG.rA, 'stroke') + ' ' + st(vG.rB, 'stroke'));
+      if (st(vG.blade, 'fill') !== BLADE_GREY) out.push('START’s bar is coloured while open');
+      if (st(vS.blade, 'fill') === BLADE_GREY) out.push('STOP (closed) has a grey bar');
+      press('START', true); step(simT + 6); needPaint = true; paint();
+      if (st(vG.blade, 'fill') === BLADE_GREY) out.push('START pressed: its bar is still grey');
+      if (st(vG.bar, 'transform') !== 'translate(0 12)') out.push('START pressed: its bar did not drop');
+      if (!vG.mvg.querySelector('.mv')) out.push('START pressed: no dashes across it');
+      press('START', false); press('STOP', true); step(simT + 3); needPaint = true; paint();
+      if (st(vS.blade, 'fill') !== BLADE_GREY) out.push('STOP pressed: its bar is still coloured');
+      if (vS.mvg.querySelector('.mv')) out.push('STOP pressed: dashes still across it');
+      return out;`));
+    out.push(...r);
+    // (today's look kept: a button drawn twice, one with a light built in, an E-stop, a turned one)
+    await page.click('#tab-edit');
+    const keep = await page.evaluate(() => { const o = [];
+      const mk = (t, x, y, L, extra) => { const p = newPart(t, x, y); p.L = L; Object.assign(p, extra || {}); parts.push(p); return p; };
+      parts.length = 0; wires.length = 0;
+      const a1 = mk('btn-no', 200, 200, 'A'), a2 = mk('btn-no', 200, 400, 'A'), b = mk('btn-no', 400, 200, 'B'), e = mk('btn-nc', 600, 200, 'E', { estop: true }), t = mk('btn-no', 800, 200, 'T', { rot: 1 }), l = mk('lamp', 400, 400, 'B');
+      const pl = mk('btn-nc', 1000, 200, 'P');
+      normalize(); draw();
+      if (!pl._nb || pl.t !== 'btn') o.push('(a plain button beside them is not drawn in the new design: the check is not working)');
+      for (const [p, n] of [[a1, 'a button drawn twice'], [a2, 'its second drawing'], [b, 'a button with a light built in'], [e, 'an E-stop'], [t, 'a turned button']]) if (p._nb) o.push(n + ' is drawn in the new design');
+      return o; });
+    out.push(...keep);
+    return out;
   });
 
   await check('Current Flow Test Circuit (Dallas, 27 Nov 2026; v2 with added rungs): through every section (heaters, motor forward and reverse, three-way lights, timer, a switch on a coil’s neutral side, back-feed through a 240 V heater) each part works (loads in series on the secondary each get their share), and once settled no current is shown going into a junction with nowhere to go, or out of one with nothing coming in', async page => {

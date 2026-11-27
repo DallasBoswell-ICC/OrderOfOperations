@@ -21,6 +21,11 @@ const V = 500;                       // how fast the current front travels at 1Ã
 const V_LEAD = 160, V_SHORT = 400, V_TAU = 0.1, V_TOP = 80;
 const RAMP = 110, FADE = 160;        // colour shading after a button / from a coil back to egg
 const BOX = 65.8368, BTN_IN = 43.8912, COIL = 82.296, COIL_IN = 60.3504;
+/* the pushbutton redesign (Dallas, 22 and 27 Nov 2026; plain buttons: not an E-stop, no light built in, drawn once): a body
+   NB_UP above its wire and NB_DN below, NB_W wide (ends 40 out, as before); the NEMA pushbutton contact at the wire (two
+   rings, a bar and its stem); above it the round cap in a guard, a rounded square on an NO and an octagon on its base on an
+   NC, each guard's top NB_GAP below the body's top */
+const NB_W = BOX + 14, NB_UP = 104, NB_DN = 32, NB_GAP = 11.5, NB_OR = 33, NB_SQ = 56, NB_CAP = 19;
 const OFF_WHITE = '#ffffd7', GREY = '#404040';
 const DARK_TEXT = 'rgba(28,28,28,.85)', LIGHT_TEXT = 'rgba(242,242,242,.78)';
 // colours chosen to sit evenly round the colour wheel, so any two currents that meet make a clear, distinct mix
@@ -166,13 +171,13 @@ const isBrk = p => p.t === 'cbk' || p.t === 'cbd' || p.t === 'cbt';   // (a circ
 const isMulti = p => isTglN(p) || p.t === 'cbd' || p.t === 'cbt';   // (the parts with more than two ends that switch: the toggle switches below, and a DPST or 3PST circuit breaker; each run as its poles)
 const isTglN = p => p.t === 'sp2' || p.t === 'xov' || p.t === 'dps' || p.t === 'dpd' || p.t === 'tps';   // (the toggle switches with more than two ends: an SPDT, a crossover, a DPST, a DPDT)
 // (how far a part's body reaches above and below its wire: the toggle switches reach further down than up)
-const bodyUp = p => p.t === 'dsc' ? PWR_H / 2 : p.t === 'cbk' ? CBK_TOP : p.t === 'cbd' ? CBD_TOP : p.t === 'cbt' ? CBT_TOP : p.t === 'tps' ? TPS_TOP : isTglN(p) ? SP2_TOP : p.t === 'tgl' ? LSW_TOP : BODYH(p.t) / 2, bodyDown = p => p.t === 'dsc' ? DSC_DOWN : p.t === 'cbk' ? CBK_BOT : p.t === 'cbd' ? CBD_BOT : p.t === 'cbt' ? CBT_BOT : p.t === 'tps' ? TPS_BOT : p.t === 'dpd' ? DPD_BOT : isTglN(p) ? SP2_BOT : p.t === 'tgl' ? TGL_BOT : BODYH(p.t) / 2;   // (toggle switches mirror left to right: Dallas, 21 Nov 2026)
+const bodyUp = p => p.t === 'btn' && p._nb ? NB_UP : p.t === 'dsc' ? PWR_H / 2 : p.t === 'cbk' ? CBK_TOP : p.t === 'cbd' ? CBD_TOP : p.t === 'cbt' ? CBT_TOP : p.t === 'tps' ? TPS_TOP : isTglN(p) ? SP2_TOP : p.t === 'tgl' ? LSW_TOP : BODYH(p.t) / 2, bodyDown = p => p.t === 'btn' && p._nb ? NB_DN : p.t === 'dsc' ? DSC_DOWN : p.t === 'cbk' ? CBK_BOT : p.t === 'cbd' ? CBD_BOT : p.t === 'cbt' ? CBT_BOT : p.t === 'tps' ? TPS_BOT : p.t === 'dpd' ? DPD_BOT : isTglN(p) ? SP2_BOT : p.t === 'tgl' ? TGL_BOT : BODYH(p.t) / 2;   // (toggle switches mirror left to right: Dallas, 21 Nov 2026)
 // the room a part takes above and below its middle, and whether two parts' rooms meet (Dallas, 22 Nov 2026: a toggle switch's
 // body reaches far further below its wire than above it, a DPDT's 360 below to 108 above, so its room is counted as it is, not
 // as the most of the two either way, which kept it 360 off parts above it as well)
 const isTglT = t => t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'tps' || t === 'dpd' || t === 'cbk' || t === 'cbd' || t === 'cbt';
-const roomUp = t => isTglT(t) ? bodyUp({ t }) + 20 : t === 'dsc' ? PWR_H / 2 + 20 : halfH(t),   // (and room for its name over it)
-      roomDown = t => isTglT(t) ? bodyDown({ t }) : t === 'dsc' ? DSC_DOWN : halfH(t);
+const roomUp = t => isTglT(t) ? bodyUp({ t }) + 20 : t === 'dsc' ? PWR_H / 2 + 20 : t === 'btn' ? NB_UP : halfH(t),   // (a pushbutton: room for the redesigned body, whichever kind; like other parts', not its name)   // (and room for its name over it)
+      roomDown = t => isTglT(t) ? bodyDown({ t }) : t === 'dsc' ? DSC_DOWN : t === 'btn' ? Math.max(NB_DN, halfH(t)) : halfH(t);
 const vClash = (ta, ya, tb, yb) => ya - roomUp(ta) < yb + roomDown(tb) && yb - roomUp(tb) < ya + roomDown(ta);
 const turns = p => turns7(p) || twoEnded(p), vert = p => (p.t === 'fu1' || twoEnded(p)) && !!((p.rot || 0) & 1);
 /* Three-phase power: an L1, L2 or L3 phase box (p.L '1', '2' or '3'), built like a supply box, every connection point

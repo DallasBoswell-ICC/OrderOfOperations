@@ -138,7 +138,7 @@ function renderInto(target, V, L) {
   // while running with faults on (Faults tab: Show Fault Badges)
   if (FAULT_BADGES && (editing || FAULTS_ON)) {
     for (const p of parts) if (p.fault && canFault(p)) {   // (on the body's top right corner; on a round or diamond load, at 45° on its edge)
-      const rnd = FAULT_LOADS.includes(p.t) && p.t !== 'mt1', mw = p.t === 'mtr' ? MTR_W / 2 - 4 : p.t === 'mt1' ? MT1_W / 2 - 4 : 0, bw = mw || (isLim(p) ? LSW_W / 2 : p.t === 'sel' ? SEL_BOX / 2 : rnd ? COIL / 2 * .74 : BOX / 2), bh = mw || (isLim(p) ? LSW_TOP : p.t === 'sel' ? SEL_BOX / 2 : rnd ? COIL / 2 * .74 : BOX / 2);
+      const rnd = FAULT_LOADS.includes(p.t) && p.t !== 'mt1', mw = p.t === 'mtr' ? MTR_W / 2 - 4 : p.t === 'mt1' ? MT1_W / 2 - 4 : 0, bw = p._nb ? NB_W / 2 : mw || (isLim(p) ? LSW_W / 2 : p.t === 'sel' ? SEL_BOX / 2 : rnd ? COIL / 2 * .74 : BOX / 2), bh = p._nb ? NB_UP : mw || (isLim(p) ? LSW_TOP : p.t === 'sel' ? SEL_BOX / 2 : rnd ? COIL / 2 * .74 : BOX / 2);
       faultBadge(vert(p) ? p.x + bh : p.x + bw, vert(p) ? p.y - bw : p.y - bh, B(p.y).g, `Fault: ${PART_FAULTS[p.fault]}`); }
     for (const w of wires) if (w.fault) faultBadge((w.x1 + w.x2) / 2, (w.y1 + w.y2) / 2, B((w.y1 + w.y2) / 2).g, `Fault: ${WIRE_FAULTS[w.fault]}`);
   }
@@ -233,7 +233,7 @@ function linkRoute([P0, d0], [P1, d1], dx, dy) {
 }
 // (the upright nearest x, clear of every part's body from y0 to y1 but the drawings being linked; null if x itself is clear)
 function aside(x, y0, y1, own) {
-  const body = p => { const h = BODYH(p.t) / 2, w = Math.min(TERM(p) - 8, Math.max(BOX, BODYH(p.t)) / 2); return { x0: p.x - w, x1: p.x + w, y0: p.y - h, y1: p.y + h }; };
+  const body = p => { const h = BODYH(p.t) / 2, w = Math.min(TERM(p) - 8, Math.max(BOX, BODYH(p.t)) / 2); return { x0: p.x - w, x1: p.x + w, y0: p.y - (p._nb ? NB_UP : h), y1: p.y + (p._nb ? NB_DN : h) }; };
   const bs = parts.filter(p => !own.includes(p) && !vert(p)).map(body), clear = X => !bs.some(o => X > o.x0 && X < o.x1 && y1 > o.y0 && y0 < o.y1);
   if (clear(x)) return null;
   for (let k = 1; k <= 8; k++) for (const X of [x + 40 * k, x - 40 * k]) if (X > BAR + 10 && X < W - BAR - 10 && clear(X)) return X;

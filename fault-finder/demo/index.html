@@ -2278,6 +2278,11 @@ const V = 500;                       // how fast the current front travels at 1Ã
 const V_LEAD = 160, V_SHORT = 400, V_TAU = 0.1, V_TOP = 80;
 const RAMP = 110, FADE = 160;        // colour shading after a button / from a coil back to egg
 const BOX = 65.8368, BTN_IN = 43.8912, COIL = 82.296, COIL_IN = 60.3504;
+/* the pushbutton redesign (Dallas, 22 and 27 Nov 2026; plain buttons: not an E-stop, no light built in, drawn once): a body
+   NB_UP above its wire and NB_DN below, NB_W wide (ends 40 out, as before); the NEMA pushbutton contact at the wire (two
+   rings, a bar and its stem); above it the round cap in a guard, a rounded square on an NO and an octagon on its base on an
+   NC, each guard's top NB_GAP below the body's top */
+const NB_W = BOX + 14, NB_UP = 104, NB_DN = 32, NB_GAP = 11.5, NB_OR = 33, NB_SQ = 56, NB_CAP = 19;
 const OFF_WHITE = '#ffffd7', GREY = '#404040';
 const DARK_TEXT = 'rgba(28,28,28,.85)', LIGHT_TEXT = 'rgba(242,242,242,.78)';
 // colours chosen to sit evenly round the colour wheel, so any two currents that meet make a clear, distinct mix
@@ -2423,13 +2428,13 @@ const isBrk = p => p.t === 'cbk' || p.t === 'cbd' || p.t === 'cbt';   // (a circ
 const isMulti = p => isTglN(p) || p.t === 'cbd' || p.t === 'cbt';   // (the parts with more than two ends that switch: the toggle switches below, and a DPST or 3PST circuit breaker; each run as its poles)
 const isTglN = p => p.t === 'sp2' || p.t === 'xov' || p.t === 'dps' || p.t === 'dpd' || p.t === 'tps';   // (the toggle switches with more than two ends: an SPDT, a crossover, a DPST, a DPDT)
 // (how far a part's body reaches above and below its wire: the toggle switches reach further down than up)
-const bodyUp = p => p.t === 'dsc' ? PWR_H / 2 : p.t === 'cbk' ? CBK_TOP : p.t === 'cbd' ? CBD_TOP : p.t === 'cbt' ? CBT_TOP : p.t === 'tps' ? TPS_TOP : isTglN(p) ? SP2_TOP : p.t === 'tgl' ? LSW_TOP : BODYH(p.t) / 2, bodyDown = p => p.t === 'dsc' ? DSC_DOWN : p.t === 'cbk' ? CBK_BOT : p.t === 'cbd' ? CBD_BOT : p.t === 'cbt' ? CBT_BOT : p.t === 'tps' ? TPS_BOT : p.t === 'dpd' ? DPD_BOT : isTglN(p) ? SP2_BOT : p.t === 'tgl' ? TGL_BOT : BODYH(p.t) / 2;   // (toggle switches mirror left to right: Dallas, 21 Nov 2026)
+const bodyUp = p => p.t === 'btn' && p._nb ? NB_UP : p.t === 'dsc' ? PWR_H / 2 : p.t === 'cbk' ? CBK_TOP : p.t === 'cbd' ? CBD_TOP : p.t === 'cbt' ? CBT_TOP : p.t === 'tps' ? TPS_TOP : isTglN(p) ? SP2_TOP : p.t === 'tgl' ? LSW_TOP : BODYH(p.t) / 2, bodyDown = p => p.t === 'btn' && p._nb ? NB_DN : p.t === 'dsc' ? DSC_DOWN : p.t === 'cbk' ? CBK_BOT : p.t === 'cbd' ? CBD_BOT : p.t === 'cbt' ? CBT_BOT : p.t === 'tps' ? TPS_BOT : p.t === 'dpd' ? DPD_BOT : isTglN(p) ? SP2_BOT : p.t === 'tgl' ? TGL_BOT : BODYH(p.t) / 2;   // (toggle switches mirror left to right: Dallas, 21 Nov 2026)
 // the room a part takes above and below its middle, and whether two parts' rooms meet (Dallas, 22 Nov 2026: a toggle switch's
 // body reaches far further below its wire than above it, a DPDT's 360 below to 108 above, so its room is counted as it is, not
 // as the most of the two either way, which kept it 360 off parts above it as well)
 const isTglT = t => t === 'tgl' || t === 'sp2' || t === 'xov' || t === 'dps' || t === 'tps' || t === 'dpd' || t === 'cbk' || t === 'cbd' || t === 'cbt';
-const roomUp = t => isTglT(t) ? bodyUp({ t }) + 20 : t === 'dsc' ? PWR_H / 2 + 20 : halfH(t),   // (and room for its name over it)
-      roomDown = t => isTglT(t) ? bodyDown({ t }) : t === 'dsc' ? DSC_DOWN : halfH(t);
+const roomUp = t => isTglT(t) ? bodyUp({ t }) + 20 : t === 'dsc' ? PWR_H / 2 + 20 : t === 'btn' ? NB_UP : halfH(t),   // (a pushbutton: room for the redesigned body, whichever kind; like other parts', not its name)   // (and room for its name over it)
+      roomDown = t => isTglT(t) ? bodyDown({ t }) : t === 'dsc' ? DSC_DOWN : t === 'btn' ? Math.max(NB_DN, halfH(t)) : halfH(t);
 const vClash = (ta, ya, tb, yb) => ya - roomUp(ta) < yb + roomDown(tb) && yb - roomUp(tb) < ya + roomDown(ta);
 const turns = p => turns7(p) || twoEnded(p), vert = p => (p.t === 'fu1' || twoEnded(p)) && !!((p.rot || 0) & 1);
 /* Three-phase power: an L1, L2 or L3 phase box (p.L '1', '2' or '3'), built like a supply box, every connection point
@@ -4637,7 +4642,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, (q._sh ?? 1) / ratedShare(q)) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => p.t === 'stand' ? standBox(p).hh + 11 : (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'flt' ? FLT_UP + 2 : p.t === 'tgl' ? LSW_TOP + 2 : isTglN(p) || isBrk(p) ? bodyUp(p) + 2 : p.t === 'dsc' ? PWR_H / 2 + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => p.t === 'btn' && p._nb ? NB_UP + 11 : p.t === 'stand' ? standBox(p).hh + 11 : (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'flt' ? FLT_UP + 2 : p.t === 'tgl' ? LSW_TOP + 2 : isTglN(p) || isBrk(p) ? bodyUp(p) + 2 : p.t === 'dsc' ? PWR_H / 2 + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -4706,7 +4711,11 @@ function drawPart(p, g, x, y, chan, onStation) {
     v.secFill = v.sec ? '#1c1c1c' : null;   // (another contact block: a black cap with a coloured outline, like a selector's other drawings)
     // a button with a light built in: a glow behind it when the light is on
     if (v.lit) v.halo = el('rect', { x: x - BOX / 2 - 4, y: y - BOX / 2 - 4, width: BOX + 8, height: BOX + 8, rx: BOX * .22, fill: p.color, opacity: 0, filter: 'url(#fGlow)' }, g);
-    if (p.estop) drawEstop(p, v, x, y, g);
+    // (a plain button, drawn once with no light built in and not turned: the redesign (Dallas, 27 Nov 2026))
+    const nb = !onStation && !p.estop && !v.sec && !v.lit && !p.rot && parts.includes(p) && parts.filter(q => q.t === 'btn' && q.L === p.L).length === 1;
+    if (!onStation && parts.includes(p)) p._nb = nb;
+    if (nb) { drawNewBtn(p, v, x, y, g); v.lead.A.body = x - NB_W / 2; v.lead.B.body = x + NB_W / 2; }
+    else if (p.estop) drawEstop(p, v, x, y, g);
     else if (p.nc) {
       const RB = BOX / 2 * 1.08, RI = BTN_IN / 2 * 1.1;
       framed('path', { d: hexPath(x, y, RB, RB * .17), fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
@@ -4719,7 +4728,7 @@ function drawPart(p, g, x, y, chan, onStation) {
       v.fill = el('rect', { x: x - BTN_IN / 2, y: y - BTN_IN / 2, width: BTN_IN, height: BTN_IN, rx: BTN_IN * .1667, fill: v.sec ? v.secFill : p.color, stroke: v.sec ? p.color : '#1d2733', 'stroke-width': v.sec ? 1.8 : 1.2, filter: 'url(#fShadow)' }, v.press);
       el('rect', { x: x - BTN_IN / 2, y: y - BTN_IN / 2, width: BTN_IN, height: BTN_IN, rx: BTN_IN * .1667, fill: 'url(#gGloss)' }, v.press);
     }
-    v.text = el('text', { x, y: y + 6.6, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: DARK_TEXT, style: v.sec ? `fill:${p.color}` : p.estop ? 'fill:#fff' : '' }, v.press); capText(v.text, nameOf(p), p.estop ? 27 : p.nc ? 35 : 37, p.estop ? 16 : 19, y + 6.6);
+    if (!nb) v.text = el('text', { x, y: y + 6.6, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: DARK_TEXT, style: v.sec ? `fill:${p.color}` : p.estop ? 'fill:#fff' : '' }, v.press); if (!nb) capText(v.text, nameOf(p), p.estop ? 27 : p.nc ? 35 : 37, p.estop ? 16 : 19, y + 6.6);
     // the same button drawn more than once (one operator with several contact blocks: pressing one presses them
     // all): a chain-link badge on each one's top left corner
     if (!onStation && parts.filter(q => q.t === 'btn' && q.L === p.L).length > 1) {
@@ -6027,6 +6036,35 @@ function setLimit(v, p, pos, cl) {
   v.arrowPath.setAttribute('d', `M${rx} ${ry}l-12 -13h6.5v-15h11v15h6.5z`);
 }
 
+/* the pushbutton redesign (Dallas, 22 and 27 Nov 2026): one body for NO and NC (NB_UP above the wire, NB_DN below); at the
+   wire the NEMA pushbutton contact, its two rings joined to the ends by thin leads, a bar with a short stem: on an NO the
+   bar above the rings, dropping onto them when pressed; on an NC under them and touching, pushed down off them. Above, the
+   round cap in its guard (an NO's rounded square, an NC's octagon on its base), its name fitted as on today's buttons.
+   The leads, rings, bar and stem are coloured as the current is, by paintNewBtn */
+function drawNewBtn(p, v, x, y, g) {
+  const w = NB_W, top = y - NB_UP, bot = y + NB_DN, COL = p.color || (p.nc ? '#FF0032' : '#00B050'), nc = !!p.nc, px1 = x - 20, px2 = x + 20, r = 6;
+  framed('rect', { x: x - w / 2, y: top, width: w, height: bot - top, rx: 15, fill: 'url(#gWell)', stroke: COL, 'stroke-width': 1.8 }, g);
+  v.sA = el('rect', { x: x - w / 2 + 4.5, y: y - 3, width: px1 - r - (x - w / 2 + 4.5), height: 6, fill: GREY }, g);
+  v.sB = el('rect', { x: px2 + r, y: y - 3, width: x + w / 2 - 4.5 - px2 - r, height: 6, fill: GREY }, g);
+  const by = nc ? y + r + 2 : y - r - 14;   // (the bar, released)
+  v.bar = el('g', { filter: 'url(#fShadow)' }, g);
+  v.stem = el('rect', nc ? { x: x - 2, y: y - 14, width: 4, height: by - 3 - (y - 14), rx: 1, fill: BLADE_GREY } : { x: x - 2, y: by - 12, width: 4, height: 9, rx: 1, fill: BLADE_GREY }, v.bar);
+  v.blade = el('rect', { x: px1 - 5, y: by - 3, width: 50, height: 6, rx: 3, fill: BLADE_GREY }, v.bar);
+  v.rA = el('circle', { cx: px1, cy: y, r, fill: '#1f1f1f', stroke: GREY, 'stroke-width': 3 }, g);
+  v.rB = el('circle', { cx: px2, cy: y, r, fill: '#1f1f1f', stroke: GREY, 'stroke-width': 3 }, g);
+  v.mvg = el('g', {}, g);   // (the current's dashes through it)
+  const ky = nc ? top + NB_GAP + NB_OR * Math.cos(Math.PI / 8) : top + NB_GAP + NB_SQ / 2, R = NB_CAP;
+  if (nc) el('polygon', { points: [0, 1, 2, 3, 4, 5, 6, 7].map(k => { const a = (k * 45 + 22.5) * Math.PI / 180; return `${(x + NB_OR * Math.cos(a)).toFixed(2)},${(ky + NB_OR * Math.sin(a)).toFixed(2)}`; }).join(' '), fill: '#1a1a1a', stroke: COL, 'stroke-width': 2, 'stroke-linejoin': 'round', filter: 'url(#fShadow)' }, g);
+  else el('rect', { x: x - NB_SQ / 2, y: ky - NB_SQ / 2, width: NB_SQ, height: NB_SQ, rx: NB_SQ * .17, fill: '#1a1a1a', stroke: COL, 'stroke-width': 2, filter: 'url(#fShadow)' }, g);
+  el('circle', { cx: x, cy: ky, r: R + 5, fill: 'url(#gKnob)', stroke: '#111', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, g);
+  el('circle', { cx: x, cy: ky, r: R + 1.5, fill: '#0b0b0b' }, g);
+  v.press = el('g', {}, g);
+  v.fill = el('circle', { cx: x, cy: ky, r: R, fill: COL, stroke: mixOk(COL, '#000000', .5), 'stroke-width': 1.2, filter: 'url(#fShadow)' }, v.press);
+  v.shine = el('ellipse', { cx: x, cy: ky - R * .38, rx: R * .62, ry: R * .36, fill: '#fff', opacity: .28 }, v.press);
+  v.text = el('text', { x, y: ky + 6.6, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: DARK_TEXT }, v.press); capText(v.text, nameOf(p), 30, 19, ky + 6.6);
+  v.nb = { by, ky };
+}
+
 /* ---- js/editor-state.js ---- */
 let editing = true, tool = 'select', sel = null, view = {}, preview = null;
 // the ribbon's open tab while building: 'home', or 'part' (the selected part's settings)
@@ -6195,7 +6233,7 @@ function renderInto(target, V, L) {
   // while running with faults on (Faults tab: Show Fault Badges)
   if (FAULT_BADGES && (editing || FAULTS_ON)) {
     for (const p of parts) if (p.fault && canFault(p)) {   // (on the body's top right corner; on a round or diamond load, at 45Â° on its edge)
-      const rnd = FAULT_LOADS.includes(p.t) && p.t !== 'mt1', mw = p.t === 'mtr' ? MTR_W / 2 - 4 : p.t === 'mt1' ? MT1_W / 2 - 4 : 0, bw = mw || (isLim(p) ? LSW_W / 2 : p.t === 'sel' ? SEL_BOX / 2 : rnd ? COIL / 2 * .74 : BOX / 2), bh = mw || (isLim(p) ? LSW_TOP : p.t === 'sel' ? SEL_BOX / 2 : rnd ? COIL / 2 * .74 : BOX / 2);
+      const rnd = FAULT_LOADS.includes(p.t) && p.t !== 'mt1', mw = p.t === 'mtr' ? MTR_W / 2 - 4 : p.t === 'mt1' ? MT1_W / 2 - 4 : 0, bw = p._nb ? NB_W / 2 : mw || (isLim(p) ? LSW_W / 2 : p.t === 'sel' ? SEL_BOX / 2 : rnd ? COIL / 2 * .74 : BOX / 2), bh = p._nb ? NB_UP : mw || (isLim(p) ? LSW_TOP : p.t === 'sel' ? SEL_BOX / 2 : rnd ? COIL / 2 * .74 : BOX / 2);
       faultBadge(vert(p) ? p.x + bh : p.x + bw, vert(p) ? p.y - bw : p.y - bh, B(p.y).g, `Fault: ${PART_FAULTS[p.fault]}`); }
     for (const w of wires) if (w.fault) faultBadge((w.x1 + w.x2) / 2, (w.y1 + w.y2) / 2, B((w.y1 + w.y2) / 2).g, `Fault: ${WIRE_FAULTS[w.fault]}`);
   }
@@ -6290,7 +6328,7 @@ function linkRoute([P0, d0], [P1, d1], dx, dy) {
 }
 // (the upright nearest x, clear of every part's body from y0 to y1 but the drawings being linked; null if x itself is clear)
 function aside(x, y0, y1, own) {
-  const body = p => { const h = BODYH(p.t) / 2, w = Math.min(TERM(p) - 8, Math.max(BOX, BODYH(p.t)) / 2); return { x0: p.x - w, x1: p.x + w, y0: p.y - h, y1: p.y + h }; };
+  const body = p => { const h = BODYH(p.t) / 2, w = Math.min(TERM(p) - 8, Math.max(BOX, BODYH(p.t)) / 2); return { x0: p.x - w, x1: p.x + w, y0: p.y - (p._nb ? NB_UP : h), y1: p.y + (p._nb ? NB_DN : h) }; };
   const bs = parts.filter(p => !own.includes(p) && !vert(p)).map(body), clear = X => !bs.some(o => X > o.x0 && X < o.x1 && y1 > o.y0 && y0 < o.y1);
   if (clear(x)) return null;
   for (let k = 1; k <= 8; k++) for (const X of [x + 40 * k, x - 40 * k]) if (X > BAR + 10 && X < W - BAR - 10 && clear(X)) return X;
@@ -6640,6 +6678,7 @@ function paintView(V) {
 }
 // a pushbutton's cap (on the circuit, or on the operator station: v is that drawing, centred at x, y)
 function paintBtn(p, v, x, y) {
+  if (v.nb) return paintNewBtn(p, v, x, y);
   // a button with a light built in: its cap is dim while the light is off, and lights up with it
   let k; const pr = !!down[p.L], lit = v.lit ? Math.max(0, ...lampsOf(p.L).map(litOf)) : 0; k = (pr ? 1 : 0) + ':' + lit.toFixed(3);
   if (k === v.k) return; v.k = k;
@@ -6661,6 +6700,26 @@ function paintBtn(p, v, x, y) {
   }
   if (v.twist) v.twist.style.display = pr ? '' : 'none';
   v.press.setAttribute('transform', pr ? `translate(${x} ${y}) scale(${p.estop ? .86 : .93}) translate(${-x} ${-y})` : '');
+}
+/* a redesigned pushbutton (Dallas, 27 Nov 2026): its leads and rings in the colour at each end (voltage on both sides of
+   an open contact shows), the bar and stem in the current's colour once made, moving down 12 when pressed; the cap darker
+   and sunk; and, with current through it, the dashes running along its leads and across the bar */
+function paintNewBtn(p, v, x, y) {
+  const pr = !!down[p.L], made = p.nc ? !pr : pr, cl = n => { const c = lit(n, simT) ? showCol(n, simT) : null; return c || GREY; }, ca = cl(p._a), cb = cl(p._b);
+  const live = c => c !== GREY && !V_DS.has(c), thr = made ? (live(ca) ? ca : live(cb) ? cb : ca !== GREY ? ca : cb !== GREY ? cb : BLADE_GREY) : BLADE_GREY;
+  const way = made && vOn() && !TS_MODE && live(ca) && live(cb) ? vWay(p._a, p._b) : 0;
+  const k = `${pr}|${ca}|${cb}|${way}|${way ? (vDirAt(p._a) || [0, 0])[1] | 0 : 0}`; if (k === v.k) return; v.k = k;
+  v.sA.setAttribute('fill', ca); v.sB.setAttribute('fill', cb); v.rA.setAttribute('stroke', ca); v.rB.setAttribute('stroke', cb);
+  v.stem.setAttribute('fill', thr); v.blade.setAttribute('fill', thr);
+  v.bar.setAttribute('transform', pr ? 'translate(0 12)' : '');
+  const col = p.color || (p.nc ? '#FF0032' : '#00B050'); v.fill.setAttribute('fill', pr ? mixOk(col, '#000000', .28) : col); v.shine.setAttribute('opacity', pr ? 0 : .28);
+  v.text.style.fill = pr ? LIGHT_TEXT : DARK_TEXT;
+  v.press.setAttribute('transform', pr ? `translate(${x} ${v.nb.ky}) scale(.87) translate(${-x} ${-v.nb.ky})` : '');
+  v.mvg.innerHTML = '';
+  if (way) {   // (along the lead in, across the bar, along the lead out: each set by how far along it starts)
+    const w2 = NB_W / 2, by = v.nb.by + (pr ? 12 : 0), ink = mvInk(thr), fwd = way > 0, segs = [[x - w2 + 4.5, x - 26, y], [x - 25, x + 25, by], [x + 26, x + w2 - 4.5, y]];
+    for (const [a, b, yy] of segs) { const at = mvAttrs(p._a, fwd, ink, 'mv', -(a - (x - TERM(p)))); at.style = 'stroke-width:3'; mvGo(el('line', { x1: a, x2: b, y1: yy, y2: yy, ...at }, v.mvg)); }
+  }
 }
 // a selector switch's handle turning, and its position names
 function paintSel(p, v) {
@@ -8148,7 +8207,7 @@ function wireInTheWay(p) {
     return wires.some(w => w.y1 === w.y2
       ? w.y1 > T && w.y1 < Bm && Math.max(w.x1, w.x2) > p.x - h && Math.min(w.x1, w.x2) < p.x + h
       : w.x1 !== p.x && Math.abs(w.x1 - p.x) < h && Math.max(w.y1, w.y2) > T && Math.min(w.y1, w.y2) < Bm); }
-  const T = isTglT(p.t) ? p.y - bodyUp(p) : p.y - h, Bm = isTglT(p.t) ? p.y + bodyDown(p) : p.y + h;   // (a toggle switch: its whole body, high above its wire and far below)
+  const T = isTglT(p.t) || p._nb ? p.y - bodyUp(p) : p.y - h, Bm = isTglT(p.t) || p._nb ? p.y + bodyDown(p) : p.y + h;   // (a toggle switch: its whole body, high above its wire and far below)
   return wires.some(w => w.x1 === w.x2
     ? w.x1 > L && w.x1 < R && Math.max(w.y1, w.y2) > T && Math.min(w.y1, w.y2) < Bm
     : w.y1 !== p.y && w.y1 > T && w.y1 < Bm && Math.max(w.x1, w.x2) > L && Math.min(w.x1, w.x2) < R);

@@ -106,7 +106,7 @@ function wireInTheWay(p) {
     return wires.some(w => w.y1 === w.y2
       ? w.y1 > T && w.y1 < Bm && Math.max(w.x1, w.x2) > p.x - h && Math.min(w.x1, w.x2) < p.x + h
       : w.x1 !== p.x && Math.abs(w.x1 - p.x) < h && Math.max(w.y1, w.y2) > T && Math.min(w.y1, w.y2) < Bm); }
-  const T = isTglT(p.t) ? p.y - bodyUp(p) : p.y - h, Bm = isTglT(p.t) ? p.y + bodyDown(p) : p.y + h;   // (a toggle switch: its whole body, high above its wire and far below)
+  const T = isTglT(p.t) || p._nb ? p.y - bodyUp(p) : p.y - h, Bm = isTglT(p.t) || p._nb ? p.y + bodyDown(p) : p.y + h;   // (a toggle switch: its whole body, high above its wire and far below)
   return wires.some(w => w.x1 === w.x2
     ? w.x1 > L && w.x1 < R && Math.max(w.y1, w.y2) > T && Math.min(w.y1, w.y2) < Bm
     : w.y1 !== p.y && w.y1 > T && w.y1 < Bm && Math.max(w.x1, w.x2) > L && Math.min(w.x1, w.x2) < R);

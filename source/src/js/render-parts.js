@@ -121,7 +121,7 @@ const LAMP_FADE = 0.2;
 const litOf = q => { const on = !!coilOn[q.id], f = q._chg == null ? 1 : clamp01((simT - q._chg) / LAMP_FADE); return (on ? f : 1 - f) * Math.min(1, (q._sh ?? 1) / ratedShare(q)) ** 2; };   // (as bright as its power: on half the voltage, a quarter)
 const filament = (x, y, s, g, w) => el('path', { d: `M ${x - s} ${y - s} L ${x + s} ${y + s} M ${x + s} ${y - s} L ${x - s} ${y + s}`, 'stroke-width': w, 'stroke-linecap': 'round', fill: 'none', stroke: 'rgba(30,30,30,.55)' }, g);
 // how far above a part's middle its name is written (clear of the badges on its top corners)
-const capTop = p => p.t === 'stand' ? standBox(p).hh + 11 : (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'flt' ? FLT_UP + 2 : p.t === 'tgl' ? LSW_TOP + 2 : isTglN(p) || isBrk(p) ? bodyUp(p) + 2 : p.t === 'dsc' ? PWR_H / 2 + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
+const capTop = p => p.t === 'btn' && p._nb ? NB_UP + 11 : p.t === 'stand' ? standBox(p).hh + 11 : (p.t === 'lsw' ? LSW_TOP + 42 + 13.3 + 28 + 4 : p.t === 'tsw' ? LSW_TOP + 2 : p.t === 'psw' ? PSW_UP + 2 : p.t === 'fsw' ? FSW_UP + 2 : p.t === 'flt' ? FLT_UP + 2 : p.t === 'tgl' ? LSW_TOP + 2 : isTglN(p) || isBrk(p) ? bodyUp(p) + 2 : p.t === 'dsc' ? PWR_H / 2 + 2 : p.t === 'xfm' ? XFM_H / 2 + 2 : p.t === 'olc' || p.t === 'fu1' ? CON_H / 2 + 1 : p.t === 'con' ? CON_H / 2 + 1 : isSolT(p.t) ? SOL_S / 2 + 2 : p.t === 'lamp' ? BODYH(p.t) / 2 + 2 : BODYH(p.t) / 2 + (p.t === 'btn' && p.nc ? 3 : 0)) + 11;
 /* Every part's body has a coloured edge and, round that, a dark bezel in the colour of its well (BEZEL wide): body,
    coloured edge, dark bezel. framed draws the bezel (a wide dark stroke along the same outline, under the body), then
    the body itself. */
@@ -190,7 +190,11 @@ function drawPart(p, g, x, y, chan, onStation) {
     v.secFill = v.sec ? '#1c1c1c' : null;   // (another contact block: a black cap with a coloured outline, like a selector's other drawings)
     // a button with a light built in: a glow behind it when the light is on
     if (v.lit) v.halo = el('rect', { x: x - BOX / 2 - 4, y: y - BOX / 2 - 4, width: BOX + 8, height: BOX + 8, rx: BOX * .22, fill: p.color, opacity: 0, filter: 'url(#fGlow)' }, g);
-    if (p.estop) drawEstop(p, v, x, y, g);
+    // (a plain button, drawn once with no light built in and not turned: the redesign (Dallas, 27 Nov 2026))
+    const nb = !onStation && !p.estop && !v.sec && !v.lit && !p.rot && parts.includes(p) && parts.filter(q => q.t === 'btn' && q.L === p.L).length === 1;
+    if (!onStation && parts.includes(p)) p._nb = nb;
+    if (nb) { drawNewBtn(p, v, x, y, g); v.lead.A.body = x - NB_W / 2; v.lead.B.body = x + NB_W / 2; }
+    else if (p.estop) drawEstop(p, v, x, y, g);
     else if (p.nc) {
       const RB = BOX / 2 * 1.08, RI = BTN_IN / 2 * 1.1;
       framed('path', { d: hexPath(x, y, RB, RB * .17), fill: 'url(#gWell)', stroke: p.color, 'stroke-width': 1.8 }, g);
@@ -203,7 +207,7 @@ function drawPart(p, g, x, y, chan, onStation) {
       v.fill = el('rect', { x: x - BTN_IN / 2, y: y - BTN_IN / 2, width: BTN_IN, height: BTN_IN, rx: BTN_IN * .1667, fill: v.sec ? v.secFill : p.color, stroke: v.sec ? p.color : '#1d2733', 'stroke-width': v.sec ? 1.8 : 1.2, filter: 'url(#fShadow)' }, v.press);
       el('rect', { x: x - BTN_IN / 2, y: y - BTN_IN / 2, width: BTN_IN, height: BTN_IN, rx: BTN_IN * .1667, fill: 'url(#gGloss)' }, v.press);
     }
-    v.text = el('text', { x, y: y + 6.6, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: DARK_TEXT, style: v.sec ? `fill:${p.color}` : p.estop ? 'fill:#fff' : '' }, v.press); capText(v.text, nameOf(p), p.estop ? 27 : p.nc ? 35 : 37, p.estop ? 16 : 19, y + 6.6);
+    if (!nb) v.text = el('text', { x, y: y + 6.6, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: DARK_TEXT, style: v.sec ? `fill:${p.color}` : p.estop ? 'fill:#fff' : '' }, v.press); if (!nb) capText(v.text, nameOf(p), p.estop ? 27 : p.nc ? 35 : 37, p.estop ? 16 : 19, y + 6.6);
     // the same button drawn more than once (one operator with several contact blocks: pressing one presses them
     // all): a chain-link badge on each one's top left corner
     if (!onStation && parts.filter(q => q.t === 'btn' && q.L === p.L).length > 1) {
@@ -1509,4 +1513,33 @@ function setLimit(v, p, pos, cl) {
   const t = la * Math.PI / 180, [lx, ly] = LSW_ROLLER, rx = px + lx * Math.cos(t) - ly * Math.sin(t), ry = py + lx * Math.sin(t) + ly * Math.cos(t) - 13.3 - 1.5 - 16 * (1 - pos);
   v.arrow.setAttribute('opacity', Math.min(1, pos * 2.5).toFixed(3));
   v.arrowPath.setAttribute('d', `M${rx} ${ry}l-12 -13h6.5v-15h11v15h6.5z`);
+}
+
+/* the pushbutton redesign (Dallas, 22 and 27 Nov 2026): one body for NO and NC (NB_UP above the wire, NB_DN below); at the
+   wire the NEMA pushbutton contact, its two rings joined to the ends by thin leads, a bar with a short stem: on an NO the
+   bar above the rings, dropping onto them when pressed; on an NC under them and touching, pushed down off them. Above, the
+   round cap in its guard (an NO's rounded square, an NC's octagon on its base), its name fitted as on today's buttons.
+   The leads, rings, bar and stem are coloured as the current is, by paintNewBtn */
+function drawNewBtn(p, v, x, y, g) {
+  const w = NB_W, top = y - NB_UP, bot = y + NB_DN, COL = p.color || (p.nc ? '#FF0032' : '#00B050'), nc = !!p.nc, px1 = x - 20, px2 = x + 20, r = 6;
+  framed('rect', { x: x - w / 2, y: top, width: w, height: bot - top, rx: 15, fill: 'url(#gWell)', stroke: COL, 'stroke-width': 1.8 }, g);
+  v.sA = el('rect', { x: x - w / 2 + 4.5, y: y - 3, width: px1 - r - (x - w / 2 + 4.5), height: 6, fill: GREY }, g);
+  v.sB = el('rect', { x: px2 + r, y: y - 3, width: x + w / 2 - 4.5 - px2 - r, height: 6, fill: GREY }, g);
+  const by = nc ? y + r + 2 : y - r - 14;   // (the bar, released)
+  v.bar = el('g', { filter: 'url(#fShadow)' }, g);
+  v.stem = el('rect', nc ? { x: x - 2, y: y - 14, width: 4, height: by - 3 - (y - 14), rx: 1, fill: BLADE_GREY } : { x: x - 2, y: by - 12, width: 4, height: 9, rx: 1, fill: BLADE_GREY }, v.bar);
+  v.blade = el('rect', { x: px1 - 5, y: by - 3, width: 50, height: 6, rx: 3, fill: BLADE_GREY }, v.bar);
+  v.rA = el('circle', { cx: px1, cy: y, r, fill: '#1f1f1f', stroke: GREY, 'stroke-width': 3 }, g);
+  v.rB = el('circle', { cx: px2, cy: y, r, fill: '#1f1f1f', stroke: GREY, 'stroke-width': 3 }, g);
+  v.mvg = el('g', {}, g);   // (the current's dashes through it)
+  const ky = nc ? top + NB_GAP + NB_OR * Math.cos(Math.PI / 8) : top + NB_GAP + NB_SQ / 2, R = NB_CAP;
+  if (nc) el('polygon', { points: [0, 1, 2, 3, 4, 5, 6, 7].map(k => { const a = (k * 45 + 22.5) * Math.PI / 180; return `${(x + NB_OR * Math.cos(a)).toFixed(2)},${(ky + NB_OR * Math.sin(a)).toFixed(2)}`; }).join(' '), fill: '#1a1a1a', stroke: COL, 'stroke-width': 2, 'stroke-linejoin': 'round', filter: 'url(#fShadow)' }, g);
+  else el('rect', { x: x - NB_SQ / 2, y: ky - NB_SQ / 2, width: NB_SQ, height: NB_SQ, rx: NB_SQ * .17, fill: '#1a1a1a', stroke: COL, 'stroke-width': 2, filter: 'url(#fShadow)' }, g);
+  el('circle', { cx: x, cy: ky, r: R + 5, fill: 'url(#gKnob)', stroke: '#111', 'stroke-width': 1.2, filter: 'url(#fShadow)' }, g);
+  el('circle', { cx: x, cy: ky, r: R + 1.5, fill: '#0b0b0b' }, g);
+  v.press = el('g', {}, g);
+  v.fill = el('circle', { cx: x, cy: ky, r: R, fill: COL, stroke: mixOk(COL, '#000000', .5), 'stroke-width': 1.2, filter: 'url(#fShadow)' }, v.press);
+  v.shine = el('ellipse', { cx: x, cy: ky - R * .38, rx: R * .62, ry: R * .36, fill: '#fff', opacity: .28 }, v.press);
+  v.text = el('text', { x, y: ky + 6.6, 'text-anchor': 'middle', class: 'devtext', 'font-size': 19, fill: DARK_TEXT }, v.press); capText(v.text, nameOf(p), 30, 19, ky + 6.6);
+  v.nb = { by, ky };
 }
