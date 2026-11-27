@@ -131,9 +131,18 @@ function presenceWant() {
       cols = vReturn(c, s.col, lc, dist, JE); }
     if (cols && cols.cur) { for (const n of cols.cur) cur.add(n);
       const rt = s.hot && cols.es ? cols.es.flatMap(e => [e.a, e.b]).filter(n => retT.has(n)) : [];
-      if (rt.length) {   // (a hot line that is the return of a load across two hot lines: from there back to its source)
-        const fx = new Map(); for (const e of cols.es) for (const n of [e.a, e.b]) { if ((dist.get(n) ?? 1) < 1e-3) fx.set(n, 0); else if (retT.has(n)) fx.set(n, 1); else if (bot.has(n)) fx.set(n, -1); }
-        vDirs(dir, cols.es, vPot(cols.es, null, null, fx), cols.cur, dist, (n, p) => retT.has(n) || p > 1e-9 ? 'r' : 'h');
+      if (rt.length) {
+        /* a hot line that is the return of a load across two hot lines (option A) (Dallas, 26 Nov 2026): where it also feeds loads,
+           its wiring out to them is shown feeding, from its source, as ever; only a branch that carries nothing but a return is shown
+           going back, to where it joins that wiring (or, feeding nothing, to its source). So blowing a fuse or a light going out
+           never turns a line's main run round. */
+        const es = cols.es, js = [...new Set(es.flatMap(e => [e.a, e.b]))], S = new Set(js.filter(n => (dist.get(n) ?? 1) < 1e-3));
+        const feedT = new Set(js.filter(n => bot.has(n) && !retT.has(n))), F = feedT.size ? vCarry(es, S, feedT) : new Set();
+        const Fn = new Set(); for (const e of F) { Fn.add(e.a); Fn.add(e.b); }
+        const fx = new Map(); if (F.size) { const pf = vPot(es.filter(e => F.has(e)), S, feedT); for (const n of Fn) fx.set(n, pf.get(n) ?? 0); }
+        for (const n of S) if (!fx.has(n)) fx.set(n, F.size ? 1 : 0);
+        for (const n of js) if (retT.has(n) && !fx.has(n)) fx.set(n, 2);
+        vDirs(dir, es, vPot(es, null, null, fx), cols.cur, dist, n => retT.has(n) || !Fn.has(n) ? 'r' : 'h');
       } else if (cols.pot) vDirs(dir, cols.es, cols.pot, cols.cur, dist, s.hot ? 'h' : 'r'); }
     for (const n of byC.get(c) || []) out.set(n, { lab: s.lab, c: (cols && cols.get(n)) || s.col }); }
   // pieces fed only through loads with no current: the colour at the load's far end; between loads in series, a fade

@@ -39,7 +39,7 @@ function renderInto(target, V, L) {
   for (const b of bands) {
     el('rect', { x: 0, y: b.y0, width: L ? W : workW(), height: b.y1 - b.y0 }, el('clipPath', { id: `sheetClip${T}${b.n}` }, target.querySelector('defs')));
     const clip = { 'clip-path': `url(#sheetClip${T}${b.n})` };
-    Object.assign(b, { chan: el('g', clip, b.g), wlV: el('g', clip, b.g), mvV: el('g', clip, b.g), backs: el('g', clip, b.g), wlH: el('g', clip, b.g), jc: el('g', clip, b.g), mvH: el('g', clip, b.g), hits: el('g', {}, b.g) });   // (mvV, mvH: the moving dashes, over their wires (an upright wire's still under a level one's hop); jc: where wires meet, the current's colour on top)
+    Object.assign(b, { chan: el('g', clip, b.g), wlV: el('g', clip, b.g), backs: el('g', clip, b.g), wlH: el('g', clip, b.g), jc: el('g', clip, b.g), mvH: el('g', clip, b.g), hits: el('g', {}, b.g) });   // (jc: where wires meet, the carrying wire's colour on top; mvH: the moving dashes over all the wiring (an upright wire's leave a gap under a level one's hop))
   }
   const shape = (x1, y1, x2, y2) => y1 === y2 && x1 !== x2 ? hPath(Math.min(x1, x2), Math.max(x1, x2), y1, net.hops) : `M${x1} ${y1}L${x2} ${y2}`;
   const wy = w => (w.y1 + w.y2) / 2;   // (which band a wire is in: none crosses from one band to the next)
@@ -62,13 +62,13 @@ function renderInto(target, V, L) {
     for (const s of NET.subs) { if (!byWire.has(s.wire.id)) byWire.set(s.wire.id, []); byWire.get(s.wire.id).push(s); }
     for (const [, subs] of byWire) {
       const xs = subs.flatMap(q => [q.x1, q.x2]), ys = subs.flatMap(q => [q.y1, q.y2]);   // (where it is, so the painting can skip it while it is out of view)
-      V.runs.push({ subs, n: V.runs.length, g: el('g', {}, layer(subs[0].x1, subs[0].x2, wy(subs[0].wire))), mg: el('g', {}, subs[0].x1 === subs[0].x2 && subs[0].y1 !== subs[0].y2 ? B(wy(subs[0].wire)).mvV : B(wy(subs[0].wire)).mvH), last: '', bb: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] });
+      V.runs.push({ subs, n: V.runs.length, g: el('g', {}, layer(subs[0].x1, subs[0].x2, wy(subs[0].wire))), mg: el('g', {}, B(wy(subs[0].wire)).mvH), last: '', bb: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] });
     }
-    // (where three or more wires meet: a dot in the current's colour over them all, so a wire with no current ending there never
-    // covers one carrying it (Dallas, 26 Nov 2026))
+    // (where three or more wires meet: a square the width of a wire in the current's colour over them all, so a branch with no
+    // current ending there lies under the wire carrying it, which keeps its straight edges (Dallas, 26 Nov 2026))
     V.jdots = [];
     for (let n = 0; n < NET.nodes.length; n++) { let k = 0; for (const i of NET.adj[n]) if (NET.edges[i].kind === 'w') k++;
-      if (k >= 3) { const q = NET.nodes[n]; V.jdots.push({ n, x: q.x, y: q.y, c: '', el: el('circle', { cx: q.x, cy: q.y, r: 4.45, fill: 'transparent' }, B(q.y).jc) }); } }
+      if (k >= 3) { const q = NET.nodes[n]; V.jdots.push({ n, x: q.x, y: q.y, c: '', el: el('rect', { x: q.x - 4.45, y: q.y - 4.45, width: 8.9, height: 8.9, fill: 'transparent' }, B(q.y).jc) }); } }
   }
   // the L1 bar down the left edge and the L2 bar down the right: wires connect by running into them
   for (const bd of bands) for (const [x, t] of barsOn() ? [[0, 'L1'], [W - BAR, 'L2']] : []) {

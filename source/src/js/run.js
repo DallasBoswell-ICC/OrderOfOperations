@@ -46,7 +46,7 @@ function paintLeadMv(L, p, n) {
   let way = 0;
   if (c && A && !V_DS.has(c) && full) {
     if (LOADT(p.t)) way = A[2] === 'h' ? 1 : A[2] === 'r' ? -1 : 0;
-    else { const m = n === p._a ? p._b : p._a, B = vDirAt(m), cm = showCol(m, simT); if (B && cm && !V_DS.has(cm) && Math.abs(A[0] - B[0]) > 1e-9) way = A[0] > B[0] ? 1 : -1; }
+    else { const m = n === p._a ? p._b : p._a, B = vDirAt(m), cm = showCol(m, simT); if (B && cm && !V_DS.has(cm)) way = Math.abs(A[0] - B[0]) > 1e-9 ? (A[0] > B[0] ? 1 : -1) : A[1] !== B[1] ? (A[1] < B[1] ? 1 : -1) : 0; }   // (or, level, from the end the current reaches first)
   }
   const k = way ? way + ':' + c + ':' + (A[1] | 0) : '';
   if (k === L.mk) return; L.mk = k;
@@ -100,8 +100,14 @@ function paintView(V) {
       let j = i; while (j + 1 < mv.length && mv[j + 1] === mv[i]) j++;
       const a = it.subs[i], b = it.subs[j], hz = a.y1 === b.y2 && a.x1 !== b.x2;
       // (a level wire is drawn left to right; an upright one from its first stretch's start)
-      const fwd = hz ? (b.x2 > a.x1) === (mv[i] > 0) : mv[i] > 0, start = hz && b.x2 < a.x1 ? b.b : a.a;   // (where the drawn path starts)
-      el('path', { d: V.shape(a.x1, a.y1, b.x2, b.y2), ...mvAttrs(start, fwd, mvInk(cols[i])) }, it.mg);
+      const fwd = hz ? (b.x2 > a.x1) === (mv[i] > 0) : mv[i] > 0, start = hz && b.x2 < a.x1 ? b.b : a.a, ink = mvInk(cols[i]);   // (where the drawn path starts)
+      if (hz || a.x1 !== b.x2) el('path', { d: V.shape(a.x1, a.y1, b.x2, b.y2), ...mvAttrs(start, fwd, ink) }, it.mg);
+      else {   // (upright: in pieces, leaving a gap where a level wire hops over it)
+        const x = a.x1, y0 = a.y1, y1 = b.y2, dn = y1 > y0 ? 1 : -1, cut = NET.hops.filter(([hx, hy]) => hx === x && (hy - y0) * dn > 0 && (y1 - hy) * dn > -20).map(([, hy]) => [hy - 20, hy + 2]).sort((u, w) => (u[0] - w[0]) * dn);
+        let from = y0; const seg = (u, w) => { if ((w - u) * dn <= 0.5) return; el('path', { d: `M${x} ${u}L${x} ${w}`, ...mvAttrs(start, fwd, ink, 'mv', -Math.abs(u - y0)) }, it.mg); };
+        for (const [lo, hi] of cut) { const [p, q] = dn > 0 ? [lo, hi] : [hi, lo]; seg(from, dn > 0 ? Math.min(p, y1) : Math.max(p, y1)); from = q; }
+        seg(from, y1);
+      }
       i = j + 1;
     }
   }

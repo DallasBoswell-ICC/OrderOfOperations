@@ -3246,6 +3246,34 @@ const DEF_CIRCUIT = `
       return out;`));
   });
 
+  await check('Loads across three phases (Dallas, 26 Nov 2026, his pilot lights and T1): each line’s run out from its source is shown feeding, whatever else it returns; a branch that only carries a return is shown going back to that run; switching one load out (as a fuse blowing) turns nothing round', async page => {
+    const H = (x, a, b) => [['htr', x, 500, '1', 0, 1, 'FF0032', null, null, null, null, null, null, null, null, { r: 3 }]];
+    const d = { app: 'order-of-operations-circuit-builder', v: 1, name: 'Delta', w: 1500, pw: 'boxes',
+      parts: [['ph', 100, 100, '1', 0, 1, '', 3], ['ph', 100, 200, '2', 0, 1, '', 3], ['ph', 100, 300, '3', 0, 1, '', 3], ...H(500), ...H(700), ...H(900), ['htr', 220, 500, '1', 0, 1, 'FF0032', null, null, null, null, null, null, null, null, { r: 3 }], ['tgl', 340, 700, '1', 0, 1, '99E600']],
+      wires: [[140, 100, 940, 100], [140, 200, 740, 200], [140, 300, 1360, 300],
+        [500, 100, 500, 440], [500, 560, 500, 620], [500, 620, 540, 620], [540, 620, 540, 200],
+        [700, 200, 700, 440], [700, 560, 700, 620], [700, 620, 740, 620], [740, 620, 740, 300],
+        [900, 300, 900, 440], [900, 560, 900, 620], [900, 620, 940, 620], [940, 620, 940, 100],
+        [220, 100, 220, 440], [220, 560, 220, 700], [220, 700, 280, 700], [400, 700, 1360, 700], [1360, 700, 1360, 300]] };
+    await page.evaluate(d => { useCircuit(readCircuit(d), ''); }, d);
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + `
+      const out = [], sw = parts.find(p => p.t === 'tgl'), K = opKey(sw);
+      const sub = (x, y) => NET.subs.find(s => s.y1 === y && s.y2 === y && Math.min(s.x1, s.x2) === x);
+      const vs = (x, y) => NET.subs.find(s => s.x1 === x && s.x2 === x && Math.min(s.y1, s.y2) === y);
+      const right = s => s ? vMove(s, showCol(s.b, simT)) * Math.sign(s.x2 - s.x1) : 'none', down_ = s => s ? vMove(s, showCol(s.b, simT)) * Math.sign(s.y2 - s.y1) : 'none';
+      const look = when => {
+        if (right(sub(160, 100)) !== 1) out.push(when + ': L1 out from its source is not shown feeding (' + right(sub(160, 100)) + ')');
+        if (right(sub(300, 100)) !== 1) out.push(when + ': L1 past where the switched load’s return joins is not shown feeding (' + right(sub(300, 100)) + ')');
+        if (right(sub(300, 200)) !== 1) out.push(when + ': L2 out from its source is not shown feeding (' + right(sub(300, 200)) + ')');
+        if (right(sub(300, 300)) !== 1) out.push(when + ': L3 out from its source is not shown feeding (' + right(sub(300, 300)) + ')');
+        if (down_(vs(540, 400)) !== -1) out.push(when + ': the return from the L1–L2 load is not shown going back up to L2 (' + down_(vs(540, 400)) + ')');
+        if (right(sub(700, 100)) !== -1) out.push(when + ': L1 beyond its last load fed is not shown bringing the returns back (' + right(sub(700, 100)) + ')'); };
+      press(K, !down[K]); step(5); look('all four on');
+      press(K, !down[K]); step(5); look('the fourth switched out');
+      return out;`));
+  });
+
   await check('A 3PST switch or breaker closed (Dallas, 26 Nov 2026): L1, L2 and L3 run out from it together, none behind the others', async page => {
     const out = [];
     for (const t of ['tps', 'cbt']) {
