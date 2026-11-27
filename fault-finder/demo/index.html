@@ -664,10 +664,10 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
 .vs-h2 { margin-top: 4px; }
 /* current moving along a wire (option 1, Dallas 26 Nov 2026: motion means current, colour means voltage); slower when the
    circuit runs slower than 1× */
-.mv { fill: none; stroke-width: 3.6; stroke-linecap: round; stroke-dasharray: 7 17; pointer-events: none; animation: mvgo var(--mv-dur, .7s) linear infinite; }
+.mv { fill: none; stroke-width: 4.6; stroke-linecap: butt; stroke-dasharray: 13 17; stroke-dashoffset: var(--o, 0px); pointer-events: none; animation: mvgo var(--mv-dur, .3s) linear infinite; }
 .mv.rev { animation-direction: reverse; }
-@keyframes mvgo { to { stroke-dashoffset: -24; } }
-@media (prefers-reduced-motion: reduce) { .mv { animation-duration: 2.4s; } }
+@keyframes mvgo { from { stroke-dashoffset: var(--o, 0px); } to { stroke-dashoffset: calc(var(--o, 0px) - 30px); } }
+@media (prefers-reduced-motion: reduce) { .mv { animation-duration: 1.2s; } }
 
 .demo-badge { font-style: normal; font-size: .7rem; font-weight: 800; letter-spacing: .08em; color: #1c1d1f; background: #9be03a; border-radius: 5px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px; }
 </style>
@@ -4170,10 +4170,14 @@ function vPot(es, top, bot) {
   return pot;
 }
 // (the junctions along each carrying wire between two junctions: in between, in step)
-function vDirs(D, es, pot, cur) {
+/* each entry [how far along (as above), how far the current has come (for keeping the moving dashes in step where wires
+   meet: from the source on a hot side, back to the source on a return), 'h' on a hot side (current goes into a load from
+   it), 'r' on a return (current comes out of a load into it)] */
+function vDirs(D, es, pot, cur, dist, role) {
+  const put = (n, p) => { if (!cur.has(n)) return; const r = typeof role === 'function' ? role(n) : role, d = dist ? dist.get(n) ?? 0 : 0; D.set(n, [p, r === 'r' ? -d : d, r]); };
   for (const e of es) { const pa = pot.get(e.a), pb = pot.get(e.b); if (pa === undefined || pb === undefined) continue;
-    if (cur.has(e.a)) D.set(e.a, pa); if (cur.has(e.b)) D.set(e.b, pb);
-    if (e.chain) { const mm = e.chain.length - 1, fw = e.chain[0] === e.a; e.chain.forEach((n, i) => { if (cur.has(n)) D.set(n, pa + (pb - pa) * (fw ? i : mm - i) / Math.max(1, mm)); }); } }
+    put(e.a, pa); put(e.b, pb);
+    if (e.chain) { const mm = e.chain.length - 1, fw = e.chain[0] === e.a; e.chain.forEach((n, i) => put(n, pa + (pb - pa) * (fw ? i : mm - i) / Math.max(1, mm))); } }
 }
 // the live sources: { n: its junction, lab, col, hot }
 function vSources() {
@@ -4257,7 +4261,7 @@ function presenceWant() {
     else { const lc = new Map();   // (each load with current through it into this return: its own colour (or, with none, the current's))
       for (const l of loads) { if (l.ca === l.cb) continue; for (const [mine, oth, cm] of [[l.a, l.b, l.ca], [l.b, l.a, l.cb]]) if (cm === c && bot.has(oth) && out.has(oth)) lc.set(mine, l.p.color ? flowOf(l.p.color) : out.get(oth).c); }
       cols = vReturn(c, s.col, lc, dist, JE); }
-    if (cols && cols.cur) { for (const n of cols.cur) cur.add(n); if (cols.pot) vDirs(dir, cols.es, cols.pot, cols.cur); }
+    if (cols && cols.cur) { for (const n of cols.cur) cur.add(n); if (cols.pot) vDirs(dir, cols.es, cols.pot, cols.cur, dist, s.hot ? 'h' : 'r'); }
     for (const n of byC.get(c) || []) out.set(n, { lab: s.lab, c: (cols && cols.get(n)) || s.col }); }
   // pieces fed only through loads with no current: the colour at the load's far end; between loads in series, a fade
   for (const g of groups) {
@@ -4279,7 +4283,7 @@ function presenceWant() {
       for (const c of g.comps) { const vc = v[ix.get(c)], tp = new Set(), bt = new Set();
         for (const l of loads) { if (l.ca === l.cb) continue; for (const [mine, cm, ow] of [[l.a, l.ca, l.cb], [l.b, l.cb, l.ca]]) { if (cm !== c) continue;
           const s = lab.get(ow), vo = s ? (s.x ? null : s.lab === hot ? 1 : 0) : ix.has(ow) ? v[ix.get(ow)] : null; if (vo === null) continue; (vo > vc ? tp : bt).add(mine); } }
-        const es = JE.get(c) || []; if (tp.size && bt.size) vDirs(dir, es, vPot(es, tp, bt), new Set(byC.get(c) || [])); }
+        const es = JE.get(c) || []; if (tp.size && bt.size) vDirs(dir, es, vPot(es, tp, bt), new Set(byC.get(c) || []), null, n => tp.has(n) ? 'r' : bt.has(n) ? 'h' : 'm'); }
     }
     for (const [c, r] of col) for (const n of byC.get(c) || []) out.set(n, { lab: r.lab, c: r.c });
   }
@@ -6407,13 +6411,36 @@ function frameBody(now) {
    -1 the other) only where current goes through it: its colour is not a dimmed one, and the current's way along it is known */
 function vMove(s, c) {
   if (!c || !vOn() || V_DS.has(c)) return 0;
-  const pa = vDirAt(s.a), pb = vDirAt(s.b); if (pa === undefined || pb === undefined || Math.abs(pa - pb) < 1e-9) return 0;
-  return pa > pb ? 1 : -1;
+  const A = vDirAt(s.a), B = vDirAt(s.b); if (!A || !B || Math.abs(A[0] - B[0]) < 1e-9) return 0;
+  return A[0] > B[0] ? 1 : -1;
+}
+/* the dashes (Dallas, 26 Nov 2026): MV_DASH long every MV_P, moving MV_P every MV_DUR seconds. Every stretch's dashes are set by how
+   far the current has come to its start, and all keep one clock, so where stretches meet (a corner, a riser, a lead into a part)
+   the dashes run on unbroken, and a stretch that starts moving is revealed in step rather than starting afresh */
+const MV_DASH = 13, MV_P = 30; let MV_DUR = 0.3;
+function mvAttrs(n, fwd, ink, cls = 'mv') {
+  const D = (vDirAt(n) || [0, 0])[1], o = fwd ? D : MV_DASH - D, m = ((o % MV_P) + MV_P) % MV_P;
+  return { class: cls + (fwd ? '' : ' rev'), stroke: ink, style: `--o:${m.toFixed(1)}px;animation-delay:${(-(performance.now() / 1000) % MV_DUR).toFixed(3)}s` };
+}
+// a part's lead with current through it (in at a load's hot side, out at its return; through a contact from its higher side)
+function paintLeadMv(L, p, n) {
+  const c = showCol(n, simT), A = vDirAt(n), full = L.full;
+  let way = 0;
+  if (c && A && !V_DS.has(c) && full) {
+    if (LOADT(p.t)) way = A[2] === 'h' ? 1 : A[2] === 'r' ? -1 : 0;
+    else { const m = n === p._a ? p._b : p._a, B = vDirAt(m), cm = showCol(m, simT); if (B && cm && !V_DS.has(cm) && Math.abs(A[0] - B[0]) > 1e-9) way = A[0] > B[0] ? 1 : -1; }
+  }
+  const k = way ? way + ':' + c + ':' + (A[1] | 0) : '';
+  if (k === L.mk) return; L.mk = k;
+  if (L.mv) { L.mv.remove(); L.mv = null; }
+  if (!way) return;
+  L.mv = el('line', { x1: L.term, x2: L.body, y1: L.y, y2: L.y, ...mvAttrs(n, way > 0, mvInk(c)) });
+  L.cur.parentNode.insertBefore(L.mv, L.old.nextSibling);
 }
 function vDirAt(n) { const a = VTL.get(n); if (!a) return undefined; for (let i = a.length - 1; i >= 0; i--) if (a[i][0] <= simT + 1e-9) return a[i][3]; }
 // (the dashes: dark on a light wire, light on a dark one)
 const MV_INK = new Map();
-function mvInk(c) { let k = MV_INK.get(c); if (k === undefined) { const L = oklab(c)[0]; k = L > 0.72 ? 'rgba(0,0,0,.30)' : 'rgba(255,255,255,.42)'; MV_INK.set(c, k); } return k; }
+function mvInk(c) { let k = MV_INK.get(c); if (k === undefined) { const L = oklab(c)[0]; k = L > 0.72 ? 'rgba(0,0,0,.55)' : 'rgba(255,255,255,.8)'; MV_INK.set(c, k); } return k; }
 function paint() {
   for (const V of VIEWS) paintView(V);
   paintStation(); overviewTick();
@@ -6450,8 +6477,8 @@ function paintView(V) {
       let j = i; while (j + 1 < mv.length && mv[j + 1] === mv[i]) j++;
       const a = it.subs[i], b = it.subs[j], hz = a.y1 === b.y2 && a.x1 !== b.x2;
       // (a level wire is drawn left to right; an upright one from its first stretch's start)
-      const fwd = hz ? (b.x2 > a.x1) === (mv[i] > 0) : mv[i] > 0;
-      el('path', { d: V.shape(a.x1, a.y1, b.x2, b.y2), class: 'mv' + (fwd ? '' : ' rev'), stroke: mvInk(cols[i]) }, it.g);
+      const fwd = hz ? (b.x2 > a.x1) === (mv[i] > 0) : mv[i] > 0, start = hz && b.x2 < a.x1 ? b.b : a.a;   // (where the drawn path starts)
+      el('path', { d: V.shape(a.x1, a.y1, b.x2, b.y2), ...mvAttrs(start, fwd, mvInk(cols[i])) }, it.g);
       i = j + 1;
     }
   }
@@ -6473,7 +6500,7 @@ function paintView(V) {
     }
     if (isSrc(p) || isPh(p) || isGnd(p)) { if (v.src) for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } continue; }
     // (a load across the phases or a phase and the neutral: each lead the colour of the phase at its end)
-    for (const S of ['A', 'B']) { const n = S === 'A' ? p._a : p._b, k = LOADT(p.t) && PARR.size ? phaseOfAt(n, simT) : 0; if (vOn()) { paintLead(v.lead[S], vLead(p, n)); continue; } paintLead(v.lead[S], k ? [{ t0: -1e9, col: (PARR.get(n) || PDARK.get(n) || {}).c || phColK(k), from: 'term' }] : p._lead && p._lead[S]); }
+    for (const S of ['A', 'B']) { const n = S === 'A' ? p._a : p._b, k = LOADT(p.t) && PARR.size ? phaseOfAt(n, simT) : 0; if (vOn()) { paintLead(v.lead[S], vLead(p, n)); if (!TS_MODE) paintLeadMv(v.lead[S], p, n); continue; } paintLead(v.lead[S], k ? [{ t0: -1e9, col: (PARR.get(n) || PDARK.get(n) || {}).c || phColK(k), from: 'term' }] : p._lead && p._lead[S]); }
     let k;
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
     else if (p.t === 'lsw') setLimit(v, p, lswPos(p), lswClosed(p));
@@ -6666,7 +6693,7 @@ function paintLead(L, evs) {
   const cur = i >= 0 ? evs[i] : null, prev = i > 0 ? evs[i - 1].col : null;
   const len = Math.abs(L.term - L.body), from = cur && cur.from === 'body' ? L.body : L.term, to = from === L.term ? L.body : L.term;
   const f = cur ? clamp01((simT - cur.t0) * V / Math.max(len, 1)) : 0, mid = from + (to - from) * f;
-  const k = `${from}|${mid.toFixed(1)}|${cur && cur.col}|${prev}`;
+  L.full = !!cur && f >= 1; const k = `${from}|${mid.toFixed(1)}|${cur && cur.col}|${prev}`;
   if (k === L.k) return; L.k = k;   // nothing has changed: leave it alone
   const set = (ln, x1, x2, c) => { const show = c && Math.abs(x2 - x1) > 0.5; ln.setAttribute('x1', x1); ln.setAttribute('x2', x2); ln.setAttribute('y1', L.y); ln.setAttribute('y2', L.y); ln.setAttribute('stroke', show ? c : 'transparent'); };
   set(L.cur, from, mid, cur && cur.col); set(L.old, mid, to, prev);
@@ -10002,7 +10029,7 @@ const SPEED_MIN = 0.1, SPEED_MAX = 300, sliderOf = s => 100 * Math.log10(s / SPE
 const fmtSpeed = s => (s < 1 ? +s.toFixed(2) : s < 10 ? +s.toFixed(1) : Math.round(s)) + '×';
 function setSpeed(s, fromSlider) {
   speed = s;
-  document.documentElement.style.setProperty('--mv-dur', (0.7 / Math.min(1, Math.max(0.25, s))).toFixed(2) + 's');   // (the current's dashes: slower below 1×)
+  MV_DUR = +(0.3 / Math.min(1, Math.max(0.25, s))).toFixed(2); document.documentElement.style.setProperty('--mv-dur', MV_DUR + 's');   // (the current's dashes: slower below 1×)
   for (const sl of document.querySelectorAll('.speed-slider')) if (sl !== fromSlider) sl.value = sliderOf(s);   // (the Simulation tab's and the operator station's)
   for (const o of document.querySelectorAll('.speed-box')) if (document.activeElement !== o) o.value = fmtSpeed(s);   // (the Simulation tab's and the operator station's)
   document.querySelectorAll('[data-speed]').forEach(x => x.setAttribute('aria-pressed', String(Math.abs(+x.dataset.speed - s) < 1e-9)));

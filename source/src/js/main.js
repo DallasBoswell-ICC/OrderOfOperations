@@ -22,7 +22,7 @@ const SPEED_MIN = 0.1, SPEED_MAX = 300, sliderOf = s => 100 * Math.log10(s / SPE
 const fmtSpeed = s => (s < 1 ? +s.toFixed(2) : s < 10 ? +s.toFixed(1) : Math.round(s)) + '×';
 function setSpeed(s, fromSlider) {
   speed = s;
-  document.documentElement.style.setProperty('--mv-dur', (0.7 / Math.min(1, Math.max(0.25, s))).toFixed(2) + 's');   // (the current's dashes: slower below 1×)
+  MV_DUR = +(0.3 / Math.min(1, Math.max(0.25, s))).toFixed(2); document.documentElement.style.setProperty('--mv-dur', MV_DUR + 's');   // (the current's dashes: slower below 1×)
   for (const sl of document.querySelectorAll('.speed-slider')) if (sl !== fromSlider) sl.value = sliderOf(s);   // (the Simulation tab's and the operator station's)
   for (const o of document.querySelectorAll('.speed-box')) if (document.activeElement !== o) o.value = fmtSpeed(s);   // (the Simulation tab's and the operator station's)
   document.querySelectorAll('[data-speed]').forEach(x => x.setAttribute('aria-pressed', String(Math.abs(+x.dataset.speed - s) < 1e-9)));

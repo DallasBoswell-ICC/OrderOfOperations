@@ -29,13 +29,36 @@ function frameBody(now) {
    -1 the other) only where current goes through it: its colour is not a dimmed one, and the current's way along it is known */
 function vMove(s, c) {
   if (!c || !vOn() || V_DS.has(c)) return 0;
-  const pa = vDirAt(s.a), pb = vDirAt(s.b); if (pa === undefined || pb === undefined || Math.abs(pa - pb) < 1e-9) return 0;
-  return pa > pb ? 1 : -1;
+  const A = vDirAt(s.a), B = vDirAt(s.b); if (!A || !B || Math.abs(A[0] - B[0]) < 1e-9) return 0;
+  return A[0] > B[0] ? 1 : -1;
+}
+/* the dashes (Dallas, 26 Nov 2026): MV_DASH long every MV_P, moving MV_P every MV_DUR seconds. Every stretch's dashes are set by how
+   far the current has come to its start, and all keep one clock, so where stretches meet (a corner, a riser, a lead into a part)
+   the dashes run on unbroken, and a stretch that starts moving is revealed in step rather than starting afresh */
+const MV_DASH = 13, MV_P = 30; let MV_DUR = 0.3;
+function mvAttrs(n, fwd, ink, cls = 'mv') {
+  const D = (vDirAt(n) || [0, 0])[1], o = fwd ? D : MV_DASH - D, m = ((o % MV_P) + MV_P) % MV_P;
+  return { class: cls + (fwd ? '' : ' rev'), stroke: ink, style: `--o:${m.toFixed(1)}px;animation-delay:${(-(performance.now() / 1000) % MV_DUR).toFixed(3)}s` };
+}
+// a part's lead with current through it (in at a load's hot side, out at its return; through a contact from its higher side)
+function paintLeadMv(L, p, n) {
+  const c = showCol(n, simT), A = vDirAt(n), full = L.full;
+  let way = 0;
+  if (c && A && !V_DS.has(c) && full) {
+    if (LOADT(p.t)) way = A[2] === 'h' ? 1 : A[2] === 'r' ? -1 : 0;
+    else { const m = n === p._a ? p._b : p._a, B = vDirAt(m), cm = showCol(m, simT); if (B && cm && !V_DS.has(cm) && Math.abs(A[0] - B[0]) > 1e-9) way = A[0] > B[0] ? 1 : -1; }
+  }
+  const k = way ? way + ':' + c + ':' + (A[1] | 0) : '';
+  if (k === L.mk) return; L.mk = k;
+  if (L.mv) { L.mv.remove(); L.mv = null; }
+  if (!way) return;
+  L.mv = el('line', { x1: L.term, x2: L.body, y1: L.y, y2: L.y, ...mvAttrs(n, way > 0, mvInk(c)) });
+  L.cur.parentNode.insertBefore(L.mv, L.old.nextSibling);
 }
 function vDirAt(n) { const a = VTL.get(n); if (!a) return undefined; for (let i = a.length - 1; i >= 0; i--) if (a[i][0] <= simT + 1e-9) return a[i][3]; }
 // (the dashes: dark on a light wire, light on a dark one)
 const MV_INK = new Map();
-function mvInk(c) { let k = MV_INK.get(c); if (k === undefined) { const L = oklab(c)[0]; k = L > 0.72 ? 'rgba(0,0,0,.30)' : 'rgba(255,255,255,.42)'; MV_INK.set(c, k); } return k; }
+function mvInk(c) { let k = MV_INK.get(c); if (k === undefined) { const L = oklab(c)[0]; k = L > 0.72 ? 'rgba(0,0,0,.55)' : 'rgba(255,255,255,.8)'; MV_INK.set(c, k); } return k; }
 function paint() {
   for (const V of VIEWS) paintView(V);
   paintStation(); overviewTick();
@@ -72,8 +95,8 @@ function paintView(V) {
       let j = i; while (j + 1 < mv.length && mv[j + 1] === mv[i]) j++;
       const a = it.subs[i], b = it.subs[j], hz = a.y1 === b.y2 && a.x1 !== b.x2;
       // (a level wire is drawn left to right; an upright one from its first stretch's start)
-      const fwd = hz ? (b.x2 > a.x1) === (mv[i] > 0) : mv[i] > 0;
-      el('path', { d: V.shape(a.x1, a.y1, b.x2, b.y2), class: 'mv' + (fwd ? '' : ' rev'), stroke: mvInk(cols[i]) }, it.g);
+      const fwd = hz ? (b.x2 > a.x1) === (mv[i] > 0) : mv[i] > 0, start = hz && b.x2 < a.x1 ? b.b : a.a;   // (where the drawn path starts)
+      el('path', { d: V.shape(a.x1, a.y1, b.x2, b.y2), ...mvAttrs(start, fwd, mvInk(cols[i])) }, it.g);
       i = j + 1;
     }
   }
@@ -95,7 +118,7 @@ function paintView(V) {
     }
     if (isSrc(p) || isPh(p) || isGnd(p)) { if (v.src) for (const q of v.src) { const c = showCol(q.n, simT) || 'transparent'; if (c !== q.c) q.ln.setAttribute('stroke', q.c = c); } continue; }
     // (a load across the phases or a phase and the neutral: each lead the colour of the phase at its end)
-    for (const S of ['A', 'B']) { const n = S === 'A' ? p._a : p._b, k = LOADT(p.t) && PARR.size ? phaseOfAt(n, simT) : 0; if (vOn()) { paintLead(v.lead[S], vLead(p, n)); continue; } paintLead(v.lead[S], k ? [{ t0: -1e9, col: (PARR.get(n) || PDARK.get(n) || {}).c || phColK(k), from: 'term' }] : p._lead && p._lead[S]); }
+    for (const S of ['A', 'B']) { const n = S === 'A' ? p._a : p._b, k = LOADT(p.t) && PARR.size ? phaseOfAt(n, simT) : 0; if (vOn()) { paintLead(v.lead[S], vLead(p, n)); if (!TS_MODE) paintLeadMv(v.lead[S], p, n); continue; } paintLead(v.lead[S], k ? [{ t0: -1e9, col: (PARR.get(n) || PDARK.get(n) || {}).c || phColK(k), from: 'term' }] : p._lead && p._lead[S]); }
     let k;
     if (p.t === 'btn') paintBtn(p, v, p.x, p.y);
     else if (p.t === 'lsw') setLimit(v, p, lswPos(p), lswClosed(p));
@@ -288,7 +311,7 @@ function paintLead(L, evs) {
   const cur = i >= 0 ? evs[i] : null, prev = i > 0 ? evs[i - 1].col : null;
   const len = Math.abs(L.term - L.body), from = cur && cur.from === 'body' ? L.body : L.term, to = from === L.term ? L.body : L.term;
   const f = cur ? clamp01((simT - cur.t0) * V / Math.max(len, 1)) : 0, mid = from + (to - from) * f;
-  const k = `${from}|${mid.toFixed(1)}|${cur && cur.col}|${prev}`;
+  L.full = !!cur && f >= 1; const k = `${from}|${mid.toFixed(1)}|${cur && cur.col}|${prev}`;
   if (k === L.k) return; L.k = k;   // nothing has changed: leave it alone
   const set = (ln, x1, x2, c) => { const show = c && Math.abs(x2 - x1) > 0.5; ln.setAttribute('x1', x1); ln.setAttribute('x2', x2); ln.setAttribute('y1', L.y); ln.setAttribute('y2', L.y); ln.setAttribute('stroke', show ? c : 'transparent'); };
   set(L.cur, from, mid, cur && cur.col); set(L.old, mid, to, prev);

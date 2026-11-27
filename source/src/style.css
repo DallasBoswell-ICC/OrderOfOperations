@@ -641,7 +641,7 @@ body.ts #mode-group { display: none !important; }   /* (the pushbutton modes are
 .vs-h2 { margin-top: 4px; }
 /* current moving along a wire (option 1, Dallas 26 Nov 2026: motion means current, colour means voltage); slower when the
    circuit runs slower than 1× */
-.mv { fill: none; stroke-width: 3.6; stroke-linecap: round; stroke-dasharray: 7 17; pointer-events: none; animation: mvgo var(--mv-dur, .7s) linear infinite; }
+.mv { fill: none; stroke-width: 4.6; stroke-linecap: butt; stroke-dasharray: 13 17; stroke-dashoffset: var(--o, 0px); pointer-events: none; animation: mvgo var(--mv-dur, .3s) linear infinite; }
 .mv.rev { animation-direction: reverse; }
-@keyframes mvgo { to { stroke-dashoffset: -24; } }
-@media (prefers-reduced-motion: reduce) { .mv { animation-duration: 2.4s; } }
+@keyframes mvgo { from { stroke-dashoffset: var(--o, 0px); } to { stroke-dashoffset: calc(var(--o, 0px) - 30px); } }
+@media (prefers-reduced-motion: reduce) { .mv { animation-duration: 1.2s; } }

@@ -31,10 +31,14 @@ function vPot(es, top, bot) {
   return pot;
 }
 // (the junctions along each carrying wire between two junctions: in between, in step)
-function vDirs(D, es, pot, cur) {
+/* each entry [how far along (as above), how far the current has come (for keeping the moving dashes in step where wires
+   meet: from the source on a hot side, back to the source on a return), 'h' on a hot side (current goes into a load from
+   it), 'r' on a return (current comes out of a load into it)] */
+function vDirs(D, es, pot, cur, dist, role) {
+  const put = (n, p) => { if (!cur.has(n)) return; const r = typeof role === 'function' ? role(n) : role, d = dist ? dist.get(n) ?? 0 : 0; D.set(n, [p, r === 'r' ? -d : d, r]); };
   for (const e of es) { const pa = pot.get(e.a), pb = pot.get(e.b); if (pa === undefined || pb === undefined) continue;
-    if (cur.has(e.a)) D.set(e.a, pa); if (cur.has(e.b)) D.set(e.b, pb);
-    if (e.chain) { const mm = e.chain.length - 1, fw = e.chain[0] === e.a; e.chain.forEach((n, i) => { if (cur.has(n)) D.set(n, pa + (pb - pa) * (fw ? i : mm - i) / Math.max(1, mm)); }); } }
+    put(e.a, pa); put(e.b, pb);
+    if (e.chain) { const mm = e.chain.length - 1, fw = e.chain[0] === e.a; e.chain.forEach((n, i) => put(n, pa + (pb - pa) * (fw ? i : mm - i) / Math.max(1, mm))); } }
 }
 // the live sources: { n: its junction, lab, col, hot }
 function vSources() {
@@ -118,7 +122,7 @@ function presenceWant() {
     else { const lc = new Map();   // (each load with current through it into this return: its own colour (or, with none, the current's))
       for (const l of loads) { if (l.ca === l.cb) continue; for (const [mine, oth, cm] of [[l.a, l.b, l.ca], [l.b, l.a, l.cb]]) if (cm === c && bot.has(oth) && out.has(oth)) lc.set(mine, l.p.color ? flowOf(l.p.color) : out.get(oth).c); }
       cols = vReturn(c, s.col, lc, dist, JE); }
-    if (cols && cols.cur) { for (const n of cols.cur) cur.add(n); if (cols.pot) vDirs(dir, cols.es, cols.pot, cols.cur); }
+    if (cols && cols.cur) { for (const n of cols.cur) cur.add(n); if (cols.pot) vDirs(dir, cols.es, cols.pot, cols.cur, dist, s.hot ? 'h' : 'r'); }
     for (const n of byC.get(c) || []) out.set(n, { lab: s.lab, c: (cols && cols.get(n)) || s.col }); }
   // pieces fed only through loads with no current: the colour at the load's far end; between loads in series, a fade
   for (const g of groups) {
@@ -140,7 +144,7 @@ function presenceWant() {
       for (const c of g.comps) { const vc = v[ix.get(c)], tp = new Set(), bt = new Set();
         for (const l of loads) { if (l.ca === l.cb) continue; for (const [mine, cm, ow] of [[l.a, l.ca, l.cb], [l.b, l.cb, l.ca]]) { if (cm !== c) continue;
           const s = lab.get(ow), vo = s ? (s.x ? null : s.lab === hot ? 1 : 0) : ix.has(ow) ? v[ix.get(ow)] : null; if (vo === null) continue; (vo > vc ? tp : bt).add(mine); } }
-        const es = JE.get(c) || []; if (tp.size && bt.size) vDirs(dir, es, vPot(es, tp, bt), new Set(byC.get(c) || [])); }
+        const es = JE.get(c) || []; if (tp.size && bt.size) vDirs(dir, es, vPot(es, tp, bt), new Set(byC.get(c) || []), null, n => tp.has(n) ? 'r' : bt.has(n) ? 'h' : 'm'); }
     }
     for (const [c, r] of col) for (const n of byC.get(c) || []) out.set(n, { lab: r.lab, c: r.c });
   }
