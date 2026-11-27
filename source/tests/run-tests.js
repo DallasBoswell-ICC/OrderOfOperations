@@ -3274,7 +3274,7 @@ const DEF_CIRCUIT = `
       return out;`));
   });
 
-  await check('L2 on a center-tapped secondary (Dallas, 26 Nov 2026, his residential panel): with the lights off (CB3) L2 only returns the heaters, so its whole run turns round back to X2, none of it left going down; with CB4 off the stub up to it carries nothing', async page => {
+  await check('L2 on a center-tapped secondary (Dallas, 26 Nov 2026, his residential panel): with the lights off (CB3) L2 only returns the heaters, so its whole run turns round back to X2, none of it left going down; with CB4 off the stub up to it carries nothing, and the neutral beyond the lights (back-fed through the heaters) carries on to X0', async page => {
     const d = require('fs').readFileSync(path.join(__dirname, 'fixtures', 'residential_panel_2.json'), 'utf8');
     await page.evaluate(d => { useCircuit(readCircuit(JSON.parse(d)), ''); }, d);
     await page.click('#tab-run');
@@ -3292,6 +3292,9 @@ const DEF_CIRCUIT = `
       const st = hs(400, 1360), c = showCol(st.b, simT);
       if (vMove(st, c) || (c && !V_DS.has(c))) out.push('CB4 off: the stub up to it is shown carrying');
       if (dn(vs(300, 1500)) !== 0) out.push('CB4 off: the riser up to the stub moves');
+      // (the lights back-fed through the heaters: their neutral side carries on, to X0 (Dallas, 26 Nov 2026))
+      if (dn(vs(2100, 1760)) !== 1) out.push('CB4 off: below the first light (neutral) is not going down (' + dn(vs(2100, 1760)) + ')');
+      if (rt(hs(2400, 1800)) !== 1) out.push('CB4 off: the neutral from the lights is not going on toward X0 (' + rt(hs(2400, 1800)) + ')');
       return out;`));
   });
 

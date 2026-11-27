@@ -123,11 +123,11 @@ function presenceWant() {
   for (let n = 0; n < NET.nodes.length; n++) { const c = f(n); if (lab.has(c) || grp.has(c)) (byC.get(c) || byC.set(c, []).get(c)).push(n); }
   // each source's own piece: a hot one coloured as the current goes (past a pushbutton or switch its colour), a return plain
   const done = new Set(), cur = new Set(), dir = new Map();
-  for (const s of [...srcs.filter(s => s.hot), ...srcs.filter(s => !s.hot)]) { const c = f(s.n), S = lab.get(c); if (S !== s || done.has(c)) continue; done.add(c);
+  const doSrc = s => { const c = f(s.n), S = lab.get(c); if (S !== s || done.has(c)) return; done.add(c);
     let cols = null;
     if (s.hot) cols = vColours(c, f, s.col, bot, dist, JE);
     else { const lc = new Map();   // (each load with current through it into this return: its own colour (or, with none, the current's))
-      for (const l of loads) { if (l.ca === l.cb) continue; for (const [mine, oth, cm] of [[l.a, l.b, l.ca], [l.b, l.a, l.cb]]) if (cm === c && bot.has(oth) && out.has(oth)) lc.set(mine, l.p.color ? flowOf(l.p.color) : out.get(oth).c); }
+      for (const l of loads) { if (l.ca === l.cb) continue; for (const [mine, oth, cm] of [[l.a, l.b, l.ca], [l.b, l.a, l.cb]]) if (cm === c && bot.has(mine) && out.has(oth)) lc.set(mine, l.p.color ? flowOf(l.p.color) : out.get(oth).c); }
       cols = vReturn(c, s.col, lc, dist, JE); }
     if (cols && cols.cur) { for (const n of cols.cur) cur.add(n);
       const rt = s.hot && cols.es ? cols.es.flatMap(e => [e.a, e.b]).filter(n => retT.has(n)) : [];
@@ -144,10 +144,9 @@ function presenceWant() {
         for (const n of js) if (retT.has(n) && !fx.has(n)) fx.set(n, 2);
         vDirs(dir, es, vPot(es, null, null, fx), cols.cur, dist, n => retT.has(n) || !Fn.has(n) ? 'r' : 'h');
       } else if (cols.pot) vDirs(dir, cols.es, cols.pot, cols.cur, dist, s.hot ? 'h' : 'r'); }
-    for (const n of byC.get(c) || []) out.set(n, { lab: s.lab, c: (cols && cols.get(n)) || s.col }); }
+    for (const n of byC.get(c) || []) out.set(n, { lab: s.lab, c: (cols && cols.get(n)) || s.col }); };
   // pieces fed only through loads with no current: the colour at the load's far end; between loads in series, a fade
-  for (const g of groups) {
-    if (!g.touch.size) continue;
+  const doGroup = g => {
     let col;
     if (g.touch.size === 1) { const [lb, ts] = [...g.touch][0], fc = (out.get(ts[0].far) || {}).c || ts[0].s.col; col = new Map(g.comps.map(c => [c, { lab: lb, c: fc }])); }
     else {
@@ -173,7 +172,14 @@ function presenceWant() {
         vDirs(dir, es, vPot(es, tp, bt), cc, null, n => tp.has(n) ? 'r' : bt.has(n) ? 'h' : 'm'); }
     }
     for (const [c, r] of col) for (const n of byC.get(c) || []) out.set(n, { lab: r.lab, c: r.c });
-  }
+  };
+  /* in this order: the hot lines; between loads in series (their fade needs only the hot side); the returns (so one can carry
+     the current coming to it through loads in series, the neutral beyond lights back-fed through heaters (Dallas, 26 Nov 2026));
+     then pieces reached through idle loads only (coloured from either) */
+  for (const s of srcs) if (s.hot) doSrc(s);
+  for (const g of groups) if (g.touch.size > 1) doGroup(g);
+  for (const s of srcs) if (!s.hot) doSrc(s);
+  for (const g of groups) if (g.touch.size === 1) doGroup(g);
   // wiring with a source on it but no current through it (Dallas, 26 Nov 2026, option 1A): a little dimmer, toward the panel's grey
   for (const [n, r] of out) if (!cur.has(n)) r.c = vDim(r.c);
   VDIR = dir;
