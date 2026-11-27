@@ -3298,6 +3298,33 @@ const DEF_CIRCUIT = `
       return out;`));
   });
 
+  await check('Current Flow Test Circuit (Dallas, 27 Nov 2026; v2 with added rungs): through every section (heaters, motor forward and reverse, three-way lights, timer, a switch on a coil’s neutral side, back-feed through a 240 V heater) each part works, and once settled no current is shown going into a junction with nowhere to go, or out of one with nothing coming in', async page => {
+    const d = require('fs').readFileSync(path.join(__dirname, 'fixtures', 'current_flow_test.json'), 'utf8');
+    await page.evaluate(d => { useCircuit(readCircuit(JSON.parse(d)), ''); }, d);
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + `
+      const out = [], carrying = n => { const c = lit(n, simT) ? showCol(n, simT) : null; return c && !V_DS.has(c); };
+      const srcAdj = new Set(); for (const s of vSources()) { srcAdj.add(s.n); for (const i of NET.adj[s.n]) { const e = NET.edges[i]; srcAdj.add(e.a); srcAdj.add(e.b); } }
+      const term = new Set(); for (const p of parts) if (p.t === 'mtr' || p.t === 'xfm') for (const n of [p._a, p._b, ...(p._t || []), ...(p._x || [])]) if (n !== undefined) term.add(n);
+      const audit = tag => { const N = NET.nodes.length, inn = new Int16Array(N), outn = new Int16Array(N); let k = 0;
+        for (const e of NET.edges) { if (!carrying(e.a) || !carrying(e.b)) continue; const A = vDirAt(e.a), B = vDirAt(e.b); if (!A || !B) continue;
+          if (e.part && LOADT(e.part.t)) { if (e.part.t === 'mtr' || e.part.t === 'xfm') continue; if (A[2] === 'h' && B[2] === 'r') { outn[e.a]++; inn[e.b]++; } else if (A[2] === 'r' && B[2] === 'h') { outn[e.b]++; inn[e.a]++; } continue; }
+          if (e.part && !conducts(e)) continue; const w = vWay(e.a, e.b); if (!w) continue; if (w > 0) { outn[e.a]++; inn[e.b]++; } else { outn[e.b]++; inn[e.a]++; } }
+        for (let n = 0; n < N; n++) { if (srcAdj.has(n) || term.has(n) || !!inn[n] === !!outn[n]) continue; if (k++ < 3) out.push(tag + ': current ' + (inn[n] ? 'goes in with nowhere to go' : 'comes out of nowhere') + ' at ' + NET.nodes[n].x + ',' + NET.nodes[n].y); } };
+      const on = (t, L) => parts.some(p => p.t === t && p.L === L && coilOn[p.id]), flip = k => press(k, !down[k]), tap = k => { press(k, true); step(simT + 1.5); press(k, false); };
+      const want = (ok, what) => { if (!ok) out.push(what); };
+      step(25); audit('at rest');
+      tap('A'); step(simT + 15); want(on('coil', 'X') && parts.filter(p => p.t === 'htr' && p.y < 2000).every(p => coilOn[p.id]), 'A: the X starter or its heaters are not on'); audit('heaters on');
+      tap('FWD'); step(simT + 15); want(on('coil', 'F') && !on('coil', 'R') && (MOT[parts.find(p => p.t === 'mtr').id] || {}).st === 'run' && MOT[parts.find(p => p.t === 'mtr').id].dir > 0, 'FWD: the motor is not running forward'); audit('motor forward');
+      tap('MSTOP'); step(simT + 12); tap('REV'); step(simT + 15); want(on('coil', 'R') && !on('coil', 'F') && (MOT[parts.find(p => p.t === 'mtr').id] || {}).st === 'run' && MOT[parts.find(p => p.t === 'mtr').id].dir < 0, 'REV: the motor is not running in reverse'); audit('motor reverse');
+      tap('MSTOP'); step(simT + 12);
+      flip('C'); step(simT + 15); want(on('coil', 'T') && coilOn[parts.find(p => p.t === 'lamp' && p.y === 5440).id], 'C: timer T or its light is not on'); audit('timer timed out'); flip('C'); step(simT + 12);
+      flip('E'); step(simT + 12); want(on('coil', 'Y'), 'E (on the neutral side of Y): Y is not on'); audit('Y on'); flip('E'); step(simT + 12);
+      flip('G'); step(simT + 12); want(coilOn[parts.find(p => p.t === 'htr' && p.L === '4').id], 'G: the 240 V heater is not on'); audit('240 V heater on');
+      flip(opKey(parts.find(p => p.t === 'cbk' && p.L === '6'))); step(simT + 15); audit('CB6 off (back-feed through the heater)');
+      return out;`));
+  });
+
   await check('A 3PST switch or breaker closed (Dallas, 26 Nov 2026): L1, L2 and L3 run out from it together, none behind the others', async page => {
     const out = [];
     for (const t of ['tps', 'cbt']) {

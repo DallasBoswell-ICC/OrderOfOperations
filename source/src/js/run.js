@@ -29,8 +29,7 @@ function frameBody(now) {
    -1 the other) only where current goes through it: its colour is not a dimmed one, and the current's way along it is known */
 function vMove(s, c) {
   if (!c || !vOn() || V_DS.has(c)) return 0;
-  const A = vDirAt(s.a), B = vDirAt(s.b); if (!A || !B || Math.abs(A[0] - B[0]) < 1e-9) return 0;
-  return A[0] > B[0] ? 1 : -1;
+  return vWay(s.a, s.b);
 }
 /* the dashes (Dallas, 26 Nov 2026): MV_DASH long every MV_P, moving MV_P every MV_DUR seconds. Every stretch's dashes are set by how
    far the current has come to its start, and all keep one clock, so where stretches meet (a corner, a riser, a lead into a part)
@@ -56,7 +55,7 @@ function paintLeadMv(L, p, n) {
   let way = 0;
   if (c && A && !V_DS.has(c) && full) {
     if (LOADT(p.t)) way = A[2] === 'h' ? 1 : A[2] === 'r' ? -1 : 0;
-    else { const m = n === p._a ? p._b : p._a, B = vDirAt(m), cm = showCol(m, simT); if (B && cm && !V_DS.has(cm)) way = Math.abs(A[0] - B[0]) > 1e-9 ? (A[0] > B[0] ? 1 : -1) : A[1] !== B[1] ? (A[1] < B[1] ? 1 : -1) : 0; }   // (or, level, from the end the current reaches first)
+    else { const m = n === p._a ? p._b : p._a, B = vDirAt(m), cm = showCol(m, simT); if (B && cm && !V_DS.has(cm)) way = vWay(n, m) || (A[1] !== B[1] ? (A[1] < B[1] ? 1 : -1) : 0); }   // (or, level, from the end the current reaches first)
   }
   const k = way ? way + ':' + c + ':' + (A[1] | 0) : '';
   if (k === L.mk) return; L.mk = k;
@@ -68,7 +67,16 @@ function paintLeadMv(L, p, n) {
   const top = [L.cur, L.old].reduce((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? b : a));
   top.parentNode.insertBefore(L.mv, top.nextSibling); mvGo(L.mv);
 }
-function vDirAt(n) { const a = VTL.get(n); if (!a) return undefined; for (let i = a.length - 1; i >= 0; i--) if (a[i][0] <= simT + 1e-9) return a[i][3]; }
+function vDirE(n) { const a = VTL.get(n); if (!a) return undefined; for (let i = a.length - 1; i >= 0; i--) if (a[i][0] <= simT + 1e-9) return a[i]; }
+function vDirAt(n) { const e = vDirE(n); return e && e[3]; }
+// which way the current goes from junction a to its neighbour b (1 toward b, -1 toward a, 0 neither or unknown): as the more
+// recently recorded of the two says
+function vWay(a, b) {
+  const A = vDirE(a), B = vDirE(b); if (!A || !B || !A[3] || !B[3]) return 0;
+  const wa = A[3][3] && A[3][3][b], wb = B[3][3] && B[3][3][a] ? -B[3][3][a] : undefined;
+  if (wa && wb && wa !== wb) return A[0] >= B[0] ? wa : wb;
+  return wa || wb || 0;
+}
 // (the dashes: dark on a light wire, light on a dark one)
 const MV_INK = new Map();
 // (solid, so where a lead's dashes and its wire's overlap they don't darken)

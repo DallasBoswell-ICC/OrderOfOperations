@@ -186,9 +186,13 @@ function presenceWant() {
   /* (which way the current goes at each junction, as a change in itself: a line that both fed one load and was the return of
      another turns round when the one it fed is switched off, with no change of colour (Dallas, 26 Nov 2026, L2 of his panel
      with CB3 off); so the new way comes with a front from the switch, like any change) */
-  for (const [n, r] of out) { const D = dir.get(n); if (!D) continue; let k = D[2];
-    for (const i of NET.adj[n]) { const e = NET.edges[i]; if (!conducts(e)) continue; const m = e.a === n ? e.b : e.a, M = dir.get(m); if (M) k += D[0] > M[0] + 1e-9 ? '+' : D[0] < M[0] - 1e-9 ? '-' : '0'; }
-    out.set(n, { ...r, d: k }); }
+  // (and kept with it: which way the current goes from it to each neighbour, +1 away, -1 toward; read from these rather than by
+  // comparing the numbers of two junctions, which, recorded at different moments, can be on different scales (Dallas's
+  // Current Flow Test Circuit, 27 Nov 2026: a short stretch shown backwards where part of a line had turned round))
+  for (const [n, r] of out) { const D = dir.get(n); if (!D) continue; let k = D[2]; const nb = {};
+    for (const i of NET.adj[n]) { const e = NET.edges[i]; if (!conducts(e)) continue; const m = e.a === n ? e.b : e.a, M = dir.get(m); if (!M) continue;
+      const w = D[0] > M[0] + 1e-9 ? 1 : D[0] < M[0] - 1e-9 ? -1 : 0; k += w > 0 ? '+' : w < 0 ? '-' : '0'; if (w) nb[m] = w; }
+    D[3] = nb; out.set(n, { ...r, d: k }); }
   return out;
 }
 const V_DIM = 0.55, V_FADE = 240;
