@@ -3703,6 +3703,7 @@ function wouldCutOff(x, f0) {
 // a coil picks up when current reaches it and it has a way through to L2; it drops out when its current is gone
 let coilIns = new Set();
 function updateCoils(t) {
+  let SV = null;   // (the network solved once, if a load in series on a phase or secondary needs it)
   const f = compNow();
   coilIns = new Set(); let changed = false;
   for (const p of parts) if (LOADT(p.t)) { if (fedBy(f, p)) { if (FED_AT[p.id] === undefined) FED_AT[p.id] = t; } else delete FED_AT[p.id]; }
@@ -3724,13 +3725,31 @@ function updateCoils(t) {
     // (across two phases, or a phase and the neutral: its share of the voltage it's made for, from the voltage system)
     const pf = phFedAt(p, t); if (pf) p._pf = true; else if (p._pf && !coilOn[p.id]) delete p._pf;
     if (pf) { cond = true; sh = p.t === 'xfm' ? 1 : phAcross(phaseOfAt(p._a, t), phaseOfAt(p._b, t)) / SUPPLY_V; p._sh = sh; p._lv = [1, 0]; }
+
     // (from a phase to ground (Dallas, 24 Nov 2026): what the meter would read across it, so ground-detector lights on an
     // ungrounded delta share the voltage, and one goes out and the others brighten when its phase faults to ground)
-    let gf = 0;
+    let gf = 0, sf = false;
     if (!pf && RATED(p.t) && NET.GND && NET.GND.length) { const fc = compNow(), gs = new Set(NET.GND.map(fc)), ka = phaseOfAt(p._a, t), kb = phaseOfAt(p._b, t), ga = gs.has(fc(p._a)), gb = gs.has(fc(p._b));
       if ((ga && kb >= 1 && kb <= 3) || (gb && ka >= 1 && ka <= 3)) { const k = ga ? kb : ka, v = tsVolts(p._a, p._b), g = vsGnd(); gf = (g ? phAcross(k, phK(g)) : phAcross(1, 2)) / SUPPLY_V;   // (ungrounded, Match Supply: made for the line voltage, as ground-detector lights are)
         cond = v > 1; sh = v / SUPPLY_V; p._sh = sh; p._lv = [1, 0]; p._pf = true; } }
-    if (RATED(p.t) && !p.rv) p._ms = pf ? sh : gf || ctrlNomK();   // (Match Supply (Dallas, 24 Nov 2026): made for what its supply gives, at its nominal voltage)
+    /* (in series with another load on a phase or a transformer's secondary (Dallas, 27 Nov 2026: two lights in series on X1;
+       a light back-fed through a 240 V heater with its own breaker off): once the phase has reached one end, what the meter
+       would read across it, as on L1 and L2 (two equal lights on 120 V: 60 V each, a quarter as bright)) */
+    if (!pf && !cond && !gf && RATED(p.t) && p.t !== 'xfm' && p.t !== 'mtr' && faultOf(p) !== 'open' && !BLOWN[p.id] && (phaseOfAt(p._a, t) > 0 || phaseOfAt(p._b, t) > 0 || NET.PH && Object.keys(NET.PH).length)) {
+      if (!SV) { const T = tsNetwork(), fix = tsSources(T); SV = { T, fix, ...tsSolve(T, fix), ld: parts.filter(q => RATED(q.t) && q._a !== undefined && q._b !== undefined).map(q => ({ q, A: T.sn[q._a], B: T.sn[q._b] })) }; }
+      const A = SV.T.sn[p._a], B = SV.T.sn[p._b];
+      if (!(SV.fix.has(A) && SV.fix.has(B))) {
+        // (the string it is in: through the loads joined to it where no supply is, out to the supplied ends; it works once
+        // the supply has reached every one of those ends, as the current then goes right through)
+        const seen = new Set(), q = [], ends = []; let ok = true;
+        const at = (pc, n) => { if (SV.fix.has(pc)) { ends.push(pc); if (!(phaseOfAt(n, t) > 0)) ok = false; } else if (!seen.has(pc)) { seen.add(pc); q.push(pc); } };
+        at(A, p._a); at(B, p._b);
+        while (q.length && ok && seen.size < 200) { const pc = q.pop(); for (const l of SV.ld) { if (l.q === p) continue; if (l.A === pc) at(l.B, l.q._b); else if (l.B === pc) at(l.A, l.q._a); } }
+        const va = SV.V.get(A), vb = SV.V.get(B), v = ok && ends.length && SV.live.has(A) && SV.live.has(B) && va && vb ? Math.hypot(va[0] - vb[0], va[1] - vb[1]) : 0;
+        if (v > 1) { let sv = 0; for (const x of ends) for (const y of ends) { const X = SV.V.get(x), Y = SV.V.get(y); if (X && Y) sv = Math.max(sv, Math.hypot(X[0] - Y[0], X[1] - Y[1])); }
+          sf = sv / SUPPLY_V || true; cond = true; sh = v / SUPPLY_V; p._sh = sh; p._lv = [1, 0]; p._pf = true; } } }
+    if (RATED(p.t) && !p.rv) p._ms = pf ? sh : sf ? (p._msD ?? (sf === true ? ctrlNomK() : sf)) : gf || ctrlNomK();   // (in series: what it's made for when fed straight across its supply, as it was last)
+    if (pf && RATED(p.t) && !p.rv) p._msD = sh;   // (Match Supply (Dallas, 24 Nov 2026): made for what its supply gives, at its nominal voltage)
     if (faultOf(p) === 'open' || (RATED(p.t) && BLOWN[p.id])) cond = false;   // (an open coil or light, or one burned out: no current through it, whatever reaches it)
     // (a coil or solenoid pulls in at 85% of the voltage it's made for, and once in holds in down to 60% (Dallas, 23 Nov 2026))
     const pull = p.t === 'lamp' || p.t === 'xfm' || p.t === 'htr' || sh >= (coilOn[p.id] ? DROP_OUT : PULL_IN) * ratedShare(p) - 1e-9;   // (a light lights, a heater heats, and a transformer works, on whatever it gets)

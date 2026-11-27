@@ -3298,7 +3298,19 @@ const DEF_CIRCUIT = `
       return out;`));
   });
 
-  await check('Current Flow Test Circuit (Dallas, 27 Nov 2026; v2 with added rungs): through every section (heaters, motor forward and reverse, three-way lights, timer, a switch on a coil’s neutral side, back-feed through a 240 V heater) each part works, and once settled no current is shown going into a junction with nowhere to go, or out of one with nothing coming in', async page => {
+  await check('Loads in series on a phase (Dallas, 27 Nov 2026): three equal lights from L1 to N on 480Y/277 each get a third of 277 V, a ninth as bright; all three, the middle one too, light together once the supply has reached both ends, not before', async page => {
+    const d = { app: 'order-of-operations-circuit-builder', v: 1, name: 's3', w: 1500, pw: 'boxes', parts: [['ph', 140, 200, '1', 0, 1, '', 3], ['ph', 1400, 200, 'N', 0, 1, '', 2], ['lamp', 500, 200, '', 0, 1, 'FFDC00'], ['lamp', 800, 200, '', 0, 1, 'FFDC00'], ['lamp', 1100, 200, '', 0, 1, 'FFDC00']],
+      wires: [[180, 200, 440, 200], [560, 200, 740, 200], [860, 200, 1040, 200], [1160, 200, 1360, 200]] };
+    await page.evaluate(d => { useCircuit(readCircuit(d), ''); }, d);
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + `
+      const out = [], L = () => parts.filter(p => p.t === 'lamp').map(litOf);
+      step(0.2); if (L().some(v => v > 0)) out.push('lit before the supply reached both ends: ' + L().map(v => v.toFixed(2)).join(' '));
+      step(3); const l = L(); if (!l.every(v => Math.abs(v - 1 / 9) < 0.02)) out.push('not a ninth as bright each: ' + l.map(v => v.toFixed(2)).join(' '));
+      return out;`));
+  });
+
+  await check('Current Flow Test Circuit (Dallas, 27 Nov 2026; v2 with added rungs): through every section (heaters, motor forward and reverse, three-way lights, timer, a switch on a coil’s neutral side, back-feed through a 240 V heater) each part works (loads in series on the secondary each get their share), and once settled no current is shown going into a junction with nowhere to go, or out of one with nothing coming in', async page => {
     const d = require('fs').readFileSync(path.join(__dirname, 'fixtures', 'current_flow_test.json'), 'utf8');
     await page.evaluate(d => { useCircuit(readCircuit(JSON.parse(d)), ''); }, d);
     await page.click('#tab-run');
@@ -3320,8 +3332,14 @@ const DEF_CIRCUIT = `
       tap('MSTOP'); step(simT + 12);
       flip('C'); step(simT + 15); want(on('coil', 'T') && coilOn[parts.find(p => p.t === 'lamp' && p.y === 5440).id], 'C: timer T or its light is not on'); audit('timer timed out'); flip('C'); step(simT + 12);
       flip('E'); step(simT + 12); want(on('coil', 'Y'), 'E (on the neutral side of Y): Y is not on'); audit('Y on'); flip('E'); step(simT + 12);
+      // (loads in series on a transformer's secondary (Dallas, 27 Nov 2026): two equal lights on 120 V, a quarter as bright each)
+      flip('F'); step(simT + 12); const sl = parts.filter(p => p.t === 'lamp' && p.y === 6040).map(litOf);
+      want(sl.length === 2 && sl.every(v => Math.abs(v - 0.25) < 0.03), 'F: the two lights in series are not a quarter as bright each (' + sl.map(v => v.toFixed(2)).join(', ') + ')'); audit('two lights in series'); flip('F'); step(simT + 12);
       flip('G'); step(simT + 12); want(coilOn[parts.find(p => p.t === 'htr' && p.L === '4').id], 'G: the 240 V heater is not on'); audit('240 V heater on');
       flip(opKey(parts.find(p => p.t === 'cbk' && p.L === '6'))); step(simT + 15); audit('CB6 off (back-feed through the heater)');
+      // (the light back-fed through the 240 V heater: nearly all of the 120 V across the light, the heater all but cold)
+      const red = litOf(parts.find(p => p.t === 'lamp' && p.y === 6240)), h4 = parts.find(p => p.t === 'htr' && p.L === '4');
+      want(red > 0.8, 'CB6 off: the light back-fed through the heater is not lit (' + red.toFixed(2) + ')'); want(!coilOn[h4.id] || (h4._sh ?? 1) < 0.1, 'CB6 off: the heater in series with the light is still heating');
       return out;`));
   });
 
