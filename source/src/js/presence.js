@@ -19,10 +19,10 @@ const vOn = () => VTL.size > 0;
 /* VDIR (Dallas, 26 Nov 2026, option 1: motion means current, colour means voltage): for each junction with current through
    it, how far along the way the current goes it is, from 1 where it comes in to 0 where it leaves (each piece of wiring
    measured on its own): along a wire, the current runs from the higher to the lower. */
-function vPot(es, top, bot) {
-  const js = [...new Set(es.flatMap(e => [e.a, e.b]))], pot = new Map(); for (const n of top) pot.set(n, 1); for (const n of bot) if (!top.has(n)) pot.set(n, 0);
+function vPot(es, top, bot, fixed) {
+  const js = [...new Set(es.flatMap(e => [e.a, e.b]))], pot = fixed ? new Map(fixed) : new Map(); if (!fixed) { for (const n of top) pot.set(n, 1); for (const n of bot) if (!top.has(n)) pot.set(n, 0); }
   const unk = js.filter(n => !pot.has(n)), ix = new Map(unk.map((n, i) => [n, i])), m = unk.length;
-  if (m && top.size && bot.size) { const links = [], diag = new Float64Array(m), rhs = new Float64Array(m);
+  if (m && (fixed ? pot.size > 1 : top.size && bot.size)) { const links = [], diag = new Float64Array(m), rhs = new Float64Array(m);
     for (const e of es) { const k = 1 / Math.max(1, e.len || 1), x = ix.get(e.a), y = ix.get(e.b);
       if (x !== undefined && y !== undefined) links.push([x, y, k]);
       else for (const [u, w] of [[x, e.b], [y, e.a]]) if (u !== undefined && pot.has(w)) { diag[u] += k; rhs[u] += k * pot.get(w); } }
@@ -35,7 +35,7 @@ function vPot(es, top, bot) {
    meet: from the source on a hot side, back to the source on a return), 'h' on a hot side (current goes into a load from
    it), 'r' on a return (current comes out of a load into it)] */
 function vDirs(D, es, pot, cur, dist, role) {
-  const put = (n, p) => { if (!cur.has(n)) return; const r = typeof role === 'function' ? role(n) : role, d = dist ? dist.get(n) ?? 0 : 0; D.set(n, [p, r === 'r' ? -d : d, r]); };
+  const put = (n, p) => { if (!cur.has(n)) return; const r = typeof role === 'function' ? role(n, p) : role, d = dist ? dist.get(n) ?? 0 : 0; D.set(n, [p, r === 'r' ? -d : d, r]); };
   for (const e of es) { const pa = pot.get(e.a), pb = pot.get(e.b); if (pa === undefined || pb === undefined) continue;
     put(e.a, pa); put(e.b, pb);
     if (e.chain) { const mm = e.chain.length - 1, fw = e.chain[0] === e.a; e.chain.forEach((n, i) => put(n, pa + (pb - pa) * (fw ? i : mm - i) / Math.max(1, mm))); } }
@@ -103,6 +103,13 @@ function presenceWant() {
     if (!live(sa, l.ca) || !live(sb, l.cb) || (sa && sb && sa.lab === sb.lab) || (!sa && !sb)) continue;
     if (sa) bot.add(l.a); if (sb) bot.add(l.b); }
   for (const p of parts) if (p.t === 'mtr' && p._t) for (const n of p._t) { const s = lab.get(f(n)); if (s && !s.x) bot.add(n); }
+  /* a load across two hot lines (Dallas, 26 Nov 2026, option A): which of them is its return, for which way the current is
+     shown going: the next line round after the one feeding it (L1 to L2, S1 to S2; P1 to P2, P2 to P3, P3 to P1) */
+  const retT = new Set(), PNEXT = { P1: 'P2', P2: 'P3', P3: 'P1' };
+  for (const l of loads) { if (l.ca === l.cb || l.p.t === 'mtr') continue; const sa = lab.get(l.ca), sb = lab.get(l.cb);   // (not a three-phase motor's windings: all three phases feed it)
+    if (!sa || !sb || sa.x || sb.x || !sa.hot || !sb.hot || sa.lab === sb.lab) continue;
+    const aFeeds = PNEXT[sa.lab] ? PNEXT[sa.lab] === sb.lab : PNEXT[sb.lab] ? PNEXT[sb.lab] !== sa.lab : sa.lab < sb.lab;
+    retT.add(aFeeds ? l.b : l.a); }
   // shortest way from its source to each junction (which way an idle wire is coloured from)
   const dist = new Map(), h = heap();
   for (const s of srcs) { dist.set(s.n, 0); h.push(0, s.n); }
@@ -122,7 +129,12 @@ function presenceWant() {
     else { const lc = new Map();   // (each load with current through it into this return: its own colour (or, with none, the current's))
       for (const l of loads) { if (l.ca === l.cb) continue; for (const [mine, oth, cm] of [[l.a, l.b, l.ca], [l.b, l.a, l.cb]]) if (cm === c && bot.has(oth) && out.has(oth)) lc.set(mine, l.p.color ? flowOf(l.p.color) : out.get(oth).c); }
       cols = vReturn(c, s.col, lc, dist, JE); }
-    if (cols && cols.cur) { for (const n of cols.cur) cur.add(n); if (cols.pot) vDirs(dir, cols.es, cols.pot, cols.cur, dist, s.hot ? 'h' : 'r'); }
+    if (cols && cols.cur) { for (const n of cols.cur) cur.add(n);
+      const rt = s.hot && cols.es ? cols.es.flatMap(e => [e.a, e.b]).filter(n => retT.has(n)) : [];
+      if (rt.length) {   // (a hot line that is the return of a load across two hot lines: from there back to its source)
+        const fx = new Map(); for (const e of cols.es) for (const n of [e.a, e.b]) { if ((dist.get(n) ?? 1) < 1e-3) fx.set(n, 0); else if (retT.has(n)) fx.set(n, 1); else if (bot.has(n)) fx.set(n, -1); }
+        vDirs(dir, cols.es, vPot(cols.es, null, null, fx), cols.cur, dist, (n, p) => retT.has(n) || p > 1e-9 ? 'r' : 'h');
+      } else if (cols.pot) vDirs(dir, cols.es, cols.pot, cols.cur, dist, s.hot ? 'h' : 'r'); }
     for (const n of byC.get(c) || []) out.set(n, { lab: s.lab, c: (cols && cols.get(n)) || s.col }); }
   // pieces fed only through loads with no current: the colour at the load's far end; between loads in series, a fade
   for (const g of groups) {

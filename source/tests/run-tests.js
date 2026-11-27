@@ -3226,6 +3226,26 @@ const DEF_CIRCUIT = `
       return out;`));
   });
 
+  await check('A load across two hot lines (Dallas, 26 Nov 2026, option A): P1 feeds the heater and P2 is its return, so P2 is shown going back to its source; dashes run into the heater from P1 and out of it to P2', async page => {
+    const d = { app: 'order-of-operations-circuit-builder', v: 1, name: 'Phase to phase', w: 880, pw: 'boxes', parts: [['ph', 100, 120, '2', 0, 1, '', 3], ['ph', 100, 360, '1', 0, 1, '', 3], ['tgl', 400, 120, '1', 0, 1, '99E600'], ['htr', 700, 240, '1', 0, 1, 'FF0032', null, null, null, null, null, null, null, null, { r: 3 }]],
+      wires: [[140, 120, 340, 120], [460, 120, 700, 120], [700, 120, 700, 180], [700, 300, 700, 360], [140, 360, 700, 360]] };
+    await page.evaluate(d => { useCircuit(readCircuit(d), ''); }, d);
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + `
+      const out = [], sw = parts.find(p => p.t === 'tgl'), K = opKey(sw), H = parts.find(p => p.t === 'htr');
+      press(K, !down[K]); step(5); needPaint = true; paint();
+      const sub = (x, y) => NET.subs.find(s => s.y1 === y && s.y2 === y && Math.min(s.x1, s.x2) === x);
+      const way = s => vMove(s, showCol(s.b, simT)) * Math.sign(s.x2 - s.x1);   // (+1: to the right)
+      if (way(sub(300, 360)) !== 1) out.push('P1 (feeding) is not shown going toward the heater');
+      if (way(sub(600, 120)) !== -1) out.push('P2 (the return) is not shown going back toward its source');
+      if (way(sub(200, 120)) !== -1) out.push('P2 before the switch is not shown going back toward its source');
+      const lead = (S, n) => { const v = view.parts.get(H.id), L = v && v.lead && v.lead[S]; return L && L.mv ? (L.mv.classList.contains('rev') ? 'out' : 'in') : 'none'; };
+      const nP1 = [H._a, H._b].find(n => VCUR.get(n) && VCUR.get(n).lab === 'P1'), S1 = nP1 === H._a ? 'A' : 'B', S2 = S1 === 'A' ? 'B' : 'A';
+      if (lead(S1) !== 'in') out.push('the heater lead on P1: ' + lead(S1) + ', not in');
+      if (lead(S2) !== 'out') out.push('the heater lead on P2: ' + lead(S2) + ', not out');
+      return out;`));
+  });
+
   await check('A 3PST switch or breaker closed (Dallas, 26 Nov 2026): L1, L2 and L3 run out from it together, none behind the others', async page => {
     const out = [];
     for (const t of ['tps', 'cbt']) {

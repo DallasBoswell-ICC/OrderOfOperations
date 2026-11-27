@@ -36,8 +36,8 @@ function vMove(s, c) {
    far the current has come to its start, and all keep one clock, so where stretches meet (a corner, a riser, a lead into a part)
    the dashes run on unbroken, and a stretch that starts moving is revealed in step rather than starting afresh */
 const MV_DASH = 13, MV_P = 30; let MV_DUR = 0.3;
-function mvAttrs(n, fwd, ink, cls = 'mv') {
-  const D = (vDirAt(n) || [0, 0])[1], o = fwd ? D : MV_DASH - D, m = ((o % MV_P) + MV_P) % MV_P;
+function mvAttrs(n, fwd, ink, cls = 'mv', back = 0) {   // (back: the drawn line starts this far before n)
+  const D = (vDirAt(n) || [0, 0])[1] + (fwd ? -back : back), o = fwd ? D : MV_DASH - D, m = ((o % MV_P) + MV_P) % MV_P;
   return { class: cls + (fwd ? '' : ' rev'), stroke: ink, style: `--o:${m.toFixed(1)}px;animation-delay:${(-(performance.now() / 1000) % MV_DUR).toFixed(3)}s` };
 }
 // a part's lead with current through it (in at a load's hot side, out at its return; through a contact from its higher side)
@@ -52,13 +52,17 @@ function paintLeadMv(L, p, n) {
   if (k === L.mk) return; L.mk = k;
   if (L.mv) { L.mv.remove(); L.mv = null; }
   if (!way) return;
-  L.mv = el('line', { x1: L.term, x2: L.body, y1: L.y, y2: L.y, ...mvAttrs(n, way > 0, mvInk(c)) });
-  L.cur.parentNode.insertBefore(L.mv, L.old.nextSibling);
+  // (over the lead's own line, and from as far out as its round end reaches over the wire)
+  const cap = 4.45, x1 = L.term + (L.term < L.body ? -cap : cap);
+  L.mv = el('line', { x1, x2: L.body, y1: L.y, y2: L.y, ...mvAttrs(n, way > 0, mvInk(c), 'mv', cap) });
+  const top = [L.cur, L.old].reduce((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? b : a));
+  top.parentNode.insertBefore(L.mv, top.nextSibling);
 }
 function vDirAt(n) { const a = VTL.get(n); if (!a) return undefined; for (let i = a.length - 1; i >= 0; i--) if (a[i][0] <= simT + 1e-9) return a[i][3]; }
 // (the dashes: dark on a light wire, light on a dark one)
 const MV_INK = new Map();
-function mvInk(c) { let k = MV_INK.get(c); if (k === undefined) { const L = oklab(c)[0]; k = L > 0.72 ? 'rgba(0,0,0,.55)' : 'rgba(255,255,255,.8)'; MV_INK.set(c, k); } return k; }
+// (solid, so where a lead's dashes and its wire's overlap they don't darken)
+function mvInk(c) { let k = MV_INK.get(c); if (k === undefined) { const L = oklab(c)[0]; k = L > 0.72 ? mixOk(c, '#000000', .55) : mixOk(c, '#ffffff', .8); MV_INK.set(c, k); } return k; }
 function paint() {
   for (const V of VIEWS) paintView(V);
   paintStation(); overviewTick();
@@ -90,16 +94,21 @@ function paintView(V) {
       i = j + 1;
     }
     // (where current goes through it: dashes moving the way it goes, over the colour (option 1, Dallas 26 Nov 2026))
+    it.mg.innerHTML = '';
     for (let i = 0; i < mv.length;) {
       if (!mv[i]) { i++; continue; }
       let j = i; while (j + 1 < mv.length && mv[j + 1] === mv[i]) j++;
       const a = it.subs[i], b = it.subs[j], hz = a.y1 === b.y2 && a.x1 !== b.x2;
       // (a level wire is drawn left to right; an upright one from its first stretch's start)
       const fwd = hz ? (b.x2 > a.x1) === (mv[i] > 0) : mv[i] > 0, start = hz && b.x2 < a.x1 ? b.b : a.a;   // (where the drawn path starts)
-      el('path', { d: V.shape(a.x1, a.y1, b.x2, b.y2), ...mvAttrs(start, fwd, mvInk(cols[i])) }, it.g);
+      el('path', { d: V.shape(a.x1, a.y1, b.x2, b.y2), ...mvAttrs(start, fwd, mvInk(cols[i])) }, it.mg);
       i = j + 1;
     }
   }
+  if (!TS_MODE && V.jdots) for (const d of V.jdots) {
+    if (R && (d.x < R[0] - M || d.x > R[0] + R[2] + M || d.y < R[1] - M || d.y > R[1] + R[3] + M)) continue;
+    const c = lit(d.n, simT) ? showCol(d.n, simT) : null, f = c && vOn() && !V_DS.has(c) ? c : 'transparent';
+    if (f !== d.c) d.el.setAttribute('fill', d.c = f); }
   // parts: each one is only touched when how it looks has changed (redrawing a part, with its shadow, is costly)
   for (const p of parts) {
     const v = V.parts.get(p.id); if (!v || p.t === 'stand') continue;
