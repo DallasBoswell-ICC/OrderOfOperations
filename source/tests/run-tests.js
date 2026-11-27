@@ -3274,6 +3274,27 @@ const DEF_CIRCUIT = `
       return out;`));
   });
 
+  await check('L2 on a center-tapped secondary (Dallas, 26 Nov 2026, his residential panel): with the lights off (CB3) L2 only returns the heaters, so its whole run turns round back to X2, none of it left going down; with CB4 off the stub up to it carries nothing', async page => {
+    const d = require('fs').readFileSync(path.join(__dirname, 'fixtures', 'residential_panel_2.json'), 'utf8');
+    await page.evaluate(d => { useCircuit(readCircuit(JSON.parse(d)), ''); }, d);
+    await page.click('#tab-run');
+    return page.evaluate(new Function(STEP + `
+      const out = [], cbk = L => parts.find(p => p.t === 'cbk' && p.L === L), flip = p => press(opKey(p), !down[opKey(p)]);
+      const vs = (x, y) => NET.subs.find(s => s.x1 === x && s.x2 === x && Math.min(s.y1, s.y2) === y), hs = (x, y) => NET.subs.find(s => s.y1 === y && s.y2 === y && Math.min(s.x1, s.x2) === x);
+      const dn = s => vMove(s, showCol(s.b, simT)) * Math.sign(s.y2 - s.y1), rt = s => vMove(s, showCol(s.b, simT)) * Math.sign(s.x2 - s.x1);
+      press('START', true); step(15);
+      if (!parts.filter(p => p.t === 'htr').every(p => coilOn[p.id])) return ['(the heaters are not on)'];
+      flip(cbk('3')); step(28);
+      if (dn(vs(300, 1500)) !== -1) out.push('CB3 off: L2 riser below CB4 is not going up (' + dn(vs(300, 1500)) + ')');
+      if (dn(vs(1100, 1200)) !== -1) out.push('CB3 off: L2 from X2 is not going back up to X2 (' + dn(vs(1100, 1200)) + ')');
+      if (rt(hs(800, 1360)) !== 1) out.push('CB3 off: L2 through CB4 is not going back toward X2 (' + rt(hs(800, 1360)) + ')');
+      flip(cbk('3')); step(40); flip(cbk('4')); step(55);
+      const st = hs(400, 1360), c = showCol(st.b, simT);
+      if (vMove(st, c) || (c && !V_DS.has(c))) out.push('CB4 off: the stub up to it is shown carrying');
+      if (dn(vs(300, 1500)) !== 0) out.push('CB4 off: the riser up to the stub moves');
+      return out;`));
+  });
+
   await check('A 3PST switch or breaker closed (Dallas, 26 Nov 2026): L1, L2 and L3 run out from it together, none behind the others', async page => {
     const out = [];
     for (const t of ['tps', 'cbt']) {

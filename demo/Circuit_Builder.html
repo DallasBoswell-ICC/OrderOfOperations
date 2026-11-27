@@ -4296,18 +4296,29 @@ function presenceWant() {
       for (let i = 0; i < m; i++) diag[i] += 1e-9;
       const [v] = netSolve(m, links, diag, [rhs]);
       col = new Map(g.comps.map((c, i) => [c, { lab: 'S' + ls.sort().join(''), c: mixOk(hc, rc, clamp01(1 - v[i])) }]));
-      for (const c of g.comps) for (const n of byC.get(c) || []) cur.add(n);
       // (which way along the wiring between loads in series: in at the terminal of a load nearer the hot side, out at the other)
       for (const c of g.comps) { const vc = v[ix.get(c)], tp = new Set(), bt = new Set();
         for (const l of loads) { if (l.ca === l.cb) continue; for (const [mine, cm, ow] of [[l.a, l.ca, l.cb], [l.b, l.cb, l.ca]]) { if (cm !== c) continue;
           const s = lab.get(ow), vo = s ? (s.x ? null : s.lab === hot ? 1 : 0) : ix.has(ow) ? v[ix.get(ow)] : null; if (vo === null) continue; (vo > vc ? tp : bt).add(mine); } }
-        const es = JE.get(c) || []; if (tp.size && bt.size) vDirs(dir, es, vPot(es, tp, bt), new Set(byC.get(c) || []), null, n => tp.has(n) ? 'r' : bt.has(n) ? 'h' : 'm'); }
+        const es = JE.get(c) || [];
+        if (!tp.size || !bt.size) { for (const n of byC.get(c) || []) cur.add(n); continue; }
+        /* (only the wiring the current goes through between the loads: a branch from it that ends at an open switch has none
+           (Dallas, 26 Nov 2026: L2 back-fed through the heaters with CB4 off; its stub up to CB4)) */
+        const cc = new Set(); for (const e of vCarry(es, tp, bt)) { cc.add(e.a); cc.add(e.b); if (e.chain) for (const n of e.chain) cc.add(n); }
+        for (const n of tp) cc.add(n); for (const n of bt) cc.add(n); for (const n of cc) cur.add(n);
+        vDirs(dir, es, vPot(es, tp, bt), cc, null, n => tp.has(n) ? 'r' : bt.has(n) ? 'h' : 'm'); }
     }
     for (const [c, r] of col) for (const n of byC.get(c) || []) out.set(n, { lab: r.lab, c: r.c });
   }
   // wiring with a source on it but no current through it (Dallas, 26 Nov 2026, option 1A): a little dimmer, toward the panel's grey
   for (const [n, r] of out) if (!cur.has(n)) r.c = vDim(r.c);
   VDIR = dir;
+  /* (which way the current goes at each junction, as a change in itself: a line that both fed one load and was the return of
+     another turns round when the one it fed is switched off, with no change of colour (Dallas, 26 Nov 2026, L2 of his panel
+     with CB3 off); so the new way comes with a front from the switch, like any change) */
+  for (const [n, r] of out) { const D = dir.get(n); if (!D) continue; let k = D[2];
+    for (const i of NET.adj[n]) { const e = NET.edges[i]; if (!conducts(e)) continue; const m = e.a === n ? e.b : e.a, M = dir.get(m); if (M) k += D[0] > M[0] + 1e-9 ? '+' : D[0] < M[0] - 1e-9 ? '-' : '0'; }
+    out.set(n, { ...r, d: k }); }
   return out;
 }
 const V_DIM = 0.55, V_FADE = 240;
@@ -4411,7 +4422,7 @@ function vPut(n, at, c, via) {
 function presenceNow(t, causes = []) {
   if (!NET || TS_MODE) return;
   const want = presenceWant(), N = NET.nodes.length, inC = new Uint8Array(N), C = [], lc = new Uint8Array(N); let nL = 0;   // (lc: its source changes, not just its colour)
-  for (let n = 0; n < N; n++) { const o = VCUR.get(n), w = want.get(n); if (!o !== !w || (o && (o.lab !== w.lab || o.c !== w.c))) { inC[n] = 1; C.push(n); if (!o || !w || o.lab !== w.lab) { lc[n] = 1; nL++; } } }
+  for (let n = 0; n < N; n++) { const o = VCUR.get(n), w = want.get(n); if (!o !== !w || (o && (o.lab !== w.lab || o.c !== w.c || o.d !== w.d))) { inC[n] = 1; C.push(n); if (!o || !w || o.lab !== w.lab) { lc[n] = 1; nL++; } } }
   if (!C.length) return;
   const srcN = vSources().map(s => s.n);
   // when what was there goes: from where the change happened, along the wires and through closed switches
@@ -4459,10 +4470,10 @@ function presenceNow(t, causes = []) {
     if (O && O.lab !== W.lab && tf !== undefined && first > tf + 1e-6) {
       // (one source draining away from a junction another would reach without it (the neutral, Dallas 25 Nov 2026; another
       // phase, across a load wired phase to phase, 26 Nov): the other was there underneath all along, and shows as the first goes)
-      vPut(n, tf, W.c, null); VCUR.set(n, { lab: W.lab, c: W.c, t: tf, tc: tf }); continue;
+      vPut(n, tf, W.c, null); VCUR.set(n, { lab: W.lab, c: W.c, d: W.d, t: tf, tc: tf }); continue;
     }
     if (first < at) vPut(n, first, lab.col[n], lab.by[n] || null);   // (the source there already, in the colour it comes with)
-    vPut(n, at, W.c, (tc !== undefined ? cf.by[n] : lab.by[n]) || null); VCUR.set(n, { lab: W.lab, c: W.c, t: O && O.lab === W.lab ? Math.min(O.t, first) : first, tc: at });
+    vPut(n, at, W.c, (tc !== undefined ? cf.by[n] : lab.by[n]) || null); VCUR.set(n, { lab: W.lab, c: W.c, d: W.d, t: O && O.lab === W.lab ? Math.min(O.t, first) : first, tc: at });
   }
   needPaint = true;
 }
